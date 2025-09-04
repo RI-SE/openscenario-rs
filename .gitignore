@@ -1,0 +1,16 @@
+# Git ignore patterns to exclude generated and temporary files from version control
+#
+# This file contains:
+# - Rust-specific ignore patterns (/target, Cargo.lock for libraries)
+# - IDE and editor temporary files (.vscode, .idea, *~, .swp)
+# - OS-specific files (.DS_Store, Thumbs.db)
+# - Test output and coverage reports
+# - Benchmark results and profiling data
+# - Documentation build artifacts
+#
+# Contributes to project by:
+# - Keeping repository clean and focused on source code
+# - Preventing accidental commits of sensitive or generated content
+# - Reducing repository size and clone times
+# - Avoiding merge conflicts on generated files
+# - Maintaining consistent development environment across contributors
