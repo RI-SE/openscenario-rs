@@ -206,6 +206,23 @@ fn can_create_and_serialize_conditions() {
     assert!(true);
 }
 
+#[test]
+fn can_parse_scenario_with_expressions() {
+    let xml = include_str!("data/expressions_scenario.xosc");
+    let result = openscenario_rs::parse_str(xml);
+    
+    // This should parse successfully even with expressions
+    assert!(result.is_ok());
+    
+    let scenario = result.unwrap();
+    
+    // Check that we can access entities even with expressions
+    assert_eq!(scenario.entities.scenario_objects.len(), 1);
+    
+    let ego = scenario.entities.find_object("Ego").unwrap();
+    assert_eq!(ego.get_name(), Some("Ego"));
+}
+
 // Integration tests for the cut_in_101_exam.xosc scenario
 mod cut_in_scenario_tests {
     use super::*;

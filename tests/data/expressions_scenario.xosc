@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader author="OpenSCENARIO-rs" date="2024-01-01T00:00:00" description="Test scenario with expressions" revMajor="1" revMinor="2"/>
+  <Entities>
+    <ScenarioObject name="Ego">
+      <Vehicle name="EgoVehicle" vehicleCategory="car">
+        <BoundingBox>
+          <Center x="0.0" y="0.0" z="0.0"/>
+          <Dimensions width="${vehicle_width}" length="${vehicle_length}" height="${vehicle_height}"/>
+        </BoundingBox>
+      </Vehicle>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init/>
+  </Storyboard>
+</OpenSCENARIO>

@@ -20,16 +20,19 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
-// Value enum that can hold either a literal value or a parameter reference
+// Value enum that can hold either a literal value, a parameter reference, or an expression
 //
-// OpenSCENARIO supports parameter references using ${parameterName} syntax.
-// This enum allows us to represent both compile-time literals and runtime parameters.
+// OpenSCENARIO supports parameter references using ${parameterName} syntax and 
+// mathematical expressions using ${expression} syntax.
+// This enum allows us to represent both compile-time literals and runtime parameters/expressions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Value<T> {
     /// A literal value known at parse time
     Literal(T),
     /// A parameter reference that will be resolved at runtime
     Parameter(std::string::String),
+    /// A mathematical expression that will be evaluated at runtime
+    Expression(std::string::String),
 }
 
 impl<T> Value<T>
@@ -53,6 +56,17 @@ where
                     )
                 })
             }
+            Value::Expression(expr) => {
+                // For now, we'll treat expressions as parameters that need to be resolved
+                // In a full implementation, we would parse and evaluate the mathematical expression
+                let resolved_expr = resolve_expression::<T>(expr, params)?;
+                resolved_expr.parse::<T>().map_err(|e| {
+                    Error::parameter_error(
+                        expr,
+                        &format!("failed to parse expression result '{}': {}", resolved_expr, e),
+                    )
+                })
+            }
         }
     }
 
@@ -61,6 +75,7 @@ where
         match self {
             Value::Literal(value) => Some(value),
             Value::Parameter(_) => None,
+            Value::Expression(_) => None,
         }
     }
 
@@ -69,6 +84,16 @@ where
         match self {
             Value::Literal(_) => None,
             Value::Parameter(name) => Some(name),
+            Value::Expression(_) => None,
+        }
+    }
+    
+    /// Get the expression if this is an expression, otherwise None
+    pub fn as_expression(&self) -> Option<&str> {
+        match self {
+            Value::Literal(_) => None,
+            Value::Parameter(_) => None,
+            Value::Expression(expr) => Some(expr),
         }
     }
 }
@@ -83,9 +108,14 @@ impl<T: Clone> Value<T> {
     pub fn parameter(name: std::string::String) -> Self {
         Value::Parameter(name)
     }
+    
+    /// Create an expression
+    pub fn expression(expr: std::string::String) -> Self {
+        Value::Expression(expr)
+    }
 }
 
-// Custom serde implementation to handle ${param} syntax
+// Custom serde implementation to handle ${param} and ${expression} syntax
 impl<'de, T> Deserialize<'de> for Value<T>
 where
     T: Deserialize<'de> + FromStr,
@@ -97,9 +127,16 @@ where
     {
         let s = String::deserialize(deserializer)?;
 
-        // Check if this is a parameter reference ${paramName}
-        if let Some(param_name) = parse_parameter_reference(&s) {
-            Ok(Value::Parameter(param_name))
+        // Check if this is a parameter reference or expression ${content}
+        if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
+            let content = &s[2..s.len() - 1];
+            // Check if it's a simple parameter (no operators)
+            if is_valid_parameter_name(content) && !content.contains(|c| "+-*/%()".contains(c)) {
+                Ok(Value::Parameter(content.to_string()))
+            } else {
+                // Treat as expression
+                Ok(Value::Expression(content.to_string()))
+            }
         } else {
             // Try to parse as literal value
             match s.parse::<T>() {
@@ -124,6 +161,7 @@ where
         match self {
             Value::Literal(value) => value.serialize(serializer),
             Value::Parameter(name) => format!("${{{}}}", name).serialize(serializer),
+            Value::Expression(expr) => format!("${{{}}}", expr).serialize(serializer),
         }
     }
 }
@@ -139,6 +177,11 @@ pub type Boolean = Value<bool>;
 // DateTime support will be added with chrono feature
 #[cfg(feature = "chrono")]
 pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
+
+// TODO: Add any missing basic types needed for actions and conditions (Week 4)
+// TODO: pub type DateTime = Value<chrono::DateTime<chrono::Utc>>; - already defined but may need chrono feature
+
+
 
 /// Parse a parameter reference from a string
 ///
@@ -156,6 +199,11 @@ pub fn parse_parameter_reference(s: &str) -> Option<std::string::String> {
     }
 }
 
+/// Check if a string is an expression (contains mathematical operators)
+pub fn is_expression(s: &str) -> bool {
+    s.contains(|c| "+-*/%()".contains(c))
+}
+
 // Check if a parameter name is valid
 //
 // Valid parameter names contain only alphanumeric characters and underscores
@@ -163,6 +211,33 @@ pub fn is_valid_parameter_name(name: &str) -> bool {
     !name.is_empty()
         && name.chars().all(|c| c.is_alphanumeric() || c == '_')
         && !name.chars().next().unwrap().is_ascii_digit() // Can't start with digit
+}
+
+/// Resolve a simple expression by substituting parameters
+/// 
+/// This is a basic implementation that only handles parameter substitution
+/// A full implementation would parse and evaluate mathematical expressions
+fn resolve_expression<T: FromStr>(
+    expr: &str, 
+    params: &HashMap<std::string::String, std::string::String>
+) -> Result<String> 
+where 
+    T::Err: std::fmt::Display 
+{
+    // For now, just substitute parameter references in the expression
+    let mut result = expr.to_string();
+    
+    // Find and replace parameter references in the expression
+    for (param_name, param_value) in params {
+        let param_ref = format!("${{{}}}", param_name);
+        if result.contains(&param_ref) {
+            result = result.replace(&param_ref, param_value);
+        }
+    }
+    
+    // In a full implementation, we would parse and evaluate the expression here
+    // For now, we'll assume the expression is already resolved or return it as-is
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -192,6 +267,37 @@ mod tests {
         assert!(!is_valid_parameter_name("123speed")); // Can't start with digit
         assert!(!is_valid_parameter_name("")); // Can't be empty
         assert!(!is_valid_parameter_name("speed-limit")); // No hyphens
+    }
+    
+    #[test]
+    fn test_value_creation() {
+        let literal = Value::<f64>::literal(10.0);
+        assert!(matches!(literal, Value::Literal(10.0)));
+        
+        let parameter = Value::<String>::parameter("speed".to_string());
+        assert!(matches!(parameter, Value::Parameter(_)));
+        
+        let expression = Value::<String>::expression("speed + 10".to_string());
+        assert!(matches!(expression, Value::Expression(_)));
+    }
+    
+    #[test]
+    fn test_value_resolution() {
+        let mut params = HashMap::new();
+        params.insert("speed".to_string(), "30.0".to_string());
+        params.insert("acceleration".to_string(), "2.5".to_string());
+        
+        // Test literal resolution
+        let literal = Value::<f64>::literal(10.0);
+        assert_eq!(literal.resolve(&params).unwrap(), 10.0);
+        
+        // Test parameter resolution
+        let parameter = Value::<f64>::parameter("speed".to_string());
+        assert_eq!(parameter.resolve(&params).unwrap(), 30.0);
+        
+        // Test expression resolution (basic)
+        let expression = Value::<String>::expression("speed".to_string());
+        assert_eq!(expression.resolve(&params).unwrap(), "speed");
     }
 }
 

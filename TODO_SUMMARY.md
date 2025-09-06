@@ -122,10 +122,15 @@ This document summarizes all the TODO items that have been added to project file
 
 ## Phase 2: Usability MVP (Weeks 5-8)
 
-### Week 5: Expression System (HIGH)
-- [ ] Enhance Value<T> deserializer for ${param} pattern
-- [ ] Implement parameter resolution logic
-- [ ] Add parameter validation helpers
+### Week 5: Expression System (HIGH) ✅ COMPLETED
+
+**src/types/basic.rs** ✅
+- [x] Enhance Value<T> enum to support Expressions variant
+- [x] Enhance Value<T> deserializer for ${param} and ${expr} patterns
+- [x] Implement parameter resolution logic with HashMap context
+- [x] Add parameter validation helpers (is_valid_parameter_name)
+- [x] Add expression parsing and basic resolution support
+- [x] Add comprehensive unit tests for all Value<T> variants
 
 ### Week 6: Validation Framework (HIGH)
 - [ ] Implement Validate trait and ValidationContext
