@@ -14,23 +14,35 @@
 //! - Supporting action composition and complex scenario building
 //! - Facilitating action validation and constraint enforcement
 
-// TODO: Declare action submodules
-// TODO: pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
-// TODO: pub mod control;    // Controller actions (skip for MVP)
-// TODO: pub mod appearance; // Appearance actions (skip for MVP)
-// TODO: pub mod traffic;    // Traffic actions (skip for MVP)
+pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
+// pub mod control;    // Controller actions (skip for MVP)
+// pub mod appearance; // Appearance actions (skip for MVP)
+// pub mod traffic;    // Traffic actions (skip for MVP)
 
-// TODO: Re-export action types for MVP (Week 4)
-// TODO: pub use movement::{SpeedAction, TeleportAction};
+pub use movement::{SpeedAction, TeleportAction};
 
-// TODO: Define base Action enum for polymorphic handling
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: #[serde(tag = "type")]
-// TODO: pub enum Action { Speed(SpeedAction), Teleport(TeleportAction) }
+use serde::{Deserialize, Serialize};
 
-// TODO: Define Action wrapper with common attributes
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct ActionWrapper { #[serde(rename = "@name")] pub name: String, #[serde(flatten)] pub action: Action }
+// Define base Action enum for polymorphic handling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Action { 
+    Speed(SpeedAction), 
+    Teleport(TeleportAction) 
+}
 
-// TODO: Add action validation trait (Week 6)
-// TODO: pub trait ValidateAction { fn validate(&self, ctx: &ValidationContext) -> Result<()>; }
+// Define Action wrapper with common attributes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionWrapper { 
+    #[serde(rename = "@name")] 
+    pub name: String, 
+    #[serde(flatten)] 
+    pub action: Action 
+}
+
+use crate::types::ValidationContext;
+
+// Add action validation trait (Week 6) - KEEP AS FUTURE WORK
+pub trait ValidateAction { 
+    fn validate(&self, ctx: &ValidationContext) -> crate::error::Result<()>; 
+}

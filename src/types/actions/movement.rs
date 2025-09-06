@@ -14,23 +14,68 @@
 //! - Enabling entity coordination through synchronization actions
 //! - Offering flexible target specification (absolute vs. relative positioning)
 
-// TODO: Implement SpeedAction for MVP (Week 4) - most common movement action
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct SpeedAction { pub speed_action_dynamics: TransitionDynamics, pub speed_action_target: SpeedActionTarget }
+use crate::types::{Double};
+use crate::types::enums::{DynamicsDimension, DynamicsShape, SpeedTargetValueType};
+use crate::types::positions::Position;
+use serde::{Deserialize, Serialize};
 
-// TODO: Implement TeleportAction for MVP (Week 4) - simplest positioning
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct TeleportAction { pub position: Position }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpeedAction { 
+    #[serde(rename = "Dynamics")]
+    pub speed_action_dynamics: TransitionDynamics, 
+    #[serde(rename = "Target")]
+    pub speed_action_target: SpeedActionTarget 
+}
 
-// TODO: Define supporting types for SpeedAction
-// TODO: pub struct TransitionDynamics - basic dynamics for smooth transitions
-// TODO: pub enum SpeedActionTarget { Absolute(AbsoluteTargetSpeed), Relative(RelativeTargetSpeed) }
-// TODO: pub struct AbsoluteTargetSpeed { pub value: Double }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TeleportAction { 
+    #[serde(rename = "Position")]
+    pub position: Position 
+}
 
-// TODO: Add more movement actions later (Week 10+)
-// TODO: pub struct LaneChangeAction - lane change maneuvers
-// TODO: pub struct FollowTrajectoryAction - trajectory following
-// TODO: pub struct SynchronizeAction - entity coordination
+// Remove duplicate import
 
-// TODO: Add movement action validation
-// TODO: impl ValidateAction for SpeedAction, TeleportAction
+// Define supporting types for SpeedAction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransitionDynamics {
+    #[serde(rename = "@dynamicsDimension")]
+    pub dynamics_dimension: DynamicsDimension,
+    #[serde(rename = "@dynamicsShape")]
+    pub dynamics_shape: DynamicsShape,
+    #[serde(rename = "@value")]
+    pub value: Double,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SpeedActionTarget { 
+    #[serde(rename = "AbsoluteTargetSpeed", alias = "Absolute")]
+    Absolute(AbsoluteTargetSpeed), 
+    #[serde(rename = "RelativeTargetSpeed", alias = "Relative")]
+    Relative(RelativeTargetSpeed) 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AbsoluteTargetSpeed { 
+    #[serde(rename = "@value")]
+    pub value: Double 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelativeTargetSpeed {
+    #[serde(rename = "@value")]
+    pub value: Double,
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: String,
+    #[serde(rename = "@valueType")]
+    pub value_type: SpeedTargetValueType,
+    #[serde(rename = "@continuous")]
+    pub continuous: bool,
+}
+
+// Add more movement actions later (Week 10+) - KEEP AS FUTURE WORK
+// pub struct LaneChangeAction - lane change maneuvers
+// pub struct FollowTrajectoryAction - trajectory following
+// pub struct SynchronizeAction - entity coordination
+
+// Add movement action validation
+// impl ValidateAction for SpeedAction, TeleportAction

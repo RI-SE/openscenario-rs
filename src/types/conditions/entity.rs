@@ -13,3 +13,17 @@
 //! - Supporting safety-critical condition detection (collision, clearance)
 //! - Facilitating dynamic scenario adaptation based on entity states
 //! - Enabling complex multi-entity coordination and interaction patterns
+
+use crate::types::{Double};
+use crate::types::enums::{Rule};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpeedCondition {
+    #[serde(rename = "@value")]
+    pub value: Double,
+    #[serde(rename = "@rule")]
+    pub rule: Rule,
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: String,
+}

@@ -14,3 +14,15 @@
 //! - Providing execution flow control through storyboard state tracking
 //! - Facilitating infrastructure integration through signal state monitoring
 //! - Enabling custom condition logic through extensible user-defined types
+
+use crate::types::{Double};
+use crate::types::enums::{Rule};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimulationTimeCondition {
+    #[serde(rename = "@value")]
+    pub value: Double,
+    #[serde(rename = "@rule")]
+    pub rule: Rule,
+}

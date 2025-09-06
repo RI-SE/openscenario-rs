@@ -14,27 +14,33 @@
 //! - Enabling event-driven scenario execution and timing control
 //! - Facilitating condition debugging and state introspection
 
-// TODO: Declare condition submodules
-// TODO: pub mod entity;  // Entity-based conditions
-// TODO: pub mod value;   // Value-based conditions
+pub mod entity;  // Entity-based conditions
+pub mod value;   // Value-based conditions
 
-// TODO: Re-export condition types for MVP (Week 4)
-// TODO: pub use value::SimulationTimeCondition;
-// TODO: pub use entity::SpeedCondition;
+pub use value::SimulationTimeCondition;
+pub use entity::SpeedCondition;
 
-// TODO: Define base condition enum for polymorphic handling
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: #[serde(tag = "type")]
-// TODO: pub enum Condition { SimulationTime(SimulationTimeCondition), Speed(SpeedCondition) }
+use serde::{Deserialize, Serialize};
 
-// TODO: Define condition wrapper with common attributes
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct ConditionWrapper { 
-//   #[serde(rename = "@name")] pub name: String, 
-//   #[serde(rename = "@conditionEdge")] pub edge: ConditionEdge,
-//   #[serde(rename = "@delay")] pub delay: Double,
-//   #[serde(flatten)] pub condition: Condition 
-// }
+// Define base condition enum for polymorphic handling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Condition { 
+  SimulationTime(SimulationTimeCondition), 
+  Speed(SpeedCondition) 
+}
 
-// TODO: Add condition evaluation trait (later phases)
-// TODO: pub trait EvaluateCondition { fn evaluate(&self, ctx: &SimulationContext) -> bool; }
+// Define condition wrapper with common attributes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionWrapper { 
+  #[serde(rename = "@name")] pub name: String, 
+  #[serde(rename = "@conditionEdge")] pub edge: ConditionEdge,
+  #[serde(rename = "@delay")] pub delay: Double,
+  #[serde(flatten)] pub condition: Condition 
+}
+
+use crate::types::{Double};
+use crate::types::enums::{ConditionEdge};
+
+// Add condition evaluation trait (later phases) - KEEP AS FUTURE WORK
+// pub trait EvaluateCondition { fn evaluate(&self, ctx: &SimulationContext) -> bool; }
