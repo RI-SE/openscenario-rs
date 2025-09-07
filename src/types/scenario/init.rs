@@ -15,7 +15,7 @@
 use serde::{Deserialize, Serialize};
 use crate::types::basic::OSString;
 use crate::types::environment::Environment;
-use crate::types::actions::movement::{SpeedAction, TeleportAction};
+use crate::types::actions::movement::{SpeedAction, TeleportAction, RoutingAction};
 
 /// Complete Init structure replacing the empty placeholder in storyboard
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,23 +72,24 @@ pub struct PrivateActionWrapper {
 }
 
 /// Types of private actions available for entity initialization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum PrivateActionType {
     LongitudinalAction(LongitudinalAction),
     TeleportAction(TeleportAction),
+    RoutingAction(RoutingAction),
     // LateralAction, SynchronizeAction, etc. can be added later
 }
 
 /// Longitudinal movement actions (speed control, etc.)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
     #[serde(flatten)]
     pub action_type: LongitudinalActionType,
 }
 
 /// Types of longitudinal actions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum LongitudinalActionType {
     SpeedAction(SpeedAction),

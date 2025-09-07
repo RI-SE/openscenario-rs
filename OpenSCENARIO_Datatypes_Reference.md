@@ -8,9 +8,9 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 |----------|--------|------------|-------------|
 | Basic Data Types | 9 | 9 | Fundamental data types with validation patterns |
 | Simple Enumeration Types | 37 | 41 | Predefined value lists |
-| Complex Types | 287 | 55 | Structured data with elements and attributes |
+| Complex Types | 287 | 65 | Structured data with elements and attributes |
 | Groups | 14 | 1 | Reusable element collections |
-| **Total** | **347** | **106** | **Complete type system** |
+| **Total** | **347** | **116** | **Complete type system** |
 
 ---
 
@@ -133,6 +133,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.1 Actions (48 types)
 
 #### 3.1.1 Movement Actions
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `SpeedAction` | Change entity speed | SpeedActionDynamics, SpeedActionTarget | ✅ Implemented |
@@ -140,7 +141,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `LaneOffsetAction` | Adjust lane offset | LaneOffsetActionDynamics, LaneOffsetTarget, continuous | 🚧 Planned |
 | `TeleportAction` | Instantly move entity | Position | ✅ Implemented |
 | `AcquirePositionAction` | Move to specific position | Position | 🚧 Planned |
-| `FollowTrajectoryAction` | Follow predefined path | Trajectory/CatalogReference, TimeReference, TrajectoryFollowingMode | 🚧 Planned |
+| `FollowTrajectoryAction` | Follow predefined path | Trajectory/CatalogReference, TimeReference, TrajectoryFollowingMode | ✅ Implemented |
 | `LateralAction` | Generic lateral movement | LaneChangeAction \| LaneOffsetAction \| LateralDistanceAction | 🚧 Planned |
 | `LongitudinalAction` | Generic longitudinal movement | SpeedAction \| LongitudinalDistanceAction \| SpeedProfileAction | ✅ Implemented |
 | `LateralDistanceAction` | Maintain lateral distance | entityRef, continuous, distance, freespace, displacement | 🚧 Planned |
@@ -148,6 +149,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `SynchronizeAction` | Synchronize with another entity | masterEntityRef, TargetPositionMaster, TargetPosition, FinalSpeed | 🚧 Planned |
 
 #### 3.1.2 Control Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ActivateControllerAction` | Enable/disable controllers | controllerRef¹, objectControllerRef, lateral, longitudinal, animation, lighting |
@@ -162,6 +164,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `OverrideParkingBrakeAction` | Override parking brake | active, BrakeInput, value¹ |
 
 #### 3.1.3 Appearance Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `AppearanceAction` | Change entity appearance | LightStateAction \| AnimationAction |
@@ -169,6 +172,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `AnimationAction` | Animate entity | AnimationType, AnimationState, loop, animationDuration |
 
 #### 3.1.4 Global Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `GlobalAction` | Scene-level actions | EnvironmentAction \| EntityAction \| InfrastructureAction \| SetMonitorAction \| ParameterAction¹ \| TrafficAction \| VariableAction | ✅ Implemented |
@@ -180,6 +184,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `SetMonitorAction` | Set monitor state | monitorRef, value |
 
 #### 3.1.5 Traffic Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TrafficAction` | Traffic control | TrafficSourceAction \| TrafficSinkAction \| TrafficSwarmAction \| TrafficAreaAction \| TrafficStopAction, trafficName |
@@ -190,6 +195,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `TrafficStopAction` | Stop traffic | (no attributes) |
 
 #### 3.1.6 Signal Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TrafficSignalAction` | Control traffic signals | TrafficSignalControllerAction \| TrafficSignalStateAction |
@@ -197,13 +203,15 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `TrafficSignalStateAction` | Set signal state | name, statee |
 
 #### 3.1.7 Routing Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `RoutingAction` | Route planning | AssignRouteAction \| FollowTrajectoryAction \| AcquirePositionAction \| RandomRouteAction |
+| `RoutingAction` | Route planning | AssignRouteAction \| FollowTrajectoryAction \| AcquirePositionAction \| RandomRouteAction | ✅ Implemented |
 | `AssignRouteAction` | Assign route to entity | Route \| CatalogReference |
 | `RandomRouteAction` | Generate random route | (no attributes) |
 
 #### 3.1.8 Trailer Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TrailerAction` | Trailer operations | ConnectTrailerAction \| DisconnectTrailerAction |
@@ -211,6 +219,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `DisconnectTrailerAction` | Disconnect trailer | (no attributes) |
 
 #### 3.1.9 Variable Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `VariableAction` | Variable manipulation | SetAction \| ModifyAction, variableRef |
@@ -218,6 +227,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `VariableModifyAction` | Modify variable | Rule |
 
 #### 3.1.10 Deprecated Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ParameterAction`¹ | Parameter manipulation | SetAction \| ModifyAction, parameterRef |
@@ -225,12 +235,14 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `ParameterModifyAction`¹ | Modify parameter | Rule |
 
 #### 3.1.11 Private Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `PrivateAction` | Entity-specific actions | LongitudinalAction \| LateralAction \| VisibilityAction \| SynchronizeAction \| ActivateControllerAction¹ \| ControllerAction \| TeleportAction \| RoutingAction \| AppearanceAction \| TrailerAction |
 | `VisibilityAction` | Control entity visibility | SensorReferenceSet, graphics, sensors, traffic |
 
 #### 3.1.12 User-Defined Actions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `UserDefinedAction` | Custom actions | CustomCommandAction |
@@ -239,6 +251,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.2 Conditions (21 types)
 
 #### 3.2.1 Entity-Based Conditions
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `ByEntityCondition` | Entity-based triggers | TriggeringEntities, EntityCondition | ✅ Implemented |
@@ -259,6 +272,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `RelativeAngleCondition` | Relative angle trigger | entityRef, angleType, angle, angleTolerance, coordinateSystem | 🚧 Planned |
 
 #### 3.2.2 Value-Based Conditions
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `ByValueCondition` | Value-based triggers | ParameterCondition \| TimeOfDayCondition \| SimulationTimeCondition \| StoryboardElementStateCondition \| UserDefinedValueCondition \| TrafficSignalCondition \| TrafficSignalControllerCondition \| VariableCondition | ✅ Implemented |
@@ -272,6 +286,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `UserDefinedValueCondition` | Custom value trigger | name, rule, value | 🚧 Planned |
 
 #### 3.2.3 Deprecated Conditions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ReachPositionCondition`¹ | Position reached trigger | Position, tolerance |
@@ -279,6 +294,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.3 Positions (15 types)
 
 #### 3.3.1 World Positions
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `Position` | Generic position | WorldPosition \| RelativeWorldPosition \| RelativeObjectPosition \| RoadPosition \| RelativeRoadPosition \| LanePosition \| RelativeLanePosition \| RoutePosition \| GeoPosition \| TrajectoryPosition | ✅ Partial |
@@ -286,6 +302,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `RelativeWorldPosition` | Relative to entity in world | entityRef, dx, dy, dz, Orientation | ✅ Implemented |
 
 #### 3.3.2 Road-Based Positions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `RoadPosition` | Road coordinate position | roadId, s, t, Orientation |
@@ -294,12 +311,14 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `RelativeLanePosition` | Relative lane position | entityRef, dLane, ds, offset, dsLane, Orientation |
 
 #### 3.3.3 Geographic & Object Positions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `GeoPosition` | GPS coordinates | latitude¹, longitude¹, height¹, latitudeDeg, longitudeDeg, altitude, verticalRoadSelection, Orientation |
 | `RelativeObjectPosition` | Relative to object | entityRef, dx, dy, dz, Orientation |
 
 #### 3.3.4 Route & Trajectory Positions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `RoutePosition` | Position along route | RouteRef, Orientation, InRoutePosition |
@@ -312,6 +331,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.4 Entities (12 types)
 
 #### 3.4.1 Entity Definitions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Vehicle` | Vehicle definition | name, vehicleCategory, role, mass, model3d, ParameterDeclarations, BoundingBox, Performance, Axles, Properties, TrailerHitch, TrailerCoupler, Trailer | ✅ Implemented |
@@ -320,6 +340,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `ExternalObjectReference` | External object reference | name |
 
 #### 3.4.2 Entity Management
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ScenarioObject` | Scenario entity | name, EntityObject, ObjectController |
@@ -334,19 +355,21 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.5 Geometry & Shapes (12 types)
 
 #### 3.5.1 Shape Definitions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Shape` | Generic shape | Polyline \| Clothoid \| ClothoidSpline \| Nurbs |
-| `Polyline` | Connected line segments | Vertex (2+) |
+| `Shape` | Generic shape | Polyline \| Clothoid \| ClothoidSpline \| Nurbs | ✅ Implemented |
+| `Polyline` | Connected line segments | Vertex (2+) | ✅ Implemented |
 | `Clothoid` | Clothoid curve | Position, curvature, curvatureDot¹, length, startTime, stopTime, curvaturePrime |
 | `ClothoidSpline` | Clothoid spline | ClothoidSplineSegment, timeEnd |
 | `ClothoidSplineSegment` | Spline segment | PositionStart, curvatureStart, curvatureEnd, length, hOffset, timeStart |
 | `Nurbs` | NURBS curve | ControlPoint (2+), Knot (2+), order |
 
 #### 3.5.2 Geometric Elements
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Vertex` | Polyline vertex | Position, time |
+| `Vertex` | Polyline vertex | Position, time | ✅ Implemented |
 | `ControlPoint` | NURBS control point | Position, time, weight |
 | `Knot` | NURBS knot | value |
 | `Polygon` | Closed polygon | Position (3+) |
@@ -357,6 +380,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.6 Distributions & Randomization (18 types)
 
 #### 3.6.1 Distribution Framework
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ParameterValueDistribution` | Parameter distribution | ScenarioFile, DistributionDefinition |
@@ -364,6 +388,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `Stochastic` | Stochastic distribution | StochasticDistribution, numberOfTestRuns, randomSeed |
 
 #### 3.6.2 Deterministic Distributions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `DeterministicSingleParameterDistribution` | Single parameter | parameterName, DeterministicSingleParameterDistributionType |
@@ -375,6 +400,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `ParameterValueSet` | Parameter assignments | ParameterAssignment |
 
 #### 3.6.3 Stochastic Distributions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `StochasticDistribution` | Stochastic parameter | parameterName, StochasticDistributionType |
@@ -391,18 +417,21 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.7 Controllers (8 types)
 
 #### 3.7.1 Controller Definitions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Controller` | Controller definition | name, controllerType, ParameterDeclarations, Properties |
 | `ObjectController` | Object controller | name, CatalogReference \| Controller |
 
 #### 3.7.2 Controller Distribution
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ControllerDistribution` | Controller distribution | ControllerDistributionEntry |
 | `ControllerDistributionEntry` | Distribution entry | weight, Controller \| CatalogReference |
 
 #### 3.7.3 Entity Distributions
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `EntityDistribution` | Entity distribution | EntityDistributionEntry |
@@ -415,6 +444,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.8 Traffic Management (8 types)
 
 #### 3.8.1 Traffic Definition
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TrafficDefinition` | Traffic characteristics | name, VehicleCategoryDistribution, VehicleRoleDistribution, ControllerDistribution |
@@ -422,6 +452,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `TrafficDistributionEntry` | Traffic entry | weight, EntityDistribution, Properties |
 
 #### 3.8.2 Traffic Areas
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TrafficArea` | Traffic area definition | Polygon \| RoadRange |
@@ -429,6 +460,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `DirectionOfTravelDistribution` | Travel direction | same, opposite |
 
 #### 3.8.3 Traffic Support
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `RoadRange` | Road segment range | RoadCursor (2+), length |
@@ -437,12 +469,14 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.9 Weather & Environment (12 types)
 
 #### 3.9.1 Environment Definition
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Environment` | Environment settings | name, ParameterDeclarations, TimeOfDay, Weather, RoadCondition | ✅ Implemented |
 | `Weather` | Weather conditions | cloudState¹, atmosphericPressure, temperature, fractionalCloudCover, Sun, Fog, Precipitation, Wind, DomeImage | ✅ Implemented |
 
 #### 3.9.2 Weather Components
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Sun` | Solar conditions | azimuth, elevation, intensity¹, illuminance | ✅ Implemented |
@@ -452,6 +486,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `DomeImage` | Sky dome image | DomeFile, azimuthOffset |
 
 #### 3.9.3 Other Environment
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TimeOfDay` | Time settings | animation, dateTime | ✅ Implemented |
@@ -463,6 +498,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.10 Catalogs & References (9 types)
 
 #### 3.10.1 Catalog System
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Catalog` | Catalog definition | name, Vehicle, Controller, Pedestrian, MiscObject, Environment, Maneuver, Trajectory, Route |
@@ -470,6 +506,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `CatalogLocations` | Catalog locations | VehicleCatalog, ControllerCatalog, PedestrianCatalog, MiscObjectCatalog, EnvironmentCatalog, ManeuverCatalog, TrajectoryCatalog, RouteCatalog |
 
 #### 3.10.2 Catalog Locations
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `VehicleCatalogLocation` | Vehicle catalog location | Directory |
@@ -484,6 +521,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.11 Scenario Structure (17 types)
 
 #### 3.11.1 Core Structure
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `OpenScenario` | Root element | FileHeader, OpenScenarioCategory | ✅ Implemented |
@@ -494,8 +532,12 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `Maneuver` | Maneuver definition | name, ParameterDeclarations, Event | ✅ Implemented |
 | `Event` | Event definition | name, maximumExecutionCount, priority, Action, StartTrigger | ✅ Implemented |
 | `Action` | Generic action | name, GlobalAction \| UserDefinedAction \| PrivateAction | ✅ Implemented |
+| `StoryAction` | Story-level action | name, StoryActionType | ✅ Implemented |
+| `StoryActionType` | Story action types | PrivateAction \| GlobalAction \| UserDefinedAction | ✅ Implemented |
+| `StoryPrivateAction` | Story private action | PrivateActionType | ✅ Implemented |
 
 #### 3.11.2 Initialization
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `Init` | Initialization | Actions | ✅ Implemented |
@@ -503,6 +545,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `Private` | Private actions | entityRef, PrivateAction | ✅ Implemented |
 
 #### 3.11.3 Triggers
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `Trigger` | Trigger definition | ConditionGroup | ✅ Implemented |
@@ -511,6 +554,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `TriggeringEntities` | Triggering entities | triggeringEntitiesRule, EntityRef | ✅ Implemented |
 
 #### 3.11.4 Actors
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `Actors` | Actor selection | selectTriggeringEntities, EntityRef | ✅ Implemented |
@@ -518,6 +562,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.12 Data Containers (25 types)
 
 #### 3.12.1 File & Metadata
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `FileHeader` | File metadata | author, date, description, revMajor, revMinor, License, Properties | ✅ Implemented |
@@ -526,6 +571,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `License` | License information | name, resource, spdxId, content | ✅ Implemented |
 
 #### 3.12.2 Properties & Parameters
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `Properties` | Property collection | Property, File, CustomContent | ✅ Implemented |
@@ -537,6 +583,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `ParameterAssignment` | Parameter assignment | parameterRef, value | ✅ Implemented |
 
 #### 3.12.3 Variables & Monitors
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `VariableDeclarations` | Variable declarations | VariableDeclaration | ✅ Implemented |
@@ -545,6 +592,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `MonitorDeclaration` | Monitor definition | name, value | ✅ Implemented |
 
 #### 3.12.4 Constraints & Ranges
+
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `ValueConstraintGroup` | Constraint group | ValueConstraint | ✅ Implemented |
@@ -552,6 +600,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `Range` | Value range | lowerLimit, upperLimit | ✅ Implemented |
 
 #### 3.12.5 Rules (Deprecated)
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ModifyRule`¹ | Modify rule | AddValue \| MultiplyByValue |
@@ -559,6 +608,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `ParameterMultiplyByValueRule`¹ | Multiply rule | value |
 
 #### 3.12.6 Variable Rules
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `VariableModifyRule` | Variable modify rule | AddValue \| MultiplyByValue |
@@ -566,6 +616,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `VariableMultiplyByValueRule` | Variable multiply rule | value |
 
 #### 3.12.7 Support Types
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `UsedArea` | Used area definition | Position (2+) |
@@ -574,6 +625,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.13 Dynamics & Physics (13 types)
 
 #### 3.13.1 Vehicle Physics
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Performance` | Vehicle performance | maxSpeed, maxAcceleration, maxDeceleration, maxAccelerationRate, maxDecelerationRate | ✅ Implemented |
@@ -582,6 +634,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `Axle` | Axle definition | maxSteering, positionX, positionZ, trackWidth, wheelDiameter | ✅ Implemented |
 
 #### 3.13.2 Control Systems
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Brake` | Brake control | value, maxRate |
@@ -589,6 +642,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `AutomaticGear` | Automatic transmission | gear |
 
 #### 3.13.3 Dynamics
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TransitionDynamics` | Transition dynamics | dynamicsDimension, dynamicsShape, followingMode, value |
@@ -598,6 +652,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `RelativeSpeedToMaster` | Relative speed target | speedTargetValueType, value, SteadyState |
 
 #### 3.13.4 Speed Profiles
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `SpeedProfileAction` | Speed profile | entityRef, followingMode, DynamicConstraints, SpeedProfileEntry |
@@ -606,6 +661,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.14 Animation & Lighting (14 types)
 
 #### 3.14.1 Animation Framework
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `AnimationType` | Animation type | ComponentAnimation \| PedestrianAnimation \| AnimationFile \| UserDefinedAnimation |
@@ -613,6 +669,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `AnimationFile` | Animation file | File, timeOffset |
 
 #### 3.14.2 Component Animation
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `ComponentAnimation` | Component animation | VehicleComponent \| UserDefinedComponent |
@@ -620,12 +677,14 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `UserDefinedComponent` | Custom component | userDefinedComponentType |
 
 #### 3.14.3 Pedestrian Animation
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `PedestrianAnimation` | Pedestrian animation | motion, userDefinedPedestrianAnimation, PedestrianGesture |
 | `PedestrianGesture` | Pedestrian gesture | gesture |
 
 #### 3.14.4 Lighting System
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `LightType` | Light type | VehicleLight \| UserDefinedLight |
@@ -634,6 +693,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `LightState` | Light state | mode, luminousIntensity, flashingOnDuration, flashingOffDuration, Color |
 
 #### 3.14.5 User-Defined Elements
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `UserDefinedAnimation` | Custom animation | userDefinedAnimationType |
@@ -641,6 +701,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.15 Routes & Trajectories (12 types)
 
 #### 3.15.1 Route System
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Route` | Route definition | name, closed, ParameterDeclarations, Waypoint (2+) |
@@ -648,19 +709,22 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `RouteRef` | Route reference | Route \| CatalogReference |
 
 #### 3.15.2 Trajectory System
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Trajectory` | Trajectory definition | name, closed, ParameterDeclarations, Shape |
-| `TrajectoryRef` | Trajectory reference | Trajectory \| CatalogReference |
-| `TrajectoryFollowingMode` | Following mode | followingMode |
+| `Trajectory` | Trajectory definition | name, closed, ParameterDeclarations, Shape | ✅ Implemented |
+| `TrajectoryRef` | Trajectory reference | Trajectory \| CatalogReference | 🚧 Planned |
+| `TrajectoryFollowingMode` | Following mode | followingMode | ✅ Implemented |
 
 #### 3.15.3 Time References
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TimeReference` | Time reference | None \| Timing |
 | `Timing` | Timing definition | domainAbsoluteRelative, offset, scale |
 
 #### 3.15.4 Target Systems
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `SpeedActionTarget` | Speed target | RelativeTargetSpeed \| AbsoluteTargetSpeed |
@@ -674,6 +738,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `RelativeTargetLaneOffset` | Relative offset target | entityRef, value |
 
 #### 3.15.5 Steady State
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TargetDistanceSteadyState` | Distance steady state | distance |
@@ -682,6 +747,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.16 Traffic Signals (9 types)
 
 #### 3.16.1 Signal Infrastructure
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `RoadNetwork` | Road network | LogicFile, SceneGraphFile, TrafficSignals, UsedArea |
@@ -689,6 +755,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `TrafficSignalController` | Signal controller | name, reference, delay, Phase |
 
 #### 3.16.2 Signal Phases
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `Phase` | Signal phase | name, duration, TrafficSignalState, TrafficSignalGroupState |
@@ -696,11 +763,13 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `TrafficSignalGroupState` | Signal group state | statee |
 
 #### 3.16.3 Collision Targets
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `TimeToCollisionConditionTarget` | Collision target | Position \| EntityRef |
 
 #### 3.16.4 Sensor References
+
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
 | `SensorReferenceSet` | Sensor reference set | SensorReference |
@@ -766,3 +835,4 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ---
 
 This comprehensive reference provides all 347 datatypes, parameters, and structural elements defined in the OpenSCENARIO XSD schema, organized by functional categories for easy navigation and understanding.
+

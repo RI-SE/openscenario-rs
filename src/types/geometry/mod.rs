@@ -3,4 +3,4 @@
 pub mod shapes;
 
 // Re-export commonly used geometry types
-pub use shapes::{BoundingBox, Center, Dimensions};
+pub use shapes::{BoundingBox, Center, Dimensions, Shape, Polyline, Vertex};

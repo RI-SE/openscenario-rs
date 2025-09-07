@@ -16,7 +16,6 @@
 
 use serde::{Deserialize, Serialize};
 use crate::types::basic::{OSString, UnsignedInt};
-use crate::types::actions::Action;
 use crate::types::enums::Priority;
 
 // Import the real Trigger from triggers module
@@ -24,6 +23,39 @@ use super::triggers::Trigger;
 
 // Import the real ParameterDeclarations from basic module
 use crate::types::basic::ParameterDeclarations;
+
+/// Story-level Action wrapper with name attribute and action content
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StoryAction {
+    /// Name of the action
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    
+    /// The specific action content
+    #[serde(flatten)]
+    pub action_type: StoryActionType,
+}
+
+/// Types of actions available at the story level
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum StoryActionType {
+    /// Private action for individual entities
+    PrivateAction(StoryPrivateAction),
+    
+    // Global action affecting the entire scenario (future)
+    // GlobalAction(StoryGlobalAction),
+    
+    // User-defined action (future)  
+    // UserDefinedAction(UserDefinedAction),
+}
+
+/// Private action at story level (reuses init-level structure)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StoryPrivateAction {
+    #[serde(flatten)]
+    pub action_type: crate::types::scenario::init::PrivateActionType,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogReference;
@@ -136,7 +168,7 @@ pub struct Event {
     
     /// The action to execute when this event triggers
     #[serde(rename = "Action")]
-    pub action: Action,
+    pub action: StoryAction,
     
     /// Trigger conditions to start this event
     #[serde(rename = "StartTrigger", skip_serializing_if = "Option::is_none")]
@@ -167,6 +199,31 @@ pub struct EntityRef {
 }
 
 // Default implementations for all structs
+impl Default for StoryAction {
+    fn default() -> Self {
+        Self {
+            name: OSString::literal("DefaultAction".to_string()),
+            action_type: StoryActionType::default(),
+        }
+    }
+}
+
+impl Default for StoryActionType {
+    fn default() -> Self {
+        Self::PrivateAction(StoryPrivateAction::default())
+    }
+}
+
+impl Default for StoryPrivateAction {
+    fn default() -> Self {
+        Self {
+            action_type: crate::types::scenario::init::PrivateActionType::LongitudinalAction(
+                crate::types::scenario::init::LongitudinalAction::default()
+            ),
+        }
+    }
+}
+
 impl Default for ScenarioStory {
     fn default() -> Self {
         Self {
@@ -216,7 +273,7 @@ impl Default for Event {
             name: OSString::literal("DefaultEvent".to_string()),
             maximum_execution_count: None,
             priority: None,
-            action: Action::default(),
+            action: StoryAction::default(),
             start_trigger: None,
         }
     }
@@ -308,14 +365,14 @@ mod tests {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
                     priority: Some(Priority::Override),
-                    action: Action::default(),
+                    action: StoryAction::default(),
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
                     priority: None,
-                    action: Action::default(),
+                    action: StoryAction::default(),
                     start_trigger: None,
                 },
             ],
@@ -333,7 +390,7 @@ mod tests {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
             priority: Some(Priority::Parallel),
-            action: Action::default(),
+            action: StoryAction::default(),
             start_trigger: None,
         };
         

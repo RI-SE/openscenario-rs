@@ -19,7 +19,7 @@ pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
 // pub mod appearance; // Appearance actions (skip for MVP)
 // pub mod traffic;    // Traffic actions (skip for MVP)
 
-pub use movement::{SpeedAction, TeleportAction};
+pub use movement::{SpeedAction, TeleportAction, RoutingAction, FollowTrajectoryAction, Trajectory, TrajectoryFollowingMode};
 
 use serde::{Deserialize, Serialize};
 

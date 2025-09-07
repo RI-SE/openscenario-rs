@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use crate::types::basic::{Double};
+use crate::types::positions::Position;
 
 /// Three-dimensional bounding box for entity spatial extents
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -71,6 +72,52 @@ impl Default for Dimensions {
     }
 }
 
+/// Shape definition for trajectories and paths
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Shape {
+    #[serde(rename = "Polyline")]
+    Polyline(Polyline),
+}
+
+/// Polyline shape with time-positioned vertices
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Polyline {
+    #[serde(rename = "Vertex", default)]
+    pub vertices: Vec<Vertex>,
+}
+
+/// Trajectory vertex with time and position
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Vertex {
+    #[serde(rename = "@time")]
+    pub time: Double,
+    #[serde(rename = "Position")]
+    pub position: Position,
+}
+
+impl Default for Shape {
+    fn default() -> Self {
+        Self::Polyline(Polyline::default())
+    }
+}
+
+impl Default for Polyline {
+    fn default() -> Self {
+        Self {
+            vertices: vec![Vertex::default()],
+        }
+    }
+}
+
+impl Default for Vertex {
+    fn default() -> Self {
+        Self {
+            time: crate::types::basic::Value::literal(0.0),
+            position: Position::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,6 +135,56 @@ mod tests {
         assert_eq!(bbox.dimensions.width.as_literal().unwrap(), &2.0);
         assert_eq!(bbox.dimensions.length.as_literal().unwrap(), &4.5);
         assert_eq!(bbox.dimensions.height.as_literal().unwrap(), &1.5);
+    }
+
+    #[test]
+    fn test_trajectory_vertex() {
+        use crate::types::positions::{Position, WorldPosition};
+        
+        let vertex = Vertex {
+            time: crate::types::basic::Value::literal(0.04),
+            position: Position::WorldPosition(WorldPosition::default()),
+        };
+        
+        assert_eq!(vertex.time.as_literal().unwrap(), &0.04);
+    }
+
+    #[test]
+    fn test_polyline_structure() {
+        use crate::types::positions::{Position, WorldPosition};
+        
+        let polyline = Polyline {
+            vertices: vec![
+                Vertex {
+                    time: crate::types::basic::Value::literal(0.0),
+                    position: Position::WorldPosition(WorldPosition::default()),
+                },
+                Vertex {
+                    time: crate::types::basic::Value::literal(0.04),
+                    position: Position::WorldPosition(WorldPosition::default()),
+                },
+            ],
+        };
+        
+        assert_eq!(polyline.vertices.len(), 2);
+        assert_eq!(polyline.vertices[0].time.as_literal().unwrap(), &0.0);
+        assert_eq!(polyline.vertices[1].time.as_literal().unwrap(), &0.04);
+    }
+
+    #[test]
+    fn test_shape_serialization() {
+        use crate::types::positions::{Position, WorldPosition};
+        
+        let shape = Shape::Polyline(Polyline {
+            vertices: vec![Vertex {
+                time: crate::types::basic::Value::literal(1.0),
+                position: Position::WorldPosition(WorldPosition::default()),
+            }],
+        });
+        
+        let xml = quick_xml::se::to_string(&shape).unwrap();
+        assert!(xml.contains("<Polyline"));
+        assert!(xml.contains("time=\"1\""));
     }
 
     #[test]
