@@ -164,9 +164,12 @@ fn can_create_and_serialize_actions() {
     // Test creating a TeleportAction
     let teleport_action = TeleportAction {
         position: Position::WorldPosition(WorldPosition {
-            x: 10.0,
-            y: 20.0,
-            z: 0.0,
+            x: openscenario_rs::types::Double::literal(10.0),
+            y: openscenario_rs::types::Double::literal(20.0),
+            z: openscenario_rs::types::Double::literal(0.0),
+            h: openscenario_rs::types::Double::literal(0.0),
+            p: openscenario_rs::types::Double::literal(0.0),
+            r: openscenario_rs::types::Double::literal(0.0),
         }),
     };
     

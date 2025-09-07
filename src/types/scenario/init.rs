@@ -61,13 +61,20 @@ pub struct Private {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "PrivateAction")]
-    pub private_actions: Vec<PrivateAction>,
+    pub private_actions: Vec<PrivateActionWrapper>,
+}
+
+/// Wrapper for individual private actions (similar to GlobalAction pattern)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrivateActionWrapper {
+    #[serde(flatten)]
+    pub action_type: PrivateActionType,
 }
 
 /// Types of private actions available for entity initialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub enum PrivateAction {
+pub enum PrivateActionType {
     LongitudinalAction(LongitudinalAction),
     TeleportAction(TeleportAction),
     // LateralAction, SynchronizeAction, etc. can be added later
@@ -130,6 +137,14 @@ impl Default for Private {
     }
 }
 
+impl Default for PrivateActionWrapper {
+    fn default() -> Self {
+        Self {
+            action_type: PrivateActionType::LongitudinalAction(LongitudinalAction::default()),
+        }
+    }
+}
+
 impl Default for LongitudinalAction {
     fn default() -> Self {
         Self {
@@ -148,7 +163,7 @@ impl Private {
     }
 
     /// Add a private action to this entity's initialization
-    pub fn add_action(mut self, action: PrivateAction) -> Self {
+    pub fn add_action(mut self, action: PrivateActionWrapper) -> Self {
         self.private_actions.push(action);
         self
     }
@@ -181,10 +196,14 @@ mod tests {
     #[test]
     fn test_private_action_builder() {
         let private = Private::new("TestEntity")
-            .add_action(PrivateAction::LongitudinalAction(LongitudinalAction {
-                action_type: LongitudinalActionType::SpeedAction(SpeedAction::default()),
-            }))
-            .add_action(PrivateAction::TeleportAction(TeleportAction::default()));
+            .add_action(PrivateActionWrapper {
+                action_type: PrivateActionType::LongitudinalAction(LongitudinalAction {
+                    action_type: LongitudinalActionType::SpeedAction(SpeedAction::default()),
+                }),
+            })
+            .add_action(PrivateActionWrapper {
+                action_type: PrivateActionType::TeleportAction(TeleportAction::default()),
+            });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
         assert_eq!(private.private_actions.len(), 2);

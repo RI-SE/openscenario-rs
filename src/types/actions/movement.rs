@@ -21,9 +21,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedAction { 
-    #[serde(rename = "Dynamics")]
+    #[serde(rename = "SpeedActionDynamics")]
     pub speed_action_dynamics: TransitionDynamics, 
-    #[serde(rename = "Target")]
+    #[serde(rename = "SpeedActionTarget")]
     pub speed_action_target: SpeedActionTarget 
 }
 

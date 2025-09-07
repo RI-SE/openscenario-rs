@@ -15,6 +15,7 @@
 //! - Facilitating spatial calculations and geometric operations
 
 use serde::{Deserialize, Serialize};
+use crate::types::basic::{Double, OSString};
 
 /// Position enum that can hold different position types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -27,16 +28,22 @@ pub enum Position {
     // Other position types will be added later
 }
 
-/// World position with X, Y, Z coordinates
+/// World position with X, Y, Z coordinates and orientation (h, p, r)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct WorldPosition {
     #[serde(rename = "@x")]
-    pub x: f64,
+    pub x: Double,
     #[serde(rename = "@y")]
-    pub y: f64,
+    pub y: Double,
     #[serde(rename = "@z")]
-    pub z: f64,
+    pub z: Double,
+    #[serde(rename = "@h")]
+    pub h: Double,
+    #[serde(rename = "@p")]
+    pub p: Double,
+    #[serde(rename = "@r")]
+    pub r: Double,
 }
 
 /// Relative world position relative to an entity
@@ -44,13 +51,13 @@ pub struct WorldPosition {
 #[serde(rename_all = "PascalCase")]
 pub struct RelativeWorldPosition {
     #[serde(rename = "@entityRef")]
-    pub entity_ref: String,
+    pub entity_ref: OSString,
     #[serde(rename = "@dx")]
-    pub dx: f64,
+    pub dx: Double,
     #[serde(rename = "@dy")]
-    pub dy: f64,
+    pub dy: Double,
     #[serde(rename = "@dz")]
-    pub dz: f64,
+    pub dz: Double,
 }
 
 // Default implementations
@@ -63,9 +70,12 @@ impl Default for Position {
 impl Default for WorldPosition {
     fn default() -> Self {
         Self {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
+            x: Double::literal(0.0),
+            y: Double::literal(0.0),
+            z: Double::literal(0.0),
+            h: Double::literal(0.0),
+            p: Double::literal(0.0),
+            r: Double::literal(0.0),
         }
     }
 }
@@ -73,10 +83,10 @@ impl Default for WorldPosition {
 impl Default for RelativeWorldPosition {
     fn default() -> Self {
         Self {
-            entity_ref: "DefaultEntity".to_string(),
-            dx: 0.0,
-            dy: 0.0,
-            dz: 0.0,
+            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            dx: Double::literal(0.0),
+            dy: Double::literal(0.0),
+            dz: Double::literal(0.0),
         }
     }
 }
