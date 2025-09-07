@@ -8,9 +8,9 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 |----------|--------|------------|-------------|
 | Basic Data Types | 9 | 9 | Fundamental data types with validation patterns |
 | Simple Enumeration Types | 37 | 41 | Predefined value lists |
-| Complex Types | 287 | 41 | Structured data with elements and attributes |
+| Complex Types | 287 | 55 | Structured data with elements and attributes |
 | Groups | 14 | 1 | Reusable element collections |
-| **Total** | **347** | **92** | **Complete type system** |
+| **Total** | **347** | **106** | **Complete type system** |
 
 ---
 
@@ -142,7 +142,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `AcquirePositionAction` | Move to specific position | Position | 🚧 Planned |
 | `FollowTrajectoryAction` | Follow predefined path | Trajectory/CatalogReference, TimeReference, TrajectoryFollowingMode | 🚧 Planned |
 | `LateralAction` | Generic lateral movement | LaneChangeAction \| LaneOffsetAction \| LateralDistanceAction | 🚧 Planned |
-| `LongitudinalAction` | Generic longitudinal movement | SpeedAction \| LongitudinalDistanceAction \| SpeedProfileAction | 🚧 Planned |
+| `LongitudinalAction` | Generic longitudinal movement | SpeedAction \| LongitudinalDistanceAction \| SpeedProfileAction | ✅ Implemented |
 | `LateralDistanceAction` | Maintain lateral distance | entityRef, continuous, distance, freespace, displacement | 🚧 Planned |
 | `LongitudinalDistanceAction` | Maintain longitudinal distance | entityRef, continuous, distance, freespace, timeGap, displacement | 🚧 Planned |
 | `SynchronizeAction` | Synchronize with another entity | masterEntityRef, TargetPositionMaster, TargetPosition, FinalSpeed | 🚧 Planned |
@@ -171,8 +171,8 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 #### 3.1.4 Global Actions
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `GlobalAction` | Scene-level actions | EnvironmentAction \| EntityAction \| InfrastructureAction \| SetMonitorAction \| ParameterAction¹ \| TrafficAction \| VariableAction |
-| `EnvironmentAction` | Change environment | Environment \| CatalogReference |
+| `GlobalAction` | Scene-level actions | EnvironmentAction \| EntityAction \| InfrastructureAction \| SetMonitorAction \| ParameterAction¹ \| TrafficAction \| VariableAction | ✅ Implemented |
+| `EnvironmentAction` | Change environment | Environment \| CatalogReference | ✅ Implemented |
 | `EntityAction` | Entity lifecycle | AddEntityAction \| DeleteEntityAction, entityRef |
 | `AddEntityAction` | Add entity to scene | Position |
 | `DeleteEntityAction` | Remove entity from scene | (no attributes) |
@@ -314,7 +314,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 #### 3.4.1 Entity Definitions
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Vehicle` | Vehicle definition | name, vehicleCategory, role, mass, model3d, ParameterDeclarations, BoundingBox, Performance, Axles, Properties, TrailerHitch, TrailerCoupler, Trailer |
+| `Vehicle` | Vehicle definition | name, vehicleCategory, role, mass, model3d, ParameterDeclarations, BoundingBox, Performance, Axles, Properties, TrailerHitch, TrailerCoupler, Trailer | ✅ Implemented |
 | `Pedestrian` | Pedestrian definition | name, mass, pedestrianCategory, model¹, model3d, role, ParameterDeclarations, BoundingBox, Properties |
 | `MiscObject` | Miscellaneous object | name, mass, miscObjectCategory, model3d, ParameterDeclarations, BoundingBox, Properties |
 | `ExternalObjectReference` | External object reference | name |
@@ -439,23 +439,23 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 #### 3.9.1 Environment Definition
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Environment` | Environment settings | name, ParameterDeclarations, TimeOfDay, Weather, RoadCondition |
-| `Weather` | Weather conditions | cloudState¹, atmosphericPressure, temperature, fractionalCloudCover, Sun, Fog, Precipitation, Wind, DomeImage |
+| `Environment` | Environment settings | name, ParameterDeclarations, TimeOfDay, Weather, RoadCondition | ✅ Implemented |
+| `Weather` | Weather conditions | cloudState¹, atmosphericPressure, temperature, fractionalCloudCover, Sun, Fog, Precipitation, Wind, DomeImage | ✅ Implemented |
 
 #### 3.9.2 Weather Components
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Sun` | Solar conditions | azimuth, elevation, intensity¹, illuminance |
-| `Fog` | Fog conditions | visualRange, BoundingBox |
-| `Precipitation` | Precipitation | intensity¹, precipitationType, precipitationIntensity |
+| `Sun` | Solar conditions | azimuth, elevation, intensity¹, illuminance | ✅ Implemented |
+| `Fog` | Fog conditions | visualRange, BoundingBox | ✅ Implemented |
+| `Precipitation` | Precipitation | intensity¹, precipitationType, precipitationIntensity | ✅ Implemented |
 | `Wind` | Wind conditions | direction, speed |
 | `DomeImage` | Sky dome image | DomeFile, azimuthOffset |
 
 #### 3.9.3 Other Environment
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `TimeOfDay` | Time settings | animation, dateTime |
-| `RoadCondition` | Road surface | frictionScaleFactor, wetness, Properties |
+| `TimeOfDay` | Time settings | animation, dateTime | ✅ Implemented |
+| `RoadCondition` | Road surface | frictionScaleFactor, wetness, Properties | ✅ Implemented |
 | `Color` | Color definition | colorType, ColorRgb \| ColorCmyk |
 | `ColorRgb` | RGB color | red, green, blue |
 | `ColorCmyk` | CMYK color | cyan, magenta, yellow, key |
@@ -499,8 +499,8 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
 | `Init` | Initialization | Actions | ✅ Implemented |
-| `InitActions` | Initial actions | GlobalAction, UserDefinedAction, Private | 🚧 Planned |
-| `Private` | Private actions | entityRef, PrivateAction | 🚧 Planned |
+| `InitActions` | Initial actions | GlobalAction, UserDefinedAction, Private | ✅ Implemented |
+| `Private` | Private actions | entityRef, PrivateAction | ✅ Implemented |
 
 #### 3.11.3 Triggers
 | Type | Description | Key Attributes/Elements | Status |
@@ -576,10 +576,10 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 #### 3.13.1 Vehicle Physics
 | Type | Description | Key Attributes/Elements |
 |------|-------------|------------------------|
-| `Performance` | Vehicle performance | maxSpeed, maxAcceleration, maxDeceleration, maxAccelerationRate, maxDecelerationRate |
-| `DynamicConstraints` | Dynamic limits | maxSpeed, maxAcceleration, maxDeceleration, maxAccelerationRate, maxDecelerationRate |
-| `Axles` | Vehicle axles | FrontAxle, RearAxle, AdditionalAxle |
-| `Axle` | Axle definition | maxSteering, positionX, positionZ, trackWidth, wheelDiameter |
+| `Performance` | Vehicle performance | maxSpeed, maxAcceleration, maxDeceleration, maxAccelerationRate, maxDecelerationRate | ✅ Implemented |
+| `DynamicConstraints` | Dynamic limits | maxSpeed, maxAcceleration, maxDeceleration, maxAccelerationRate, maxDecelerationRate | 🚧 Planned |
+| `Axles` | Vehicle axles | FrontAxle, RearAxle, AdditionalAxle | ✅ Implemented |
+| `Axle` | Axle definition | maxSteering, positionX, positionZ, trackWidth, wheelDiameter | ✅ Implemented |
 
 #### 3.13.2 Control Systems
 | Type | Description | Key Attributes/Elements |

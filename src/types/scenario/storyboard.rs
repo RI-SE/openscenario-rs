@@ -42,11 +42,8 @@ pub struct Storyboard {
     pub stories: Vec<super::story::ScenarioStory>,
 }
 
-/// Initialization container
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Init {
-    // Simplified for MVP
-}
+// Init is now imported from init.rs module
+pub use super::init::Init;
 
 // Story is now imported from story.rs module
 

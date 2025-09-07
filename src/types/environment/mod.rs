@@ -14,7 +14,7 @@
 //! - Facilitating environment-dependent scenario validation
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::OSString;
+use crate::types::basic::{OSString, Boolean};
 
 pub mod weather;
 pub mod road;
@@ -39,7 +39,7 @@ pub struct Environment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeOfDay {
     #[serde(rename = "@animation")]
-    pub animation: bool,
+    pub animation: Boolean,
     #[serde(rename = "@dateTime")]
     pub date_time: String, // ISO 8601 datetime format: "2021-12-10T11:00:00"
 }
@@ -58,7 +58,7 @@ impl Default for Environment {
 impl Default for TimeOfDay {
     fn default() -> Self {
         Self {
-            animation: false,
+            animation: crate::types::basic::Value::literal(false),
             date_time: "2021-01-01T12:00:00".to_string(),
         }
     }
@@ -74,7 +74,7 @@ mod tests {
         let environment = Environment {
             name: Value::literal("TestEnvironment".to_string()),
             time_of_day: TimeOfDay {
-                animation: false,
+                animation: Value::literal(false),
                 date_time: "2021-12-10T11:00:00".to_string(),
             },
             weather: Weather::default(),
@@ -83,7 +83,7 @@ mod tests {
 
         assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(environment.time_of_day.date_time, "2021-12-10T11:00:00");
-        assert!(!environment.time_of_day.animation);
+        assert!(!environment.time_of_day.animation.as_literal().unwrap());
     }
 
     #[test]
@@ -92,13 +92,13 @@ mod tests {
         
         assert_eq!(environment.name.as_literal().unwrap(), "DefaultEnvironment");
         assert_eq!(environment.time_of_day.date_time, "2021-01-01T12:00:00");
-        assert!(!environment.time_of_day.animation);
+        assert!(!environment.time_of_day.animation.as_literal().unwrap());
     }
 
     #[test]
     fn test_time_of_day_serialization() {
         let time_of_day = TimeOfDay {
-            animation: true,
+            animation: Value::literal(true),
             date_time: "2021-12-10T11:00:00".to_string(),
         };
 
@@ -112,7 +112,7 @@ mod tests {
         let environment = Environment {
             name: Value::literal("TestEnvironment".to_string()),
             time_of_day: TimeOfDay {
-                animation: false,
+                animation: Value::literal(false),
                 date_time: "2021-12-10T11:00:00".to_string(),
             },
             weather: Weather::default(),

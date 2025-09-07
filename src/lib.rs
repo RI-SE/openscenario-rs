@@ -88,7 +88,7 @@ pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
 /// <OpenSCENARIO>
 ///   <FileHeader author="Test" date="2024-01-01" description="Test" revMajor="1" revMinor="0"/>
 ///   <Entities/>
-///   <Storyboard><Init/></Storyboard>
+///   <Storyboard><Init><Actions/></Init></Storyboard>
 /// </OpenSCENARIO>
 /// "#;
 /// 

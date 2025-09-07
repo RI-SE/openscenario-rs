@@ -25,6 +25,8 @@
     </ScenarioObject>
   </Entities>
   <Storyboard>
-    <Init/>
+    <Init>
+      <Actions/>
+    </Init>
   </Storyboard>
 </OpenSCENARIO>

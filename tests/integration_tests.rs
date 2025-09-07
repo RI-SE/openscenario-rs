@@ -627,3 +627,73 @@ fn test_parameter_declarations_with_constraints() {
     assert_eq!(name_param.parameter_type, ParameterType::String);
     assert!(!name_param.has_constraints());
 }
+
+#[test] 
+fn can_parse_init_system_basic() {
+    // Test parsing a basic init system with environment and private actions
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader author="Test" date="2024-01-01T00:00:00" description="Init test" revMajor="1" revMinor="0"/>
+  <Entities/>
+  <Storyboard>
+    <Init>
+      <Actions>
+        <GlobalAction>
+          <EnvironmentAction>
+            <Environment name="TestEnvironment">
+              <TimeOfDay animation="false" dateTime="2021-12-10T11:00:00"/>
+              <Weather cloudState="free">
+                <Sun intensity="1.0" azimuth="0.0" elevation="1.571"/>
+                <Fog visualRange="100000.0"/>
+                <Precipitation precipitationType="dry" intensity="0.0"/>
+              </Weather>
+              <RoadCondition frictionScaleFactor="1.0"/>
+            </Environment>
+          </EnvironmentAction>
+        </GlobalAction>
+        <Private entityRef="TestEntity">
+          <PrivateAction>
+            <LongitudinalAction>
+              <SpeedAction>
+                <SpeedActionDynamics dynamicsShape="step" value="0" dynamicsDimension="time"/>
+                <SpeedActionTarget>
+                  <AbsoluteTargetSpeed value="25.0"/>
+                </SpeedActionTarget>
+              </SpeedAction>
+            </LongitudinalAction>
+          </PrivateAction>
+        </Private>
+      </Actions>
+    </Init>
+  </Storyboard>
+</OpenSCENARIO>"#;
+
+    let result = parse_str(xml);
+    
+    if let Ok(scenario) = result {
+        let init = &scenario.storyboard.init;
+        
+        // Test GlobalAction parsing
+        assert!(!init.actions.global_actions.is_empty());
+        assert_eq!(init.actions.global_actions.len(), 1);
+        
+        // Test Private action parsing
+        assert!(!init.actions.private_actions.is_empty());
+        assert_eq!(init.actions.private_actions.len(), 1);
+        
+        let private = &init.actions.private_actions[0];
+        assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
+        assert!(!private.private_actions.is_empty());
+        
+        println!("✅ Init system parsing successful!");
+        println!("   🌍 GlobalAction with EnvironmentAction parsed");  
+        println!("   🚗 Private action for TestEntity parsed");
+        println!("   📊 {} global actions, {} private actions", 
+                 init.actions.global_actions.len(), 
+                 init.actions.private_actions.len());
+    } else {
+        println!("❌ Init system parsing failed: {:?}", result.unwrap_err());
+        // This test expects to pass with our new implementation
+        panic!("Init system should parse successfully");
+    }
+}

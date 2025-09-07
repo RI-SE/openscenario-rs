@@ -1,11 +1,13 @@
 //! Scenario structure types
 
+pub mod init;
 pub mod storyboard;
 pub mod story;
 pub mod triggers;
 
 // Re-export main types for convenience
-pub use storyboard::{OpenScenario, FileHeader, Storyboard, Init};
+pub use init::{Init, Actions, GlobalAction, GlobalActionType, EnvironmentAction, Private, PrivateAction, LongitudinalAction, LongitudinalActionType};
+pub use storyboard::{OpenScenario, FileHeader, Storyboard};
 pub use story::{
     ScenarioStory, Act, ManeuverGroup, Maneuver, Event, Actors, EntityRef,
 };
