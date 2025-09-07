@@ -131,6 +131,8 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add parameter validation helpers (is_valid_parameter_name)
 - [x] Add expression parsing and basic resolution support
 - [x] Add comprehensive unit tests for all Value<T> variants
+- [x] Add expression creation methods (Value::expression constructor)
+- [x] Add expression serialization support
 
 ### Week 6: Validation Framework (HIGH)
 - [ ] Implement Validate trait and ValidationContext
@@ -258,13 +260,11 @@ let sim_time_condition = SimulationTimeCondition { /* ... */ };
 let speed_condition = SpeedCondition { /* ... */ };
 ```
 
-### 🎯 **CURRENT PRIORITIES (Week 5 - Expression System & Validation)**
-- Enhance Value<T> deserializer for ${param} pattern
-- Implement parameter resolution logic
-- Add parameter validation helpers
+### 🎯 **CURRENT PRIORITIES (Week 5 - Validation Framework)**
 - Implement Validate trait and ValidationContext
 - Add basic validations (required fields, entity references)
 - Add validation tests
+- Add cross-reference validation between entities and actions/conditions
 
 ### 📝 **SUCCESS METRICS ACHIEVED**
 - **Week 1-2 Goals**: ✅ **EXCEEDED** - Not only core infrastructure but complete entity parsing system
@@ -280,12 +280,13 @@ let speed_condition = SpeedCondition { /* ... */ };
 1. **✅ Serde approach working** - XML parsing and serialization infrastructure complete
 2. **✅ Error handling robust** - Comprehensive error types with proper context  
 3. **✅ Parameter system ready** - Value<T> enum handles ${param} syntax correctly
-4. **✅ Public API complete** - Clean, documented API with convenience functions
-5. **✅ Module system ready** - Type organization with traits and validation framework
-6. **✅ Entity system complete** - Vehicle, Pedestrian with geometry and full serde support
-7. **✅ Integration testing complete** - Real OpenSCENARIO XML parsing with 7 comprehensive tests
-8. **✅ First working parser achieved** - End-to-end XML → Rust structs → XML round-trip
-9. **✅ Actions & Conditions system complete** - SpeedAction, TeleportAction, SimulationTimeCondition, SpeedCondition
+4. **✅ Expression system complete** - Value<T> enum now supports ${expr} syntax with expression parsing
+5. **✅ Public API complete** - Clean, documented API with convenience functions
+6. **✅ Module system ready** - Type organization with traits and validation framework
+7. **✅ Entity system complete** - Vehicle, Pedestrian with geometry and full serde support
+8. **✅ Integration testing complete** - Real OpenSCENARIO XML parsing with 7 comprehensive tests
+9. **✅ First working parser achieved** - End-to-end XML → Rust structs → XML round-trip
+10. **✅ Actions & Conditions system complete** - SpeedAction, TeleportAction, SimulationTimeCondition, SpeedCondition
 
 **Foundation Status**: **WEEKS 1-4 COMPLETED** - We have exceeded the original Week 1-2 objectives and achieved the first working OpenSCENARIO parser with actions and conditions. The library now supports:
 - Complete entity parsing (Vehicle, Pedestrian)

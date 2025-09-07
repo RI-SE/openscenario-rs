@@ -31,22 +31,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate different Value types
     let literal_value = Double::literal(25.0);
     let parameter_value = Double::parameter("vehicle_speed".to_string());
+    let expression_value = Double::expression("vehicle_speed + 10".to_string());
     
     println!("Value Types:");
     println!("  Literal: {:?}", literal_value);
     println!("  Parameter: {:?}", parameter_value);
+    println!("  Expression: {:?}", expression_value);
     println!();
     
     // Resolve values
     println!("Resolved Values:");
     println!("  Literal: {}", literal_value.resolve(&params)?);
     println!("  Parameter: {}", parameter_value.resolve(&params)?);
+    // For expression, we'll just show the expression string since full evaluation isn't implemented yet
+    if let Some(expr) = expression_value.as_expression() {
+        println!("  Expression: {}", expr);
+    }
     println!();
     
     // Show serialization
     println!("Serialized Values:");
     println!("  Literal: {}", serde_json::to_string(&literal_value)?);
     println!("  Parameter: {}", serde_json::to_string(&parameter_value)?);
+    println!("  Expression: {}", serde_json::to_string(&expression_value)?);
     println!();
     
     println!("✅ Expression system demo completed successfully!");

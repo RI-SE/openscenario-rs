@@ -14,23 +14,22 @@
 //! - Offering copy-paste starting point for basic use cases
 //! - Validating API ergonomics and developer experience
 
-// TODO: Implement basic parsing example (Week 3)
-// TODO: use openscenario::{parse_file, Result};
+use openscenario_rs::parse_file;
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse a scenario file
     let scenario = parse_file("examples/simple_scenario.xosc")?;
-
+    
     // Access file header information
-    println!("Scenario: {}", scenario.file_header.description);
-    println!("Author: {}", scenario.file_header.author);
-
+    println!("Scenario: {:?}", scenario.file_header.description);
+    println!("Author: {:?}", scenario.file_header.author);
+    
     // Access entities
     println!("Entities:");
     for entity in &scenario.entities.scenario_objects {
-        println!("  - {}", entity.name);
+        println!("  - {:?}", entity.name);
     }
-
+    
     Ok(())
 }
 

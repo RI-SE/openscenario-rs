@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use crate::types::basic::{OSString, UnsignedShort};
+use crate::types::entities::Entities;
 
 /// Root OpenSCENARIO document structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,11 +31,7 @@ pub struct FileHeader {
     pub rev_minor: UnsignedShort,
 }
 
-/// Entities container (simplified for MVP)
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Entities {
-    // Will be expanded later with ScenarioObject, EntityObject, etc.
-}
+// Entities is now imported from entities module
 
 /// Storyboard structure (simplified for MVP)
 #[derive(Debug, Clone, Serialize, Deserialize)]

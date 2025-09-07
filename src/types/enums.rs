@@ -148,6 +148,26 @@ pub enum DynamicsDimension {
     Distance,
 }
 
+/// Relative distance type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RelativeDistanceType {
+    #[serde(rename = "longitudinal")]
+    Longitudinal,
+    #[serde(rename = "lateral")]
+    Lateral,
+    #[serde(rename = "cartesianDistance")]
+    Cartesian,
+}
+
+/// Following mode enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FollowingMode {
+    #[serde(rename = "position")]
+    Position,
+    #[serde(rename = "follow")]
+    Follow,
+}
+
 // Implement Display trait for all enums to show XML representation
 impl fmt::Display for VehicleCategory {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -285,6 +305,76 @@ impl FromStr for ObjectType {
             "pedestrian" => Ok(ObjectType::Pedestrian),
             "miscellaneousObject" => Ok(ObjectType::MiscellaneousObject),
             _ => Err(format!("Invalid object type: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for RelativeDistanceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            RelativeDistanceType::Longitudinal => "longitudinal",
+            RelativeDistanceType::Lateral => "lateral",
+            RelativeDistanceType::Cartesian => "cartesianDistance",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for RelativeDistanceType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "longitudinal" => Ok(RelativeDistanceType::Longitudinal),
+            "lateral" => Ok(RelativeDistanceType::Lateral),
+            "cartesianDistance" => Ok(RelativeDistanceType::Cartesian),
+            _ => Err(format!("Invalid relative distance type: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for FollowingMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            FollowingMode::Position => "position",
+            FollowingMode::Follow => "follow",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for FollowingMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "position" => Ok(FollowingMode::Position),
+            "follow" => Ok(FollowingMode::Follow),
+            _ => Err(format!("Invalid following mode: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for DynamicsDimension {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            DynamicsDimension::Rate => "rate",
+            DynamicsDimension::Time => "time",
+            DynamicsDimension::Distance => "distance",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for DynamicsDimension {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "rate" => Ok(DynamicsDimension::Rate),
+            "time" => Ok(DynamicsDimension::Time),
+            "distance" => Ok(DynamicsDimension::Distance),
+            _ => Err(format!("Invalid dynamics dimension: {}", s)),
         }
     }
 }

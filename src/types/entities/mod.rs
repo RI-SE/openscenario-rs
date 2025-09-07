@@ -1,47 +1,136 @@
-//! Entity type module for all scenario objects and participants
-//!
-//! This file contains:
-//! - Base entity traits and common entity behaviors
-//! - Entity lifecycle management and state tracking
-//! - Entity reference resolution and validation
-//! - Entity selection and filtering utilities
-//! - Common entity properties and bounding box calculations
-//!
-//! Contributes to project by:
-//! - Organizing 12+ entity types into logical categories
-//! - Providing consistent interface for all entity types
-//! - Enabling polymorphic entity handling and management
-//! - Supporting entity relationships and interactions
-//! - Facilitating entity validation and constraint checking
+//! Entity definitions for OpenSCENARIO scenarios
 
-// TODO: Declare entity submodules
-// TODO: pub mod vehicle;     // Vehicle entity definitions
-// TODO: pub mod pedestrian;  // Pedestrian entity definitions
-// TODO: pub mod misc_object; // Miscellaneous object definitions (later)
+use serde::{Deserialize, Serialize};
+use crate::types::basic::OSString;
 
-// TODO: Re-export entity types for MVP (Week 3)
-// TODO: pub use vehicle::Vehicle;
-// TODO: pub use pedestrian::Pedestrian;
+pub mod vehicle;
+pub mod pedestrian;
 
-// TODO: Define ScenarioObject wrapper for all entity types
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct ScenarioObject { 
-//   #[serde(rename = "@name")] pub name: String,
-//   #[serde(flatten)] pub entity: EntityObject 
-// }
+// Re-export entity types
+pub use vehicle::Vehicle;
+pub use pedestrian::Pedestrian;
 
-// TODO: Define EntityObject enum for polymorphic entities
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: #[serde(tag = "type")]
-// TODO: pub enum EntityObject { Vehicle(Vehicle), Pedestrian(Pedestrian) }
+/// Union type for all entity objects
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum EntityObject {
+    /// Vehicle entity
+    Vehicle(Vehicle),
+    /// Pedestrian entity  
+    Pedestrian(Pedestrian),
+    // TODO: Add MiscellaneousObject later
+    // MiscellaneousObject(MiscObject),
+}
 
-// TODO: Define Entities collection container
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct Entities { 
-//   #[serde(rename = "ScenarioObject", default)] 
-//   pub scenario_objects: Vec<ScenarioObject> 
-// }
+/// Wrapper for scenario objects containing entity information
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ScenarioObject {
+    /// Name of the scenario object (used for references)
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    
+    /// The actual entity object (Vehicle, Pedestrian, etc.)
+    #[serde(flatten)]
+    pub entity_object: EntityObject,
+}
 
-// TODO: Define EntityRef for entity references
-// TODO: #[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: pub struct EntityRef { #[serde(rename = "@entityRef")] pub entity_ref: String }
+/// Container for all entities in the scenario
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Entities {
+    /// List of scenario objects
+    #[serde(rename = "ScenarioObject", default)]
+    pub scenario_objects: Vec<ScenarioObject>,
+}
+
+impl ScenarioObject {
+    /// Create a new scenario object with a vehicle
+    pub fn new_vehicle(name: String, vehicle: Vehicle) -> Self {
+        Self {
+            name: crate::types::basic::Value::literal(name),
+            entity_object: EntityObject::Vehicle(vehicle),
+        }
+    }
+    
+    /// Create a new scenario object with a pedestrian
+    pub fn new_pedestrian(name: String, pedestrian: Pedestrian) -> Self {
+        Self {
+            name: crate::types::basic::Value::literal(name),
+            entity_object: EntityObject::Pedestrian(pedestrian),
+        }
+    }
+    
+    /// Get the name of this scenario object
+    pub fn get_name(&self) -> Option<&str> {
+        self.name.as_literal().map(|s| s.as_str())
+    }
+}
+
+impl Entities {
+    /// Create a new empty entities container
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
+    /// Add a scenario object to the entities
+    pub fn add_object(&mut self, object: ScenarioObject) {
+        self.scenario_objects.push(object);
+    }
+    
+    /// Find a scenario object by name
+    pub fn find_object(&self, name: &str) -> Option<&ScenarioObject> {
+        self.scenario_objects.iter()
+            .find(|obj| obj.get_name() == Some(name))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scenario_object_creation() {
+        let vehicle = Vehicle::default();
+        let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
+        
+        assert_eq!(obj.get_name(), Some("TestVehicle"));
+        
+        match &obj.entity_object {
+            EntityObject::Vehicle(v) => {
+                assert_eq!(v.name.as_literal().unwrap(), "DefaultVehicle");
+            },
+            _ => panic!("Expected vehicle"),
+        }
+    }
+    
+    #[test]
+    fn test_entities_container() {
+        let mut entities = Entities::new();
+        
+        let vehicle = Vehicle::default();
+        let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
+        entities.add_object(obj);
+        
+        assert_eq!(entities.scenario_objects.len(), 1);
+        
+        let found = entities.find_object("TestVehicle");
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().get_name(), Some("TestVehicle"));
+        
+        let not_found = entities.find_object("NonExistent");
+        assert!(not_found.is_none());
+    }
+
+    #[test]
+    fn test_entities_serialization() {
+        let mut entities = Entities::new();
+        
+        let vehicle = Vehicle::default();
+        let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
+        entities.add_object(obj);
+        
+        // Test that serialization works
+        let xml = quick_xml::se::to_string(&entities).unwrap();
+        assert!(xml.contains("ScenarioObject"));
+        assert!(xml.contains("name=\"TestVehicle\""));
+    }
+}
