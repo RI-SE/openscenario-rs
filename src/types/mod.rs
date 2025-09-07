@@ -40,6 +40,7 @@ pub use enums::{
     DynamicsDimension, DynamicsShape
 };
 pub use scenario::storyboard::{OpenScenario, FileHeader, Storyboard, Init};
+pub use environment::{Environment, TimeOfDay, Weather, Sun, Fog, Precipitation, RoadCondition};
 
 // Re-export entity types (when implemented)
 // pub use entities::{Vehicle, Pedestrian, MiscObject, Entities, ScenarioObject};

@@ -1,15 +1,29 @@
 //! Road condition and infrastructure types
 //!
 //! This file contains:
-//! - RoadCondition with friction and wetness parameters
-//! - RoadNetwork integration with logic and scene graph files
-//! - Traffic signal infrastructure and controller definitions
-//! - Road surface properties and grip conditions
-//! - UsedArea definitions for scenario spatial bounds
+//! - RoadCondition with friction scale factors for surface properties
+//! - Road surface properties affecting vehicle dynamics
 //!
 //! Contributes to project by:
 //! - Supporting realistic road surface simulation and vehicle dynamics
-//! - Enabling integration with road network databases (OpenDRIVE)
-//! - Providing traffic signal infrastructure for intersection scenarios
+//! - Enabling friction-dependent scenario validation
+//! - Providing road condition setup for OpenSCENARIO scenarios
 //! - Supporting variable road conditions for weather-dependent testing
-//! - Facilitating scenario spatial bounds and area restrictions
+
+use serde::{Deserialize, Serialize};
+use crate::types::basic::Double;
+
+/// Road surface conditions affecting vehicle dynamics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoadCondition {
+    #[serde(rename = "@frictionScaleFactor")]
+    pub friction_scale_factor: Double,
+}
+
+impl Default for RoadCondition {
+    fn default() -> Self {
+        Self {
+            friction_scale_factor: Double::literal(1.0), // Normal dry road conditions
+        }
+    }
+}
