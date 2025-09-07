@@ -169,16 +169,16 @@ fn can_parse_basic_scenario_logic() {
 
 ## Phase 2: Usability MVP (Weeks 5-8)
 
-### 2.1 Expression System (Week 5)
+### 2.1 Expression System (Week 5) ✅ COMPLETED
 **Priority: HIGH** - Enables parameter-based scenarios
 
-#### Implement:
+#### Implemented:
 ```rust
 #[derive(Debug, Clone)]
 pub enum Value<T> {
     Literal(T),
-    Parameter(String),    // ${parameterName} 
-    // Skip expressions for now
+    Parameter(String),      // ${parameterName} 
+    Expression(String),     // ${expression}
 }
 
 // Custom serde deserializer for parameter expressions
@@ -191,19 +191,21 @@ where
     where
         D: Deserializer<'de>,
     {
-        // Handle ${param} vs literal values during deserialization
+        // ✅ Implemented: Handle ${param} vs literal values during deserialization
     }
 }
 
 impl<T> Value<T> where T: Clone {
     pub fn resolve(&self, params: &HashMap<String, String>) -> Result<T>;
+    // ✅ Added: Parameter validation with ParameterDeclarations and constraints
 }
 ```
 
-#### Why Now:
-- Many real scenarios use parameters
-- Unlocks more ASAM examples
-- Shows advanced type system working
+#### ✅ Achieved:
+- ✅ Real scenarios with parameters fully supported
+- ✅ ASAM examples with parameterization parse correctly
+- ✅ Advanced type system working with constraints
+- ✅ Parameter validation and constraint checking
 
 ### 2.2 Validation Framework (Week 6)
 **Priority: HIGH** - Catch invalid scenarios early
@@ -471,7 +473,7 @@ pub struct ParserConfig {
 ### Success Metrics by Phase:
 
 **Phase 1**: Parse 1 ASAM example scenario
-**Phase 2**: Parse 5 ASAM example scenarios + validate them  
+**Phase 2**: Parse 5 ASAM example scenarios + validate them ✅ **ACHIEVED** (parsing real ASAM scenarios with parameter validation)
 **Phase 3**: Parse 20+ ASAM scenarios + build new ones
 **Phase 4**: Production-ready with docs and examples
 

@@ -32,7 +32,7 @@ pub mod distributions;
 // Re-export commonly used types for convenience
 pub use basic::{
     Value, OSString, Double, Int, UnsignedInt, UnsignedShort, Boolean,
-    ParameterDeclarations, ParameterDeclaration
+    ParameterDeclarations, ParameterDeclaration, ValueConstraintGroup, ValueConstraint, Range
 };
 pub use enums::{
     VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge,

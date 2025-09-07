@@ -497,6 +497,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
             name: Value::literal("MaxSpeed".to_string()),
             parameter_type: ParameterType::Double,
             value: Value::literal("30.0".to_string()),
+            constraint_group: None,
         }],
     };
 
@@ -577,4 +578,52 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     println!("   🎭 Actors: Entity reference to 'Ego'");
     println!("");
     println!("✅ Week 5 Core Scenario Structure: COMPLETE");
+}
+
+#[test]
+fn test_parameter_declarations_with_constraints() {
+    use openscenario_rs::types::{
+        basic::{ParameterDeclarations, ParameterDeclaration, ValueConstraintGroup, ValueConstraint},
+        enums::ParameterType,
+    };
+
+    // Create parameter declarations with various constraints
+    let speed_param = ParameterDeclaration::with_constraints(
+        "MaxSpeed".to_string(),
+        ParameterType::Double,
+        "60.0".to_string(),
+        ValueConstraintGroup::new(vec![
+            ValueConstraint::greater_than("0.0".to_string()),
+            ValueConstraint::less_than("200.0".to_string()),
+        ]),
+    );
+
+    let name_param = ParameterDeclaration::new(
+        "VehicleName".to_string(),
+        ParameterType::String,
+        "EgoVehicle".to_string(),
+    );
+
+    let declarations = ParameterDeclarations {
+        parameter_declarations: vec![speed_param, name_param],
+    };
+
+    // Test the parameter declarations structure
+    assert_eq!(declarations.parameter_declarations.len(), 2);
+    
+    let speed_param = &declarations.parameter_declarations[0];
+    assert_eq!(speed_param.name.as_literal().unwrap(), "MaxSpeed");
+    assert_eq!(speed_param.parameter_type, ParameterType::Double);
+    assert!(speed_param.has_constraints());
+    
+    // Test constraints
+    let constraints = speed_param.constraint_group.as_ref().unwrap();
+    assert_eq!(constraints.value_constraints.len(), 2);
+    assert_eq!(constraints.value_constraints[0].value.as_literal().unwrap(), "0.0");
+    assert_eq!(constraints.value_constraints[1].value.as_literal().unwrap(), "200.0");
+    
+    let name_param = &declarations.parameter_declarations[1];
+    assert_eq!(name_param.name.as_literal().unwrap(), "VehicleName");
+    assert_eq!(name_param.parameter_type, ParameterType::String);
+    assert!(!name_param.has_constraints());
 }

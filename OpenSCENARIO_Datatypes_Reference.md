@@ -8,9 +8,9 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 |----------|--------|------------|-------------|
 | Basic Data Types | 9 | 9 | Fundamental data types with validation patterns |
 | Simple Enumeration Types | 37 | 41 | Predefined value lists |
-| Complex Types | 287 | 38 | Structured data with elements and attributes |
+| Complex Types | 287 | 41 | Structured data with elements and attributes |
 | Groups | 14 | 1 | Reusable element collections |
-| **Total** | **347** | **89** | **Complete type system** |
+| **Total** | **347** | **92** | **Complete type system** |
 
 ---
 
@@ -545,11 +545,11 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | `MonitorDeclaration` | Monitor definition | name, value | ✅ Implemented |
 
 #### 3.12.4 Constraints & Ranges
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `ValueConstraintGroup` | Constraint group | ValueConstraint |
-| `ValueConstraint` | Value constraint | rule, value |
-| `Range` | Value range | lowerLimit, upperLimit |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `ValueConstraintGroup` | Constraint group | ValueConstraint | ✅ Implemented |
+| `ValueConstraint` | Value constraint | rule, value | ✅ Implemented |
+| `Range` | Value range | lowerLimit, upperLimit | ✅ Implemented |
 
 #### 3.12.5 Rules (Deprecated)
 | Type | Description | Key Attributes/Elements |
