@@ -22,7 +22,7 @@ use std::str::FromStr;
 
 // Value enum that can hold either a literal value, a parameter reference, or an expression
 //
-// OpenSCENARIO supports parameter references using ${parameterName} syntax and 
+// OpenSCENARIO supports parameter references using ${parameterName} syntax and
 // mathematical expressions using ${expression} syntax.
 // This enum allows us to represent both compile-time literals and runtime parameters/expressions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -63,7 +63,10 @@ where
                 resolved_expr.parse::<T>().map_err(|e| {
                     Error::parameter_error(
                         expr,
-                        &format!("failed to parse expression result '{}': {}", resolved_expr, e),
+                        &format!(
+                            "failed to parse expression result '{}': {}",
+                            resolved_expr, e
+                        ),
                     )
                 })
             }
@@ -87,7 +90,7 @@ where
             Value::Expression(_) => None,
         }
     }
-    
+
     /// Get the expression if this is an expression, otherwise None
     pub fn as_expression(&self) -> Option<&str> {
         match self {
@@ -108,7 +111,7 @@ impl<T: Clone> Value<T> {
     pub fn parameter(name: std::string::String) -> Self {
         Value::Parameter(name)
     }
-    
+
     /// Create an expression
     pub fn expression(expr: std::string::String) -> Self {
         Value::Expression(expr)
@@ -181,8 +184,6 @@ pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
 // TODO: Add any missing basic types needed for actions and conditions (Week 4)
 // TODO: pub type DateTime = Value<chrono::DateTime<chrono::Utc>>; - already defined but may need chrono feature
 
-
-
 /// Parse a parameter reference from a string
 ///
 /// Returns the parameter name if the string matches ${paramName} pattern
@@ -214,19 +215,19 @@ pub fn is_valid_parameter_name(name: &str) -> bool {
 }
 
 /// Resolve a simple expression by substituting parameters
-/// 
+///
 /// This is a basic implementation that only handles parameter substitution
 /// A full implementation would parse and evaluate mathematical expressions
 fn resolve_expression<T: FromStr>(
-    expr: &str, 
-    params: &HashMap<std::string::String, std::string::String>
-) -> Result<String> 
-where 
-    T::Err: std::fmt::Display 
+    expr: &str,
+    params: &HashMap<std::string::String, std::string::String>,
+) -> Result<String>
+where
+    T::Err: std::fmt::Display,
 {
     // For now, just substitute parameter references in the expression
     let mut result = expr.to_string();
-    
+
     // Find and replace parameter references in the expression
     for (param_name, param_value) in params {
         let param_ref = format!("${{{}}}", param_name);
@@ -234,7 +235,7 @@ where
             result = result.replace(&param_ref, param_value);
         }
     }
-    
+
     // In a full implementation, we would parse and evaluate the expression here
     // For now, we'll assume the expression is already resolved or return it as-is
     Ok(result)
@@ -269,33 +270,33 @@ mod tests {
         assert!(!is_valid_parameter_name("")); // Can't be empty
         assert!(!is_valid_parameter_name("speed-limit")); // No hyphens
     }
-    
+
     #[test]
     fn test_value_creation() {
         let literal = Value::<f64>::literal(10.0);
         assert!(matches!(literal, Value::Literal(10.0)));
-        
+
         let parameter = Value::<String>::parameter("speed".to_string());
         assert!(matches!(parameter, Value::Parameter(_)));
-        
+
         let expression = Value::<String>::expression("speed + 10".to_string());
         assert!(matches!(expression, Value::Expression(_)));
     }
-    
+
     #[test]
     fn test_value_resolution() {
         let mut params = HashMap::new();
         params.insert("speed".to_string(), "30.0".to_string());
         params.insert("acceleration".to_string(), "2.5".to_string());
-        
+
         // Test literal resolution
         let literal = Value::<f64>::literal(10.0);
         assert_eq!(literal.resolve(&params).unwrap(), 10.0);
-        
+
         // Test parameter resolution
         let parameter = Value::<f64>::parameter("speed".to_string());
         assert_eq!(parameter.resolve(&params).unwrap(), 30.0);
-        
+
         // Test expression resolution (basic)
         let expression = Value::<String>::expression("speed".to_string());
         assert_eq!(expression.resolve(&params).unwrap(), "speed");
@@ -309,7 +310,7 @@ mod tests {
             ParameterType::Double,
             "60.0".to_string(),
         );
-        
+
         assert_eq!(param.name.as_literal().unwrap(), "MaxSpeed");
         assert_eq!(param.parameter_type, ParameterType::Double);
         assert_eq!(param.value.as_literal().unwrap(), "60.0");
@@ -333,17 +334,17 @@ mod tests {
         assert!(param.has_constraints());
         let constraint_group = param.constraint_group.as_ref().unwrap();
         assert_eq!(constraint_group.value_constraints.len(), 2);
-        assert_eq!(constraint_group.value_constraints[0].rule, Rule::GreaterThan);
+        assert_eq!(
+            constraint_group.value_constraints[0].rule,
+            Rule::GreaterThan
+        );
         assert_eq!(constraint_group.value_constraints[1].rule, Rule::LessThan);
     }
 
     #[test]
     fn test_parameter_declaration_add_constraint() {
-        let mut param = ParameterDeclaration::new(
-            "Age".to_string(),
-            ParameterType::Int,
-            "25".to_string(),
-        );
+        let mut param =
+            ParameterDeclaration::new("Age".to_string(), ParameterType::Int, "25".to_string());
 
         // Initially no constraints
         assert!(!param.has_constraints());
@@ -354,7 +355,7 @@ mod tests {
 
         // Add second constraint
         param.add_constraint(ValueConstraint::less_than("120".to_string()));
-        
+
         let constraints = param.constraint_group.as_ref().unwrap();
         assert_eq!(constraints.value_constraints.len(), 2);
     }
@@ -388,21 +389,31 @@ mod tests {
         let mut declarations = ParameterDeclarations::default();
         assert!(declarations.parameter_declarations.is_empty());
 
-        declarations.parameter_declarations.push(ParameterDeclaration::new(
-            "Speed".to_string(),
-            ParameterType::Double,
-            "30.0".to_string(),
-        ));
+        declarations
+            .parameter_declarations
+            .push(ParameterDeclaration::new(
+                "Speed".to_string(),
+                ParameterType::Double,
+                "30.0".to_string(),
+            ));
 
-        declarations.parameter_declarations.push(ParameterDeclaration::new(
-            "VehicleName".to_string(),
-            ParameterType::String,
-            "Ego".to_string(),
-        ));
+        declarations
+            .parameter_declarations
+            .push(ParameterDeclaration::new(
+                "VehicleName".to_string(),
+                ParameterType::String,
+                "Ego".to_string(),
+            ));
 
         assert_eq!(declarations.parameter_declarations.len(), 2);
-        assert_eq!(declarations.parameter_declarations[0].parameter_type, ParameterType::Double);
-        assert_eq!(declarations.parameter_declarations[1].parameter_type, ParameterType::String);
+        assert_eq!(
+            declarations.parameter_declarations[0].parameter_type,
+            ParameterType::Double
+        );
+        assert_eq!(
+            declarations.parameter_declarations[1].parameter_type,
+            ParameterType::String
+        );
     }
 
     #[test]
@@ -410,21 +421,21 @@ mod tests {
         // Test values from real XOSC files that are causing parsing issues
         let test_values = [
             "0.0000000000000000e+00",
-            "1.5000000000000000e+00", 
+            "1.5000000000000000e+00",
             "9.2884257876425379e-04",
             "3.7479999999999983e+01",
-            "-2.8099999999999987e+00"
+            "-2.8099999999999987e+00",
         ];
-        
+
         for val in test_values {
             println!("Testing: '{}'", val);
-            
+
             // Test direct f64 parsing
             match val.parse::<f64>() {
                 Ok(f) => println!("  Direct f64::parse: {}", f),
                 Err(e) => println!("  Direct f64::parse ERROR: {}", e),
             }
-            
+
             // Test Value<f64> deserialization via JSON
             let json_str = format!("\"{}\"", val);
             match serde_json::from_str::<Double>(&json_str) {
@@ -433,11 +444,11 @@ mod tests {
                     if let Some(literal_val) = double_val.as_literal() {
                         println!("  Literal value: {}", literal_val);
                     }
-                },
+                }
                 Err(e) => println!("  Value<f64> JSON ERROR: {}", e),
             }
-            
-            // Test Value<f64> deserialization via XML 
+
+            // Test Value<f64> deserialization via XML
             let xml_str = format!("<test>{}</test>", val);
             match quick_xml::de::from_str::<Double>(&xml_str) {
                 Ok(double_val) => {
@@ -445,15 +456,13 @@ mod tests {
                     if let Some(literal_val) = double_val.as_literal() {
                         println!("  XML Literal value: {}", literal_val);
                     }
-                },
+                }
                 Err(e) => println!("  Value<f64> XML ERROR: {}", e),
             }
             println!();
         }
     }
 }
-
-
 
 // Data Container Types for Scenario Structure
 
@@ -462,7 +471,7 @@ use crate::types::enums::{ParameterType, Rule};
 /// Parameter declarations container
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ParameterDeclarations {
-    #[serde(rename = "ParameterDeclaration")]
+    #[serde(rename = "ParameterDeclaration", default)]
     pub parameter_declarations: Vec<ParameterDeclaration>,
 }
 
@@ -481,7 +490,9 @@ pub struct ParameterDeclaration {
 
 impl Default for ParameterDeclarations {
     fn default() -> Self {
-        Self { parameter_declarations: Vec::new() }
+        Self {
+            parameter_declarations: Vec::new(),
+        }
     }
 }
 
@@ -642,4 +653,3 @@ impl Range {
         }
     }
 }
-
