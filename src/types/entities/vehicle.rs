@@ -1,9 +1,84 @@
 //! Vehicle entity definition
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::OSString;
+use crate::types::basic::{OSString, Double};
 use crate::types::enums::VehicleCategory;
 use crate::types::geometry::BoundingBox;
+
+/// Vehicle performance characteristics
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Performance {
+    #[serde(rename = "@maxSpeed")]
+    pub max_speed: Double,
+    #[serde(rename = "@maxAcceleration")]
+    pub max_acceleration: Double,
+    #[serde(rename = "@maxDeceleration")]
+    pub max_deceleration: Double,
+}
+
+/// Axle definitions for vehicle
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Axles {
+    #[serde(rename = "FrontAxle")]
+    pub front_axle: FrontAxle,
+    #[serde(rename = "RearAxle")]
+    pub rear_axle: RearAxle,
+}
+
+/// Front axle specification
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FrontAxle {
+    #[serde(rename = "@maxSteering")]
+    pub max_steering: Double,
+    #[serde(rename = "@wheelDiameter")]
+    pub wheel_diameter: Double,
+    #[serde(rename = "@trackWidth")]
+    pub track_width: Double,
+    #[serde(rename = "@positionX")]
+    pub position_x: Double,
+    #[serde(rename = "@positionZ")]
+    pub position_z: Double,
+}
+
+/// Rear axle specification
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RearAxle {
+    #[serde(rename = "@maxSteering")]
+    pub max_steering: Double,
+    #[serde(rename = "@wheelDiameter")]
+    pub wheel_diameter: Double,
+    #[serde(rename = "@trackWidth")]
+    pub track_width: Double,
+    #[serde(rename = "@positionX")]
+    pub position_x: Double,
+    #[serde(rename = "@positionZ")]
+    pub position_z: Double,
+}
+
+/// Vehicle properties container
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Properties {
+    #[serde(rename = "Property", default)]
+    pub properties: Vec<Property>,
+    #[serde(rename = "File", default)]
+    pub files: Vec<File>,
+}
+
+/// Property key-value pair
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Property {
+    #[serde(rename = "@name")]
+    pub name: String,
+    #[serde(rename = "@value")]
+    pub value: String,
+}
+
+/// File reference
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct File {
+    #[serde(rename = "@filepath")]
+    pub filepath: String,
+}
 
 /// Vehicle entity definition
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -20,13 +95,69 @@ pub struct Vehicle {
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
     
-    // TODO: Add these complex fields in later phases:
-    // #[serde(rename = "Performance", skip_serializing_if = "Option::is_none")]
-    // pub performance: Option<Performance>,
-    // #[serde(rename = "Axles", skip_serializing_if = "Option::is_none")] 
-    // pub axles: Option<Axles>,
-    // #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
-    // pub properties: Option<Properties>,
+    /// Vehicle performance characteristics
+    #[serde(rename = "Performance")]
+    pub performance: Performance,
+    
+    /// Axle definitions
+    #[serde(rename = "Axles")]
+    pub axles: Axles,
+    
+    /// Vehicle properties
+    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Properties>,
+}
+
+impl Default for Performance {
+    fn default() -> Self {
+        Self {
+            max_speed: Double::literal(200.0),
+            max_acceleration: Double::literal(200.0),
+            max_deceleration: Double::literal(10.0),
+        }
+    }
+}
+
+impl Default for FrontAxle {
+    fn default() -> Self {
+        Self {
+            max_steering: Double::literal(0.5),
+            wheel_diameter: Double::literal(0.5),
+            track_width: Double::literal(1.75),
+            position_x: Double::literal(2.8),
+            position_z: Double::literal(0.25),
+        }
+    }
+}
+
+impl Default for RearAxle {
+    fn default() -> Self {
+        Self {
+            max_steering: Double::literal(0.0),
+            wheel_diameter: Double::literal(0.5),
+            track_width: Double::literal(1.75),
+            position_x: Double::literal(0.0),
+            position_z: Double::literal(0.25),
+        }
+    }
+}
+
+impl Default for Axles {
+    fn default() -> Self {
+        Self {
+            front_axle: FrontAxle::default(),
+            rear_axle: RearAxle::default(),
+        }
+    }
+}
+
+impl Default for Properties {
+    fn default() -> Self {
+        Self {
+            properties: Vec::new(),
+            files: Vec::new(),
+        }
+    }
 }
 
 impl Default for Vehicle {
@@ -35,6 +166,9 @@ impl Default for Vehicle {
             name: crate::types::basic::Value::literal("DefaultVehicle".to_string()),
             vehicle_category: VehicleCategory::Car,
             bounding_box: BoundingBox::default(),
+            performance: Performance::default(),
+            axles: Axles::default(),
+            properties: None,
         }
     }
 }
@@ -60,6 +194,9 @@ mod tests {
             name: crate::types::basic::Value::literal("TestCar".to_string()),
             vehicle_category: VehicleCategory::Car,
             bounding_box: BoundingBox::default(),
+            performance: Performance::default(),
+            axles: Axles::default(),
+            properties: None,
         };
         
         assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");

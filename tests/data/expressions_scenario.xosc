@@ -8,6 +8,11 @@
           <Center x="0.0" y="0.0" z="0.0"/>
           <Dimensions width="${vehicle_width}" length="${vehicle_length}" height="${vehicle_height}"/>
         </BoundingBox>
+        <Performance maxSpeed="200" maxAcceleration="200" maxDeceleration="10.0"/>
+        <Axles>
+          <FrontAxle maxSteering="0.5" wheelDiameter="0.5" trackWidth="1.75" positionX="2.8" positionZ="0.25"/>
+          <RearAxle maxSteering="0.0" wheelDiameter="0.5" trackWidth="1.75" positionX="0.0" positionZ="0.25"/>
+        </Axles>
       </Vehicle>
     </ScenarioObject>
   </Entities>

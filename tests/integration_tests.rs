@@ -144,9 +144,9 @@ fn can_use_public_api_convenience_functions() {
 
 #[test]
 fn can_create_and_serialize_actions() {
-    use openscenario_rs::types::actions::movement::{SpeedAction, TeleportAction, TransitionDynamics, SpeedActionTarget, AbsoluteTargetSpeed, RelativeTargetSpeed};
+    use openscenario_rs::types::actions::movement::{SpeedAction, TeleportAction, TransitionDynamics, SpeedActionTarget, AbsoluteTargetSpeed};
     use openscenario_rs::types::actions::Action;
-    use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape, SpeedTargetValueType, Rule};
+    use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
     use openscenario_rs::types::positions::{Position, WorldPosition};
     
     // Test creating a SpeedAction
@@ -304,7 +304,7 @@ mod cut_in_scenario_tests {
             let _init = &storyboard.init;
             
             // Basic structural validation for MVP
-            assert!(storyboard.stories.len() >= 0); // May be empty in simplified implementation
+            // Storyboard stories may be empty in simplified implementation
         }
     }
     
@@ -318,7 +318,7 @@ mod cut_in_scenario_tests {
             
             // For MVP, we expect the stories structure to exist
             // The actual parsing of complex story elements may not be fully implemented yet
-            assert!(storyboard.stories.len() >= 0);
+            // Storyboard stories may be empty in simplified implementation
             
             // If stories are parsed, validate basic structure
             if !storyboard.stories.is_empty() {

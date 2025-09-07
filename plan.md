@@ -405,7 +405,7 @@ full = ["validation", "builder", "geometry-utils", "catalog-resolution"]
 
 ### Phase 2: Core Types (Weeks 5-8)
 
-**Goal**: Implement all major type categories
+**Goal**: Implement all major type categories to parse complete XOSC files
 
 **Deliverables**:
 
@@ -414,8 +414,19 @@ full = ["validation", "builder", "geometry-utils", "catalog-resolution"]
   - [x] Full Trigger/ConditionGroup/Condition system ✅
   - [x] Parameter declarations and data containers ✅
   - [x] Essential scenario structure enums ✅
-- [ ] Action type implementations (48 types) - **Week 6**
+- [ ] **Extended Vehicle Definition** (High Priority) - **Week 6**
+  - [ ] BoundingBox with Center and Dimensions
+  - [ ] Performance (maxSpeed, maxAcceleration, maxDeceleration)
+  - [ ] Axles (FrontAxle, RearAxle with detailed specifications)
+  - [ ] Properties container
+  - [ ] ObjectController support
+- [ ] Environment and Weather system parsing (High Priority) - **Week 6**
+- [ ] Action type implementations (48 types) - **Week 6-7**
 - [ ] Condition type implementations (21 types) - **Week 7** 
+- [ ] Trajectory and Polyline vertex parsing (High Priority) - **Week 7**
+- [ ] Storyboard with Init, Story, Act, ManeuverGroup structures (High Priority) - **Week 6**
+- [ ] Private actions and GlobalAction structures (Medium Priority) - **Week 6**
+- [ ] Complete RoutingAction with FollowTrajectoryAction (Medium Priority) - **Week 7**
 - [ ] Entity type implementations (12 types)
 - [ ] Geometry type implementations (12 types)
 - [ ] Position type implementations (15 types)
@@ -424,7 +435,7 @@ full = ["validation", "builder", "geometry-utils", "catalog-resolution"]
 
 ### Phase 3: Advanced Features (Weeks 9-12)
 
-**Goal**: Implement complex features and validation
+**Goal**: Implement complex features and validation for complete XOSC support
 
 **Deliverables**:
 
@@ -435,6 +446,7 @@ full = ["validation", "builder", "geometry-utils", "catalog-resolution"]
 - [ ] Environment and weather types (12 types)
 - [ ] Traffic management types (8 types)
 - [ ] Controller system (8 types)
+- [ ] Complete XML deserializer for top-level OpenSCENARIO structure
 
 ### Phase 4: API Design & Optimization (Weeks 13-16)
 
@@ -457,7 +469,7 @@ full = ["validation", "builder", "geometry-utils", "catalog-resolution"]
 **Deliverables**:
 
 - [ ] Integration with ASAM OpenSCENARIO examples
-- [ ] Real-world scenario testing
+- [ ] Real-world scenario testing including cut_in_101_exam.xosc
 - [ ] Error message improvements
 - [ ] Example applications
 - [ ] Tutorial documentation
@@ -980,243 +992,130 @@ assert!(speed_param.has_constraints());
 
 **Status**: ✅ Parameter system now feature-complete with validation constraints - ready for advanced action/condition implementations
 
-## Phase 2 Detailed Implementation Tasks
+## Phase 2 Detailed Implementation Tasks - REVISED FOCUS: Complete XOSC File Parsing
 
-### Week 5: Core Scenario Structure Completion
+**STRATEGIC SHIFT**: Based on analysis of real-world XOSC files like `cut_in_101_exam.xosc`, Phase 2 now prioritizes **complete XOSC file parsing capability** over incremental type expansion.
 
-**Goal**: Complete the core scenario structure to support full Story/Act/ManeuverGroup/Maneuver/Event hierarchy with triggers.
+### High-Priority Implementation Items (Week 6)
 
-#### Task Group 1: Story System Implementation (High Priority)
-**File**: `src/types/scenario/story.rs`
+The following components are **blocking** complete XOSC file parsing and must be implemented first:
 
+#### Item 1: Fix Integration Test Failures (IMMEDIATE)
+**Status**: 6 tests failing - blocking development
+- Investigate and resolve failing integration tests
+- Ensure stable foundation before advancing
+
+#### Item 2: Enhanced Vehicle Definition ✅ **COMPLETED**
+**Status**: ✅ **COMPLETED** - Vehicle now includes Performance, Axles, Properties
+- ✅ Performance struct (maxSpeed, maxAcceleration, maxDeceleration)  
+- ✅ Axles struct with FrontAxle and RearAxle definitions
+- ✅ Properties container with Property and File support
+- ✅ Complete Default implementations matching cut_in scenario requirements
+
+#### Item 3: ObjectController Implementation (HIGH PRIORITY)
+**File**: `src/types/entities/mod.rs` and related files
+**Current Issue**: `<ObjectController />` elements in XOSC files cannot be parsed
 **Tasks**:
-1. **Implement Story struct** (2-3 hours)
-   - Add `name: OSString` 
-   - Add `parameter_declarations: Option<ParameterDeclarations>`
-   - Add `acts: Vec<Act>`
-   - Implement serde serialization/deserialization
-   - Add comprehensive unit tests for Story creation and parsing
+- Replace empty ObjectController placeholder with proper struct
+- Add Properties container support
+- Implement serde XML parsing for controller definitions
 
-2. **Implement Act struct** (2-3 hours)
-   - Add `name: OSString`
-   - Add `maneuver_groups: Vec<ManeuverGroup>`  
-   - Add `start_trigger: Option<Trigger>`
-   - Add `stop_trigger: Option<Trigger>`
-   - Implement serde attributes for proper XML mapping
-   - Add unit tests for Act lifecycle and trigger management
-
-3. **Implement ManeuverGroup struct** (3-4 hours)
-   - Add `name: OSString`
-   - Add `maximum_execution_count: Option<UnsignedInt>`
-   - Add `actors: Actors`
-   - Add `catalog_reference: Option<CatalogReference>` (placeholder)
-   - Add `maneuvers: Vec<Maneuver>`
-   - Handle XML choice between direct maneuvers and catalog references
-   - Add tests for actor assignment and maneuver coordination
-
-4. **Implement Maneuver struct** (2-3 hours)
-   - Add `name: OSString`
-   - Add `parameter_declarations: Option<ParameterDeclarations>`
-   - Add `events: Vec<Event>`
-   - Implement parameter scoping within maneuvers
-   - Add tests for event ordering and parameter inheritance
-
-5. **Implement Event struct** (3-4 hours)
-   - Add `name: OSString`
-   - Add `maximum_execution_count: Option<UnsignedInt>`
-   - Add `priority: Option<Priority>` enum
-   - Add `action: Action` (polymorphic action enum)
-   - Add `start_trigger: Option<Trigger>`
-   - Implement event priority and execution semantics
-   - Add tests for event trigger conditions and action execution
-
-**Estimated Time**: 12-17 hours
-
-#### Task Group 2: Trigger System Implementation (High Priority)  
-**File**: `src/types/scenario/triggers.rs`
-
+#### Item 4: Environment and Weather System (HIGH PRIORITY)  
+**Files**: `src/types/environment/weather.rs`, `src/types/environment/road.rs`
+**Current Issue**: Environment system exists but is incomplete for XOSC parsing
+**Required for parsing**:
+```xml
+<Environment name="Default_Environment">
+    <TimeOfDay animation="false" dateTime="2021-12-10T11:00:00" />
+    <Weather cloudState="free">
+        <Sun intensity="1.0" azimuth="0.0" elevation="1.571" />
+        <Fog visualRange="100000.0" />
+        <Precipitation precipitationType="dry" intensity="0.0" />
+    </Weather>
+    <RoadCondition frictionScaleFactor="1.0" />
+</Environment>
+```
 **Tasks**:
-1. **Implement Trigger struct** (2-3 hours)
-   - Add `condition_groups: Vec<ConditionGroup>`
-   - Implement OR logic between condition groups
-   - Add serde support for proper XML structure
-   - Add unit tests for trigger evaluation logic
+- Complete TimeOfDay struct with animation and dateTime fields
+- Complete Weather struct with cloudState and child elements
+- Complete Sun, Fog, Precipitation structs with proper attributes
+- Complete RoadCondition struct
+- Implement full Environment container struct
 
-2. **Implement ConditionGroup struct** (2-3 hours)
-   - Add `conditions: Vec<Condition>`
-   - Implement AND logic between conditions within group
-   - Add validation for non-empty condition groups
-   - Add tests for condition group evaluation
-
-3. **Implement Condition struct** (3-4 hours)
-   - Add `name: OSString`
-   - Add `condition_edge: ConditionEdge` enum
-   - Add `delay: Option<Double>`
-   - Add `condition_type: ConditionType` (ByEntityCondition | ByValueCondition)
-   - Implement edge detection logic (rising, falling, risingOrFalling)
-   - Add comprehensive tests for condition evaluation and edge detection
-
-4. **Implement TriggeringEntities struct** (2 hours)
-   - Add `triggering_entities_rule: TriggeringEntitiesRule` enum (all, any)
-   - Add `entity_refs: Vec<EntityRef>`
-   - Add validation for entity reference resolution
-   - Add tests for entity-based trigger logic
-
-5. **Implement Actors struct** (2 hours)
-   - Add `select_triggering_entities: Option<Boolean>`
-   - Add `entity_refs: Vec<EntityRef>`
-   - Implement actor selection from triggering entities
-   - Add tests for actor assignment and selection logic
-
-**Estimated Time**: 11-14 hours
-
-#### Task Group 3: Initialization System (Medium Priority)
-**File**: `src/types/scenario/init.rs` (New File)
-
+#### Item 5: Storyboard Init System (HIGH PRIORITY)
+**Files**: `src/types/scenario/init.rs` (new), related action files
+**Current Issue**: Init/Actions/GlobalAction/EnvironmentAction parsing not implemented
+**Required for parsing**:
+```xml
+<Init>
+    <Actions>
+        <GlobalAction>
+            <EnvironmentAction>
+                <Environment>...</Environment>
+            </EnvironmentAction>
+        </GlobalAction>
+        <Private entityRef="Ego">
+            <PrivateAction>
+                <LongitudinalAction>
+                    <SpeedAction>...</SpeedAction>
+                </LongitudinalAction>
+            </PrivateAction>
+        </Private>
+    </Actions>
+</Init>
+```
 **Tasks**:
-1. **Create init.rs module** (1 hour)
-   - Set up module structure and documentation
-   - Add proper module exports to scenario/mod.rs
+- Create Init struct with Actions container
+- Create GlobalAction, EnvironmentAction structs
+- Create Private struct with entityRef and PrivateAction list
+- Create LongitudinalAction with SpeedAction support
+- Integrate with existing Action/SpeedAction system
 
-2. **Implement Init struct** (2 hours)
-   - Add `actions: InitActions`
-   - Replace placeholder Init in storyboard.rs
-   - Add serde support for XML mapping
-   - Add unit tests for initialization structure
-
-3. **Implement InitActions struct** (2-3 hours)
-   - Add `global_actions: Vec<GlobalAction>`
-   - Add `user_defined_actions: Vec<UserDefinedAction>`  
-   - Add `private_actions: Vec<Private>`
-   - Implement proper XML element ordering
-   - Add tests for action initialization
-
-4. **Implement Private struct** (2 hours)
-   - Add `entity_ref: OSString`
-   - Add `private_actions: Vec<PrivateAction>`
-   - Add entity reference validation
-   - Add tests for private action assignment
-
-**Estimated Time**: 7-8 hours
-
-#### Task Group 4: Data Container Types (Medium Priority)
-**File**: `src/types/basic.rs`
-
+#### Item 6: ManeuverGroup Actor Enhancement (MEDIUM PRIORITY)
+**Files**: `src/types/scenario/story.rs`
+**Current Issue**: ManeuverGroup may need enhanced Actors support for entity assignments
 **Tasks**:
-1. **Implement ParameterDeclarations** (2-3 hours) ✅ COMPLETED
-   - ✅ Add `ParameterDeclarations` struct with `parameter_declarations: Vec<ParameterDeclaration>`
-   - ✅ Add `ParameterDeclaration` with name, type, value, constraints
-   - ✅ Add `ValueConstraintGroup` and `ValueConstraint` for parameter validation
-   - ✅ Add `Range` type for value range specifications
-   - ✅ Implement parameter constraint system with helper methods
-   - ✅ Add comprehensive tests for parameter system (7 new tests)
+- Review ManeuverGroup.Actors implementation
+- Ensure proper EntityRef parsing and validation
+- Add actor selection logic if needed
 
-2. **Implement VariableDeclarations** (2 hours)
-   - Add `VariableDeclarations` struct with `variable_declarations: Vec<VariableDeclaration>`
-   - Add `VariableDeclaration` with name, type, value
-   - Add runtime variable modification support
-   - Add tests for variable lifecycle
+### Medium-Priority Items (Week 7)
 
-3. **Implement MonitorDeclarations** (1-2 hours)
-   - Add `MonitorDeclarations` struct with `monitor_declarations: Vec<MonitorDeclaration>`
-   - Add `MonitorDeclaration` with name and value
-   - Add basic monitor functionality
-   - Add tests for monitor state management
+#### Item 7: Trajectory and Polyline Support  
+**Files**: `src/types/geometry/shapes.rs`, position files
+**Required for**: Complex routing and path-following scenarios
 
-4. **Implement Properties system** (2-3 hours)
-   - Add `Properties` struct with properties, files, custom content
-   - Add `Property` with name/value pairs
-   - Add `File` and `CustomContent` structs
-   - Add `License` struct for FileHeader
-   - Add tests for metadata and properties handling
+#### Item 8: Complete Action System Expansion
+**Files**: Various action module files
+**Required for**: All action types used in real XOSC files
 
-**Estimated Time**: 7-10 hours
+#### Item 9: Complete Condition System Expansion  
+**Files**: Various condition module files
+**Required for**: All condition types used in real XOSC files
 
-#### Task Group 5: Missing Enums (Medium Priority)
-**File**: `src/types/enums.rs`
+### Week 6 Success Criteria
 
-**Tasks**:
-1. **Add scenario structure enums** (1-2 hours)
-   - Add `Priority` enum (overwrite, override, parallel, skip)
-   - Add `StoryboardElementState` enum (completeState, runningState, etc.)
-   - Add `StoryboardElementType` enum (act, action, event, etc.)
-   - Add `TriggeringEntitiesRule` enum (all, any)
-   - Add `ParameterType` enum (boolean, dateTime, double, etc.)
+**MUST HAVE (Blocking complete XOSC parsing)**:
+- [ ] All integration tests passing (0 failures)
+- [ ] Complete Vehicle definition with Performance, Axles, Properties ✅ **COMPLETED**
+- [ ] ObjectController implementation supporting empty and configured controllers
+- [ ] Complete Environment system: TimeOfDay, Weather, Sun, Fog, Precipitation, RoadCondition
+- [ ] Complete Init system: GlobalAction, EnvironmentAction, Private actions integration
+- [ ] Successfully parse `cut_in_101_exam.xosc` without missing type errors
 
-2. **Update enum exports** (30 minutes)
-   - Add new enums to mod.rs exports
-   - Update serde attributes for XML compatibility
-   - Add unit tests for enum serialization
+**NICE TO HAVE**:
+- [ ] Enhanced ManeuverGroup Actors support
+- [ ] Documentation updates for new components
+- [ ] Performance benchmarks for complete XOSC parsing
 
-**Estimated Time**: 1.5-2.5 hours
+### Revised Phase 2 Strategy
 
-#### Task Group 6: Storyboard Updates (Low Priority)
-**File**: `src/types/scenario/storyboard.rs`
+**Focus**: **"Complete XOSC File Parsing First"** rather than incremental type expansion
 
-**Tasks**:
-1. **Complete FileHeader** (1-2 hours)
-   - Add `license: Option<License>` field
-   - Add `properties: Option<Properties>` field
-   - Update Default implementation
-   - Add tests for complete file header
+**Approach**:
+1. **Gap Analysis**: Use `cut_in_101_exam.xosc` as reference implementation target
+2. **Blocking Component Priority**: Implement only components that block complete file parsing
+3. **Iterative Testing**: Test against real XOSC files throughout development
+4. **Defer Advanced Features**: Complex validation, builder patterns, optimization until basic parsing works
 
-2. **Complete Storyboard** (1 hour)
-   - Add `stop_trigger: Option<Trigger>` field
-   - Update integration with new Story types
-   - Add tests for storyboard lifecycle
-
-3. **Add ScenarioDefinition group** (1-2 hours)
-   - Implement `ScenarioDefinition` containing all scenario components
-   - Add `OpenScenarioCategory` choice enum
-   - Update OpenScenario root to use categories
-   - Add tests for complete scenario structure
-
-**Estimated Time**: 3-5 hours
-
-#### Task Group 7: Integration and Testing (High Priority)
-
-**Tasks**:
-1. **Update module exports** (1 hour)
-   - Update `src/types/scenario/mod.rs` to export all new types
-   - Update `src/types/mod.rs` to re-export scenario types
-   - Fix any circular dependency issues
-
-2. **Integration tests** (3-4 hours)
-   - Create test fixtures with complete Story/Act/ManeuverGroup structure
-   - Add round-trip serialization tests for all new types
-   - Test trigger evaluation and condition logic
-   - Test parameter and variable scoping
-
-3. **Documentation** (2-3 hours)
-   - Add comprehensive rustdoc for all new types
-   - Add code examples for Story creation and manipulation
-   - Document trigger system and condition evaluation
-   - Add usage examples for parameter/variable systems
-
-**Estimated Time**: 6-8 hours
-
-### Total Week 5 Estimated Time: 40-54 hours
-
-### Week 5 Success Criteria
-
-**Must Have (MVP)**:
-- [ ] Complete Story/Act/ManeuverGroup/Maneuver/Event hierarchy
-- [ ] Working Trigger/ConditionGroup/Condition system  
-- [ ] Parameter and Variable declarations
-- [ ] All integration tests passing
-- [ ] Round-trip XML serialization for all new types
-
-**Nice to Have**:
-- [ ] Complete Init system with private actions
-- [ ] Full Properties and License support in FileHeader
-- [ ] Comprehensive validation for entity references
-- [ ] Performance benchmarks for parsing complex scenarios
-
-**Phase 2 Week 5 Deliverables**:
-1. **Complete Scenario Structure**: Full hierarchy from OpenScenario → Story → Act → ManeuverGroup → Maneuver → Event
-2. **Working Trigger System**: Condition evaluation with edge detection and entity-based logic
-3. **Parameter System**: Declaration, assignment and scoping throughout scenario hierarchy
-4. **Comprehensive Testing**: All scenario structure types tested with real XML fixtures
-5. **Documentation**: Complete API docs and usage examples for scenario building
-
-This completes the core scenario structure foundation needed for Phase 2, enabling full OpenSCENARIO document parsing and manipulation with proper story organization, event triggers, and parameter management.
+**Rationale**: This approach ensures we can parse real-world OpenSCENARIO files end-to-end, providing immediate value and a solid foundation for advanced features.
