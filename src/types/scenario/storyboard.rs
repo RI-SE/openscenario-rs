@@ -39,7 +39,7 @@ pub struct Storyboard {
     #[serde(rename = "Init")]
     pub init: Init,
     #[serde(rename = "Story", default)]
-    pub stories: Vec<Story>,
+    pub stories: Vec<super::story::ScenarioStory>,
 }
 
 /// Initialization container
@@ -48,11 +48,7 @@ pub struct Init {
     // Simplified for MVP
 }
 
-/// Story container (simplified for MVP)
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Story {
-    // Will be expanded later with Acts, ManeuverGroups, etc.
-}
+// Story is now imported from story.rs module
 
 impl Default for OpenScenario {
     fn default() -> Self {

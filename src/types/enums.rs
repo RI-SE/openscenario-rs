@@ -93,6 +93,83 @@ pub enum ConditionEdge {
     RisingOrFalling,
 }
 
+/// Triggering entities rule enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TriggeringEntitiesRule {
+    #[serde(rename = "all")]
+    All,
+    #[serde(rename = "any")]
+    Any,
+}
+
+/// Priority level for events and actions
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Priority {
+    #[serde(rename = "overwrite")]
+    Overwrite,
+    #[serde(rename = "override")]
+    Override,
+    #[serde(rename = "parallel")]
+    Parallel,
+    #[serde(rename = "skip")]
+    Skip,
+}
+
+/// Storyboard element state enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StoryboardElementState {
+    #[serde(rename = "completeState")]
+    CompleteState,
+    #[serde(rename = "endTransition")]
+    EndTransition,
+    #[serde(rename = "runningState")]
+    RunningState,
+    #[serde(rename = "skipTransition")]
+    SkipTransition,
+    #[serde(rename = "standbyState")]
+    StandbyState,
+    #[serde(rename = "startTransition")]
+    StartTransition,
+    #[serde(rename = "stopTransition")]
+    StopTransition,
+}
+
+/// Storyboard element type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StoryboardElementType {
+    #[serde(rename = "act")]
+    Act,
+    #[serde(rename = "action")]
+    Action,
+    #[serde(rename = "event")]
+    Event,
+    #[serde(rename = "maneuver")]
+    Maneuver,
+    #[serde(rename = "maneuverGroup")]
+    ManeuverGroup,
+    #[serde(rename = "story")]
+    Story,
+}
+
+/// Parameter data type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ParameterType {
+    #[serde(rename = "boolean")]
+    Boolean,
+    #[serde(rename = "dateTime")]
+    DateTime,
+    #[serde(rename = "double")]
+    Double,
+    #[serde(rename = "int")]
+    Int,
+    #[serde(rename = "string")]
+    String,
+    #[serde(rename = "unsignedInt")]
+    UnsignedInt,
+    #[serde(rename = "unsignedShort")]
+    UnsignedShort,
+}
+
 /// Coordinate system enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CoordinateSystem {

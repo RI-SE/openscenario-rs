@@ -396,3 +396,185 @@ mod cut_in_scenario_tests {
         assert!(xml.contains("Cutin"));
     }
 }
+
+// Week 5 Complete Scenario Structure Integration Test
+#[test]
+fn can_create_complete_scenario_structure_with_story_hierarchy() {
+    use openscenario_rs::types::{
+        scenario::{
+            ScenarioStory, Act, ManeuverGroup, Maneuver, Event, 
+            EntityRef, Actors
+        },
+        scenario::triggers::{Trigger, ConditionGroup, Condition, ConditionType},
+        actions::{Action, SpeedAction},
+        actions::movement::{TransitionDynamics, SpeedActionTarget, AbsoluteTargetSpeed},
+        conditions::{ByValueCondition, SimulationTimeCondition},
+        enums::{Priority, ConditionEdge, DynamicsDimension, DynamicsShape, Rule},
+        basic::{Value, ParameterDeclarations, ParameterDeclaration},
+    };
+    use openscenario_rs::types::enums::ParameterType;
+
+    // Create a simulation time condition
+    let time_condition = SimulationTimeCondition {
+        value: Value::literal(5.0),
+        rule: Rule::GreaterThan,
+    };
+
+    // Create a condition with the time condition
+    let condition = Condition {
+        name: Value::literal("StartCondition".to_string()),
+        condition_edge: ConditionEdge::Rising,
+        delay: Some(Value::literal(1.0)),
+        condition_type: ConditionType::ByValue(ByValueCondition::SimulationTime(time_condition)),
+    };
+
+    // Create a condition group (AND logic)
+    let condition_group = ConditionGroup {
+        conditions: vec![condition],
+    };
+
+    // Create a trigger (OR logic between condition groups)
+    let trigger = Trigger {
+        condition_groups: vec![condition_group],
+    };
+
+    // Create a speed action
+    let speed_action = SpeedAction {
+        speed_action_dynamics: TransitionDynamics {
+            dynamics_dimension: DynamicsDimension::Time,
+            dynamics_shape: DynamicsShape::Linear,
+            value: Value::literal(3.0),
+        },
+        speed_action_target: SpeedActionTarget::Absolute(AbsoluteTargetSpeed {
+            value: Value::literal(25.0),
+        }),
+    };
+
+    // Create an event with the speed action and trigger
+    let event = Event {
+        name: Value::literal("SpeedEvent".to_string()),
+        maximum_execution_count: Some(Value::literal(1)),
+        priority: Some(Priority::Override),
+        action: Action::Speed(speed_action),
+        start_trigger: Some(trigger),
+    };
+
+    // Create a maneuver with the event
+    let maneuver = Maneuver {
+        name: Value::literal("SpeedManeuver".to_string()),
+        parameter_declarations: Some(ParameterDeclarations::default()),
+        events: vec![event],
+    };
+
+    // Create actors for the maneuver group
+    let actors = Actors {
+        select_triggering_entities: Some(false),
+        entity_refs: vec![EntityRef {
+            entity_ref: Value::literal("Ego".to_string()),
+        }],
+    };
+
+    // Create a maneuver group with the maneuver
+    let maneuver_group = ManeuverGroup {
+        name: Value::literal("MainManeuverGroup".to_string()),
+        maximum_execution_count: Some(Value::literal(1)),
+        actors,
+        catalog_reference: None,
+        maneuvers: vec![maneuver],
+    };
+
+    // Create an act with the maneuver group
+    let act = Act {
+        name: Value::literal("MainAct".to_string()),
+        maneuver_groups: vec![maneuver_group],
+        start_trigger: None,
+        stop_trigger: None,
+    };
+
+    // Create parameter declarations for the story
+    let parameter_declarations = ParameterDeclarations {
+        parameter_declarations: vec![ParameterDeclaration {
+            name: Value::literal("MaxSpeed".to_string()),
+            parameter_type: ParameterType::Double,
+            value: Value::literal("30.0".to_string()),
+        }],
+    };
+
+    // Create the complete story with the act
+    let story = ScenarioStory {
+        name: Value::literal("MainStory".to_string()),
+        parameter_declarations: Some(parameter_declarations),
+        acts: vec![act],
+    };
+
+    // Verify the complete hierarchy is accessible
+    assert_eq!(story.name.as_literal().unwrap(), "MainStory");
+    assert_eq!(story.acts.len(), 1);
+    
+    let act = &story.acts[0];
+    assert_eq!(act.name.as_literal().unwrap(), "MainAct");
+    assert_eq!(act.maneuver_groups.len(), 1);
+    
+    let maneuver_group = &act.maneuver_groups[0];
+    assert_eq!(maneuver_group.name.as_literal().unwrap(), "MainManeuverGroup");
+    assert_eq!(maneuver_group.actors.entity_refs.len(), 1);
+    assert_eq!(maneuver_group.maneuvers.len(), 1);
+    
+    let maneuver = &maneuver_group.maneuvers[0];
+    assert_eq!(maneuver.name.as_literal().unwrap(), "SpeedManeuver");
+    assert_eq!(maneuver.events.len(), 1);
+    
+    let event = &maneuver.events[0];
+    assert_eq!(event.name.as_literal().unwrap(), "SpeedEvent");
+    assert_eq!(event.priority.as_ref().unwrap(), &Priority::Override);
+    
+    // Verify the trigger system
+    let trigger = event.start_trigger.as_ref().unwrap();
+    assert_eq!(trigger.condition_groups.len(), 1);
+    
+    let condition_group = &trigger.condition_groups[0];
+    assert_eq!(condition_group.conditions.len(), 1);
+    
+    let condition = &condition_group.conditions[0];
+    assert_eq!(condition.name.as_literal().unwrap(), "StartCondition");
+    assert_eq!(condition.condition_edge, ConditionEdge::Rising);
+    assert_eq!(condition.delay.as_ref().unwrap().as_literal().unwrap(), &1.0);
+    
+    // Verify the action system
+    match &event.action {
+        Action::Speed(speed_action) => {
+            assert_eq!(speed_action.speed_action_dynamics.dynamics_dimension, DynamicsDimension::Time);
+            assert_eq!(speed_action.speed_action_dynamics.dynamics_shape, DynamicsShape::Linear);
+            assert_eq!(speed_action.speed_action_dynamics.value.as_literal().unwrap(), &3.0);
+            
+            match &speed_action.speed_action_target {
+                SpeedActionTarget::Absolute(target) => {
+                    assert_eq!(target.value.as_literal().unwrap(), &25.0);
+                },
+                _ => panic!("Expected absolute target speed"),
+            }
+        },
+        _ => panic!("Expected speed action"),
+    }
+    
+    // Verify parameter declarations
+    let params = story.parameter_declarations.as_ref().unwrap();
+    assert_eq!(params.parameter_declarations.len(), 1);
+    
+    let param = &params.parameter_declarations[0];
+    assert_eq!(param.name.as_literal().unwrap(), "MaxSpeed");
+    assert_eq!(param.parameter_type, ParameterType::Double);
+    assert_eq!(param.value.as_literal().unwrap(), "30.0");
+    
+    println!("✅ Successfully created complete OpenSCENARIO structure:");
+    println!("   📚 Story '{}' with parameter declarations", story.name.as_literal().unwrap());
+    println!("   🎬 Act '{}' with maneuver groups", act.name.as_literal().unwrap());
+    println!("   👥 ManeuverGroup '{}' with actors and maneuvers", maneuver_group.name.as_literal().unwrap());
+    println!("   🎯 Maneuver '{}' with events", maneuver.name.as_literal().unwrap());
+    println!("   ⚡ Event '{}' with priority and triggers", event.name.as_literal().unwrap());
+    println!("   🔧 Action: SpeedAction with transition dynamics");
+    println!("   📊 Condition: SimulationTimeCondition with edge detection");
+    println!("   🎭 Actors: Entity reference to 'Ego'");
+    println!("");
+    println!("✅ Week 5 Core Scenario Structure: COMPLETE");
+}

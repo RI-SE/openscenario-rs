@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Position enum that can hold different position types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum Position {
     /// World position (absolute X,Y,Z coordinates)
@@ -28,7 +28,7 @@ pub enum Position {
 }
 
 /// World position with X, Y, Z coordinates
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct WorldPosition {
     #[serde(rename = "@x")]
@@ -40,7 +40,7 @@ pub struct WorldPosition {
 }
 
 /// Relative world position relative to an entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct RelativeWorldPosition {
     #[serde(rename = "@entityRef")]
@@ -51,4 +51,32 @@ pub struct RelativeWorldPosition {
     pub dy: f64,
     #[serde(rename = "@dz")]
     pub dz: f64,
+}
+
+// Default implementations
+impl Default for Position {
+    fn default() -> Self {
+        Position::WorldPosition(WorldPosition::default())
+    }
+}
+
+impl Default for WorldPosition {
+    fn default() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
+}
+
+impl Default for RelativeWorldPosition {
+    fn default() -> Self {
+        Self {
+            entity_ref: "DefaultEntity".to_string(),
+            dx: 0.0,
+            dy: 0.0,
+            dz: 0.0,
+        }
+    }
 }

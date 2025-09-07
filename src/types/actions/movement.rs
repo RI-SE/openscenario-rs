@@ -19,7 +19,7 @@ use crate::types::enums::{DynamicsDimension, DynamicsShape, SpeedTargetValueType
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedAction { 
     #[serde(rename = "Dynamics")]
     pub speed_action_dynamics: TransitionDynamics, 
@@ -27,7 +27,7 @@ pub struct SpeedAction {
     pub speed_action_target: SpeedActionTarget 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TeleportAction { 
     #[serde(rename = "Position")]
     pub position: Position 
@@ -36,7 +36,7 @@ pub struct TeleportAction {
 // Remove duplicate import
 
 // Define supporting types for SpeedAction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransitionDynamics {
     #[serde(rename = "@dynamicsDimension")]
     pub dynamics_dimension: DynamicsDimension,
@@ -46,7 +46,7 @@ pub struct TransitionDynamics {
     pub value: Double,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SpeedActionTarget { 
     #[serde(rename = "AbsoluteTargetSpeed", alias = "Absolute")]
     Absolute(AbsoluteTargetSpeed), 
@@ -54,13 +54,13 @@ pub enum SpeedActionTarget {
     Relative(RelativeTargetSpeed) 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsoluteTargetSpeed { 
     #[serde(rename = "@value")]
     pub value: Double 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeTargetSpeed {
     #[serde(rename = "@value")]
     pub value: Double,
@@ -76,6 +76,59 @@ pub struct RelativeTargetSpeed {
 // pub struct LaneChangeAction - lane change maneuvers
 // pub struct FollowTrajectoryAction - trajectory following
 // pub struct SynchronizeAction - entity coordination
+
+// Default implementations
+impl Default for SpeedAction {
+    fn default() -> Self {
+        Self {
+            speed_action_dynamics: TransitionDynamics::default(),
+            speed_action_target: SpeedActionTarget::default(),
+        }
+    }
+}
+
+impl Default for TeleportAction {
+    fn default() -> Self {
+        Self {
+            position: Position::default(),
+        }
+    }
+}
+
+impl Default for TransitionDynamics {
+    fn default() -> Self {
+        Self {
+            dynamics_dimension: DynamicsDimension::Time,
+            dynamics_shape: DynamicsShape::Linear,
+            value: Double::literal(1.0),
+        }
+    }
+}
+
+impl Default for SpeedActionTarget {
+    fn default() -> Self {
+        Self::Absolute(AbsoluteTargetSpeed::default())
+    }
+}
+
+impl Default for AbsoluteTargetSpeed {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(10.0),
+        }
+    }
+}
+
+impl Default for RelativeTargetSpeed {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(0.0),
+            entity_ref: "DefaultEntity".to_string(),
+            value_type: SpeedTargetValueType::Delta,
+            continuous: false,
+        }
+    }
+}
 
 // Add movement action validation
 // impl ValidateAction for SpeedAction, TeleportAction

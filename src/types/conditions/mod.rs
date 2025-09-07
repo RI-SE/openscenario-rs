@@ -17,8 +17,8 @@
 pub mod entity;  // Entity-based conditions
 pub mod value;   // Value-based conditions
 
-pub use value::SimulationTimeCondition;
-pub use entity::SpeedCondition;
+pub use value::{SimulationTimeCondition, ByValueCondition};
+pub use entity::{SpeedCondition, ByEntityCondition};
 
 use serde::{Deserialize, Serialize};
 

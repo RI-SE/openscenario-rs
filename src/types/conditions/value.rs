@@ -19,10 +19,35 @@ use crate::types::{Double};
 use crate::types::enums::{Rule};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SimulationTimeCondition {
     #[serde(rename = "@value")]
     pub value: Double,
     #[serde(rename = "@rule")]
     pub rule: Rule,
+}
+
+/// Value-based condition types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "PascalCase")]
+pub enum ByValueCondition {
+    /// Simulation time-based condition
+    #[serde(rename = "SimulationTimeCondition")]
+    SimulationTime(SimulationTimeCondition),
+    // More value conditions will be added later
+}
+
+impl Default for SimulationTimeCondition {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(10.0),
+            rule: Rule::GreaterThan,
+        }
+    }
+}
+
+impl Default for ByValueCondition {
+    fn default() -> Self {
+        ByValueCondition::SimulationTime(SimulationTimeCondition::default())
+    }
 }

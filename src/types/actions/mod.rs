@@ -24,11 +24,17 @@ pub use movement::{SpeedAction, TeleportAction};
 use serde::{Deserialize, Serialize};
 
 // Define base Action enum for polymorphic handling
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Action { 
     Speed(SpeedAction), 
     Teleport(TeleportAction) 
+}
+
+impl Default for Action {
+    fn default() -> Self {
+        Action::Speed(SpeedAction::default())
+    }
 }
 
 // Define Action wrapper with common attributes

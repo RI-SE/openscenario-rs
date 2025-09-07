@@ -18,7 +18,7 @@ use crate::types::{Double};
 use crate::types::enums::{Rule};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedCondition {
     #[serde(rename = "@value")]
     pub value: Double,
@@ -26,4 +26,30 @@ pub struct SpeedCondition {
     pub rule: Rule,
     #[serde(rename = "@entityRef")]
     pub entity_ref: String,
+}
+
+/// Entity-based condition types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "PascalCase")]
+pub enum ByEntityCondition {
+    /// Speed-based condition
+    #[serde(rename = "SpeedCondition")]
+    Speed(SpeedCondition),
+    // More entity conditions will be added later
+}
+
+impl Default for SpeedCondition {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(10.0),
+            rule: Rule::GreaterThan,
+            entity_ref: "DefaultEntity".to_string(),
+        }
+    }
+}
+
+impl Default for ByEntityCondition {
+    fn default() -> Self {
+        ByEntityCondition::Speed(SpeedCondition::default())
+    }
 }

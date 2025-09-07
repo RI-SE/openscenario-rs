@@ -30,8 +30,15 @@ pub mod catalogs;
 pub mod distributions;
 
 // Re-export commonly used types for convenience
-pub use basic::{Value, OSString, Double, Int, UnsignedInt, UnsignedShort, Boolean};
-pub use enums::{VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge};
+pub use basic::{
+    Value, OSString, Double, Int, UnsignedInt, UnsignedShort, Boolean,
+    ParameterDeclarations, ParameterDeclaration
+};
+pub use enums::{
+    VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge,
+    Priority, ParameterType, TriggeringEntitiesRule,
+    DynamicsDimension, DynamicsShape
+};
 pub use scenario::storyboard::{OpenScenario, FileHeader, Storyboard, Init};
 
 // Re-export entity types (when implemented)

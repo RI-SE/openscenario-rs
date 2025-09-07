@@ -301,3 +301,43 @@ mod tests {
     }
 }
 
+
+
+// Data Container Types for Scenario Structure
+
+use crate::types::enums::{ParameterType, Rule};
+
+/// Parameter declarations container
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ParameterDeclarations {
+    #[serde(rename = "ParameterDeclaration")]
+    pub parameter_declarations: Vec<ParameterDeclaration>,
+}
+
+/// Individual parameter declaration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ParameterDeclaration {
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    #[serde(rename = "@parameterType")]
+    pub parameter_type: ParameterType,
+    #[serde(rename = "@value")]
+    pub value: OSString,
+}
+
+impl Default for ParameterDeclarations {
+    fn default() -> Self {
+        Self { parameter_declarations: Vec::new() }
+    }
+}
+
+impl Default for ParameterDeclaration {
+    fn default() -> Self {
+        Self {
+            name: OSString::literal("DefaultParameter".to_string()),
+            parameter_type: ParameterType::String,
+            value: OSString::literal("".to_string()),
+        }
+    }
+}
+

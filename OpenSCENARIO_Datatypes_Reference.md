@@ -7,10 +7,10 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | Category | Count | Implemented | Description |
 |----------|--------|------------|-------------|
 | Basic Data Types | 9 | 9 | Fundamental data types with validation patterns |
-| Simple Enumeration Types | 37 | 37 | Predefined value lists |
-| Complex Types | 287 | 21 | Structured data with elements and attributes |
-| Groups | 14 | 0 | Reusable element collections |
-| **Total** | **347** | **67** | **Complete type system** |
+| Simple Enumeration Types | 37 | 41 | Predefined value lists |
+| Complex Types | 287 | 38 | Structured data with elements and attributes |
+| Groups | 14 | 1 | Reusable element collections |
+| **Total** | **347** | **89** | **Complete type system** |
 
 ---
 
@@ -19,9 +19,9 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | Type | Base Type | Validation Pattern/Union | Description | Status |
 |------|-----------|-------------------------|-------------|--------|
 | `parameter` | xsd:string | Pattern: `[$][A-Za-z_][A-Za-z0-9_]*` | Parameter reference starting with $ | ✅ Implemented |
-| `expression` | xsd:string | Pattern: `[$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]` | Mathematical expression in ${} format | 🚧 Partial |
+| `expression` | xsd:string | Pattern: `[$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]` | Mathematical expression in ${} format | ✅ Implemented |
 | `Boolean` | Union | expression \| parameter \| xsd:boolean | Boolean value or reference | ✅ Implemented |
-| `DateTime` | Union | parameter \| xsd:dateTime | Date/time value or reference | 🚧 Partial |
+| `DateTime` | Union | parameter \| xsd:dateTime | Date/time value or reference | ✅ Implemented |
 | `Double` | Union | expression \| parameter \| xsd:double | Double precision number or reference | ✅ Implemented |
 | `Int` | Union | expression \| parameter \| xsd:int | Integer value or reference | ✅ Implemented |
 | `String` | Union | parameter \| xsd:string | String value or reference | ✅ Implemented |
@@ -94,15 +94,15 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 |------|--------|-------------|--------|
 | `ConditionEdge` | falling, none, rising, risingOrFalling | Condition trigger edges | ✅ Implemented |
 | `Rule` | equalTo, greaterThan, lessThan, greaterOrEqual, lessOrEqual, notEqualTo | Comparison operators | ✅ Implemented |
-| `TriggeringEntitiesRule` | all, any | Entity trigger logic | 🚧 Planned |
+| `TriggeringEntitiesRule` | all, any | Entity trigger logic | ✅ Implemented |
 
 ### 2.8 Scenario Structure
 
 | Type | Values | Description | Status |
 |------|--------|-------------|--------|
-| `Priority` | overwrite¹, override, parallel, skip | Action priority levels | 🚧 Planned |
-| `StoryboardElementState` | completeState, endTransition, runningState, skipTransition, standbyState, startTransition, stopTransition | Storyboard element states | 🚧 Planned |
-| `StoryboardElementType` | act, action, event, maneuver, maneuverGroup, story | Storyboard element types | 🚧 Planned |
+| `Priority` | overwrite¹, override, parallel, skip | Action priority levels | ✅ Implemented |
+| `StoryboardElementState` | completeState, endTransition, runningState, skipTransition, standbyState, startTransition, stopTransition | Storyboard element states | ✅ Implemented |
+| `StoryboardElementType` | act, action, event, maneuver, maneuverGroup, story | Storyboard element types | ✅ Implemented |
 
 ### 2.9 Routing & Navigation
 
@@ -122,7 +122,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 
 | Type | Values | Description | Status |
 |------|--------|-------------|--------|
-| `ParameterType` | boolean, dateTime, double, integer¹, string, unsignedInt, unsignedShort, int | Parameter data types | 🚧 Planned |
+| `ParameterType` | boolean, dateTime, double, integer¹, string, unsignedInt, unsignedShort, int | Parameter data types | ✅ Implemented |
 
 ¹ *Deprecated element*
 
@@ -241,7 +241,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 #### 3.2.1 Entity-Based Conditions
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
-| `ByEntityCondition` | Entity-based triggers | TriggeringEntities, EntityCondition | 🚧 Planned |
+| `ByEntityCondition` | Entity-based triggers | TriggeringEntities, EntityCondition | ✅ Implemented |
 | `CollisionCondition` | Collision detection | EntityRef \| ByType | 🚧 Planned |
 | `DistanceCondition` | Distance-based trigger | Position, alongRoute¹, freespace, rule, value, coordinateSystem, relativeDistanceType, routingAlgorithm | 🚧 Planned |
 | `RelativeDistanceCondition` | Relative distance trigger | entityRef, freespace, relativeDistanceType, rule, value, coordinateSystem, routingAlgorithm | 🚧 Planned |
@@ -261,7 +261,7 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 #### 3.2.2 Value-Based Conditions
 | Type | Description | Key Attributes/Elements | Status |
 |------|-------------|------------------------|--------|
-| `ByValueCondition` | Value-based triggers | ParameterCondition \| TimeOfDayCondition \| SimulationTimeCondition \| StoryboardElementStateCondition \| UserDefinedValueCondition \| TrafficSignalCondition \| TrafficSignalControllerCondition \| VariableCondition | 🚧 Planned |
+| `ByValueCondition` | Value-based triggers | ParameterCondition \| TimeOfDayCondition \| SimulationTimeCondition \| StoryboardElementStateCondition \| UserDefinedValueCondition \| TrafficSignalCondition \| TrafficSignalControllerCondition \| VariableCondition | ✅ Implemented |
 | `ParameterCondition` | Parameter value trigger | parameterRef, rule, value | 🚧 Planned |
 | `VariableCondition` | Variable value trigger | variableRef, rule, value | 🚧 Planned |
 | `TimeOfDayCondition` | Time-based trigger | dateTime, rule | 🚧 Planned |
@@ -484,65 +484,65 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 ### 3.11 Scenario Structure (17 types)
 
 #### 3.11.1 Core Structure
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `OpenScenario` | Root element | FileHeader, OpenScenarioCategory |
-| `Storyboard` | Main scenario structure | Init, Story, StopTrigger |
-| `Story` | Story definition | name, ParameterDeclarations, Act |
-| `Act` | Act definition | name, ManeuverGroup, StartTrigger, StopTrigger |
-| `ManeuverGroup` | Maneuver group | name, maximumExecutionCount, Actors, CatalogReference, Maneuver |
-| `Maneuver` | Maneuver definition | name, ParameterDeclarations, Event |
-| `Event` | Event definition | name, maximumExecutionCount, priority, Action, StartTrigger |
-| `Action` | Generic action | name, GlobalAction \| UserDefinedAction \| PrivateAction |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `OpenScenario` | Root element | FileHeader, OpenScenarioCategory | ✅ Implemented |
+| `Storyboard` | Main scenario structure | Init, Story, StopTrigger | ✅ Implemented |
+| `Story` | Story definition | name, ParameterDeclarations, Act | ✅ Implemented |
+| `Act` | Act definition | name, ManeuverGroup, StartTrigger, StopTrigger | ✅ Implemented |
+| `ManeuverGroup` | Maneuver group | name, maximumExecutionCount, Actors, CatalogReference, Maneuver | ✅ Implemented |
+| `Maneuver` | Maneuver definition | name, ParameterDeclarations, Event | ✅ Implemented |
+| `Event` | Event definition | name, maximumExecutionCount, priority, Action, StartTrigger | ✅ Implemented |
+| `Action` | Generic action | name, GlobalAction \| UserDefinedAction \| PrivateAction | ✅ Implemented |
 
 #### 3.11.2 Initialization
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `Init` | Initialization | Actions |
-| `InitActions` | Initial actions | GlobalAction, UserDefinedAction, Private |
-| `Private` | Private actions | entityRef, PrivateAction |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `Init` | Initialization | Actions | ✅ Implemented |
+| `InitActions` | Initial actions | GlobalAction, UserDefinedAction, Private | 🚧 Planned |
+| `Private` | Private actions | entityRef, PrivateAction | 🚧 Planned |
 
 #### 3.11.3 Triggers
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `Trigger` | Trigger definition | ConditionGroup |
-| `ConditionGroup` | Condition group | Condition |
-| `Condition` | Condition definition | name, conditionEdge, delay, ByEntityCondition \| ByValueCondition |
-| `TriggeringEntities` | Triggering entities | triggeringEntitiesRule, EntityRef |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `Trigger` | Trigger definition | ConditionGroup | ✅ Implemented |
+| `ConditionGroup` | Condition group | Condition | ✅ Implemented |
+| `Condition` | Condition definition | name, conditionEdge, delay, ByEntityCondition \| ByValueCondition | ✅ Implemented |
+| `TriggeringEntities` | Triggering entities | triggeringEntitiesRule, EntityRef | ✅ Implemented |
 
 #### 3.11.4 Actors
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `Actors` | Actor selection | selectTriggeringEntities, EntityRef |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `Actors` | Actor selection | selectTriggeringEntities, EntityRef | ✅ Implemented |
 
 ### 3.12 Data Containers (25 types)
 
 #### 3.12.1 File & Metadata
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `FileHeader` | File metadata | author, date, description, revMajor, revMinor, License, Properties |
-| `File` | File reference | filepath |
-| `Directory` | Directory path | path |
-| `License` | License information | name, resource, spdxId, content |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `FileHeader` | File metadata | author, date, description, revMajor, revMinor, License, Properties | ✅ Implemented |
+| `File` | File reference | filepath | ✅ Implemented |
+| `Directory` | Directory path | path | 🚧 Planned |
+| `License` | License information | name, resource, spdxId, content | ✅ Implemented |
 
 #### 3.12.2 Properties & Parameters
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `Properties` | Property collection | Property, File, CustomContent |
-| `Property` | Property definition | name, value |
-| `CustomContent` | Custom content | content |
-| `ParameterDeclarations` | Parameter declarations | ParameterDeclaration |
-| `ParameterDeclaration` | Parameter definition | name, parameterType, value, ConstraintGroup |
-| `ParameterAssignments` | Parameter assignments | ParameterAssignment |
-| `ParameterAssignment` | Parameter assignment | parameterRef, value |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `Properties` | Property collection | Property, File, CustomContent | ✅ Implemented |
+| `Property` | Property definition | name, value | ✅ Implemented |
+| `CustomContent` | Custom content | content | ✅ Implemented |
+| `ParameterDeclarations` | Parameter declarations | ParameterDeclaration | ✅ Implemented |
+| `ParameterDeclaration` | Parameter definition | name, parameterType, value, ConstraintGroup | ✅ Implemented |
+| `ParameterAssignments` | Parameter assignments | ParameterAssignment | ✅ Implemented |
+| `ParameterAssignment` | Parameter assignment | parameterRef, value | ✅ Implemented |
 
 #### 3.12.3 Variables & Monitors
-| Type | Description | Key Attributes/Elements |
-|------|-------------|------------------------|
-| `VariableDeclarations` | Variable declarations | VariableDeclaration |
-| `VariableDeclaration` | Variable definition | name, variableType, value |
-| `MonitorDeclarations` | Monitor declarations | MonitorDeclaration |
-| `MonitorDeclaration` | Monitor definition | name, value |
+| Type | Description | Key Attributes/Elements | Status |
+|------|-------------|------------------------|--------|
+| `VariableDeclarations` | Variable declarations | VariableDeclaration | ✅ Implemented |
+| `VariableDeclaration` | Variable definition | name, variableType, value | ✅ Implemented |
+| `MonitorDeclarations` | Monitor declarations | MonitorDeclaration | ✅ Implemented |
+| `MonitorDeclaration` | Monitor definition | name, value | ✅ Implemented |
 
 #### 3.12.4 Constraints & Ranges
 | Type | Description | Key Attributes/Elements |
@@ -728,21 +728,21 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 
 ## 4. Groups (14 types)
 
-| Group | Elements | Description |
-|-------|----------|-------------|
-| `BrakeInput` | BrakePercent \| BrakeForce | Brake input methods |
-| `CatalogDefinition` | Catalog | Catalog definition group |
-| `DeterministicMultiParameterDistributionType` | ValueSetDistribution | Multi-parameter deterministic distribution |
-| `DeterministicParameterDistribution` | DeterministicMultiParameterDistribution \| DeterministicSingleParameterDistribution | Deterministic distribution choice |
-| `DeterministicSingleParameterDistributionType` | DistributionSet \| DistributionRange \| UserDefinedDistribution | Single parameter deterministic distribution |
-| `DistributionDefinition` | Deterministic \| Stochastic | Distribution type choice |
-| `EntityObject` | CatalogReference \| Vehicle \| Pedestrian \| MiscObject \| ExternalObjectReference | Entity object types |
-| `Gear` | ManualGear \| AutomaticGear | Gear type choice |
-| `OpenScenarioCategory` | ScenarioDefinition \| CatalogDefinition \| ParameterValueDistributionDefinition | Top-level scenario categories |
-| `ParameterValueDistributionDefinition` | ParameterValueDistribution | Parameter distribution definition |
-| `ScenarioDefinition` | ParameterDeclarations, VariableDeclarations, MonitorDeclarations, CatalogLocations, RoadNetwork, Entities, Storyboard | Complete scenario definition |
-| `SteadyState` | TargetDistanceSteadyState \| TargetTimeSteadyState | Steady state options |
-| `StochasticDistributionType` | ProbabilityDistributionSet \| NormalDistribution \| LogNormalDistribution \| UniformDistribution \| PoissonDistribution \| Histogram \| UserDefinedDistribution | Stochastic distribution types |
+| Group | Elements | Description | Status |
+|-------|----------|-------------|--------|
+| `BrakeInput` | BrakePercent \| BrakeForce | Brake input methods | 🚧 Planned |
+| `CatalogDefinition` | Catalog | Catalog definition group | 🚧 Planned |
+| `DeterministicMultiParameterDistributionType` | ValueSetDistribution | Multi-parameter deterministic distribution | 🚧 Planned |
+| `DeterministicParameterDistribution` | DeterministicMultiParameterDistribution \| DeterministicSingleParameterDistribution | Deterministic distribution choice | 🚧 Planned |
+| `DeterministicSingleParameterDistributionType` | DistributionSet \| DistributionRange \| UserDefinedDistribution | Single parameter deterministic distribution | 🚧 Planned |
+| `DistributionDefinition` | Deterministic \| Stochastic | Distribution type choice | 🚧 Planned |
+| `EntityObject` | CatalogReference \| Vehicle \| Pedestrian \| MiscObject \| ExternalObjectReference | Entity object types | ✅ Implemented |
+| `Gear` | ManualGear \| AutomaticGear | Gear type choice | 🚧 Planned |
+| `OpenScenarioCategory` | ScenarioDefinition \| CatalogDefinition \| ParameterValueDistributionDefinition | Top-level scenario categories | 🚧 Planned |
+| `ParameterValueDistributionDefinition` | ParameterValueDistribution | Parameter distribution definition | 🚧 Planned |
+| `ScenarioDefinition` | ParameterDeclarations, VariableDeclarations, MonitorDeclarations, CatalogLocations, RoadNetwork, Entities, Storyboard | Complete scenario definition | 🚧 Planned |
+| `SteadyState` | TargetDistanceSteadyState \| TargetTimeSteadyState | Steady state options | 🚧 Planned |
+| `StochasticDistributionType` | ProbabilityDistributionSet \| NormalDistribution \| LogNormalDistribution \| UniformDistribution \| PoissonDistribution \| Histogram \| UserDefinedDistribution | Stochastic distribution types | 🚧 Planned |
 
 ---
 
