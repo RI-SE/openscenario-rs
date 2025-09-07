@@ -1,0 +1,17 @@
+<!-- Simple OpenSCENARIO test file for basic parsing validation
+  
+  This file contains:
+  - Minimal valid OpenSCENARIO structure with required elements
+  - Basic entity definitions and simple maneuvers
+  - Standard parameter usage patterns
+  - Common trigger conditions and actions
+  - Representative but simple scenario content
+  
+  Contributes to project by:
+  - Providing baseline test case for parser validation
+  - Ensuring basic functionality works correctly
+  - Serving as reference for minimal valid scenario structure
+  - Supporting rapid test execution with lightweight content
+  - Enabling focused testing of core functionality without complexity -->
+
+<!-- Actual OpenSCENARIO XML content will be added during implementation -->

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader author="OpenSCENARIO-rs" date="2024-01-01T00:00:00" description="Simple test scenario for parsing validation" revMajor="1" revMinor="2"/>
+  <Entities>
+    <ScenarioObject name="Ego">
+      <Vehicle name="EgoVehicle" vehicleCategory="car">
+        <BoundingBox>
+          <Center x="0.0" y="0.0" z="0.0"/>
+          <Dimensions width="2.0" length="4.5" height="1.5"/>
+        </BoundingBox>
+      </Vehicle>
+    </ScenarioObject>
+    <ScenarioObject name="Pedestrian1">
+      <Pedestrian name="TestPedestrian" pedestrianCategory="pedestrian">
+        <BoundingBox>
+          <Center x="10.0" y="2.0" z="0.0"/>
+          <Dimensions width="0.6" length="0.6" height="1.8"/>
+        </BoundingBox>
+      </Pedestrian>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init/>
+  </Storyboard>
+</OpenSCENARIO>

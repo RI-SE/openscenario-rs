@@ -1,0 +1,17 @@
+<!-- Invalid OpenSCENARIO test file for error handling validation
+
+  This file contains:
+  - Intentional syntax errors and malformed XML
+  - Invalid references (missing entities, broken catalog references)
+  - Logical inconsistencies (contradictory constraints, impossible conditions)
+  - Out-of-range parameter values and constraint violations
+  - Missing required elements and incomplete definitions
+  
+  Contributes to project by:
+  - Testing error handling and recovery mechanisms
+  - Validating error message quality and helpfulness
+  - Ensuring graceful failure modes for invalid input
+  - Supporting fuzzing and robustness testing
+  - Providing regression tests for error handling improvements -->
+
+<!-- Actual invalid OpenSCENARIO XML content will be added during implementation -->
