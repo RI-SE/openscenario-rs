@@ -14,6 +14,7 @@
           <RearAxle maxSteering="0.0" wheelDiameter="0.5" trackWidth="1.75" positionX="0.0" positionZ="0.25"/>
         </Axles>
       </Vehicle>
+      <ObjectController />
     </ScenarioObject>
     <ScenarioObject name="Pedestrian1">
       <Pedestrian name="TestPedestrian" pedestrianCategory="pedestrian">
@@ -22,6 +23,7 @@
           <Dimensions width="0.6" length="0.6" height="1.8"/>
         </BoundingBox>
       </Pedestrian>
+      <ObjectController />
     </ScenarioObject>
   </Entities>
   <Storyboard>

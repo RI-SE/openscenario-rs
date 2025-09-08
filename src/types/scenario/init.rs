@@ -34,19 +34,15 @@ pub struct Actions {
 }
 
 /// Global actions that affect the entire scenario
+/// The XML structure has explicit action type elements inside GlobalAction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalAction {
-    #[serde(flatten)]
-    pub action_type: GlobalActionType,
+    #[serde(rename = "EnvironmentAction", skip_serializing_if = "Option::is_none")]
+    pub environment_action: Option<EnvironmentAction>,
+    // EntityAction and InfrastructureAction can be added later as Option fields
 }
 
-/// Types of global actions available for initialization
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum GlobalActionType {
-    EnvironmentAction(EnvironmentAction),
-    // EntityAction and InfrastructureAction can be added later
-}
+
 
 /// Environment setup action containing complete environment definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,11 +60,15 @@ pub struct Private {
     pub private_actions: Vec<PrivateActionWrapper>,
 }
 
-/// Wrapper for individual private actions (similar to GlobalAction pattern)
+/// Wrapper for individual private actions with explicit element types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivateActionWrapper {
-    #[serde(flatten)]
-    pub action_type: PrivateActionType,
+    #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
+    pub longitudinal_action: Option<LongitudinalAction>,
+    #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
+    pub teleport_action: Option<TeleportAction>,
+    #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
+    pub routing_action: Option<RoutingAction>,
 }
 
 /// Types of private actions available for entity initialization
@@ -84,8 +84,9 @@ pub enum PrivateActionType {
 /// Longitudinal movement actions (speed control, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
-    #[serde(flatten)]
-    pub action_type: LongitudinalActionType,
+    #[serde(rename = "SpeedAction", skip_serializing_if = "Option::is_none")]
+    pub speed_action: Option<SpeedAction>,
+    // SpeedProfileAction, SynchronizeAction, etc. can be added later as Option fields
 }
 
 /// Types of longitudinal actions
@@ -116,7 +117,7 @@ impl Default for Actions {
 impl Default for GlobalAction {
     fn default() -> Self {
         Self {
-            action_type: GlobalActionType::EnvironmentAction(EnvironmentAction::default()),
+            environment_action: Some(EnvironmentAction::default()),
         }
     }
 }
@@ -141,7 +142,9 @@ impl Default for Private {
 impl Default for PrivateActionWrapper {
     fn default() -> Self {
         Self {
-            action_type: PrivateActionType::LongitudinalAction(LongitudinalAction::default()),
+            longitudinal_action: Some(LongitudinalAction::default()),
+            teleport_action: None,
+            routing_action: None,
         }
     }
 }
@@ -149,7 +152,7 @@ impl Default for PrivateActionWrapper {
 impl Default for LongitudinalAction {
     fn default() -> Self {
         Self {
-            action_type: LongitudinalActionType::SpeedAction(SpeedAction::default()),
+            speed_action: Some(SpeedAction::default()),
         }
     }
 }
@@ -181,7 +184,7 @@ mod tests {
         let init = Init {
             actions: Actions {
                 global_actions: vec![GlobalAction {
-                    action_type: GlobalActionType::EnvironmentAction(EnvironmentAction {
+                    environment_action: Some(EnvironmentAction {
                         environment: Environment::default(),
                     }),
                 }],
@@ -198,12 +201,16 @@ mod tests {
     fn test_private_action_builder() {
         let private = Private::new("TestEntity")
             .add_action(PrivateActionWrapper {
-                action_type: PrivateActionType::LongitudinalAction(LongitudinalAction {
-                    action_type: LongitudinalActionType::SpeedAction(SpeedAction::default()),
+                longitudinal_action: Some(LongitudinalAction {
+                    speed_action: Some(SpeedAction::default()),
                 }),
+                teleport_action: None,
+                routing_action: None,
             })
             .add_action(PrivateActionWrapper {
-                action_type: PrivateActionType::TeleportAction(TeleportAction::default()),
+                longitudinal_action: None,
+                teleport_action: Some(TeleportAction::default()),
+                routing_action: None,
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
@@ -241,7 +248,7 @@ mod tests {
         let init = Init {
             actions: Actions {
                 global_actions: vec![GlobalAction {
-                    action_type: GlobalActionType::EnvironmentAction(EnvironmentAction::default()),
+                    environment_action: Some(EnvironmentAction::default()),
                 }],
                 private_actions: vec![Private::new("Ego")],
             },

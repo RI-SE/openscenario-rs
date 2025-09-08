@@ -40,6 +40,8 @@ pub struct Storyboard {
     pub init: Init,
     #[serde(rename = "Story", default)]
     pub stories: Vec<super::story::ScenarioStory>,
+    #[serde(rename = "StopTrigger", skip_serializing_if = "Option::is_none")]
+    pub stop_trigger: Option<super::triggers::Trigger>,
 }
 
 // Init is now imported from init.rs module
@@ -61,6 +63,7 @@ impl Default for OpenScenario {
             storyboard: Storyboard {
                 init: Init::default(),
                 stories: vec![],
+                stop_trigger: None,
             },
         }
     }

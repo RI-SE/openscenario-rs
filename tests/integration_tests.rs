@@ -167,14 +167,17 @@ fn can_create_and_serialize_actions() {
     
     // Test creating a TeleportAction
     let teleport_action = TeleportAction {
-        position: Position::WorldPosition(WorldPosition {
-            x: openscenario_rs::types::Double::literal(10.0),
-            y: openscenario_rs::types::Double::literal(20.0),
-            z: openscenario_rs::types::Double::literal(0.0),
-            h: openscenario_rs::types::Double::literal(0.0),
-            p: openscenario_rs::types::Double::literal(0.0),
-            r: openscenario_rs::types::Double::literal(0.0),
-        }),
+        position: Position {
+            world_position: Some(WorldPosition {
+                x: openscenario_rs::types::Double::literal(10.0),
+                y: openscenario_rs::types::Double::literal(20.0),
+                z: openscenario_rs::types::Double::literal(0.0),
+                h: openscenario_rs::types::Double::literal(0.0),
+                p: openscenario_rs::types::Double::literal(0.0),
+                r: openscenario_rs::types::Double::literal(0.0),
+            }),
+            relative_world_position: None,
+        },
     };
     
     // Test creating Action enum variants
@@ -498,36 +501,34 @@ fn can_parse_routing_actions_in_story_events() {
     // Check that private actions can be parsed (including RoutingAction type)
     for private in &init.actions.private_actions {
         for action_wrapper in &private.private_actions {
-            match &action_wrapper.action_type {
-                PrivateActionType::LongitudinalAction(_) => {
-                    println!("✓ LongitudinalAction parsed");
-                }
-                PrivateActionType::TeleportAction(_) => {
-                    println!("✓ TeleportAction parsed");  
-                }
-                PrivateActionType::RoutingAction(routing) => {
-                    // This validates the trajectory system integration
-                    println!("✓ RoutingAction with FollowTrajectoryAction parsed");
-                    
-                    // Verify the trajectory has the expected structure
-                    let trajectory = &routing.follow_trajectory_action.trajectory;
-                    println!("  - Trajectory name: {}", trajectory.name.as_literal().unwrap_or(&"Unknown".to_string()));
-                    println!("  - Trajectory closed: {}", trajectory.closed.as_literal().unwrap_or(&false));
-                    
-                    // Verify shape contains vertices
-                    match &trajectory.shape {
-                        openscenario_rs::types::geometry::Shape::Polyline(polyline) => {
-                            println!("  - Polyline vertices: {}", polyline.vertices.len());
-                            assert!(!polyline.vertices.is_empty(), "Polyline must contain vertices");
-                        }
+            if let Some(_) = &action_wrapper.longitudinal_action {
+                println!("✓ LongitudinalAction parsed");
+            }
+            if let Some(_) = &action_wrapper.teleport_action {
+                println!("✓ TeleportAction parsed");  
+            }
+            if let Some(routing) = &action_wrapper.routing_action {
+                // This validates the trajectory system integration
+                println!("✓ RoutingAction with FollowTrajectoryAction parsed");
+                
+                // Verify the trajectory has the expected structure
+                let trajectory = &routing.follow_trajectory_action.trajectory;
+                println!("  - Trajectory name: {}", trajectory.name.as_literal().unwrap_or(&"Unknown".to_string()));
+                println!("  - Trajectory closed: {}", trajectory.closed.as_literal().unwrap_or(&false));
+                
+                // Verify shape contains vertices
+                match &trajectory.shape {
+                    openscenario_rs::types::geometry::Shape::Polyline(polyline) => {
+                        println!("  - Polyline vertices: {}", polyline.vertices.len());
+                        assert!(!polyline.vertices.is_empty(), "Polyline must contain vertices");
                     }
-                    
-                    // Verify trajectory following mode
-                    use openscenario_rs::types::enums::FollowingMode;
-                    match routing.follow_trajectory_action.trajectory_following_mode.following_mode {
-                        FollowingMode::Follow => println!("  - Following mode: Follow"),
-                        FollowingMode::Position => println!("  - Following mode: Position"),
-                    }
+                }
+                
+                // Verify trajectory following mode
+                use openscenario_rs::types::enums::FollowingMode;
+                match routing.follow_trajectory_action.trajectory_following_mode.following_mode {
+                    FollowingMode::Follow => println!("  - Following mode: Follow"),
+                    FollowingMode::Position => println!("  - Following mode: Position"),
                 }
             }
         }
@@ -550,7 +551,7 @@ fn can_validate_trajectory_following_modes() {
     let init = &scenario.storyboard.init;
     for private in &init.actions.private_actions {
         for action_wrapper in &private.private_actions {
-            if let openscenario_rs::types::scenario::init::PrivateActionType::RoutingAction(routing) = &action_wrapper.action_type {
+            if let Some(routing) = &action_wrapper.routing_action {
                 routing_actions_found += 1;
                 
                 use openscenario_rs::types::enums::FollowingMode;
@@ -757,7 +758,7 @@ use openscenario_rs::types::{
             name: Value::literal("SpeedAction1".to_string()),
             action_type: StoryActionType::PrivateAction(StoryPrivateAction {
                 action_type: PrivateActionType::LongitudinalAction(LongitudinalAction {
-                    action_type: LongitudinalActionType::SpeedAction(speed_action),
+                    speed_action: Some(speed_action),
                 }),
             }),
         },
@@ -852,20 +853,21 @@ use openscenario_rs::types::{
         StoryActionType::PrivateAction(private_action) => {
             match &private_action.action_type {
                 PrivateActionType::LongitudinalAction(longitudinal_action) => {
-                    match &longitudinal_action.action_type {
-                        LongitudinalActionType::SpeedAction(speed_action) => {
-                            assert_eq!(speed_action.speed_action_dynamics.dynamics_dimension, DynamicsDimension::Time);
-                            assert_eq!(speed_action.speed_action_dynamics.dynamics_shape, DynamicsShape::Linear);
-                            assert_eq!(speed_action.speed_action_dynamics.value.as_literal().unwrap(), &3.0);
-                            
-                            match &speed_action.speed_action_target {
-                                SpeedActionTarget::Absolute(target) => {
-                                    assert_eq!(target.value.as_literal().unwrap(), &25.0);
-                                },
-                                _ => panic!("Expected absolute target speed"),
-                            }
-                        },
-                        _ => panic!("Expected speed action type"),
+                    if let Some(speed_action) = &longitudinal_action.speed_action {
+                        assert_eq!(speed_action.speed_action_dynamics.dynamics_dimension, DynamicsDimension::Time);
+                        assert_eq!(speed_action.speed_action_dynamics.dynamics_shape, DynamicsShape::Linear);
+                        assert_eq!(speed_action.speed_action_dynamics.value.as_literal().unwrap(), &3.0);
+                        
+                        match &speed_action.speed_action_target {
+                            SpeedActionTarget::Absolute(target) => {
+                                assert_eq!(target.value.as_literal().unwrap(), &25.0);
+                            },
+                            SpeedActionTarget::Relative(_) => {
+                                panic!("Expected absolute target speed");
+                            },
+                        }
+                    } else {
+                        panic!("Expected speed action");
                     }
                 },
                 _ => panic!("Expected longitudinal action"),

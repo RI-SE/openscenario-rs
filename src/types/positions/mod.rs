@@ -17,15 +17,14 @@
 use serde::{Deserialize, Serialize};
 use crate::types::basic::{Double, OSString};
 
-/// Position enum that can hold different position types
+/// Wrapper for Position element that contains position variants
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub enum Position {
-    /// World position (absolute X,Y,Z coordinates)
-    WorldPosition(WorldPosition),
-    /// Relative world position (relative to an entity)
-    RelativeWorldPosition(RelativeWorldPosition),
-    // Other position types will be added later
+pub struct Position {
+    #[serde(rename = "WorldPosition", skip_serializing_if = "Option::is_none")]
+    pub world_position: Option<WorldPosition>,
+    #[serde(rename = "RelativeWorldPosition", skip_serializing_if = "Option::is_none")]
+    pub relative_world_position: Option<RelativeWorldPosition>,
+    // Other position types will be added later as Optional fields
 }
 
 /// World position with X, Y, Z coordinates and orientation (h, p, r)
@@ -63,7 +62,10 @@ pub struct RelativeWorldPosition {
 // Default implementations
 impl Default for Position {
     fn default() -> Self {
-        Position::WorldPosition(WorldPosition::default())
+        Position {
+            world_position: Some(WorldPosition::default()),
+            relative_world_position: None,
+        }
     }
 }
 

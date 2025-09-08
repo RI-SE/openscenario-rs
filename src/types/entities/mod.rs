@@ -7,7 +7,7 @@ pub mod vehicle;
 pub mod pedestrian;
 
 // Re-export entity types
-pub use vehicle::Vehicle;
+pub use vehicle::{Vehicle, Properties};
 pub use pedestrian::Pedestrian;
 
 /// Union type for all entity objects
@@ -32,6 +32,10 @@ pub struct ScenarioObject {
     /// The actual entity object (Vehicle, Pedestrian, etc.)
     #[serde(flatten)]
     pub entity_object: EntityObject,
+    
+    /// Object controller configuration (optional)
+    #[serde(rename = "ObjectController")]
+    pub object_controller: ObjectController,
 }
 
 /// Container for all entities in the scenario
@@ -48,6 +52,7 @@ impl ScenarioObject {
         Self {
             name: crate::types::basic::Value::literal(name),
             entity_object: EntityObject::Vehicle(vehicle),
+            object_controller: ObjectController::default(),
         }
     }
     
@@ -56,6 +61,7 @@ impl ScenarioObject {
         Self {
             name: crate::types::basic::Value::literal(name),
             entity_object: EntityObject::Pedestrian(pedestrian),
+            object_controller: ObjectController::default(),
         }
     }
     
@@ -82,6 +88,26 @@ impl Entities {
             .find(|obj| obj.get_name() == Some(name))
     }
 }
+
+/// Object controller for controlling entity behavior
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ObjectController {
+    /// Optional controller properties
+    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Properties>,
+}
+
+
+
+impl Default for ObjectController {
+    fn default() -> Self {
+        Self {
+            properties: None,
+        }
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {

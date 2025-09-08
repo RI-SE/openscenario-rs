@@ -49,11 +49,11 @@ pub struct TransitionDynamics {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum SpeedActionTarget { 
-    #[serde(rename = "AbsoluteTargetSpeed", alias = "Absolute")]
-    Absolute(AbsoluteTargetSpeed), 
-    #[serde(rename = "RelativeTargetSpeed", alias = "Relative")]
-    Relative(RelativeTargetSpeed) 
+pub struct SpeedActionTarget {
+    #[serde(rename = "AbsoluteTargetSpeed", skip_serializing_if = "Option::is_none")]
+    pub absolute: Option<AbsoluteTargetSpeed>,
+    #[serde(rename = "RelativeTargetSpeed", skip_serializing_if = "Option::is_none")]
+    pub relative: Option<RelativeTargetSpeed>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -142,7 +142,10 @@ impl Default for TransitionDynamics {
 
 impl Default for SpeedActionTarget {
     fn default() -> Self {
-        Self::Absolute(AbsoluteTargetSpeed::default())
+        Self {
+            absolute: Some(AbsoluteTargetSpeed::default()),
+            relative: None,
+        }
     }
 }
 

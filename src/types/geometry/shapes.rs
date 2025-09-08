@@ -143,7 +143,10 @@ mod tests {
         
         let vertex = Vertex {
             time: crate::types::basic::Value::literal(0.04),
-            position: Position::WorldPosition(WorldPosition::default()),
+            position: Position {
+                world_position: Some(WorldPosition::default()),
+                relative_world_position: None,
+            },
         };
         
         assert_eq!(vertex.time.as_literal().unwrap(), &0.04);
@@ -157,11 +160,17 @@ mod tests {
             vertices: vec![
                 Vertex {
                     time: crate::types::basic::Value::literal(0.0),
-                    position: Position::WorldPosition(WorldPosition::default()),
+                    position: Position {
+                        world_position: Some(WorldPosition::default()),
+                        relative_world_position: None,
+                    },
                 },
                 Vertex {
                     time: crate::types::basic::Value::literal(0.04),
-                    position: Position::WorldPosition(WorldPosition::default()),
+                    position: Position {
+                        world_position: Some(WorldPosition::default()),
+                        relative_world_position: None,
+                    },
                 },
             ],
         };
@@ -178,7 +187,10 @@ mod tests {
         let shape = Shape::Polyline(Polyline {
             vertices: vec![Vertex {
                 time: crate::types::basic::Value::literal(1.0),
-                position: Position::WorldPosition(WorldPosition::default()),
+                position: Position {
+                    world_position: Some(WorldPosition::default()),
+                    relative_world_position: None,
+                },
             }],
         });
         
