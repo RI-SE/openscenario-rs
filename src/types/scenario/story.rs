@@ -186,6 +186,7 @@ pub struct Event {
 /// Actors define which entities will participate in a ManeuverGroup
 /// and can optionally select from triggering entities.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct Actors {
     /// Whether to select entities that triggered the maneuver group
     #[serde(rename = "@selectTriggeringEntities", skip_serializing_if = "Option::is_none")]
@@ -285,14 +286,6 @@ impl Default for Event {
     }
 }
 
-impl Default for Actors {
-    fn default() -> Self {
-        Self {
-            select_triggering_entities: None,
-            entity_refs: Vec::new(),
-        }
-    }
-}
 
 impl Default for EntityRef {
     fn default() -> Self {

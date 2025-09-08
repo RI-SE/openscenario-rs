@@ -6,6 +6,7 @@ use crate::types::positions::Position;
 
 /// Three-dimensional bounding box for entity spatial extents
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct BoundingBox {
     /// Center position of the bounding box
     #[serde(rename = "Center")]
@@ -43,14 +44,6 @@ pub struct Dimensions {
     pub height: Double,
 }
 
-impl Default for BoundingBox {
-    fn default() -> Self {
-        Self {
-            center: Center::default(),
-            dimensions: Dimensions::default(),
-        }
-    }
-}
 
 impl Default for Center {
     fn default() -> Self {
@@ -187,15 +180,17 @@ mod tests {
     fn test_shape_serialization() {
         use crate::types::positions::{Position, WorldPosition};
         
-        let shape = Shape::Polyline(Polyline {
-            vertices: vec![Vertex {
-                time: crate::types::basic::Value::literal(1.0),
-                position: Position {
-                    world_position: Some(WorldPosition::default()),
-                    relative_world_position: None,
-                },
-            }],
-        });
+        let shape = Shape {
+            polyline: Some(Polyline {
+                vertices: vec![Vertex {
+                    time: crate::types::basic::Value::literal(1.0),
+                    position: Position {
+                        world_position: Some(WorldPosition::default()),
+                        relative_world_position: None,
+                    },
+                }],
+            }),
+        };
         
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(xml.contains("<Polyline"));

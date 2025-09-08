@@ -46,6 +46,9 @@ pub use types::scenario::storyboard::{OpenScenario, FileHeader};
 // Re-export parser functions
 pub use parser::xml::{parse_from_str, parse_from_file, serialize_to_string, serialize_to_file};
 
+// Re-export expression evaluation
+pub use expression::evaluate_expression;
+
 // Feature-gated re-exports
 #[cfg(feature = "builder")]
 pub use builder::scenario::ScenarioBuilder;

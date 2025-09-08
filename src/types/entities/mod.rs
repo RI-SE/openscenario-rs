@@ -15,9 +15,9 @@ pub use pedestrian::Pedestrian;
 #[serde(rename_all = "PascalCase")]
 pub enum EntityObject {
     /// Vehicle entity
-    Vehicle(Vehicle),
+    Vehicle(Box<Vehicle>),
     /// Pedestrian entity  
-    Pedestrian(Pedestrian),
+    Pedestrian(Box<Pedestrian>),
     // TODO: Add MiscellaneousObject later
     // MiscellaneousObject(MiscObject),
 }
@@ -74,12 +74,8 @@ impl ScenarioObject {
     /// Get the entity object as an enum variant
     pub fn get_entity_object(&self) -> Option<EntityObject> {
         if let Some(vehicle) = &self.vehicle {
-            Some(EntityObject::Vehicle(vehicle.clone()))
-        } else if let Some(pedestrian) = &self.pedestrian {
-            Some(EntityObject::Pedestrian(pedestrian.clone()))
-        } else {
-            None
-        }
+            Some(EntityObject::Vehicle(Box::new(vehicle.clone())))
+        } else { self.pedestrian.as_ref().map(|pedestrian| EntityObject::Pedestrian(Box::new(pedestrian.clone()))) }
     }
     
     /// Get the name of this scenario object
@@ -108,6 +104,7 @@ impl Entities {
 
 /// Object controller for controlling entity behavior
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ObjectController {
     /// Optional controller properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
@@ -116,13 +113,6 @@ pub struct ObjectController {
 
 
 
-impl Default for ObjectController {
-    fn default() -> Self {
-        Self {
-            properties: None,
-        }
-    }
-}
 
 
 

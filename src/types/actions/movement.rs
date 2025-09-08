@@ -22,6 +22,7 @@ use crate::types::geometry::shapes::Shape;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct SpeedAction { 
     #[serde(rename = "SpeedActionDynamics")]
     pub speed_action_dynamics: TransitionDynamics, 
@@ -30,6 +31,7 @@ pub struct SpeedAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct TeleportAction { 
     #[serde(rename = "Position")]
     pub position: Position 
@@ -94,6 +96,7 @@ pub struct TrajectoryFollowingMode {
 
 /// Follow trajectory action containing complete trajectory definition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct FollowTrajectoryAction {
     #[serde(rename = "Trajectory")]
     pub trajectory: Trajectory,
@@ -103,6 +106,7 @@ pub struct FollowTrajectoryAction {
 
 /// Routing action container for trajectory-based movement
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct RoutingAction {
     #[serde(rename = "FollowTrajectoryAction")]
     pub follow_trajectory_action: FollowTrajectoryAction,
@@ -113,22 +117,7 @@ pub struct RoutingAction {
 // pub struct SynchronizeAction - entity coordination
 
 // Default implementations
-impl Default for SpeedAction {
-    fn default() -> Self {
-        Self {
-            speed_action_dynamics: TransitionDynamics::default(),
-            speed_action_target: SpeedActionTarget::default(),
-        }
-    }
-}
 
-impl Default for TeleportAction {
-    fn default() -> Self {
-        Self {
-            position: Position::default(),
-        }
-    }
-}
 
 impl Default for TransitionDynamics {
     fn default() -> Self {
@@ -186,22 +175,7 @@ impl Default for TrajectoryFollowingMode {
     }
 }
 
-impl Default for FollowTrajectoryAction {
-    fn default() -> Self {
-        Self {
-            trajectory: Trajectory::default(),
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
-        }
-    }
-}
 
-impl Default for RoutingAction {
-    fn default() -> Self {
-        Self {
-            follow_trajectory_action: FollowTrajectoryAction::default(),
-        }
-    }
-}
 
 // Add movement action validation
 // impl ValidateAction for SpeedAction, TeleportAction

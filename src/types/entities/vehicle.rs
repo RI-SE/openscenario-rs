@@ -18,6 +18,7 @@ pub struct Performance {
 
 /// Axle definitions for vehicle
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Axles {
     #[serde(rename = "FrontAxle")]
     pub front_axle: FrontAxle,
@@ -57,6 +58,7 @@ pub struct RearAxle {
 
 /// Vehicle properties container
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Properties {
     #[serde(rename = "Property", default)]
     pub properties: Vec<Property>,
@@ -142,23 +144,7 @@ impl Default for RearAxle {
     }
 }
 
-impl Default for Axles {
-    fn default() -> Self {
-        Self {
-            front_axle: FrontAxle::default(),
-            rear_axle: RearAxle::default(),
-        }
-    }
-}
 
-impl Default for Properties {
-    fn default() -> Self {
-        Self {
-            properties: Vec::new(),
-            files: Vec::new(),
-        }
-    }
-}
 
 impl Default for Vehicle {
     fn default() -> Self {

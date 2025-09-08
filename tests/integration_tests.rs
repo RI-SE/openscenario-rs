@@ -7,7 +7,6 @@
 //! - Failing tests indicate missing functionality to implement next
 
 use openscenario_rs::parse_str;
-use openscenario_rs::types::entities::{EntityObject};
 use openscenario_rs::types::enums::{VehicleCategory, PedestrianCategory};
 use std::fs;
 
@@ -737,7 +736,7 @@ use openscenario_rs::types::{
         EntityRef, Actors
     },
     scenario::triggers::{Trigger, ConditionGroup, Condition},
-    scenario::story::{StoryAction, StoryActionType, StoryPrivateAction},
+    scenario::story::{StoryAction, StoryPrivateAction},
     actions::movement::{SpeedAction, TransitionDynamics, SpeedActionTarget, AbsoluteTargetSpeed},
     scenario::init::{LongitudinalAction},
     conditions::{ByValueCondition, SimulationTimeCondition},

@@ -6,8 +6,10 @@
 //! - Support for ${expression} syntax from the XSD schema
 //! - Comprehensive error handling for invalid expressions
 //!
-//! Supported operators: +, -, *, /, %, (, )
-//! Supported types: numeric literals, parameters, function calls
+//! Supported operators: +, -, *, /, %, (, ), >, <, >=, <=, ==, !=
+//! Supported types: numeric literals, parameters, function calls, constants
+//! Supported functions: sin, cos, tan, sqrt, abs, floor, ceil, min, max
+//! Supported constants: PI, E
 //!
 //! XSD Pattern: `[$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]`
 
@@ -21,8 +23,11 @@ pub enum Token {
     Number(f64),
     Parameter(String),
     Operator(Operator),
+    Function(String),
+    Constant(String),
     LeftParen,
     RightParen,
+    Comma,
 }
 
 /// Supported mathematical operators
@@ -33,6 +38,13 @@ pub enum Operator {
     Multiply,
     Divide,
     Modulo,
+    // Comparison operators
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
+    Equal,
+    NotEqual,
 }
 
 /// Abstract syntax tree node for expressions
@@ -40,12 +52,17 @@ pub enum Operator {
 pub enum Expr {
     Number(f64),
     Parameter(String),
+    Constant(String),
     BinaryOp {
         left: Box<Expr>,
         operator: Operator,
         right: Box<Expr>,
     },
     UnaryMinus(Box<Expr>),
+    FunctionCall {
+        name: String,
+        args: Vec<Expr>,
+    },
 }
 
 /// Expression parser for OpenSCENARIO mathematical expressions
@@ -109,6 +126,46 @@ impl ExpressionParser {
                     tokens.push(Token::RightParen);
                     chars.next();
                 }
+                ',' => {
+                    tokens.push(Token::Comma);
+                    chars.next();
+                }
+                '>' => {
+                    chars.next();
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator(Operator::GreaterEqual));
+                    } else {
+                        tokens.push(Token::Operator(Operator::Greater));
+                    }
+                }
+                '<' => {
+                    chars.next();
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator(Operator::LessEqual));
+                    } else {
+                        tokens.push(Token::Operator(Operator::Less));
+                    }
+                }
+                '=' => {
+                    chars.next();
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator(Operator::Equal));
+                    } else {
+                        return Err(Error::validation_error("tokenize", "single '=' not supported, use '==' for equality"));
+                    }
+                }
+                '!' => {
+                    chars.next();
+                    if chars.peek() == Some(&'=') {
+                        chars.next();
+                        tokens.push(Token::Operator(Operator::NotEqual));
+                    } else {
+                        return Err(Error::validation_error("tokenize", "single '!' not supported, use '!=' for inequality"));
+                    }
+                }
                 '$' => {
                     // Parameter reference: ${paramName} or $paramName
                     chars.next(); // consume '$'
@@ -134,8 +191,14 @@ impl ExpressionParser {
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     let identifier = Self::read_identifier(&mut chars)?;
-                    // For now, treat all identifiers as parameter names
-                    tokens.push(Token::Parameter(identifier));
+                    // Check if it's followed by '(' for function call
+                    if chars.peek() == Some(&'(') {
+                        tokens.push(Token::Function(identifier));
+                    } else if Self::is_constant(&identifier) {
+                        tokens.push(Token::Constant(identifier));
+                    } else {
+                        tokens.push(Token::Parameter(identifier));
+                    }
                 }
                 _ => {
                     return Err(Error::validation_error("tokenize", &format!("unexpected character: '{}'", ch)));
@@ -210,9 +273,81 @@ impl ExpressionParser {
         Ok(content)
     }
 
+    /// Check if identifier is a mathematical constant
+    fn is_constant(identifier: &str) -> bool {
+        matches!(identifier, "PI" | "E")
+    }
+
     /// Parse an expression with precedence handling
     fn parse_expression(&mut self) -> Result<Expr> {
-        self.parse_additive()
+        self.parse_comparison()
+    }
+    
+    /// Parse comparison expressions (>, <, >=, <=, ==, !=)
+    fn parse_comparison(&mut self) -> Result<Expr> {
+        let mut left = self.parse_additive()?;
+
+        while self.current < self.tokens.len() {
+            match &self.tokens[self.current] {
+                Token::Operator(Operator::Greater) => {
+                    self.current += 1;
+                    let right = self.parse_additive()?;
+                    left = Expr::BinaryOp {
+                        left: Box::new(left),
+                        operator: Operator::Greater,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Operator(Operator::Less) => {
+                    self.current += 1;
+                    let right = self.parse_additive()?;
+                    left = Expr::BinaryOp {
+                        left: Box::new(left),
+                        operator: Operator::Less,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Operator(Operator::GreaterEqual) => {
+                    self.current += 1;
+                    let right = self.parse_additive()?;
+                    left = Expr::BinaryOp {
+                        left: Box::new(left),
+                        operator: Operator::GreaterEqual,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Operator(Operator::LessEqual) => {
+                    self.current += 1;
+                    let right = self.parse_additive()?;
+                    left = Expr::BinaryOp {
+                        left: Box::new(left),
+                        operator: Operator::LessEqual,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Operator(Operator::Equal) => {
+                    self.current += 1;
+                    let right = self.parse_additive()?;
+                    left = Expr::BinaryOp {
+                        left: Box::new(left),
+                        operator: Operator::Equal,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Operator(Operator::NotEqual) => {
+                    self.current += 1;
+                    let right = self.parse_additive()?;
+                    left = Expr::BinaryOp {
+                        left: Box::new(left),
+                        operator: Operator::NotEqual,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(left)
     }
 
     /// Parse additive expressions (+ and -)
@@ -289,13 +424,10 @@ impl ExpressionParser {
     /// Parse unary expressions (unary minus)
     fn parse_unary(&mut self) -> Result<Expr> {
         if self.current < self.tokens.len() {
-            match &self.tokens[self.current] {
-                Token::Operator(Operator::Subtract) => {
-                    self.current += 1;
-                    let expr = self.parse_primary()?;
-                    return Ok(Expr::UnaryMinus(Box::new(expr)));
-                }
-                _ => {}
+            if let Token::Operator(Operator::Subtract) = &self.tokens[self.current] {
+                self.current += 1;
+                let expr = self.parse_primary()?;
+                return Ok(Expr::UnaryMinus(Box::new(expr)));
             }
         }
         self.parse_primary()
@@ -313,6 +445,43 @@ impl ExpressionParser {
         match token {
             Token::Number(n) => Ok(Expr::Number(*n)),
             Token::Parameter(name) => Ok(Expr::Parameter(name.clone())),
+            Token::Constant(name) => Ok(Expr::Constant(name.clone())),
+            Token::Function(name) => {
+                // Function call: function_name(arg1, arg2, ...)
+                if self.current >= self.tokens.len() || self.tokens[self.current] != Token::LeftParen {
+                    return Err(Error::validation_error("expression", "expected '(' after function name"));
+                }
+                self.current += 1; // consume '('
+                
+                let mut args = Vec::new();
+                
+                // Handle empty function calls like sin()
+                if self.current < self.tokens.len() && self.tokens[self.current] != Token::RightParen {
+                    loop {
+                        args.push(self.parse_expression()?);
+                        
+                        if self.current >= self.tokens.len() {
+                            return Err(Error::validation_error("expression", "missing closing parenthesis in function call"));
+                        }
+                        
+                        match &self.tokens[self.current] {
+                            Token::Comma => {
+                                self.current += 1; // consume comma
+                                continue;
+                            }
+                            Token::RightParen => break,
+                            _ => return Err(Error::validation_error("expression", "expected ',' or ')' in function call")),
+                        }
+                    }
+                }
+                
+                if self.current >= self.tokens.len() || self.tokens[self.current] != Token::RightParen {
+                    return Err(Error::validation_error("expression", "missing closing parenthesis in function call"));
+                }
+                self.current += 1; // consume ')'
+                
+                Ok(Expr::FunctionCall { name: name.clone(), args })
+            }
             Token::LeftParen => {
                 let expr = self.parse_expression()?;
                 if self.current >= self.tokens.len() || self.tokens[self.current] != Token::RightParen {
@@ -350,6 +519,13 @@ impl ExpressionEvaluator {
                     Error::parameter_error(name, &format!("failed to parse '{}': {}", param_value, e))
                 })
             }
+            Expr::Constant(name) => {
+                match name.as_str() {
+                    "PI" => Ok(std::f64::consts::PI),
+                    "E" => Ok(std::f64::consts::E),
+                    _ => Err(Error::parameter_error(name, "unknown constant")),
+                }
+            }
             Expr::BinaryOp { left, operator, right } => {
                 let left_val = self.evaluate(left)?;
                 let right_val = self.evaluate(right)?;
@@ -372,12 +548,96 @@ impl ExpressionEvaluator {
                             Ok(left_val % right_val)
                         }
                     }
+                    Operator::Greater => Ok(if left_val > right_val { 1.0 } else { 0.0 }),
+                    Operator::Less => Ok(if left_val < right_val { 1.0 } else { 0.0 }),
+                    Operator::GreaterEqual => Ok(if left_val >= right_val { 1.0 } else { 0.0 }),
+                    Operator::LessEqual => Ok(if left_val <= right_val { 1.0 } else { 0.0 }),
+                    Operator::Equal => Ok(if (left_val - right_val).abs() < f64::EPSILON { 1.0 } else { 0.0 }),
+                    Operator::NotEqual => Ok(if (left_val - right_val).abs() >= f64::EPSILON { 1.0 } else { 0.0 }),
                 }
             }
             Expr::UnaryMinus(expr) => {
                 let val = self.evaluate(expr)?;
                 Ok(-val)
             }
+            Expr::FunctionCall { name, args } => {
+                self.evaluate_function(name, args)
+            }
+        }
+    }
+
+    /// Evaluate a function call
+    fn evaluate_function(&self, name: &str, args: &[Expr]) -> Result<f64> {
+        match name {
+            "sin" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "sin() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.sin())
+            }
+            "cos" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "cos() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.cos())
+            }
+            "tan" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "tan() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.tan())
+            }
+            "sqrt" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "sqrt() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                if arg < 0.0 {
+                    return Err(Error::parameter_error(name, "sqrt() of negative number"));
+                }
+                Ok(arg.sqrt())
+            }
+            "abs" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "abs() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.abs())
+            }
+            "floor" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "floor() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.floor())
+            }
+            "ceil" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(name, "ceil() requires exactly 1 argument"));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.ceil())
+            }
+            "min" => {
+                if args.len() != 2 {
+                    return Err(Error::parameter_error(name, "min() requires exactly 2 arguments"));
+                }
+                let arg1 = self.evaluate(&args[0])?;
+                let arg2 = self.evaluate(&args[1])?;
+                Ok(arg1.min(arg2))
+            }
+            "max" => {
+                if args.len() != 2 {
+                    return Err(Error::parameter_error(name, "max() requires exactly 2 arguments"));
+                }
+                let arg1 = self.evaluate(&args[0])?;
+                let arg2 = self.evaluate(&args[1])?;
+                Ok(arg1.max(arg2))
+            }
+            _ => Err(Error::parameter_error(name, "unknown function")),
         }
     }
 }
@@ -584,5 +844,217 @@ mod tests {
         
         let result: f64 = evaluate_expression("-(${value} + 5)", &params).unwrap();
         assert_eq!(result, -15.0);
+    }
+
+    #[test]
+    fn test_mathematical_constants() {
+        let params = HashMap::new();
+        
+        // Test PI constant
+        let result: f64 = evaluate_expression("PI", &params).unwrap();
+        assert!((result - std::f64::consts::PI).abs() < f64::EPSILON);
+        
+        // Test E constant
+        let result: f64 = evaluate_expression("E", &params).unwrap();
+        assert!((result - std::f64::consts::E).abs() < f64::EPSILON);
+        
+        // Test constants in expressions
+        let result: f64 = evaluate_expression("2 * PI", &params).unwrap();
+        assert!((result - 2.0 * std::f64::consts::PI).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_trigonometric_functions() {
+        let params = HashMap::new();
+        
+        // Test sin function
+        let result: f64 = evaluate_expression("sin(0)", &params).unwrap();
+        assert!((result - 0.0).abs() < f64::EPSILON);
+        
+        let result: f64 = evaluate_expression("sin(PI / 2)", &params).unwrap();
+        assert!((result - 1.0).abs() < 1e-10);
+        
+        // Test cos function
+        let result: f64 = evaluate_expression("cos(0)", &params).unwrap();
+        assert!((result - 1.0).abs() < f64::EPSILON);
+        
+        let result: f64 = evaluate_expression("cos(PI)", &params).unwrap();
+        assert!((result - (-1.0)).abs() < 1e-10);
+        
+        // Test tan function
+        let result: f64 = evaluate_expression("tan(0)", &params).unwrap();
+        assert!((result - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_mathematical_functions() {
+        let params = HashMap::new();
+        
+        // Test sqrt function
+        let result: f64 = evaluate_expression("sqrt(4)", &params).unwrap();
+        assert_eq!(result, 2.0);
+        
+        let result: f64 = evaluate_expression("sqrt(9)", &params).unwrap();
+        assert_eq!(result, 3.0);
+        
+        // Test abs function
+        let result: f64 = evaluate_expression("abs(-5)", &params).unwrap();
+        assert_eq!(result, 5.0);
+        
+        let result: f64 = evaluate_expression("abs(3.14)", &params).unwrap();
+        assert_eq!(result, 3.14);
+        
+        // Test floor function
+        let result: f64 = evaluate_expression("floor(3.7)", &params).unwrap();
+        assert_eq!(result, 3.0);
+        
+        let result: f64 = evaluate_expression("floor(-2.3)", &params).unwrap();
+        assert_eq!(result, -3.0);
+        
+        // Test ceil function
+        let result: f64 = evaluate_expression("ceil(3.2)", &params).unwrap();
+        assert_eq!(result, 4.0);
+        
+        let result: f64 = evaluate_expression("ceil(-2.7)", &params).unwrap();
+        assert_eq!(result, -2.0);
+    }
+
+    #[test]
+    fn test_min_max_functions() {
+        let params = HashMap::new();
+        
+        // Test min function
+        let result: f64 = evaluate_expression("min(5, 3)", &params).unwrap();
+        assert_eq!(result, 3.0);
+        
+        let result: f64 = evaluate_expression("min(-2, 1)", &params).unwrap();
+        assert_eq!(result, -2.0);
+        
+        // Test max function
+        let result: f64 = evaluate_expression("max(5, 3)", &params).unwrap();
+        assert_eq!(result, 5.0);
+        
+        let result: f64 = evaluate_expression("max(-2, 1)", &params).unwrap();
+        assert_eq!(result, 1.0);
+    }
+
+    #[test]
+    fn test_comparison_operators() {
+        let params = HashMap::new();
+        
+        // Test greater than
+        let result: f64 = evaluate_expression("5 > 3", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("2 > 5", &params).unwrap();
+        assert_eq!(result, 0.0);
+        
+        // Test less than
+        let result: f64 = evaluate_expression("3 < 5", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("5 < 3", &params).unwrap();
+        assert_eq!(result, 0.0);
+        
+        // Test greater than or equal
+        let result: f64 = evaluate_expression("5 >= 5", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("5 >= 3", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("3 >= 5", &params).unwrap();
+        assert_eq!(result, 0.0);
+        
+        // Test less than or equal
+        let result: f64 = evaluate_expression("3 <= 3", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("3 <= 5", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("5 <= 3", &params).unwrap();
+        assert_eq!(result, 0.0);
+        
+        // Test equality
+        let result: f64 = evaluate_expression("5 == 5", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("5 == 3", &params).unwrap();
+        assert_eq!(result, 0.0);
+        
+        // Test inequality
+        let result: f64 = evaluate_expression("5 != 3", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        let result: f64 = evaluate_expression("5 != 5", &params).unwrap();
+        assert_eq!(result, 0.0);
+    }
+
+    #[test]
+    fn test_complex_expressions_with_functions() {
+        let mut params = HashMap::new();
+        params.insert("angle".to_string(), "0.5".to_string());
+        params.insert("radius".to_string(), "10.0".to_string());
+        
+        // Test complex trigonometric expression: radius * sin(angle)
+        let result: f64 = evaluate_expression("${radius} * sin(${angle})", &params).unwrap();
+        assert!((result - 10.0 * 0.5_f64.sin()).abs() < 1e-10);
+        
+        // Test with constants: 2 * PI * radius
+        let result: f64 = evaluate_expression("2 * PI * ${radius}", &params).unwrap();
+        assert!((result - 2.0 * std::f64::consts::PI * 10.0).abs() < 1e-10);
+        
+        // Test nested functions: sqrt(abs(-16))
+        let result: f64 = evaluate_expression("sqrt(abs(-16))", &params).unwrap();
+        assert_eq!(result, 4.0);
+    }
+
+    #[test]
+    fn test_function_error_handling() {
+        let params = HashMap::new();
+        
+        // Test wrong number of arguments
+        assert!(evaluate_expression::<f64>("sin(1, 2)", &params).is_err());
+        assert!(evaluate_expression::<f64>("sqrt()", &params).is_err());
+        assert!(evaluate_expression::<f64>("min(5)", &params).is_err());
+        assert!(evaluate_expression::<f64>("max(1, 2, 3)", &params).is_err());
+        
+        // Test unknown function
+        assert!(evaluate_expression::<f64>("unknown_func(5)", &params).is_err());
+        
+        // Test sqrt of negative number
+        assert!(evaluate_expression::<f64>("sqrt(-1)", &params).is_err());
+        
+        // Test unknown constant
+        assert!(evaluate_expression::<f64>("UNKNOWN_CONSTANT", &params).is_err());
+    }
+
+    #[test]
+    fn test_complex_automotive_scenarios() {
+        let mut params = HashMap::new();
+        params.insert("current_speed".to_string(), "50.0".to_string());
+        params.insert("target_speed".to_string(), "30.0".to_string());
+        params.insert("deceleration".to_string(), "3.0".to_string());
+        params.insert("reaction_time".to_string(), "1.5".to_string());
+        
+        // Test braking distance calculation: speed^2 / (2 * deceleration)
+        // Note: Using multiplication instead of exponentiation for now
+        let result: f64 = evaluate_expression(
+            "(${current_speed} * ${current_speed}) / (2 * ${deceleration})", 
+            &params
+        ).unwrap();
+        assert!((result - (50.0 * 50.0) / (2.0 * 3.0)).abs() < 1e-10);
+        
+        // Test speed comparison: current_speed > target_speed
+        let result: f64 = evaluate_expression("${current_speed} > ${target_speed}", &params).unwrap();
+        assert_eq!(result, 1.0);
+        
+        // Test time-based calculation with functions
+        let result: f64 = evaluate_expression(
+            "max(${reaction_time}, min(5.0, abs(${current_speed} - ${target_speed}) / 10.0))", 
+            &params
+        ).unwrap();
+        assert_eq!(result, 2.0); // max(1.5, min(5.0, 20.0 / 10.0)) = max(1.5, 2.0) = 2.0
     }
 }

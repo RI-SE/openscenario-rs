@@ -51,7 +51,7 @@ pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
     xml.push('\n');
     
     let serialized = quick_xml::se::to_string(scenario)
-        .map_err(|e| Error::XmlParseError(e))
+        .map_err(Error::XmlParseError)
         .map_err(|e| e.with_context("Failed to serialize OpenSCENARIO to XML"))?;
     
     xml.push_str(&serialized);

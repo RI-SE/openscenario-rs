@@ -473,6 +473,7 @@ use crate::types::enums::{ParameterType, Rule};
 
 /// Parameter declarations container
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct ParameterDeclarations {
     #[serde(rename = "ParameterDeclaration", default)]
     pub parameter_declarations: Vec<ParameterDeclaration>,
@@ -491,13 +492,6 @@ pub struct ParameterDeclaration {
     pub constraint_group: Option<ValueConstraintGroup>,
 }
 
-impl Default for ParameterDeclarations {
-    fn default() -> Self {
-        Self {
-            parameter_declarations: Vec::new(),
-        }
-    }
-}
 
 impl Default for ParameterDeclaration {
     fn default() -> Self {
@@ -512,6 +506,7 @@ impl Default for ParameterDeclaration {
 
 /// Parameter constraints container
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct ValueConstraintGroup {
     #[serde(rename = "ValueConstraint")]
     pub value_constraints: Vec<ValueConstraint>,
@@ -535,13 +530,6 @@ pub struct Range {
     pub upper_limit: Double,
 }
 
-impl Default for ValueConstraintGroup {
-    fn default() -> Self {
-        Self {
-            value_constraints: Vec::new(),
-        }
-    }
-}
 
 impl Default for ValueConstraint {
     fn default() -> Self {

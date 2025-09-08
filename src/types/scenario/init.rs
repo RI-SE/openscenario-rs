@@ -19,6 +19,7 @@ use crate::types::actions::movement::{SpeedAction, TeleportAction, RoutingAction
 
 /// Complete Init structure replacing the empty placeholder in storyboard
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Init {
     #[serde(rename = "Actions")]
     pub actions: Actions,
@@ -26,6 +27,7 @@ pub struct Init {
 
 /// Actions container holding all initialization actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Actions {
     #[serde(rename = "GlobalAction", default)]
     pub global_actions: Vec<GlobalAction>,
@@ -46,6 +48,7 @@ pub struct GlobalAction {
 
 /// Environment setup action containing complete environment definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct EnvironmentAction {
     #[serde(rename = "Environment")]
     pub environment: Environment,
@@ -97,22 +100,7 @@ pub enum LongitudinalActionType {
     // SpeedProfileAction, SynchronizeAction, etc. can be added later
 }
 
-impl Default for Init {
-    fn default() -> Self {
-        Self {
-            actions: Actions::default(),
-        }
-    }
-}
 
-impl Default for Actions {
-    fn default() -> Self {
-        Self {
-            global_actions: Vec::new(),
-            private_actions: Vec::new(),
-        }
-    }
-}
 
 impl Default for GlobalAction {
     fn default() -> Self {
@@ -122,13 +110,6 @@ impl Default for GlobalAction {
     }
 }
 
-impl Default for EnvironmentAction {
-    fn default() -> Self {
-        Self {
-            environment: Environment::default(),
-        }
-    }
-}
 
 impl Default for Private {
     fn default() -> Self {
