@@ -37,7 +37,9 @@ pub use basic::{
 pub use enums::{
     VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge,
     Priority, ParameterType, TriggeringEntitiesRule,
-    DynamicsDimension, DynamicsShape
+    DynamicsDimension, DynamicsShape, MiscObjectCategory, ControllerType,
+    PrecipitationType, Wetness, ColorType, Role, AngleType, DirectionalDimension,
+    VehicleComponentType, VehicleLightType, LightMode
 };
 pub use scenario::storyboard::{OpenScenario, FileHeader, Storyboard};
 pub use scenario::init::{Init, Actions, GlobalAction, EnvironmentAction, Private, PrivateActionWrapper, PrivateActionType, LongitudinalAction};
