@@ -879,6 +879,132 @@ pub enum LightMode {
     Flashing,
 }
 
+/// Automatic gear type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AutomaticGearType {
+    #[serde(rename = "n")]
+    Neutral,
+    #[serde(rename = "p")]
+    Park,
+    #[serde(rename = "r")]
+    Reverse,
+    #[serde(rename = "d")]
+    Drive,
+}
+
+/// Fractional cloud cover enumeration (in oktas)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FractionalCloudCover {
+    #[serde(rename = "zeroOktas")]
+    ZeroOktas,
+    #[serde(rename = "oneOktas")]
+    OneOktas,
+    #[serde(rename = "twoOktas")]
+    TwoOktas,
+    #[serde(rename = "threeOktas")]
+    ThreeOktas,
+    #[serde(rename = "fourOktas")]
+    FourOktas,
+    #[serde(rename = "fiveOktas")]
+    FiveOktas,
+    #[serde(rename = "sixOktas")]
+    SixOktas,
+    #[serde(rename = "sevenOktas")]
+    SevenOktas,
+    #[serde(rename = "eightOktas")]
+    EightOktas,
+    #[serde(rename = "nineOktas")]
+    NineOktas,
+}
+
+/// Pedestrian motion type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PedestrianMotionType {
+    #[serde(rename = "standing")]
+    Standing,
+    #[serde(rename = "sitting")]
+    Sitting,
+    #[serde(rename = "lying")]
+    Lying,
+    #[serde(rename = "squatting")]
+    Squatting,
+    #[serde(rename = "walking")]
+    Walking,
+    #[serde(rename = "running")]
+    Running,
+    #[serde(rename = "reeling")]
+    Reeling,
+    #[serde(rename = "crawling")]
+    Crawling,
+    #[serde(rename = "cycling")]
+    Cycling,
+    #[serde(rename = "jumping")]
+    Jumping,
+    #[serde(rename = "ducking")]
+    Ducking,
+    #[serde(rename = "bendingDown")]
+    BendingDown,
+}
+
+/// Pedestrian gesture type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PedestrianGestureType {
+    #[serde(rename = "phoneCallRightHand")]
+    PhoneCallRightHand,
+    #[serde(rename = "phoneCallLeftHand")]
+    PhoneCallLeftHand,
+    #[serde(rename = "phoneTextRightHand")]
+    PhoneTextRightHand,
+    #[serde(rename = "phoneTextLeftHand")]
+    PhoneTextLeftHand,
+    #[serde(rename = "wavingRightArm")]
+    WavingRightArm,
+    #[serde(rename = "wavingLeftArm")]
+    WavingLeftArm,
+    #[serde(rename = "umbrellaRightHand")]
+    UmbrellaRightHand,
+    #[serde(rename = "umbrellaLeftHand")]
+    UmbrellaLeftHand,
+    #[serde(rename = "crossArms")]
+    CrossArms,
+    #[serde(rename = "coffeeRightHand")]
+    CoffeeRightHand,
+    #[serde(rename = "coffeeLeftHand")]
+    CoffeeLeftHand,
+    #[serde(rename = "sandwichRightHand")]
+    SandwichRightHand,
+    #[serde(rename = "sandwichLeftHand")]
+    SandwichLeftHand,
+}
+
+/// Route strategy enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RouteStrategy {
+    #[serde(rename = "fastest")]
+    Fastest,
+    #[serde(rename = "leastIntersections")]
+    LeastIntersections,
+    #[serde(rename = "random")]
+    Random,
+    #[serde(rename = "shortest")]
+    Shortest,
+}
+
+/// Routing algorithm enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RoutingAlgorithm {
+    #[serde(rename = "assignedRoute")]
+    AssignedRoute,
+    #[serde(rename = "fastest")]
+    Fastest,
+    #[serde(rename = "leastIntersections")]
+    LeastIntersections,
+    #[serde(rename = "shortest")]
+    Shortest,
+    #[serde(rename = "undefined")]
+    Undefined,
+}
+
 impl fmt::Display for AngleType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -1025,6 +1151,210 @@ impl FromStr for LightMode {
     }
 }
 
+impl fmt::Display for AutomaticGearType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            AutomaticGearType::Neutral => "n",
+            AutomaticGearType::Park => "p",
+            AutomaticGearType::Reverse => "r",
+            AutomaticGearType::Drive => "d",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for AutomaticGearType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "n" => Ok(AutomaticGearType::Neutral),
+            "p" => Ok(AutomaticGearType::Park),
+            "r" => Ok(AutomaticGearType::Reverse),
+            "d" => Ok(AutomaticGearType::Drive),
+            _ => Err(format!("Invalid automatic gear type: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for FractionalCloudCover {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            FractionalCloudCover::ZeroOktas => "zeroOktas",
+            FractionalCloudCover::OneOktas => "oneOktas",
+            FractionalCloudCover::TwoOktas => "twoOktas",
+            FractionalCloudCover::ThreeOktas => "threeOktas",
+            FractionalCloudCover::FourOktas => "fourOktas",
+            FractionalCloudCover::FiveOktas => "fiveOktas",
+            FractionalCloudCover::SixOktas => "sixOktas",
+            FractionalCloudCover::SevenOktas => "sevenOktas",
+            FractionalCloudCover::EightOktas => "eightOktas",
+            FractionalCloudCover::NineOktas => "nineOktas",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for FractionalCloudCover {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "zeroOktas" => Ok(FractionalCloudCover::ZeroOktas),
+            "oneOktas" => Ok(FractionalCloudCover::OneOktas),
+            "twoOktas" => Ok(FractionalCloudCover::TwoOktas),
+            "threeOktas" => Ok(FractionalCloudCover::ThreeOktas),
+            "fourOktas" => Ok(FractionalCloudCover::FourOktas),
+            "fiveOktas" => Ok(FractionalCloudCover::FiveOktas),
+            "sixOktas" => Ok(FractionalCloudCover::SixOktas),
+            "sevenOktas" => Ok(FractionalCloudCover::SevenOktas),
+            "eightOktas" => Ok(FractionalCloudCover::EightOktas),
+            "nineOktas" => Ok(FractionalCloudCover::NineOktas),
+            _ => Err(format!("Invalid fractional cloud cover: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for PedestrianMotionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            PedestrianMotionType::Standing => "standing",
+            PedestrianMotionType::Sitting => "sitting",
+            PedestrianMotionType::Lying => "lying",
+            PedestrianMotionType::Squatting => "squatting",
+            PedestrianMotionType::Walking => "walking",
+            PedestrianMotionType::Running => "running",
+            PedestrianMotionType::Reeling => "reeling",
+            PedestrianMotionType::Crawling => "crawling",
+            PedestrianMotionType::Cycling => "cycling",
+            PedestrianMotionType::Jumping => "jumping",
+            PedestrianMotionType::Ducking => "ducking",
+            PedestrianMotionType::BendingDown => "bendingDown",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for PedestrianMotionType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "standing" => Ok(PedestrianMotionType::Standing),
+            "sitting" => Ok(PedestrianMotionType::Sitting),
+            "lying" => Ok(PedestrianMotionType::Lying),
+            "squatting" => Ok(PedestrianMotionType::Squatting),
+            "walking" => Ok(PedestrianMotionType::Walking),
+            "running" => Ok(PedestrianMotionType::Running),
+            "reeling" => Ok(PedestrianMotionType::Reeling),
+            "crawling" => Ok(PedestrianMotionType::Crawling),
+            "cycling" => Ok(PedestrianMotionType::Cycling),
+            "jumping" => Ok(PedestrianMotionType::Jumping),
+            "ducking" => Ok(PedestrianMotionType::Ducking),
+            "bendingDown" => Ok(PedestrianMotionType::BendingDown),
+            _ => Err(format!("Invalid pedestrian motion type: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for PedestrianGestureType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            PedestrianGestureType::PhoneCallRightHand => "phoneCallRightHand",
+            PedestrianGestureType::PhoneCallLeftHand => "phoneCallLeftHand",
+            PedestrianGestureType::PhoneTextRightHand => "phoneTextRightHand",
+            PedestrianGestureType::PhoneTextLeftHand => "phoneTextLeftHand",
+            PedestrianGestureType::WavingRightArm => "wavingRightArm",
+            PedestrianGestureType::WavingLeftArm => "wavingLeftArm",
+            PedestrianGestureType::UmbrellaRightHand => "umbrellaRightHand",
+            PedestrianGestureType::UmbrellaLeftHand => "umbrellaLeftHand",
+            PedestrianGestureType::CrossArms => "crossArms",
+            PedestrianGestureType::CoffeeRightHand => "coffeeRightHand",
+            PedestrianGestureType::CoffeeLeftHand => "coffeeLeftHand",
+            PedestrianGestureType::SandwichRightHand => "sandwichRightHand",
+            PedestrianGestureType::SandwichLeftHand => "sandwichLeftHand",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for PedestrianGestureType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "phoneCallRightHand" => Ok(PedestrianGestureType::PhoneCallRightHand),
+            "phoneCallLeftHand" => Ok(PedestrianGestureType::PhoneCallLeftHand),
+            "phoneTextRightHand" => Ok(PedestrianGestureType::PhoneTextRightHand),
+            "phoneTextLeftHand" => Ok(PedestrianGestureType::PhoneTextLeftHand),
+            "wavingRightArm" => Ok(PedestrianGestureType::WavingRightArm),
+            "wavingLeftArm" => Ok(PedestrianGestureType::WavingLeftArm),
+            "umbrellaRightHand" => Ok(PedestrianGestureType::UmbrellaRightHand),
+            "umbrellaLeftHand" => Ok(PedestrianGestureType::UmbrellaLeftHand),
+            "crossArms" => Ok(PedestrianGestureType::CrossArms),
+            "coffeeRightHand" => Ok(PedestrianGestureType::CoffeeRightHand),
+            "coffeeLeftHand" => Ok(PedestrianGestureType::CoffeeLeftHand),
+            "sandwichRightHand" => Ok(PedestrianGestureType::SandwichRightHand),
+            "sandwichLeftHand" => Ok(PedestrianGestureType::SandwichLeftHand),
+            _ => Err(format!("Invalid pedestrian gesture type: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for RouteStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            RouteStrategy::Fastest => "fastest",
+            RouteStrategy::LeastIntersections => "leastIntersections",
+            RouteStrategy::Random => "random",
+            RouteStrategy::Shortest => "shortest",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for RouteStrategy {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "fastest" => Ok(RouteStrategy::Fastest),
+            "leastIntersections" => Ok(RouteStrategy::LeastIntersections),
+            "random" => Ok(RouteStrategy::Random),
+            "shortest" => Ok(RouteStrategy::Shortest),
+            _ => Err(format!("Invalid route strategy: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for RoutingAlgorithm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            RoutingAlgorithm::AssignedRoute => "assignedRoute",
+            RoutingAlgorithm::Fastest => "fastest",
+            RoutingAlgorithm::LeastIntersections => "leastIntersections",
+            RoutingAlgorithm::Shortest => "shortest",
+            RoutingAlgorithm::Undefined => "undefined",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for RoutingAlgorithm {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "assignedRoute" => Ok(RoutingAlgorithm::AssignedRoute),
+            "fastest" => Ok(RoutingAlgorithm::Fastest),
+            "leastIntersections" => Ok(RoutingAlgorithm::LeastIntersections),
+            "shortest" => Ok(RoutingAlgorithm::Shortest),
+            "undefined" => Ok(RoutingAlgorithm::Undefined),
+            _ => Err(format!("Invalid routing algorithm: {}", s)),
+        }
+    }
+}
+
 // TODO: Add remaining enums incrementally (Week 5+)
 // TODO: All geometry and positioning enums (DirectionalDimension, etc.)
 // TODO: All vehicle and pedestrian behavior enums
@@ -1139,5 +1469,107 @@ mod tests {
         assert_eq!(LightMode::On.to_string(), "on");
         assert_eq!(LightMode::Off.to_string(), "off");
         assert_eq!(LightMode::Flashing.to_string(), "flashing");
+    }
+
+    #[test]
+    fn test_automatic_gear_type_display() {
+        assert_eq!(AutomaticGearType::Neutral.to_string(), "n");
+        assert_eq!(AutomaticGearType::Park.to_string(), "p");
+        assert_eq!(AutomaticGearType::Reverse.to_string(), "r");
+        assert_eq!(AutomaticGearType::Drive.to_string(), "d");
+    }
+
+    #[test]
+    fn test_automatic_gear_type_from_str() {
+        assert_eq!("n".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Neutral);
+        assert_eq!("p".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Park);
+        assert_eq!("r".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Reverse);
+        assert_eq!("d".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Drive);
+        assert!("invalid".parse::<AutomaticGearType>().is_err());
+    }
+
+    #[test]
+    fn test_fractional_cloud_cover_display() {
+        assert_eq!(FractionalCloudCover::ZeroOktas.to_string(), "zeroOktas");
+        assert_eq!(FractionalCloudCover::FiveOktas.to_string(), "fiveOktas");
+        assert_eq!(FractionalCloudCover::NineOktas.to_string(), "nineOktas");
+    }
+
+    #[test]
+    fn test_fractional_cloud_cover_from_str() {
+        assert_eq!("zeroOktas".parse::<FractionalCloudCover>().unwrap(), FractionalCloudCover::ZeroOktas);
+        assert_eq!("fiveOktas".parse::<FractionalCloudCover>().unwrap(), FractionalCloudCover::FiveOktas);
+        assert_eq!("nineOktas".parse::<FractionalCloudCover>().unwrap(), FractionalCloudCover::NineOktas);
+        assert!("invalid".parse::<FractionalCloudCover>().is_err());
+    }
+
+    #[test]
+    fn test_pedestrian_motion_type_display() {
+        assert_eq!(PedestrianMotionType::Standing.to_string(), "standing");
+        assert_eq!(PedestrianMotionType::Walking.to_string(), "walking");
+        assert_eq!(PedestrianMotionType::Running.to_string(), "running");
+        assert_eq!(PedestrianMotionType::BendingDown.to_string(), "bendingDown");
+    }
+
+    #[test]
+    fn test_pedestrian_motion_type_from_str() {
+        assert_eq!("standing".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::Standing);
+        assert_eq!("walking".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::Walking);
+        assert_eq!("running".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::Running);
+        assert_eq!("bendingDown".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::BendingDown);
+        assert!("invalid".parse::<PedestrianMotionType>().is_err());
+    }
+
+    #[test]
+    fn test_pedestrian_gesture_type_display() {
+        assert_eq!(PedestrianGestureType::PhoneCallRightHand.to_string(), "phoneCallRightHand");
+        assert_eq!(PedestrianGestureType::WavingLeftArm.to_string(), "wavingLeftArm");
+        assert_eq!(PedestrianGestureType::CoffeeRightHand.to_string(), "coffeeRightHand");
+        assert_eq!(PedestrianGestureType::SandwichLeftHand.to_string(), "sandwichLeftHand");
+    }
+
+    #[test]
+    fn test_pedestrian_gesture_type_from_str() {
+        assert_eq!("phoneCallRightHand".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::PhoneCallRightHand);
+        assert_eq!("wavingLeftArm".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::WavingLeftArm);
+        assert_eq!("coffeeRightHand".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::CoffeeRightHand);
+        assert_eq!("sandwichLeftHand".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::SandwichLeftHand);
+        assert!("invalid".parse::<PedestrianGestureType>().is_err());
+    }
+
+    #[test]
+    fn test_route_strategy_display() {
+        assert_eq!(RouteStrategy::Fastest.to_string(), "fastest");
+        assert_eq!(RouteStrategy::LeastIntersections.to_string(), "leastIntersections");
+        assert_eq!(RouteStrategy::Random.to_string(), "random");
+        assert_eq!(RouteStrategy::Shortest.to_string(), "shortest");
+    }
+
+    #[test]
+    fn test_route_strategy_from_str() {
+        assert_eq!("fastest".parse::<RouteStrategy>().unwrap(), RouteStrategy::Fastest);
+        assert_eq!("leastIntersections".parse::<RouteStrategy>().unwrap(), RouteStrategy::LeastIntersections);
+        assert_eq!("random".parse::<RouteStrategy>().unwrap(), RouteStrategy::Random);
+        assert_eq!("shortest".parse::<RouteStrategy>().unwrap(), RouteStrategy::Shortest);
+        assert!("invalid".parse::<RouteStrategy>().is_err());
+    }
+
+    #[test]
+    fn test_routing_algorithm_display() {
+        assert_eq!(RoutingAlgorithm::AssignedRoute.to_string(), "assignedRoute");
+        assert_eq!(RoutingAlgorithm::Fastest.to_string(), "fastest");
+        assert_eq!(RoutingAlgorithm::LeastIntersections.to_string(), "leastIntersections");
+        assert_eq!(RoutingAlgorithm::Shortest.to_string(), "shortest");
+        assert_eq!(RoutingAlgorithm::Undefined.to_string(), "undefined");
+    }
+
+    #[test]
+    fn test_routing_algorithm_from_str() {
+        assert_eq!("assignedRoute".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::AssignedRoute);
+        assert_eq!("fastest".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Fastest);
+        assert_eq!("leastIntersections".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::LeastIntersections);
+        assert_eq!("shortest".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Shortest);
+        assert_eq!("undefined".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Undefined);
+        assert!("invalid".parse::<RoutingAlgorithm>().is_err());
     }
 }

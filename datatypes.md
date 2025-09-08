@@ -7,10 +7,10 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 | Category | Total | Implemented | Planned | Coverage |
 |----------|--------|------------|---------|----------|
 | **Basic Data Types** | 9 | 9 | 0 | 100% |
-| **Simple Enumeration Types** | 37 | 23 | 14 | 62% |
+| **Simple Enumeration Types** | 37 | 29 | 8 | 78% |
 | **Complex Types** | 287 | 85+ | 200+ | 30% |
 | **Groups** | 14 | 2 | 12 | 14% |
-| **TOTAL** | **347** | **119+** | **226+** | **34%** |
+| **TOTAL** | **347** | **125+** | **220+** | **36%** |
 
 ---
 
@@ -28,7 +28,7 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 
 ---
 
-## 2. Simple Enumeration Types (23/37 - 62%)
+## 2. Simple Enumeration Types (29/37 - 78%)
 
 ### 2.1 Geometry & Positioning (5/5)
 - [x] `CoordinateSystem` - Reference coordinate systems - `src/types/enums.rs`
@@ -44,20 +44,20 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [x] `MiscObjectCategory` - Miscellaneous object types - `src/types/enums.rs`
 - [x] `Role` - Entity roles (police, ambulance, etc.) - `src/types/enums.rs`
 
-### 2.3 Vehicle Components & Lights (2/3)
+### 2.3 Vehicle Components & Lights (3/3)
 - [x] `VehicleComponentType` - Vehicle body components - `src/types/enums.rs`
 - [x] `VehicleLightType` - Vehicle lighting systems - `src/types/enums.rs`
-- [ ] `AutomaticGearType` - Automatic transmission gears
+- [x] `AutomaticGearType` - Automatic transmission gears - `src/types/enums.rs`
 
-### 2.4 Pedestrian Behavior (0/2)
-- [ ] `PedestrianMotionType` - Pedestrian movement types
-- [ ] `PedestrianGestureType` - Pedestrian gestures
+### 2.4 Pedestrian Behavior (2/2)
+- [x] `PedestrianMotionType` - Pedestrian movement types - `src/types/enums.rs`
+- [x] `PedestrianGestureType` - Pedestrian gestures - `src/types/enums.rs`
 
-### 2.5 Environment & Weather (3/5)
+### 2.5 Environment & Weather (4/5)
 - [x] `ColorType` - Color definitions - `src/types/enums.rs`
 - [x] `PrecipitationType` - Weather precipitation - `src/types/enums.rs`
 - [x] `Wetness` - Road surface conditions - `src/types/enums.rs`
-- [ ] `FractionalCloudCover` - Cloud coverage levels
+- [x] `FractionalCloudCover` - Cloud coverage levels - `src/types/enums.rs`
 - [ ] `CloudState` - Sky conditions (deprecated)
 
 ### 2.6 Control & Dynamics (6/6)
@@ -78,9 +78,9 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [x] `StoryboardElementState` - Storyboard element states - `src/types/enums.rs`
 - [x] `StoryboardElementType` - Storyboard element types - `src/types/enums.rs`
 
-### 2.9 Routing & Navigation (0/2)
-- [ ] `RouteStrategy` - Route calculation strategies
-- [ ] `RoutingAlgorithm` - Routing algorithms
+### 2.9 Routing & Navigation (2/2)
+- [x] `RouteStrategy` - Route calculation strategies - `src/types/enums.rs`
+- [x] `RoutingAlgorithm` - Routing algorithms - `src/types/enums.rs`
 
 ### 2.10 Spatial Relationships (0/2)
 - [ ] `LateralDisplacement` - Lateral position relationships
@@ -323,6 +323,6 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 ---
 
 *Last Updated: 2025-01-08*
-*Implementation Status: 34% (119+/347 types)*
+*Implementation Status: 36% (125+/347 types)*
 *Production Status: ✅ Ready for real-world XOSC parsing*
-*Enum Coverage: ✅ 62% complete (23/37 enums)*
+*Enum Coverage: ✅ 78% complete (29/37 enums)*
