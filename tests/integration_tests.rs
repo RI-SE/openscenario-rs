@@ -49,34 +49,32 @@ fn can_access_entities() {
     let ego = entities.find_object("Ego").unwrap();
     assert_eq!(ego.get_name(), Some("Ego"));
     
-    match &ego.entity_object {
-        EntityObject::Vehicle(vehicle) => {
-            assert_eq!(vehicle.name.as_literal().unwrap(), "EgoVehicle");
-            assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
-            
-            // Check bounding box
-            assert_eq!(vehicle.bounding_box.center.x.as_literal().unwrap(), &0.0);
-            assert_eq!(vehicle.bounding_box.dimensions.width.as_literal().unwrap(), &2.0);
-            assert_eq!(vehicle.bounding_box.dimensions.length.as_literal().unwrap(), &4.5);
-        },
-        _ => panic!("Expected vehicle"),
-    }
+    if let Some(vehicle) = &ego.vehicle {
+        assert_eq!(vehicle.name.as_literal().unwrap(), "EgoVehicle");
+        assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
+        
+        // Check bounding box
+        assert_eq!(vehicle.bounding_box.center.x.as_literal().unwrap(), &0.0);
+        assert_eq!(vehicle.bounding_box.dimensions.width.as_literal().unwrap(), &2.0);
+                assert_eq!(vehicle.bounding_box.dimensions.length.as_literal().unwrap(), &4.5);
+            } else {
+                panic!("Expected vehicle for Ego");
+            }
     
     // Find the pedestrian
     let ped = entities.find_object("Pedestrian1").unwrap();
     assert_eq!(ped.get_name(), Some("Pedestrian1"));
     
-    match &ped.entity_object {
-        EntityObject::Pedestrian(pedestrian) => {
-            assert_eq!(pedestrian.name.as_literal().unwrap(), "TestPedestrian");
-            assert_eq!(pedestrian.pedestrian_category, PedestrianCategory::Pedestrian);
-            
-            // Check bounding box
-            assert_eq!(pedestrian.bounding_box.center.x.as_literal().unwrap(), &10.0);
-            assert_eq!(pedestrian.bounding_box.center.y.as_literal().unwrap(), &2.0);
-            assert_eq!(pedestrian.bounding_box.dimensions.height.as_literal().unwrap(), &1.8);
-        },
-        _ => panic!("Expected pedestrian"),
+    if let Some(pedestrian) = &ped.pedestrian {
+        assert_eq!(pedestrian.name.as_literal().unwrap(), "TestPedestrian");
+        assert_eq!(pedestrian.pedestrian_category, PedestrianCategory::Pedestrian);
+        
+        // Check bounding box
+        assert_eq!(pedestrian.bounding_box.center.x.as_literal().unwrap(), &10.0);
+        assert_eq!(pedestrian.bounding_box.center.y.as_literal().unwrap(), &2.0);
+        assert_eq!(pedestrian.bounding_box.dimensions.height.as_literal().unwrap(), &1.8);
+    } else {
+        panic!("Expected pedestrian");
     }
 }
 
@@ -160,9 +158,12 @@ fn can_create_and_serialize_actions() {
             dynamics_shape: DynamicsShape::Linear,
             value: openscenario_rs::types::Double::literal(5.0),
         },
-        speed_action_target: SpeedActionTarget::Absolute(AbsoluteTargetSpeed {
-            value: openscenario_rs::types::Double::literal(30.0),
-        }),
+        speed_action_target: SpeedActionTarget {
+            absolute: Some(AbsoluteTargetSpeed {
+                value: openscenario_rs::types::Double::literal(30.0),
+            }),
+            relative: None,
+        },
     };
     
     // Test creating a TeleportAction
@@ -222,6 +223,9 @@ fn can_parse_scenario_with_expressions() {
     let result = openscenario_rs::parse_str(xml);
     
     // This should parse successfully even with expressions
+    if let Err(ref e) = result {
+        println!("Parse error: {:?}", e);
+    }
     assert!(result.is_ok());
     
     let scenario = result.unwrap();
@@ -231,6 +235,38 @@ fn can_parse_scenario_with_expressions() {
     
     let ego = scenario.entities.find_object("Ego").unwrap();
     assert_eq!(ego.get_name(), Some("Ego"));
+}
+
+#[test]
+fn can_evaluate_expressions_with_parameters() {
+    use openscenario_rs::types::basic::Double;
+    use openscenario_rs::expression::evaluate_expression;
+    use std::collections::HashMap;
+    
+    // Test full expression evaluation with parameters
+    let mut params = HashMap::new();
+    params.insert("speed".to_string(), "30.0".to_string());
+    params.insert("time".to_string(), "2.0".to_string());
+    params.insert("acceleration".to_string(), "5.0".to_string());
+    
+    // Test simple parameter resolution
+    let param_value = Double::parameter("speed".to_string());
+    let resolved = param_value.resolve(&params).unwrap();
+    assert_eq!(resolved, 30.0);
+    
+    // Test complex mathematical expression
+    let expr_value = Double::expression("${speed} * ${time} + ${acceleration}".to_string());
+    let resolved = expr_value.resolve(&params).unwrap();
+    assert_eq!(resolved, 65.0); // 30 * 2 + 5 = 65
+    
+    // Test expression with parentheses
+    let complex_expr = Double::expression("(${speed} + ${acceleration}) * ${time}".to_string());
+    let resolved = complex_expr.resolve(&params).unwrap();
+    assert_eq!(resolved, 70.0); // (30 + 5) * 2 = 70
+    
+    // Test direct evaluation function
+    let result: f64 = evaluate_expression("${speed} / ${time} + ${acceleration}", &params).unwrap();
+    assert_eq!(result, 20.0); // 30 / 2 + 5 = 20
 }
 
 // Integration tests for the cut_in_101_exam.xosc scenario
@@ -271,20 +307,19 @@ mod cut_in_scenario_tests {
             let ego = entities.find_object("Ego").unwrap();
             assert_eq!(ego.get_name(), Some("Ego"));
             
-            match &ego.entity_object {
-                EntityObject::Vehicle(vehicle) => {
-                    assert_eq!(vehicle.name.as_literal().unwrap(), "Default_car");
-                    assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
-                    
-                    // Check basic bounding box dimensions (what's currently implemented)
-                    assert_eq!(vehicle.bounding_box.center.x.as_literal().unwrap(), &1.5);
-                    assert_eq!(vehicle.bounding_box.center.y.as_literal().unwrap(), &0.0);
-                    assert_eq!(vehicle.bounding_box.center.z.as_literal().unwrap(), &0.9);
-                    assert_eq!(vehicle.bounding_box.dimensions.width.as_literal().unwrap(), &2.1);
-                    assert_eq!(vehicle.bounding_box.dimensions.length.as_literal().unwrap(), &4.5);
-                    assert_eq!(vehicle.bounding_box.dimensions.height.as_literal().unwrap(), &1.8);
-                },
-                _ => panic!("Expected vehicle for Ego"),
+            if let Some(vehicle) = &ego.vehicle {
+                assert_eq!(vehicle.name.as_literal().unwrap(), "Default_car");
+                assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
+                
+                // Check basic bounding box dimensions (what's currently implemented)
+                assert_eq!(vehicle.bounding_box.center.x.as_literal().unwrap(), &1.5);
+                assert_eq!(vehicle.bounding_box.center.y.as_literal().unwrap(), &0.0);
+                assert_eq!(vehicle.bounding_box.center.z.as_literal().unwrap(), &0.9);
+                assert_eq!(vehicle.bounding_box.dimensions.width.as_literal().unwrap(), &2.1);
+                assert_eq!(vehicle.bounding_box.dimensions.length.as_literal().unwrap(), &4.5);
+                assert_eq!(vehicle.bounding_box.dimensions.height.as_literal().unwrap(), &1.8);
+            } else {
+                panic!("Expected vehicle for Ego");
             }
             
             // Verify A1 and A2 vehicles exist with correct basic properties
@@ -488,7 +523,7 @@ mod cut_in_scenario_tests {
 // POST-MVP: Story-Level Action Integration Tests
 #[test]
 fn can_parse_routing_actions_in_story_events() {
-    use openscenario_rs::types::scenario::init::{PrivateActionType};
+
     
     let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
@@ -517,11 +552,11 @@ fn can_parse_routing_actions_in_story_events() {
                 println!("  - Trajectory closed: {}", trajectory.closed.as_literal().unwrap_or(&false));
                 
                 // Verify shape contains vertices
-                match &trajectory.shape {
-                    openscenario_rs::types::geometry::Shape::Polyline(polyline) => {
-                        println!("  - Polyline vertices: {}", polyline.vertices.len());
-                        assert!(!polyline.vertices.is_empty(), "Polyline must contain vertices");
-                    }
+                if let Some(polyline) = &trajectory.shape.polyline {
+                    println!("  - Polyline vertices: {}", polyline.vertices.len());
+                    assert!(!polyline.vertices.is_empty(), "Polyline must contain vertices");
+                } else {
+                    panic!("Expected polyline shape");
                 }
                 
                 // Verify trajectory following mode
@@ -701,10 +736,10 @@ use openscenario_rs::types::{
         ScenarioStory, Act, ManeuverGroup, Maneuver, Event, 
         EntityRef, Actors
     },
-    scenario::triggers::{Trigger, ConditionGroup, Condition, ConditionType},
+    scenario::triggers::{Trigger, ConditionGroup, Condition},
     scenario::story::{StoryAction, StoryActionType, StoryPrivateAction},
     actions::movement::{SpeedAction, TransitionDynamics, SpeedActionTarget, AbsoluteTargetSpeed},
-    scenario::init::{PrivateActionType, LongitudinalAction, LongitudinalActionType},
+    scenario::init::{LongitudinalAction},
     conditions::{ByValueCondition, SimulationTimeCondition},
     enums::{Priority, ConditionEdge, DynamicsDimension, DynamicsShape, Rule},
     basic::{Value, ParameterDeclarations, ParameterDeclaration},
@@ -745,9 +780,12 @@ use openscenario_rs::types::{
             dynamics_shape: DynamicsShape::Linear,
             value: Value::literal(3.0),
         },
-        speed_action_target: SpeedActionTarget::Absolute(AbsoluteTargetSpeed {
-            value: Value::literal(25.0),
-        }),
+        speed_action_target: SpeedActionTarget {
+            absolute: Some(AbsoluteTargetSpeed {
+                value: Value::literal(25.0),
+            }),
+            relative: None,
+        },
     };
 
     // Create an event with the speed action and trigger
@@ -852,31 +890,29 @@ use openscenario_rs::types::{
     
     // Verify the action system
     assert_eq!(event.action.name.as_literal().unwrap(), "SpeedAction1");
-    match &event.action.action_type {
-        StoryActionType::PrivateAction(private_action) => {
-            match &private_action.action_type {
-                PrivateActionType::LongitudinalAction(longitudinal_action) => {
+    if let Some(private_action) = &event.action.private_action {
+        if let Some(longitudinal_action) = &private_action.longitudinal_action {
                     if let Some(speed_action) = &longitudinal_action.speed_action {
                         assert_eq!(speed_action.speed_action_dynamics.dynamics_dimension, DynamicsDimension::Time);
                         assert_eq!(speed_action.speed_action_dynamics.dynamics_shape, DynamicsShape::Linear);
                         assert_eq!(speed_action.speed_action_dynamics.value.as_literal().unwrap(), &3.0);
                         
-                        match &speed_action.speed_action_target {
-                            SpeedActionTarget::Absolute(target) => {
-                                assert_eq!(target.value.as_literal().unwrap(), &25.0);
-                            },
-                            SpeedActionTarget::Relative(_) => {
-                                panic!("Expected absolute target speed");
-                            },
+                        if let Some(target) = &speed_action.speed_action_target.absolute {
+                            assert_eq!(target.value.as_literal().unwrap(), &25.0);
+                        } else if speed_action.speed_action_target.relative.is_some() {
+                            panic!("Expected absolute target speed");
+                        } else {
+                            panic!("No target speed specified");
                         }
                     } else {
                         panic!("Expected speed action");
                     }
-                },
-                _ => panic!("Expected longitudinal action"),
+                } else {
+                    panic!("Expected longitudinal action");
+                }
+            } else {
+                panic!("Expected private action");
             }
-        },
-    }
     
     // Verify parameter declarations
     let params = story.parameter_declarations.as_ref().unwrap();

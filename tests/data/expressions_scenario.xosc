@@ -14,6 +14,7 @@
           <RearAxle maxSteering="0.0" wheelDiameter="0.5" trackWidth="1.75" positionX="0.0" positionZ="0.25"/>
         </Axles>
       </Vehicle>
+      <ObjectController />
     </ScenarioObject>
   </Entities>
   <Storyboard>

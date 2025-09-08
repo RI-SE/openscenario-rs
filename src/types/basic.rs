@@ -214,10 +214,9 @@ pub fn is_valid_parameter_name(name: &str) -> bool {
         && !name.chars().next().unwrap().is_ascii_digit() // Can't start with digit
 }
 
-/// Resolve a simple expression by substituting parameters
+/// Resolve a mathematical expression by parsing and evaluating it
 ///
-/// This is a basic implementation that only handles parameter substitution
-/// A full implementation would parse and evaluate mathematical expressions
+/// This implementation uses the full expression parser and evaluator
 fn resolve_expression<T: FromStr>(
     expr: &str,
     params: &HashMap<std::string::String, std::string::String>,
@@ -225,20 +224,24 @@ fn resolve_expression<T: FromStr>(
 where
     T::Err: std::fmt::Display,
 {
-    // For now, just substitute parameter references in the expression
-    let mut result = expr.to_string();
-
-    // Find and replace parameter references in the expression
-    for (param_name, param_value) in params {
-        let param_ref = format!("${{{}}}", param_name);
-        if result.contains(&param_ref) {
-            result = result.replace(&param_ref, param_value);
+    // Use the full expression evaluator
+    match crate::expression::evaluate_expression::<f64>(expr, params) {
+        Ok(result) => Ok(result.to_string()),
+        Err(_) => {
+            // Fallback to parameter substitution if expression parsing fails
+            let mut result = expr.to_string();
+            
+            // Find and replace parameter references in the expression
+            for (param_name, param_value) in params {
+                let param_ref = format!("${{{}}}", param_name);
+                if result.contains(&param_ref) {
+                    result = result.replace(&param_ref, param_value);
+                }
+            }
+            
+            Ok(result)
         }
     }
-
-    // In a full implementation, we would parse and evaluate the expression here
-    // For now, we'll assume the expression is already resolved or return it as-is
-    Ok(result)
 }
 
 #[cfg(test)]
@@ -299,7 +302,7 @@ mod tests {
 
         // Test expression resolution (basic)
         let expression = Value::<String>::expression("speed".to_string());
-        assert_eq!(expression.resolve(&params).unwrap(), "speed");
+        assert_eq!(expression.resolve(&params).unwrap(), "30");
     }
 
     #[test]
