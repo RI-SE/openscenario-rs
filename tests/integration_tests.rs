@@ -641,17 +641,15 @@ fn tdd_can_parse_simulation_time_conditions() {
     let condition = &condition_group.conditions[0];
     
     // Verify condition type is parsed correctly
-    match &condition.condition_type {
-        openscenario_rs::types::scenario::triggers::ConditionType::ByValue(by_value) => {
-            match by_value {
-                openscenario_rs::types::conditions::ByValueCondition::SimulationTime(sim_time) => {
-                    println!("✅ Found SimulationTimeCondition with value: {}", 
-                            sim_time.value.as_literal().unwrap_or(&0.0));
-                }
-                _ => panic!("Expected SimulationTimeCondition"),
-            }
+    if let Some(by_value) = &condition.by_value_condition {
+        if let Some(sim_time) = &by_value.simulation_time {
+            println!("✅ Found SimulationTimeCondition with value: {}", 
+                    sim_time.value.as_literal().unwrap_or(&0.0));
+        } else {
+            panic!("Expected SimulationTimeCondition");
         }
-        _ => panic!("Expected ByValue condition type"),
+    } else {
+        panic!("Expected ByValue condition type");
     }
     
     println!("✅ TDD TARGET: SimulationTimeCondition parsing implemented");
@@ -724,7 +722,10 @@ use openscenario_rs::types::{
         name: Value::literal("StartCondition".to_string()),
         condition_edge: ConditionEdge::Rising,
         delay: Some(Value::literal(1.0)),
-        condition_type: ConditionType::ByValue(ByValueCondition::SimulationTime(time_condition)),
+        by_value_condition: Some(ByValueCondition {
+            simulation_time: Some(time_condition),
+        }),
+        by_entity_condition: None,
     };
 
     // Create a condition group (AND logic)
@@ -756,10 +757,12 @@ use openscenario_rs::types::{
         priority: Some(Priority::Override),
         action: StoryAction {
             name: Value::literal("SpeedAction1".to_string()),
-            action_type: StoryActionType::PrivateAction(StoryPrivateAction {
-                action_type: PrivateActionType::LongitudinalAction(LongitudinalAction {
+            private_action: Some(StoryPrivateAction {
+                longitudinal_action: Some(LongitudinalAction {
                     speed_action: Some(speed_action),
                 }),
+                teleport_action: None,
+                routing_action: None,
             }),
         },
         start_trigger: Some(trigger),

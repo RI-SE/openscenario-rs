@@ -29,9 +29,13 @@ pub struct ScenarioObject {
     #[serde(rename = "@name")]
     pub name: OSString,
     
-    /// The actual entity object (Vehicle, Pedestrian, etc.)
-    #[serde(flatten)]
-    pub entity_object: EntityObject,
+    /// Vehicle entity (optional)
+    #[serde(rename = "Vehicle", skip_serializing_if = "Option::is_none")]
+    pub vehicle: Option<Vehicle>,
+    
+    /// Pedestrian entity (optional)
+    #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
+    pub pedestrian: Option<Pedestrian>,
     
     /// Object controller configuration (optional)
     #[serde(rename = "ObjectController")]
@@ -51,7 +55,8 @@ impl ScenarioObject {
     pub fn new_vehicle(name: String, vehicle: Vehicle) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            entity_object: EntityObject::Vehicle(vehicle),
+            vehicle: Some(vehicle),
+            pedestrian: None,
             object_controller: ObjectController::default(),
         }
     }
@@ -60,8 +65,20 @@ impl ScenarioObject {
     pub fn new_pedestrian(name: String, pedestrian: Pedestrian) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            entity_object: EntityObject::Pedestrian(pedestrian),
+            vehicle: None,
+            pedestrian: Some(pedestrian),
             object_controller: ObjectController::default(),
+        }
+    }
+    
+    /// Get the entity object as an enum variant
+    pub fn get_entity_object(&self) -> Option<EntityObject> {
+        if let Some(vehicle) = &self.vehicle {
+            Some(EntityObject::Vehicle(vehicle.clone()))
+        } else if let Some(pedestrian) = &self.pedestrian {
+            Some(EntityObject::Pedestrian(pedestrian.clone()))
+        } else {
+            None
         }
     }
     
@@ -120,8 +137,15 @@ mod tests {
         
         assert_eq!(obj.get_name(), Some("TestVehicle"));
         
-        match &obj.entity_object {
-            EntityObject::Vehicle(v) => {
+        assert!(obj.vehicle.is_some());
+        assert!(obj.pedestrian.is_none());
+        
+        if let Some(v) = &obj.vehicle {
+            assert_eq!(v.name.as_literal().unwrap(), "DefaultVehicle");
+        }
+        
+        match obj.get_entity_object() {
+            Some(EntityObject::Vehicle(v)) => {
                 assert_eq!(v.name.as_literal().unwrap(), "DefaultVehicle");
             },
             _ => panic!("Expected vehicle"),

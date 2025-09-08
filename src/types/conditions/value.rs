@@ -29,12 +29,11 @@ pub struct SimulationTimeCondition {
 
 /// Value-based condition types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type", rename_all = "PascalCase")]
-pub enum ByValueCondition {
+pub struct ByValueCondition {
     /// Simulation time-based condition
-    #[serde(rename = "SimulationTimeCondition")]
-    SimulationTime(SimulationTimeCondition),
-    // More value conditions will be added later
+    #[serde(rename = "SimulationTimeCondition", skip_serializing_if = "Option::is_none")]
+    pub simulation_time: Option<SimulationTimeCondition>,
+    // More value conditions will be added later as optional fields
 }
 
 impl Default for SimulationTimeCondition {
@@ -48,6 +47,8 @@ impl Default for SimulationTimeCondition {
 
 impl Default for ByValueCondition {
     fn default() -> Self {
-        ByValueCondition::SimulationTime(SimulationTimeCondition::default())
+        Self {
+            simulation_time: Some(SimulationTimeCondition::default()),
+        }
     }
 }

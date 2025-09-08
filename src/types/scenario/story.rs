@@ -31,9 +31,11 @@ pub struct StoryAction {
     #[serde(rename = "@name")]
     pub name: OSString,
     
-    /// The specific action content
-    #[serde(flatten)]
-    pub action_type: StoryActionType,
+    /// Private action for individual entities
+    #[serde(rename = "PrivateAction", skip_serializing_if = "Option::is_none")]
+    pub private_action: Option<StoryPrivateAction>,
+    
+    // Other action types can be added later as optional fields
 }
 
 /// Types of actions available at the story level
@@ -53,8 +55,12 @@ pub enum StoryActionType {
 /// Private action at story level (reuses init-level structure)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StoryPrivateAction {
-    #[serde(flatten)]
-    pub action_type: crate::types::scenario::init::PrivateActionType,
+    #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
+    pub longitudinal_action: Option<crate::types::scenario::init::LongitudinalAction>,
+    #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
+    pub teleport_action: Option<crate::types::actions::movement::TeleportAction>,
+    #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
+    pub routing_action: Option<crate::types::actions::movement::RoutingAction>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -203,7 +209,7 @@ impl Default for StoryAction {
     fn default() -> Self {
         Self {
             name: OSString::literal("DefaultAction".to_string()),
-            action_type: StoryActionType::default(),
+            private_action: Some(StoryPrivateAction::default()),
         }
     }
 }
@@ -217,9 +223,9 @@ impl Default for StoryActionType {
 impl Default for StoryPrivateAction {
     fn default() -> Self {
         Self {
-            action_type: crate::types::scenario::init::PrivateActionType::LongitudinalAction(
-                crate::types::scenario::init::LongitudinalAction::default()
-            ),
+            longitudinal_action: Some(crate::types::scenario::init::LongitudinalAction::default()),
+            teleport_action: None,
+            routing_action: None,
         }
     }
 }

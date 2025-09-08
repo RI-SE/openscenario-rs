@@ -59,9 +59,13 @@ pub struct Condition {
     #[serde(rename = "@delay", skip_serializing_if = "Option::is_none")]
     pub delay: Option<Double>,
     
-    /// The actual condition to evaluate
-    #[serde(flatten)]
-    pub condition_type: ConditionType,
+    /// Value-based condition (time, parameter, variable, etc.)
+    #[serde(rename = "ByValueCondition", skip_serializing_if = "Option::is_none")]
+    pub by_value_condition: Option<ByValueCondition>,
+    
+    /// Entity-based condition (collision, distance, speed, etc.)
+    #[serde(rename = "ByEntityCondition", skip_serializing_if = "Option::is_none")]
+    pub by_entity_condition: Option<ByEntityCondition>,
 }
 
 /// Type of condition - either entity-based or value-based
@@ -120,7 +124,8 @@ impl Default for Condition {
             name: OSString::literal("DefaultCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
             delay: None,
-            condition_type: ConditionType::default(),
+            by_value_condition: Some(ByValueCondition::default()),
+            by_entity_condition: None,
         }
     }
 }
@@ -192,11 +197,17 @@ impl ConditionGroup {
 impl Condition {
     /// Create a new condition with default edge detection
     pub fn new(name: impl Into<String>, condition_type: ConditionType) -> Self {
+        let (by_value_condition, by_entity_condition) = match condition_type {
+            ConditionType::ByValue(cond) => (Some(cond), None),
+            ConditionType::ByEntity(cond) => (None, Some(cond)),
+        };
+        
         Self {
             name: OSString::literal(name.into()),
             condition_edge: ConditionEdge::Rising,
             delay: None,
-            condition_type,
+            by_value_condition,
+            by_entity_condition,
         }
     }
     

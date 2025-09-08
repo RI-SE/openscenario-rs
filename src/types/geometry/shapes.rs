@@ -74,9 +74,10 @@ impl Default for Dimensions {
 
 /// Shape definition for trajectories and paths
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Shape {
-    #[serde(rename = "Polyline")]
-    Polyline(Polyline),
+pub struct Shape {
+    #[serde(rename = "Polyline", skip_serializing_if = "Option::is_none")]
+    pub polyline: Option<Polyline>,
+    // Other shape types can be added later as optional fields
 }
 
 /// Polyline shape with time-positioned vertices
@@ -97,7 +98,9 @@ pub struct Vertex {
 
 impl Default for Shape {
     fn default() -> Self {
-        Self::Polyline(Polyline::default())
+        Self {
+            polyline: Some(Polyline::default()),
+        }
     }
 }
 

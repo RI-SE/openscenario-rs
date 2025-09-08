@@ -7,22 +7,26 @@ This document summarizes all the TODO items that have been added to project file
 ### Week 1: Core Infrastructure (CRITICAL) ✅ COMPLETED
 
 **src/lib.rs** ✅
+
 - [x] Re-export core types from submodules (Error, Result, OpenScenario, FileHeader)
 - [x] Implement high-level convenience functions (parse_file, parse_str, serialize_str, validate_scenario)
 - [x] Add feature flag conditional compilation (builder, validation, streaming)
 - [x] Add comprehensive library documentation with examples
 
 **src/error.rs** ✅
+
 - [x] Define main error enum with thiserror (XmlParseError, IoError, ValidationError, etc.)
 - [x] Define Result type alias
 - [x] Add error context helpers (with_context, parameter_error, validation_error, parsing_error)
 
 **Cargo.toml** ✅
+
 - [x] Define package metadata and basic dependencies (serde, quick-xml, thiserror)
 - [x] Define feature flags (serde-parsing, validation, builder, expressions, streaming)
 - [x] Add development dependencies (proptest, criterion, tempfile)
 
 **src/types/basic.rs** ✅
+
 - [x] Define Value<T> enum for parameter support (Literal, Parameter)
 - [x] Implement custom serde deserializer for Value<T> (${param} pattern)
 - [x] Define basic OpenSCENARIO type aliases (String, Double, Int, etc.)
@@ -30,6 +34,7 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add comprehensive unit tests (12 test cases)
 
 **src/types/enums.rs** ✅
+
 - [x] Implement critical enums for MVP (VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge)
 - [x] Add 10 total enums including coordinate system and dynamics enums
 - [x] Add serde annotations for XML mapping (#[serde(rename = "...")])
@@ -37,6 +42,7 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add unit tests for serialization and parsing
 
 **src/parser/xml.rs** ✅
+
 - [x] Implement serde-based parsing functions (parse_from_str, parse_from_file)
 - [x] Implement serialization functions (serialize_to_string, serialize_to_file)
 - [x] Handle XML parsing errors properly with context
@@ -46,11 +52,13 @@ This document summarizes all the TODO items that have been added to project file
 ### Week 2: Basic Scenario Structure (CRITICAL) ✅ COMPLETED
 
 **src/types/scenario/storyboard.rs** ✅
+
 - [x] Define OpenScenario root type with serde annotations
 - [x] Define FileHeader with required metadata fields
 - [x] Define Storyboard, Init, and InitActions structures (simplified for MVP)
 
 **src/types/entities/mod.rs** ✅
+
 - [x] Define ScenarioObject wrapper and EntityObject enum
 - [x] Define Entities collection container with find methods
 - [x] Define EntityRef for entity references (implemented in types/mod.rs)
@@ -58,6 +66,7 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add comprehensive unit tests for entity management
 
 **src/types/mod.rs** ✅  
+
 - [x] Declare all submodules (basic, enums, entities, geometry, scenario, etc.)
 - [x] Re-export core types for convenience (Value, OSString, enums, scenario types)
 - [x] Define common traits (Validate, Resolve) and contexts
@@ -65,6 +74,7 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add EntityRef and CatalogRef for cross-references
 
 **tests/integration_tests.rs** ✅
+
 - [x] Add basic parsing tests (can_parse_simple_scenario, can_access_file_header)
 - [x] Add error handling tests (malformed XML, missing fields)
 - [x] Add entity access tests (can_access_entities)
@@ -75,6 +85,7 @@ This document summarizes all the TODO items that have been added to project file
 ### Week 2-3: Basic Entities (HIGH) ✅ COMPLETED
 
 **src/types/entities/vehicle.rs** ✅
+
 - [x] Implement Vehicle struct with serde annotations
 - [x] Include basic fields (name, category, bounding_box)
 - [x] Skip complex fields like Performance, Axles for MVP (commented TODOs for later)
@@ -82,12 +93,14 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add comprehensive unit tests (creation, serialization, defaults)
 
 **src/types/entities/pedestrian.rs** ✅
+
 - [x] Implement Pedestrian struct with serde annotations
 - [x] Include basic fields (name, category, bounding_box)
 - [x] Add Default implementation with pedestrian-appropriate dimensions
 - [x] Add comprehensive unit tests (creation, serialization, defaults)
 
 **src/types/geometry/shapes.rs** ✅
+
 - [x] Implement BoundingBox and supporting geometry types
 - [x] Add Center and Dimensions structs with proper serde annotations
 - [x] Add Default implementations with realistic values
@@ -95,29 +108,36 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Update geometry/mod.rs to export types
 
 **tests/integration_tests.rs** ✅
+
 - [x] Add entity access tests (can_access_entities) - COMPLETED ABOVE
 
 ### Week 4: Basic Actions & Conditions (MEDIUM) ✅ COMPLETED
 
 **src/types/actions/mod.rs** ✅
+
 - [x] Define base Action enum and ActionWrapper
 - [x] Re-export action types for MVP
 
 **src/types/actions/movement.rs** ✅
+
 - [x] Implement SpeedAction and TeleportAction
 - [x] Define supporting types (TransitionDynamics, SpeedActionTarget, etc.)
 
 **src/types/conditions/mod.rs** ✅
+
 - [x] Define base Condition enum and ConditionWrapper
 - [x] Re-export condition types for MVP
 
 **src/types/conditions/value.rs** ✅
+
 - [x] Implement SimulationTimeCondition
 
 **src/types/conditions/entity.rs** ✅
+
 - [x] Implement SpeedCondition
 
 **tests/integration_tests.rs** ✅
+
 - [x] Add tests for accessing actions and conditions
 
 ## Phase 2: Usability MVP (Weeks 5-8)
@@ -125,6 +145,7 @@ This document summarizes all the TODO items that have been added to project file
 ### Week 5: Expression System (HIGH) ✅ COMPLETED
 
 **src/types/basic.rs** ✅
+
 - [x] Enhance Value<T> enum to support Expressions variant
 - [x] Enhance Value<T> deserializer for ${param} and ${expr} patterns
 - [x] Implement parameter resolution logic with HashMap context
@@ -135,6 +156,7 @@ This document summarizes all the TODO items that have been added to project file
 - [x] Add expression serialization support
 
 ### Week 6: Validation Framework (HIGH)
+
 - [ ] Implement Validate trait and ValidationContext
 - [ ] Add basic validations (required fields, entity references)
 - [ ] Add validation tests
@@ -142,52 +164,63 @@ This document summarizes all the TODO items that have been added to project file
 ### Week 7: Builder Pattern (MEDIUM)
 
 **src/builder/scenario.rs**
+
 - [ ] Implement ScenarioBuilder struct and basic methods
 - [ ] Add entity building methods (add_vehicle, add_pedestrian)
 - [ ] Add builder validation during construction
 - [ ] Add convenience methods for common patterns
 
 **tests/integration_tests.rs**
+
 - [ ] Add builder integration tests
 
 ### Week 8: Serialization (HIGH)
 
 **src/parser/xml.rs**
+
 - [ ] Implement serde-based serialization functions
 - [ ] Add proper XML declaration and formatting
 
 **tests/integration_tests.rs**
+
 - [ ] Add round-trip serialization tests
 - [ ] Verify serialized XML is well-formed
 
 ## Phase 3: Ecosystem MVP (Weeks 9-12)
 
 ### Week 9: Position System
+
 - [ ] Implement WorldPosition, RelativeWorldPosition, LanePosition
 - [ ] Add coordinate system transformation utilities
 
 ### Week 10: More Actions
+
 - [ ] Implement LaneChangeAction, FollowTrajectoryAction, SynchronizeAction
 
 ### Week 11: More Conditions
+
 - [ ] Implement DistanceCondition, CollisionCondition, TimeHeadwayCondition
 
 ### Week 12: Geometry Basics
+
 - [ ] Implement Polyline and basic trajectory support
 - [ ] Add coordinate transformations
 
 ## Phase 4+: Production Ready (Weeks 13+)
 
 ### Week 13: Streaming Parser
+
 - [ ] Add streaming parser feature flag
 - [ ] Implement manual quick-xml parsing for large files
 
 **src/parser/xml.rs**
+
 - [ ] Add streaming parser module (feature gated)
 
 ### Week 15: Documentation & Examples
 
 **examples/basic_parsing.rs**
+
 - [ ] Implement complete basic parsing example
 - [ ] Add error handling demonstration
 - [ ] Create example OpenSCENARIO file
@@ -195,6 +228,7 @@ This document summarizes all the TODO items that have been added to project file
 ## TODO Categories Summary
 
 ### Critical for MVP (Must Implement First)
+
 - Error handling and Result types
 - Basic data types and enums
 - Core scenario structure (OpenScenario, FileHeader, Entities)
@@ -202,17 +236,20 @@ This document summarizes all the TODO items that have been added to project file
 - Basic entity types (Vehicle, Pedestrian)
 
 ### High Priority (Core Functionality)
+
 - Parameter expression system
 - Validation framework
 - Basic actions and conditions
 - Round-trip serialization testing
 
 ### Medium Priority (Enhanced Features)
+
 - Builder pattern for programmatic construction
 - Extended action and condition types
 - Position system and geometry
 
 ### Future Features (Performance & Polish)
+
 - Streaming parser for large files
 - Advanced validation rules
 - Comprehensive documentation and examples
@@ -221,6 +258,7 @@ This document summarizes all the TODO items that have been added to project file
 ## Current Status Summary (Updated)
 
 ### ✅ **COMPLETED (Weeks 1-6 - Foundation MVP + Actions & Conditions + Trajectory System)**
+
 - **Complete Error Handling**: Error enum, Result type, context helpers
 - **Complete Type System Foundation**: Value<T> enum with parameter support (${param})
 - **Complete Enum System**: 10 critical enums with serde + Display/FromStr traits
@@ -241,6 +279,7 @@ This document summarizes all the TODO items that have been added to project file
 **Test Status**: ✅ **76 TESTS** (53 unit + 19 integration + 4 doc tests) with TDD methodology
 
 ### 🚀 **FIRST WORKING OPENSCENARIO PARSER WITH ACTIONS & CONDITIONS ACHIEVED!**
+
 ```rust
 let xml = include_str!("simple_scenario.xosc");
 let scenario = openscenario_rs::parse_str(xml).unwrap();
@@ -264,12 +303,14 @@ let speed_condition = SpeedCondition { /* ... */ };
 ```
 
 ### 🎯 **CURRENT PRIORITIES (Week 7 - Post-MVP TDD Development)**
+
 - **Immediate**: Investigate "invalid type: map, expected a sequence" serialization error
 - **Next**: Implement missing story-level structures causing parsing failures  
 - **Approach**: Use TDD failing tests as exact specifications for next implementations
 - **Target**: Complete cut_in_101_exam.xosc parsing without errors
 
 ### 📝 **SUCCESS METRICS ACHIEVED**
+
 - **Week 1-2 Goals**: ✅ **EXCEEDED** - Not only core infrastructure but complete entity parsing system
 - **Week 3-4 Goals**: ✅ **COMPLETED** - Implemented basic actions and conditions system
 - **Public API**: ✅ Clean, documented API with full convenience functions
@@ -292,6 +333,7 @@ let speed_condition = SpeedCondition { /* ... */ };
 10. **✅ Actions & Conditions system complete** - SpeedAction, TeleportAction, SimulationTimeCondition, SpeedCondition
 
 **Foundation Status**: **WEEKS 1-6 COMPLETED** - We have exceeded the original MVP objectives and achieved a sophisticated OpenSCENARIO parser with trajectory system support. The library now supports:
+
 - Complete entity parsing (Vehicle, Pedestrian) with enhanced vehicle definitions
 - Full geometry system (BoundingBox with 3D coordinates, Shape/Polyline/Vertex)
 - Complete story hierarchy (Story/Act/ManeuverGroup/Maneuver/Event)
@@ -304,3 +346,4 @@ let speed_condition = SpeedCondition { /* ... */ };
 - Advanced actions and conditions for complex scenario control
 
 **Ready for Week 7**: TDD-driven implementation to resolve sequence/map serialization issues and achieve full cut_in_101_exam.xosc parsing.
+

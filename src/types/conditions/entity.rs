@@ -30,7 +30,6 @@ pub struct SpeedCondition {
 
 /// Entity-based condition types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type", rename_all = "PascalCase")]
 pub enum ByEntityCondition {
     /// Speed-based condition
     #[serde(rename = "SpeedCondition")]
