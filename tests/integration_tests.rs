@@ -606,7 +606,6 @@ fn can_validate_trajectory_following_modes() {
 // These tests define what needs to be implemented next
 
 #[test]
-#[should_panic(expected = "must parse successfully")] // TDD: This will fail until we implement the missing structures
 fn tdd_can_parse_story_level_start_triggers() {
     let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
@@ -633,7 +632,6 @@ fn tdd_can_parse_story_level_start_triggers() {
 }
 
 #[test] 
-#[should_panic(expected = "must parse successfully")] // TDD: This will fail until we implement the missing structures
 fn tdd_can_parse_condition_groups_and_conditions() {
     let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
@@ -660,7 +658,6 @@ fn tdd_can_parse_condition_groups_and_conditions() {
 }
 
 #[test]
-#[should_panic(expected = "must parse successfully")] // TDD: This will fail until condition types are implemented  
 fn tdd_can_parse_simulation_time_conditions() {
     let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
