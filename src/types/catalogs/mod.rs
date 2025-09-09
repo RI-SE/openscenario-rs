@@ -16,7 +16,9 @@
 
 pub mod locations;
 pub mod entities;
+pub mod references;
 
 // Re-export catalog types
 pub use entities::*;
 pub use locations::*;
+pub use references::*;
