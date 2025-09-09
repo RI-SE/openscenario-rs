@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::error::Result;
 use crate::types::basic::Value;
-use crate::types::entities::vehicle;
+use crate::types::entities::{vehicle, pedestrian};
 use crate::types::geometry::BoundingBox;
 use crate::types::controllers::{Controller, ParameterAssignments};
-use crate::types::enums::ControllerType;
+use crate::types::enums::{ControllerType, PedestrianCategory};
 
 /// Trait for types that can be loaded from catalog files and resolved into scenario entities
 pub trait CatalogEntity: Clone + Send + Sync {
@@ -309,6 +309,222 @@ impl CatalogController {
     }
 }
 
+/// Pedestrian entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogPedestrian {
+    /// Name of the pedestrian in the catalog
+    #[serde(rename = "@name")]
+    pub name: String,
+    
+    /// Category of pedestrian (can be parameterized)
+    #[serde(rename = "@pedestrianCategory")]
+    pub pedestrian_category: Value<String>,
+    
+    /// Bounding box (can have parameterized dimensions)
+    #[serde(rename = "BoundingBox")]
+    pub bounding_box: BoundingBox,
+    
+    /// Parameter declarations for this catalog pedestrian
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+impl CatalogEntity for CatalogPedestrian {
+    type ResolvedType = pedestrian::Pedestrian;
+    
+    fn into_scenario_entity(self, parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        let resolved_pedestrian = pedestrian::Pedestrian {
+            name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
+            pedestrian_category: self.resolve_pedestrian_category(&self.pedestrian_category, &parameters)?,
+            bounding_box: self.bounding_box, // TODO: Add parameter resolution for bounding box
+        };
+        
+        Ok(resolved_pedestrian)
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![
+            ParameterDefinition {
+                name: "PedestrianCategory".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("pedestrian".to_string()),
+                description: Some("Category of pedestrian (pedestrian, wheelchair, animal)".to_string()),
+            },
+        ]
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogPedestrian {
+    /// Helper method to resolve a parameter value
+    fn resolve_parameter(&self, value: &str, parameters: &HashMap<String, String>) -> Result<String> {
+        // If the value starts with '$', it's a parameter reference
+        if value.starts_with('$') {
+            let param_name = &value[1..]; // Remove '$' prefix
+            parameters.get(param_name)
+                .map(|v| v.clone())
+                .ok_or_else(|| crate::error::Error::catalog_error(&format!(
+                    "Parameter '{}' not found in substitution map", param_name
+                )))
+        } else {
+            Ok(value.to_string())
+        }
+    }
+    
+    /// Helper method to resolve pedestrian category parameter
+    fn resolve_pedestrian_category(&self, category: &Value<String>, parameters: &HashMap<String, String>) -> Result<PedestrianCategory> {
+        let category_str = category.resolve(parameters)?;
+        match category_str.as_str() {
+            "pedestrian" => Ok(PedestrianCategory::Pedestrian),
+            "wheelchair" => Ok(PedestrianCategory::Wheelchair),
+            "animal" => Ok(PedestrianCategory::Animal),
+            _ => Err(crate::error::Error::catalog_error(&format!(
+                "Invalid pedestrian category: {}", category_str
+            ))),
+        }
+    }
+}
+
+/// Placeholder catalog entities for remaining types
+/// These provide basic structure for future implementation
+
+/// Miscellaneous object entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogMiscObject {
+    #[serde(rename = "@name")]
+    pub name: String,
+    #[serde(rename = "BoundingBox")]
+    pub bounding_box: BoundingBox,
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+/// Environment entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogEnvironment {
+    #[serde(rename = "@name")]
+    pub name: String,
+    // TODO: Add environment-specific fields in future phases
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+/// Maneuver entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogManeuver {
+    #[serde(rename = "@name")]
+    pub name: String,
+    // TODO: Add maneuver-specific fields in future phases
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+/// Trajectory entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogTrajectory {
+    #[serde(rename = "@name")]
+    pub name: String,
+    // TODO: Add trajectory-specific fields in future phases
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+/// Route entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogRoute {
+    #[serde(rename = "@name")]
+    pub name: String,
+    // TODO: Add route-specific fields in future phases
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+// Placeholder implementations for remaining catalog entities
+// These will be expanded when the corresponding entity types are fully implemented
+
+impl CatalogEntity for CatalogMiscObject {
+    type ResolvedType = String; // Placeholder - will be MiscObject when implemented
+    
+    fn into_scenario_entity(self, _parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        Ok(format!("MiscObject:{}", self.name)) // Placeholder implementation
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![] // TODO: Add schema when MiscObject is fully implemented
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogEntity for CatalogEnvironment {
+    type ResolvedType = String; // Placeholder - will be Environment when implemented
+    
+    fn into_scenario_entity(self, _parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        Ok(format!("Environment:{}", self.name)) // Placeholder implementation
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![] // TODO: Add schema when Environment is fully implemented
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogEntity for CatalogManeuver {
+    type ResolvedType = String; // Placeholder - will be Maneuver when implemented
+    
+    fn into_scenario_entity(self, _parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        Ok(format!("Maneuver:{}", self.name)) // Placeholder implementation
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![] // TODO: Add schema when Maneuver is fully implemented
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogEntity for CatalogTrajectory {
+    type ResolvedType = String; // Placeholder - will be Trajectory when implemented
+    
+    fn into_scenario_entity(self, _parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        Ok(format!("Trajectory:{}", self.name)) // Placeholder implementation
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![] // TODO: Add schema when Trajectory is fully implemented
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogEntity for CatalogRoute {
+    type ResolvedType = String; // Placeholder - will be Route when implemented
+    
+    fn into_scenario_entity(self, _parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        Ok(format!("Route:{}", self.name)) // Placeholder implementation
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![] // TODO: Add schema when Route is fully implemented
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -457,5 +673,86 @@ mod tests {
         let parameters = HashMap::new();
         let resolved = catalog_controller.into_scenario_entity(parameters).unwrap();
         assert_eq!(resolved.controller_type.unwrap(), ControllerType::Longitudinal);
+    }
+    
+    #[test]
+    fn test_catalog_pedestrian_parameter_schema() {
+        let schema = CatalogPedestrian::parameter_schema();
+        assert_eq!(schema.len(), 1);
+        
+        let pedestrian_category_param = schema.iter().find(|p| p.name == "PedestrianCategory").unwrap();
+        assert_eq!(pedestrian_category_param.parameter_type, "String");
+        assert_eq!(pedestrian_category_param.default_value.as_ref().unwrap(), "pedestrian");
+    }
+    
+    #[test]
+    fn test_catalog_pedestrian_entity_name() {
+        let catalog_pedestrian = CatalogPedestrian {
+            name: "WalkingPerson".to_string(),
+            pedestrian_category: Value::Literal("pedestrian".to_string()),
+            bounding_box: BoundingBox::default(),
+            parameter_declarations: None,
+        };
+        
+        assert_eq!(catalog_pedestrian.entity_name(), "WalkingPerson");
+    }
+    
+    #[test]
+    fn test_catalog_pedestrian_resolution() {
+        let catalog_pedestrian = CatalogPedestrian {
+            name: "TestPedestrian".to_string(),
+            pedestrian_category: Value::Parameter("PedestrianTypeParam".to_string()),
+            bounding_box: BoundingBox::default(),
+            parameter_declarations: None,
+        };
+        
+        let mut parameters = HashMap::new();
+        parameters.insert("PedestrianTypeParam".to_string(), "wheelchair".to_string());
+        
+        let resolved = catalog_pedestrian.into_scenario_entity(parameters).unwrap();
+        assert_eq!(resolved.pedestrian_category, PedestrianCategory::Wheelchair);
+        assert_eq!(resolved.name.as_literal().unwrap(), "TestPedestrian");
+    }
+    
+    #[test]
+    fn test_catalog_misc_object_placeholder() {
+        let catalog_misc_object = CatalogMiscObject {
+            name: "TrafficCone".to_string(),
+            bounding_box: BoundingBox::default(),
+            parameter_declarations: None,
+        };
+        
+        assert_eq!(catalog_misc_object.entity_name(), "TrafficCone");
+        
+        let resolved = catalog_misc_object.into_scenario_entity(HashMap::new()).unwrap();
+        assert_eq!(resolved, "MiscObject:TrafficCone");
+    }
+    
+    #[test]
+    fn test_catalog_environment_placeholder() {
+        let catalog_environment = CatalogEnvironment {
+            name: "SunnyDay".to_string(),
+            parameter_declarations: None,
+        };
+        
+        assert_eq!(catalog_environment.entity_name(), "SunnyDay");
+        
+        let resolved = catalog_environment.into_scenario_entity(HashMap::new()).unwrap();
+        assert_eq!(resolved, "Environment:SunnyDay");
+    }
+    
+    #[test]
+    fn test_all_catalog_entity_schemas() {
+        // Test that all entity types have valid parameter schemas
+        let vehicle_schema = CatalogVehicle::parameter_schema();
+        let controller_schema = CatalogController::parameter_schema();
+        let pedestrian_schema = CatalogPedestrian::parameter_schema();
+        let misc_object_schema = CatalogMiscObject::parameter_schema();
+        
+        // Should not panic and should return valid schemas
+        assert!(vehicle_schema.len() >= 1);
+        assert!(controller_schema.len() >= 1);
+        assert!(pedestrian_schema.len() >= 1);
+        assert_eq!(misc_object_schema.len(), 0); // Placeholder has empty schema
     }
 }
