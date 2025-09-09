@@ -47,6 +47,21 @@ pub use scenario::storyboard::{OpenScenario, FileHeader, Storyboard};
 pub use scenario::init::{Init, Actions, GlobalAction, EnvironmentAction, Private, PrivateActionWrapper, PrivateActionType, LongitudinalAction};
 pub use environment::{Environment, TimeOfDay, Weather, Sun, Fog, Precipitation, RoadCondition};
 
+// Re-export distribution types
+pub use distributions::{
+    ParameterValueDistribution, DistributionDefinition, UserDefinedDistribution,
+    DistributionSampler, ValidateDistribution,
+    // Deterministic types
+    DeterministicParameterDistribution, DeterministicSingleParameterDistribution, 
+    DeterministicMultiParameterDistribution, DeterministicSingleParameterDistributionType,
+    DeterministicMultiParameterDistributionType, DistributionSet, DistributionSetElement,
+    DistributionRange, ValueSetDistribution, ParameterValueSet, ParameterAssignment,
+    // Stochastic types
+    StochasticDistribution, StochasticDistributionType, ProbabilityDistributionSet,
+    ProbabilityDistributionSetElement, NormalDistribution, LogNormalDistribution,
+    UniformDistribution, PoissonDistribution, Histogram, HistogramBin,
+};
+
 // Re-export entity types (when implemented)
 // pub use entities::{Vehicle, Pedestrian, MiscObject, Entities, ScenarioObject};
 
