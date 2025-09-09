@@ -9,6 +9,8 @@ use crate::error::Result;
 use crate::types::basic::Value;
 use crate::types::entities::vehicle;
 use crate::types::geometry::BoundingBox;
+use crate::types::controllers::{Controller, ParameterAssignments};
+use crate::types::enums::ControllerType;
 
 /// Trait for types that can be loaded from catalog files and resolved into scenario entities
 pub trait CatalogEntity: Clone + Send + Sync {
@@ -224,7 +226,88 @@ impl CatalogVehicle {
     }
 }
 
+/// Controller entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogController {
+    /// Name of the controller in the catalog
+    #[serde(rename = "@name")]
+    pub name: String,
+    
+    /// Type of controller (can be parameterized)
+    #[serde(rename = "@controllerType")]
+    pub controller_type: Value<String>,
+    
+    /// Parameter declarations for this catalog controller
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    
+    /// Additional properties
+    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
+    pub properties: Option<vehicle::Properties>,
+}
 
+impl CatalogEntity for CatalogController {
+    type ResolvedType = Controller;
+    
+    fn into_scenario_entity(self, parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        let resolved_controller = Controller {
+            name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
+            controller_type: Some(self.resolve_controller_type(&self.controller_type, &parameters)?),
+            parameter_declarations: None, // TODO: Add parameter declaration resolution
+            properties: self.properties,
+        };
+        
+        Ok(resolved_controller)
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![
+            ParameterDefinition {
+                name: "ControllerType".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("movement".to_string()),
+                description: Some("Type of controller (movement, lateral, longitudinal, etc.)".to_string()),
+            },
+        ]
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogController {
+    /// Helper method to resolve a parameter value
+    fn resolve_parameter(&self, value: &str, parameters: &HashMap<String, String>) -> Result<String> {
+        // If the value starts with '$', it's a parameter reference
+        if value.starts_with('$') {
+            let param_name = &value[1..]; // Remove '$' prefix
+            parameters.get(param_name)
+                .map(|v| v.clone())
+                .ok_or_else(|| crate::error::Error::catalog_error(&format!(
+                    "Parameter '{}' not found in substitution map", param_name
+                )))
+        } else {
+            Ok(value.to_string())
+        }
+    }
+    
+    /// Helper method to resolve controller type parameter
+    fn resolve_controller_type(&self, controller_type: &Value<String>, parameters: &HashMap<String, String>) -> Result<ControllerType> {
+        let type_str = controller_type.resolve(parameters)?;
+        match type_str.as_str() {
+            "movement" => Ok(ControllerType::Movement),
+            "lateral" => Ok(ControllerType::Lateral),
+            "longitudinal" => Ok(ControllerType::Longitudinal),
+            "lighting" => Ok(ControllerType::Lighting),
+            "animation" => Ok(ControllerType::Animation),
+            "appearance" => Ok(ControllerType::Appearance),
+            _ => Err(crate::error::Error::catalog_error(&format!(
+                "Invalid controller type: {}", type_str
+            ))),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -321,5 +404,58 @@ mod tests {
         let resolved = catalog_vehicle.into_scenario_entity(parameters).unwrap();
         assert_eq!(resolved.performance.max_speed.as_literal().unwrap(), &180.0);
         assert_eq!(resolved.name.as_literal().unwrap(), "TestVehicle");
+    }
+    
+    #[test]
+    fn test_catalog_controller_parameter_schema() {
+        let schema = CatalogController::parameter_schema();
+        assert_eq!(schema.len(), 1);
+        
+        let controller_type_param = schema.iter().find(|p| p.name == "ControllerType").unwrap();
+        assert_eq!(controller_type_param.parameter_type, "String");
+        assert_eq!(controller_type_param.default_value.as_ref().unwrap(), "movement");
+    }
+    
+    #[test]
+    fn test_catalog_controller_entity_name() {
+        let catalog_controller = CatalogController {
+            name: "AIDriver".to_string(),
+            controller_type: Value::Literal("movement".to_string()),
+            parameter_declarations: None,
+            properties: None,
+        };
+        
+        assert_eq!(catalog_controller.entity_name(), "AIDriver");
+    }
+    
+    #[test]
+    fn test_catalog_controller_resolution() {
+        let catalog_controller = CatalogController {
+            name: "TestController".to_string(),
+            controller_type: Value::Parameter("ControllerTypeParam".to_string()),
+            parameter_declarations: None,
+            properties: None,
+        };
+        
+        let mut parameters = HashMap::new();
+        parameters.insert("ControllerTypeParam".to_string(), "lateral".to_string());
+        
+        let resolved = catalog_controller.into_scenario_entity(parameters).unwrap();
+        assert_eq!(resolved.controller_type.unwrap(), ControllerType::Lateral);
+        assert_eq!(resolved.name.as_literal().unwrap(), "TestController");
+    }
+    
+    #[test]
+    fn test_catalog_controller_type_resolution() {
+        let catalog_controller = CatalogController {
+            name: "FlexController".to_string(),
+            controller_type: Value::Literal("longitudinal".to_string()),
+            parameter_declarations: None,
+            properties: None,
+        };
+        
+        let parameters = HashMap::new();
+        let resolved = catalog_controller.into_scenario_entity(parameters).unwrap();
+        assert_eq!(resolved.controller_type.unwrap(), ControllerType::Longitudinal);
     }
 }
