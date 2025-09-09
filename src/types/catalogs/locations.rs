@@ -11,8 +11,7 @@
 //! - RouteCatalogLocation
 
 use crate::types::basic::Directory;
-use crate::catalog::CatalogLocation;
-use crate::error::Result;
+
 use serde::{Deserialize, Serialize};
 
 /// Location specification for vehicle catalogs
@@ -32,19 +31,6 @@ impl VehicleCatalogLocation {
     /// Create a vehicle catalog location from a path string
     pub fn from_path(path: String) -> Self {
         Self::new(Directory::new(path))
-    }
-}
-
-impl CatalogLocation for VehicleCatalogLocation {
-    type CatalogType = String; // Will be VehicleCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        // Placeholder implementation - will be enhanced with actual catalog parsing
-        Ok(format!("VehicleCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
     }
 }
 
@@ -68,18 +54,6 @@ impl ControllerCatalogLocation {
     }
 }
 
-impl CatalogLocation for ControllerCatalogLocation {
-    type CatalogType = String; // Will be ControllerCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("ControllerCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
-    }
-}
-
 /// Location specification for pedestrian catalogs
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PedestrianCatalogLocation {
@@ -97,18 +71,6 @@ impl PedestrianCatalogLocation {
     /// Create a pedestrian catalog location from a path string
     pub fn from_path(path: String) -> Self {
         Self::new(Directory::new(path))
-    }
-}
-
-impl CatalogLocation for PedestrianCatalogLocation {
-    type CatalogType = String; // Will be PedestrianCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("PedestrianCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
     }
 }
 
@@ -132,18 +94,6 @@ impl MiscObjectCatalogLocation {
     }
 }
 
-impl CatalogLocation for MiscObjectCatalogLocation {
-    type CatalogType = String; // Will be MiscObjectCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("MiscObjectCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
-    }
-}
-
 /// Location specification for environment catalogs
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EnvironmentCatalogLocation {
@@ -161,18 +111,6 @@ impl EnvironmentCatalogLocation {
     /// Create an environment catalog location from a path string
     pub fn from_path(path: String) -> Self {
         Self::new(Directory::new(path))
-    }
-}
-
-impl CatalogLocation for EnvironmentCatalogLocation {
-    type CatalogType = String; // Will be EnvironmentCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("EnvironmentCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
     }
 }
 
@@ -196,18 +134,6 @@ impl ManeuverCatalogLocation {
     }
 }
 
-impl CatalogLocation for ManeuverCatalogLocation {
-    type CatalogType = String; // Will be ManeuverCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("ManeuverCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
-    }
-}
-
 /// Location specification for trajectory catalogs
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TrajectoryCatalogLocation {
@@ -228,18 +154,6 @@ impl TrajectoryCatalogLocation {
     }
 }
 
-impl CatalogLocation for TrajectoryCatalogLocation {
-    type CatalogType = String; // Will be TrajectoryCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("TrajectoryCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
-    }
-}
-
 /// Location specification for route catalogs
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RouteCatalogLocation {
@@ -257,18 +171,6 @@ impl RouteCatalogLocation {
     /// Create a route catalog location from a path string
     pub fn from_path(path: String) -> Self {
         Self::new(Directory::new(path))
-    }
-}
-
-impl CatalogLocation for RouteCatalogLocation {
-    type CatalogType = String; // Will be RouteCatalog when implemented
-    
-    async fn load_catalog(&self) -> Result<Self::CatalogType> {
-        Ok(format!("RouteCatalog from {:?}", self.directory.path))
-    }
-    
-    fn directory(&self) -> &Directory {
-        &self.directory
     }
 }
 
@@ -367,7 +269,7 @@ mod tests {
 
         let directory = Directory::new("./vehicles".to_string());
         let location2 = VehicleCatalogLocation::new(directory.clone());
-        assert_eq!(location2.directory(), &directory);
+        assert_eq!(&location2.directory, &directory);
     }
 
     #[test]
@@ -410,16 +312,5 @@ mod tests {
         assert_eq!(maneuver.directory.path.as_literal().unwrap(), "/maneuvers");
         assert_eq!(trajectory.directory.path.as_literal().unwrap(), "/trajectories");
         assert_eq!(route.directory.path.as_literal().unwrap(), "/routes");
-    }
-
-    #[tokio::test]
-    async fn test_catalog_location_load() {
-        let location = VehicleCatalogLocation::from_path("/test/path".to_string());
-        let result = location.load_catalog().await;
-        
-        assert!(result.is_ok());
-        let catalog_data = result.unwrap();
-        assert!(catalog_data.contains("VehicleCatalog"));
-        assert!(catalog_data.contains("/test/path"));
     }
 }

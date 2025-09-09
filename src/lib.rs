@@ -45,10 +45,16 @@ pub use error::{Error, Result};
 pub use types::scenario::storyboard::{OpenScenario, FileHeader};
 
 // Re-export parser functions
-pub use parser::xml::{parse_from_str, parse_from_file, serialize_to_string, serialize_to_file};
+pub use parser::xml::{
+    parse_from_str, parse_from_file, serialize_to_string, serialize_to_file,
+    parse_catalog_from_str, parse_catalog_from_file, serialize_catalog_to_string, serialize_catalog_to_file
+};
 
 // Re-export expression evaluation
 pub use expression::evaluate_expression;
+
+// Re-export catalog system
+pub use catalog::{CatalogManager, CatalogLoader, CatalogCache, CatalogResolver, ResolvedCatalog, ParameterSubstitutionEngine};
 
 // Feature-gated re-exports
 #[cfg(feature = "builder")]
@@ -77,6 +83,46 @@ use std::path::Path;
 /// ```
 pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     parse_from_file(path)
+}
+
+/// Parse a catalog file from the filesystem
+/// 
+/// This is a convenience function that wraps `parser::xml::parse_catalog_from_file`
+/// with additional context and error handling.
+///
+/// # Example
+/// ```rust,no_run
+/// use openscenario_rs::parse_catalog_file;
+/// 
+/// let catalog = parse_catalog_file("catalogs/vehicles.xosc")?;
+/// # Ok::<(), openscenario_rs::Error>(())
+/// ```
+pub fn parse_catalog_file<P: AsRef<Path>>(path: P) -> Result<types::catalogs::files::CatalogFile> {
+    parse_catalog_from_file(path)
+}
+
+/// Parse a catalog document from a string
+/// 
+/// This is a convenience function that wraps `parser::xml::parse_catalog_from_str`
+/// with additional context and error handling.
+///
+/// # Example
+/// ```rust
+/// use openscenario_rs::parse_catalog_str;
+/// 
+/// let xml = r#"
+/// <?xml version="1.0" encoding="UTF-8"?>
+/// <OpenSCENARIO>
+///   <FileHeader author="Test" date="2024-01-01" description="Test" revMajor="1" revMinor="0"/>
+///   <Catalog name="TestCatalog"/>
+/// </OpenSCENARIO>
+/// "#;
+/// 
+/// let catalog = parse_catalog_str(xml)?;
+/// # Ok::<(), openscenario_rs::Error>(())
+/// ```
+pub fn parse_catalog_str(xml: &str) -> Result<types::catalogs::files::CatalogFile> {
+    parse_catalog_from_str(xml)
 }
 
 /// Parse an OpenSCENARIO document from a string
