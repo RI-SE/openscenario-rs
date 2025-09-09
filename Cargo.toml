@@ -33,3 +33,4 @@ proptest = "1.0"
 criterion = "0.5"
 tempfile = "3.0"
 serde_json = "1.0.143"
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }

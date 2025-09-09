@@ -29,6 +29,7 @@ pub mod error;
 pub mod types;
 pub mod parser;
 pub mod expression;
+pub mod catalog;
 
 #[cfg(feature = "builder")]
 pub mod builder;

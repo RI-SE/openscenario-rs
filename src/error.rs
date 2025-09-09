@@ -28,6 +28,10 @@ pub enum Error {
     /// Missing catalog reference
     #[error("Catalog entry not found: {entry} in catalog {catalog}")]
     CatalogNotFound { catalog: String, entry: String },
+
+    /// Catalog system errors
+    #[error("Catalog error: {0}")]
+    CatalogError(String),
 }
 
 impl Error {
@@ -64,6 +68,11 @@ impl Error {
             field: field.to_string(),
             message: message.to_string(),
         }
+    }
+
+    /// Create a catalog error
+    pub fn catalog_error(message: &str) -> Self {
+        Error::CatalogError(message.to_string())
     }
 }
 

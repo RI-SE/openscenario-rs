@@ -33,7 +33,8 @@ pub mod controllers;
 // Re-export commonly used types for convenience
 pub use basic::{
     Value, OSString, Double, Int, UnsignedInt, UnsignedShort, Boolean,
-    ParameterDeclarations, ParameterDeclaration, ValueConstraintGroup, ValueConstraint, Range
+    ParameterDeclarations, ParameterDeclaration, ValueConstraintGroup, ValueConstraint, Range,
+    Directory
 };
 pub use enums::{
     VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge,
@@ -67,7 +68,14 @@ pub use distributions::{
 pub use controllers::{
     Controller, ObjectController, ControllerProperties,
     ActivateControllerAction, OverrideControllerValueAction,
-    ControllerAssignment, ControllerCatalogLocation, ControllerDistribution,
+    ControllerAssignment, ControllerDistribution,
+};
+
+// Re-export catalog location types
+pub use catalogs::locations::{
+    VehicleCatalogLocation, ControllerCatalogLocation, PedestrianCatalogLocation,
+    MiscObjectCatalogLocation, EnvironmentCatalogLocation, ManeuverCatalogLocation,
+    TrajectoryCatalogLocation, RouteCatalogLocation, CatalogLocations,
 };
 
 // Re-export entity types (when implemented)

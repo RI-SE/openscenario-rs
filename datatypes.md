@@ -10,9 +10,9 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 | **Simple Enumeration Types** | 37 | 37 | 0 | 100% |
 | **Distribution Types** | 18 | 18 | 0 | 100% |
 | **Controller Types** | 8 | 8 | 0 | 100% |
-| **Complex Types** | 287 | 111+ | 172+ | 39% |
+| **Complex Types** | 287 | 121+ | 166+ | 42% |
 | **Groups** | 14 | 2 | 12 | 14% |
-| **TOTAL** | **347** | **185+** | **184+** | **53%** |
+| **TOTAL** | **347** | **195+** | **178+** | **56%** |
 
 ---
 
@@ -201,7 +201,7 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [x] `ValueConstraintGroup` - Constraint group - `src/lib.rs`
 - [x] `ValueConstraint` - Value constraint - `src/lib.rs`
 - [x] `Range` - Value range - `src/lib.rs`
-- [ ] `Directory` - Directory path
+- [x] `Directory` - Directory path - `src/types/basic.rs`
 - [ ] `MonitorDeclarations` - Monitor declarations
 - [ ] `MonitorDeclaration` - Monitor definition
 - [ ] (7+ additional container types)
@@ -237,7 +237,7 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [x] `ActivateControllerAction` - Controller activation action - `src/types/controllers/mod.rs`
 - [x] `OverrideControllerValueAction` - Parameter override action - `src/types/controllers/mod.rs`
 - [x] `ControllerAssignment` - Controller to entity assignment - `src/types/controllers/mod.rs`
-- [x] `ControllerCatalogLocation` - Controller catalog location - `src/types/controllers/mod.rs`
+
 - [x] `ControllerDistribution` - Statistical controller parameters - `src/types/controllers/mod.rs`
 
 ### 3.10 Traffic Management (0/8)
@@ -245,11 +245,16 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [ ] `TrafficDistribution` - Traffic distribution
 - [ ] (6+ additional traffic types)
 
-### 3.11 Catalogs & References (0/9)
-- [ ] `Catalog` - Catalog definition
-- [ ] `CatalogReference` - Catalog item reference
-- [ ] `CatalogLocations` - Catalog locations
-- [ ] (6+ additional catalog types)
+### 3.11 Catalogs & References (9/9 - 100%)
+- [x] `VehicleCatalogLocation` - Vehicle catalog location - `src/types/catalogs/locations.rs`
+- [x] `ControllerCatalogLocation` - Controller catalog location - `src/types/catalogs/locations.rs`
+- [x] `PedestrianCatalogLocation` - Pedestrian catalog location - `src/types/catalogs/locations.rs`
+- [x] `MiscObjectCatalogLocation` - Miscellaneous object catalog location - `src/types/catalogs/locations.rs`
+- [x] `EnvironmentCatalogLocation` - Environment catalog location - `src/types/catalogs/locations.rs`
+- [x] `ManeuverCatalogLocation` - Maneuver catalog location - `src/types/catalogs/locations.rs`
+- [x] `TrajectoryCatalogLocation` - Trajectory catalog location - `src/types/catalogs/locations.rs`
+- [x] `RouteCatalogLocation` - Route catalog location - `src/types/catalogs/locations.rs`
+- [x] `CatalogLocations` - Catalog locations container - `src/types/catalogs/locations.rs`
 
 ### 3.12 Routes & Trajectories (3/12)
 - [x] `Trajectory` - Trajectory definition - `src/types/positions/trajectory.rs`

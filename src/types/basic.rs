@@ -420,6 +420,70 @@ mod tests {
     }
 
     #[test]
+    fn test_directory_creation() {
+        // Test basic creation
+        let dir = Directory::new("/path/to/catalogs".to_string());
+        assert_eq!(dir.path.as_literal().unwrap(), "/path/to/catalogs");
+
+        // Test parameter creation
+        let param_dir = Directory::from_parameter("CatalogPath".to_string());
+        assert_eq!(param_dir.path.as_parameter().unwrap(), "CatalogPath");
+
+        // Test default
+        let default_dir = Directory::default();
+        assert_eq!(default_dir.path.as_literal().unwrap(), "");
+    }
+
+    #[test]
+    fn test_directory_path_resolution() {
+        let mut params = HashMap::new();
+        params.insert("CatalogPath".to_string(), "/catalogs/vehicles".to_string());
+
+        // Test literal path resolution
+        let dir = Directory::new("/path/to/catalogs".to_string());
+        assert_eq!(dir.resolve_path(&params).unwrap(), "/path/to/catalogs");
+
+        // Test parameter path resolution
+        let param_dir = Directory::from_parameter("CatalogPath".to_string());
+        assert_eq!(param_dir.resolve_path(&params).unwrap(), "/catalogs/vehicles");
+    }
+
+    #[test]
+    fn test_directory_path_validation() {
+        // Valid paths
+        let valid_dir = Directory::new("/path/to/catalogs".to_string());
+        assert!(valid_dir.validate_path());
+
+        let relative_dir = Directory::new("./catalogs".to_string());
+        assert!(relative_dir.validate_path());
+
+        // Invalid paths
+        let empty_dir = Directory::new("".to_string());
+        assert!(!empty_dir.validate_path());
+
+        let null_dir = Directory::new("path\0with\0null".to_string());
+        assert!(!null_dir.validate_path());
+
+        // Parameters are considered valid at this stage
+        let param_dir = Directory::from_parameter("CatalogPath".to_string());
+        assert!(param_dir.validate_path());
+    }
+
+    #[test]
+    fn test_directory_serialization() {
+        let dir = Directory::new("/path/to/catalogs".to_string());
+        
+        // Test JSON serialization
+        let json = serde_json::to_string(&dir).unwrap();
+        assert!(json.contains("path"));
+        assert!(json.contains("/path/to/catalogs"));
+
+        // Test JSON deserialization
+        let deserialized: Directory = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.path.as_literal().unwrap(), "/path/to/catalogs");
+    }
+
+    #[test]
     fn test_scientific_notation_parsing() {
         // Test values from real XOSC files that are causing parsing issues
         let test_values = [
@@ -593,9 +657,59 @@ impl ParameterDeclaration {
     }
 }
 
+/// Directory path reference for catalog files
+///
+/// This type represents a directory path that contains catalog files.
+/// It's used by all catalog location types to specify where to find
+/// catalog definitions that can be referenced by scenarios.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Directory {
+    /// Path to the directory containing catalog files
+    #[serde(rename = "@path")]
+    pub path: OSString,
+}
+
+// Helper methods for Directory
+impl Directory {
+    /// Create a new Directory with the given path
+    pub fn new(path: String) -> Self {
+        Self {
+            path: OSString::literal(path),
+        }
+    }
+
+    /// Create a Directory from a parameter reference
+    pub fn from_parameter(param_name: String) -> Self {
+        Self {
+            path: OSString::parameter(param_name),
+        }
+    }
+
+    /// Get the resolved path string
+    pub fn resolve_path(&self, params: &HashMap<std::string::String, std::string::String>) -> Result<std::string::String> {
+        self.path.resolve(params)
+    }
+
+    /// Check if the directory path is valid (basic validation)
+    pub fn validate_path(&self) -> bool {
+        if let Some(literal_path) = self.path.as_literal() {
+            !literal_path.is_empty() && !literal_path.contains('\0')
+        } else {
+            // Parameters and expressions are assumed valid at this stage
+            true
+        }
+    }
+}
+
+impl Default for Directory {
+    fn default() -> Self {
+        Self::new(String::new())
+    }
+}
+
 // Helper methods for ValueConstraintGroup
 impl ValueConstraintGroup {
-    /// Create a new constraint group with the given constraints
+    /// Create a new value constraint group with the given constraints
     pub fn new(constraints: Vec<ValueConstraint>) -> Self {
         Self {
             value_constraints: constraints,
