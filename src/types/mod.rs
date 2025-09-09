@@ -28,6 +28,7 @@ pub mod environment;
 // Advanced features (to be expanded)
 pub mod catalogs;
 pub mod distributions;
+pub mod controllers;
 
 // Re-export commonly used types for convenience
 pub use basic::{
@@ -60,6 +61,13 @@ pub use distributions::{
     StochasticDistribution, StochasticDistributionType, ProbabilityDistributionSet,
     ProbabilityDistributionSetElement, NormalDistribution, LogNormalDistribution,
     UniformDistribution, PoissonDistribution, Histogram, HistogramBin,
+};
+
+// Re-export controller types
+pub use controllers::{
+    Controller, ObjectController, ControllerProperties,
+    ActivateControllerAction, OverrideControllerValueAction,
+    ControllerAssignment, ControllerCatalogLocation, ControllerDistribution,
 };
 
 // Re-export entity types (when implemented)

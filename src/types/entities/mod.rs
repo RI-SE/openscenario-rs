@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use crate::types::basic::OSString;
+use crate::types::controllers::ObjectController;
 
 pub mod vehicle;
 pub mod pedestrian;
@@ -102,14 +103,7 @@ impl Entities {
     }
 }
 
-/// Object controller for controlling entity behavior
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
-pub struct ObjectController {
-    /// Optional controller properties
-    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
-    pub properties: Option<Properties>,
-}
+// ObjectController is now imported from crate::types::controllers
 
 
 

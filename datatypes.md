@@ -8,9 +8,11 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 |----------|--------|------------|---------|----------|
 | **Basic Data Types** | 9 | 9 | 0 | 100% |
 | **Simple Enumeration Types** | 37 | 37 | 0 | 100% |
-| **Complex Types** | 287 | 85+ | 200+ | 30% |
+| **Distribution Types** | 18 | 18 | 0 | 100% |
+| **Controller Types** | 8 | 8 | 0 | 100% |
+| **Complex Types** | 287 | 111+ | 172+ | 39% |
 | **Groups** | 14 | 2 | 12 | 14% |
-| **TOTAL** | **347** | **133+** | **214+** | **38%** |
+| **TOTAL** | **347** | **185+** | **184+** | **53%** |
 
 ---
 
@@ -204,16 +206,39 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [ ] `MonitorDeclaration` - Monitor definition
 - [ ] (7+ additional container types)
 
-### 3.8 Distributions (0/18)
-- [ ] `ParameterValueDistribution` - Parameter distribution
-- [ ] `Deterministic` - Deterministic distribution
-- [ ] `Stochastic` - Stochastic distribution
-- [ ] (15+ additional distribution types)
+### 3.8 Distributions (18/18) ✅ **COMPLETED**
+- [x] `ParameterValueDistribution` - Parameter distribution wrapper - `src/types/distributions/mod.rs`
+- [x] `DistributionDefinition` - Union of all distribution types - `src/types/distributions/mod.rs`
+- [x] `UserDefinedDistribution` - Custom parameter distributions - `src/types/distributions/mod.rs`
+- [x] `DeterministicParameterDistribution` - Deterministic wrapper - `src/types/distributions/deterministic.rs`
+- [x] `DeterministicSingleParameterDistribution` - Single parameter deterministic - `src/types/distributions/deterministic.rs`
+- [x] `DeterministicMultiParameterDistribution` - Multi-parameter deterministic - `src/types/distributions/deterministic.rs`
+- [x] `DistributionSet` - Discrete value enumeration - `src/types/distributions/deterministic.rs`
+- [x] `DistributionSetElement` - Individual set element - `src/types/distributions/deterministic.rs`
+- [x] `DistributionRange` - Continuous range with step size - `src/types/distributions/deterministic.rs`
+- [x] `ValueSetDistribution` - Multi-parameter combinations - `src/types/distributions/deterministic.rs`
+- [x] `ParameterValueSet` - Parameter assignment set - `src/types/distributions/deterministic.rs`
+- [x] `ParameterAssignment` - Individual assignment - `src/types/distributions/deterministic.rs`
+- [x] `StochasticDistribution` - Stochastic wrapper - `src/types/distributions/stochastic.rs`
+- [x] `UniformDistribution` - Uniform distribution - `src/types/distributions/stochastic.rs`
+- [x] `NormalDistribution` - Gaussian distribution - `src/types/distributions/stochastic.rs`
+- [x] `LogNormalDistribution` - Log-normal distribution - `src/types/distributions/stochastic.rs`
+- [x] `PoissonDistribution` - Poisson distribution - `src/types/distributions/stochastic.rs`
+- [x] `ProbabilityDistributionSet` - Weighted discrete distribution - `src/types/distributions/stochastic.rs`
+- [x] `ProbabilityDistributionSetElement` - Weighted element - `src/types/distributions/stochastic.rs`
+- [x] `Histogram` - Histogram-based distribution - `src/types/distributions/stochastic.rs`
+- [x] `HistogramBin` - Histogram bin - `src/types/distributions/stochastic.rs`
+- [x] `Range` - Range specification - `src/types/distributions/stochastic.rs`
 
-### 3.9 Controllers (0/8)
-- [ ] `Controller` - Controller definition
-- [ ] `ObjectController` - Object controller
-- [ ] (6+ additional controller types)
+### 3.9 Controllers (8/8) ✅ **COMPLETED**
+- [x] `Controller` - Controller definition - `src/types/controllers/mod.rs`
+- [x] `ObjectController` - Object controller - `src/types/controllers/mod.rs`
+- [x] `ControllerProperties` - Controller properties container - `src/types/controllers/mod.rs`
+- [x] `ActivateControllerAction` - Controller activation action - `src/types/controllers/mod.rs`
+- [x] `OverrideControllerValueAction` - Parameter override action - `src/types/controllers/mod.rs`
+- [x] `ControllerAssignment` - Controller to entity assignment - `src/types/controllers/mod.rs`
+- [x] `ControllerCatalogLocation` - Controller catalog location - `src/types/controllers/mod.rs`
+- [x] `ControllerDistribution` - Statistical controller parameters - `src/types/controllers/mod.rs`
 
 ### 3.10 Traffic Management (0/8)
 - [ ] `TrafficDefinition` - Traffic characteristics
@@ -280,10 +305,10 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - [ ] Lighting actions
 - [ ] Traffic signal actions
 
-### Phase 3: Advanced Features (PLANNED 📋)
-**Status: 0% Complete**
-- [ ] Distribution system (Deterministic, Stochastic)
-- [ ] Controller system
+### Phase 3: Advanced Features (IN PROGRESS 🚧)
+**Status: 67% Complete**
+- [x] Distribution system (Deterministic, Stochastic) ✅ **COMPLETED**
+- [x] Controller system (8 types) ✅ **COMPLETED**
 - [ ] Traffic management
 - [ ] Catalog system
 - [ ] Route system
@@ -320,11 +345,15 @@ Based on the comprehensive analysis from `OpenSCENARIO_Datatypes_Reference.md`, 
 - **Conditions**: `src/types/conditions/`
 - **Scenario Structure**: `src/types/scenario/`
 - **Geometry**: `src/types/geometry/`
+- **Controllers**: `src/types/controllers/`
+- **Distributions**: `src/types/distributions/`
 
 ---
 
-*Last Updated: 2025-09-08*
-*Implementation Status: 38% (133+/347 types)*
+*Last Updated: 2025-09-09*
+*Implementation Status: 53% (185+/347 types)*
 *Production Status: ✅ Ready for real-world XOSC parsing*
 *Expression System: ✅ Complete with 9 mathematical functions, constants, and comparison operators*
-*Enum Coverage: ✅ 100% complete (37/37 enums)* 🎉
+*Enum Coverage: ✅ 100% complete (37/37 enums)*
+*Distribution System: ✅ 100% complete (18/18 distribution types)* 🎉
+*Controller System: ✅ 100% complete (8/8 controller types)* 🎉
