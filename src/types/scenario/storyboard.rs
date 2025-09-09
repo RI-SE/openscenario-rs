@@ -10,8 +10,19 @@ use crate::types::entities::Entities;
 pub struct OpenScenario {
     #[serde(rename = "FileHeader")]
     pub file_header: FileHeader,
+    
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
+    
+    #[serde(rename = "CatalogLocations", skip_serializing_if = "Option::is_none")]
+    pub catalog_locations: Option<crate::types::catalogs::locations::CatalogLocations>,
+    
+    #[serde(rename = "RoadNetwork", skip_serializing_if = "Option::is_none")]
+    pub road_network: Option<crate::types::road::RoadNetwork>,
+    
     #[serde(rename = "Entities", default)]
     pub entities: Entities,
+    
     #[serde(rename = "Storyboard")]
     pub storyboard: Storyboard,
 }
@@ -49,6 +60,16 @@ pub use super::init::Init;
 
 // Story is now imported from story.rs module
 
+impl Default for Storyboard {
+    fn default() -> Self {
+        Self {
+            init: Init::default(),
+            stories: Vec::new(),
+            stop_trigger: None,
+        }
+    }
+}
+
 impl Default for OpenScenario {
     fn default() -> Self {
         Self {
@@ -59,12 +80,11 @@ impl Default for OpenScenario {
                 rev_major: crate::types::basic::Value::literal(1),
                 rev_minor: crate::types::basic::Value::literal(0),
             },
+            parameter_declarations: None,
+            catalog_locations: None,
+            road_network: None,
             entities: Entities::default(),
-            storyboard: Storyboard {
-                init: Init::default(),
-                stories: vec![],
-                stop_trigger: None,
-            },
+            storyboard: Storyboard::default(),
         }
     }
 }

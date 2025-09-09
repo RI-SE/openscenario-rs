@@ -38,6 +38,10 @@ pub struct ScenarioObject {
     #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
     pub pedestrian: Option<Pedestrian>,
     
+    /// Catalog reference for entity definition (optional)
+    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
+    pub catalog_reference: Option<crate::types::catalogs::references::CatalogReference<crate::types::catalogs::entities::CatalogVehicle>>,
+    
     /// Object controller configuration (optional)
     #[serde(rename = "ObjectController")]
     pub object_controller: ObjectController,
@@ -58,6 +62,7 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: Some(vehicle),
             pedestrian: None,
+            catalog_reference: None,
             object_controller: ObjectController::default(),
         }
     }
@@ -68,6 +73,21 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: Some(pedestrian),
+            catalog_reference: None,
+            object_controller: ObjectController::default(),
+        }
+    }
+    
+    /// Create a new scenario object with a catalog reference
+    pub fn new_catalog_reference(
+        name: String, 
+        catalog_reference: crate::types::catalogs::references::CatalogReference<crate::types::catalogs::entities::CatalogVehicle>
+    ) -> Self {
+        Self {
+            name: crate::types::basic::Value::literal(name),
+            vehicle: None,
+            pedestrian: None,
+            catalog_reference: Some(catalog_reference),
             object_controller: ObjectController::default(),
         }
     }

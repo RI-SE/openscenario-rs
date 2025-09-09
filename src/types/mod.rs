@@ -30,6 +30,9 @@ pub mod catalogs;
 pub mod distributions;
 pub mod controllers;
 
+// Road network types
+pub mod road;
+
 // Re-export commonly used types for convenience
 pub use basic::{
     Value, OSString, Double, Int, UnsignedInt, UnsignedShort, Boolean,

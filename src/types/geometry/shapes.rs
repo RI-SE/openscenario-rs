@@ -142,6 +142,8 @@ mod tests {
             position: Position {
                 world_position: Some(WorldPosition::default()),
                 relative_world_position: None,
+                road_position: None,
+                lane_position: None,
             },
         };
         
@@ -159,6 +161,8 @@ mod tests {
                     position: Position {
                         world_position: Some(WorldPosition::default()),
                         relative_world_position: None,
+                        road_position: None,
+                        lane_position: None,
                     },
                 },
                 Vertex {
@@ -166,6 +170,8 @@ mod tests {
                     position: Position {
                         world_position: Some(WorldPosition::default()),
                         relative_world_position: None,
+                        road_position: None,
+                        lane_position: None,
                     },
                 },
             ],
@@ -187,6 +193,8 @@ mod tests {
                     position: Position {
                         world_position: Some(WorldPosition::default()),
                         relative_world_position: None,
+                        road_position: None,
+                        lane_position: None,
                     },
                 }],
             }),

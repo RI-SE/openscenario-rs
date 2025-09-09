@@ -171,12 +171,14 @@ fn can_create_and_serialize_actions() {
             world_position: Some(WorldPosition {
                 x: openscenario_rs::types::Double::literal(10.0),
                 y: openscenario_rs::types::Double::literal(20.0),
-                z: openscenario_rs::types::Double::literal(0.0),
-                h: openscenario_rs::types::Double::literal(0.0),
-                p: openscenario_rs::types::Double::literal(0.0),
-                r: openscenario_rs::types::Double::literal(0.0),
+                z: Some(openscenario_rs::types::Double::literal(0.0)),
+                h: Some(openscenario_rs::types::Double::literal(0.0)),
+                p: Some(openscenario_rs::types::Double::literal(0.0)),
+                r: Some(openscenario_rs::types::Double::literal(0.0)),
             }),
             relative_world_position: None,
+            road_position: None,
+            lane_position: None,
         },
     };
     
