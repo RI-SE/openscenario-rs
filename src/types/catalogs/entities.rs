@@ -1,0 +1,325 @@
+//! Catalog entity types for reference resolution
+//!
+//! This module contains catalog-specific entity types that can be loaded from
+//! catalog files and resolved into scenario entities with parameter substitution.
+
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use crate::error::Result;
+use crate::types::basic::Value;
+use crate::types::entities::vehicle;
+use crate::types::geometry::BoundingBox;
+
+/// Trait for types that can be loaded from catalog files and resolved into scenario entities
+pub trait CatalogEntity: Clone + Send + Sync {
+    /// The type this catalog entity resolves to in scenarios
+    type ResolvedType;
+    
+    /// Convert this catalog entity into a scenario entity with parameter substitution
+    fn into_scenario_entity(self, parameters: HashMap<String, String>) -> Result<Self::ResolvedType>;
+    
+    /// Get the parameter schema for this catalog entity
+    fn parameter_schema() -> Vec<ParameterDefinition>;
+    
+    /// Get the name of this catalog entity
+    fn entity_name(&self) -> &str;
+}
+
+/// Parameter definition for catalog entities
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParameterDefinition {
+    /// Parameter name
+    pub name: String,
+    /// Parameter type (String, Double, Integer, Boolean)
+    pub parameter_type: String,
+    /// Optional default value
+    pub default_value: Option<String>,
+    /// Parameter description
+    pub description: Option<String>,
+}
+
+/// Vehicle entity definition for catalogs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogVehicle {
+    /// Name of the vehicle in the catalog
+    #[serde(rename = "@name")]
+    pub name: String,
+    
+    /// Vehicle category (can be parameterized)
+    #[serde(rename = "@vehicleCategory")]
+    pub vehicle_category: Value<String>,
+    
+    /// Bounding box (can have parameterized dimensions)
+    #[serde(rename = "BoundingBox")]
+    pub bounding_box: BoundingBox,
+    
+    /// Performance characteristics (can be parameterized)
+    #[serde(rename = "Performance")]
+    pub performance: CatalogPerformance,
+    
+    /// Axle definitions (can be parameterized)
+    #[serde(rename = "Axles")]
+    pub axles: CatalogAxles,
+    
+    /// Additional properties
+    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
+    pub properties: Option<vehicle::Properties>,
+    
+    /// Parameter declarations for this catalog vehicle
+    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+}
+
+/// Performance characteristics with parameter support
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogPerformance {
+    #[serde(rename = "@maxSpeed")]
+    pub max_speed: Value<f64>,
+    #[serde(rename = "@maxAcceleration")]
+    pub max_acceleration: Value<f64>,
+    #[serde(rename = "@maxDeceleration")]
+    pub max_deceleration: Value<f64>,
+}
+
+/// Axles with parameter support
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogAxles {
+    #[serde(rename = "FrontAxle")]
+    pub front_axle: CatalogFrontAxle,
+    #[serde(rename = "RearAxle")]
+    pub rear_axle: CatalogRearAxle,
+}
+
+/// Front axle with parameter support
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogFrontAxle {
+    #[serde(rename = "@maxSteering")]
+    pub max_steering: Value<f64>,
+    #[serde(rename = "@wheelDiameter")]
+    pub wheel_diameter: Value<f64>,
+    #[serde(rename = "@trackWidth")]
+    pub track_width: Value<f64>,
+    #[serde(rename = "@positionX")]
+    pub position_x: Value<f64>,
+    #[serde(rename = "@positionZ")]
+    pub position_z: Value<f64>,
+}
+
+/// Rear axle with parameter support
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CatalogRearAxle {
+    #[serde(rename = "@maxSteering")]
+    pub max_steering: Value<f64>,
+    #[serde(rename = "@wheelDiameter")]
+    pub wheel_diameter: Value<f64>,
+    #[serde(rename = "@trackWidth")]
+    pub track_width: Value<f64>,
+    #[serde(rename = "@positionX")]
+    pub position_x: Value<f64>,
+    #[serde(rename = "@positionZ")]
+    pub position_z: Value<f64>,
+}
+
+impl CatalogEntity for CatalogVehicle {
+    type ResolvedType = vehicle::Vehicle;
+    
+    fn into_scenario_entity(self, parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
+        // Resolve parameters in the catalog vehicle
+        let resolved_vehicle = vehicle::Vehicle {
+            name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
+            vehicle_category: self.resolve_vehicle_category(&self.vehicle_category, &parameters)?,
+            bounding_box: self.bounding_box, // TODO: Add parameter resolution for bounding box
+            performance: vehicle::Performance {
+                max_speed: crate::types::basic::Double::literal(self.performance.max_speed.resolve(&parameters)?),
+                max_acceleration: crate::types::basic::Double::literal(self.performance.max_acceleration.resolve(&parameters)?),
+                max_deceleration: crate::types::basic::Double::literal(self.performance.max_deceleration.resolve(&parameters)?),
+            },
+            axles: vehicle::Axles {
+                front_axle: vehicle::FrontAxle {
+                    max_steering: crate::types::basic::Double::literal(self.axles.front_axle.max_steering.resolve(&parameters)?),
+                    wheel_diameter: crate::types::basic::Double::literal(self.axles.front_axle.wheel_diameter.resolve(&parameters)?),
+                    track_width: crate::types::basic::Double::literal(self.axles.front_axle.track_width.resolve(&parameters)?),
+                    position_x: crate::types::basic::Double::literal(self.axles.front_axle.position_x.resolve(&parameters)?),
+                    position_z: crate::types::basic::Double::literal(self.axles.front_axle.position_z.resolve(&parameters)?),
+                },
+                rear_axle: vehicle::RearAxle {
+                    max_steering: crate::types::basic::Double::literal(self.axles.rear_axle.max_steering.resolve(&parameters)?),
+                    wheel_diameter: crate::types::basic::Double::literal(self.axles.rear_axle.wheel_diameter.resolve(&parameters)?),
+                    track_width: crate::types::basic::Double::literal(self.axles.rear_axle.track_width.resolve(&parameters)?),
+                    position_x: crate::types::basic::Double::literal(self.axles.rear_axle.position_x.resolve(&parameters)?),
+                    position_z: crate::types::basic::Double::literal(self.axles.rear_axle.position_z.resolve(&parameters)?),
+                },
+            },
+            properties: self.properties,
+        };
+        
+        Ok(resolved_vehicle)
+    }
+    
+    fn parameter_schema() -> Vec<ParameterDefinition> {
+        vec![
+            ParameterDefinition {
+                name: "MaxSpeed".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("200.0".to_string()),
+                description: Some("Maximum speed of the vehicle in m/s".to_string()),
+            },
+            ParameterDefinition {
+                name: "MaxAcceleration".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("200.0".to_string()),
+                description: Some("Maximum acceleration of the vehicle in m/s²".to_string()),
+            },
+            ParameterDefinition {
+                name: "MaxDeceleration".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("10.0".to_string()),
+                description: Some("Maximum deceleration of the vehicle in m/s²".to_string()),
+            },
+            ParameterDefinition {
+                name: "VehicleCategory".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("car".to_string()),
+                description: Some("Category of the vehicle (car, truck, bus, etc.)".to_string()),
+            },
+        ]
+    }
+    
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CatalogVehicle {
+    /// Helper method to resolve a parameter value
+    fn resolve_parameter(&self, value: &str, parameters: &HashMap<String, String>) -> Result<String> {
+        // If the value starts with '$', it's a parameter reference
+        if value.starts_with('$') {
+            let param_name = &value[1..]; // Remove '$' prefix
+            parameters.get(param_name)
+                .map(|v| v.clone())
+                .ok_or_else(|| crate::error::Error::catalog_error(&format!(
+                    "Parameter '{}' not found in substitution map", param_name
+                )))
+        } else {
+            Ok(value.to_string())
+        }
+    }
+    
+    /// Helper method to resolve vehicle category parameter
+    fn resolve_vehicle_category(&self, category: &Value<String>, parameters: &HashMap<String, String>) -> Result<crate::types::enums::VehicleCategory> {
+        let category_str = category.resolve(parameters)?;
+        match category_str.as_str() {
+            "car" => Ok(crate::types::enums::VehicleCategory::Car),
+            "truck" => Ok(crate::types::enums::VehicleCategory::Truck),
+            "bus" => Ok(crate::types::enums::VehicleCategory::Bus),
+            "motorbike" => Ok(crate::types::enums::VehicleCategory::Motorbike),
+            "bicycle" => Ok(crate::types::enums::VehicleCategory::Bicycle),
+            "train" => Ok(crate::types::enums::VehicleCategory::Train),
+            "tram" => Ok(crate::types::enums::VehicleCategory::Tram),
+            _ => Err(crate::error::Error::catalog_error(&format!(
+                "Invalid vehicle category: {}", category_str
+            ))),
+        }
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_catalog_vehicle_parameter_schema() {
+        let schema = CatalogVehicle::parameter_schema();
+        assert_eq!(schema.len(), 4);
+        
+        let max_speed_param = schema.iter().find(|p| p.name == "MaxSpeed").unwrap();
+        assert_eq!(max_speed_param.parameter_type, "Double");
+        assert_eq!(max_speed_param.default_value.as_ref().unwrap(), "200.0");
+    }
+    
+    #[test]
+    fn test_parameter_resolution() {
+        let mut parameters = HashMap::new();
+        parameters.insert("TestParam".to_string(), "42.0".to_string());
+        
+        let value: Value<f64> = Value::Parameter("TestParam".to_string());
+        let resolved = value.resolve(&parameters).unwrap();
+        assert_eq!(resolved, 42.0);
+    }
+    
+    #[test]
+    fn test_catalog_vehicle_entity_name() {
+        let catalog_vehicle = CatalogVehicle {
+            name: "SportsCar".to_string(),
+            vehicle_category: Value::Literal("car".to_string()),
+            bounding_box: BoundingBox::default(),
+            performance: CatalogPerformance {
+                max_speed: Value::Literal(250.0),
+                max_acceleration: Value::Literal(15.0),
+                max_deceleration: Value::Literal(12.0),
+            },
+            axles: CatalogAxles {
+                front_axle: CatalogFrontAxle {
+                    max_steering: Value::Literal(0.6),
+                    wheel_diameter: Value::Literal(0.65),
+                    track_width: Value::Literal(1.8),
+                    position_x: Value::Literal(3.0),
+                    position_z: Value::Literal(0.3),
+                },
+                rear_axle: CatalogRearAxle {
+                    max_steering: Value::Literal(0.0),
+                    wheel_diameter: Value::Literal(0.65),
+                    track_width: Value::Literal(1.8),
+                    position_x: Value::Literal(0.0),
+                    position_z: Value::Literal(0.3),
+                },
+            },
+            properties: None,
+            parameter_declarations: None,
+        };
+        
+        assert_eq!(catalog_vehicle.entity_name(), "SportsCar");
+    }
+    
+    #[test]
+    fn test_catalog_vehicle_resolution() {
+        let catalog_vehicle = CatalogVehicle {
+            name: "TestVehicle".to_string(),
+            vehicle_category: Value::Literal("car".to_string()),
+            bounding_box: BoundingBox::default(),
+            performance: CatalogPerformance {
+                max_speed: Value::Parameter("MaxSpeedParam".to_string()),
+                max_acceleration: Value::Literal(10.0),
+                max_deceleration: Value::Literal(8.0),
+            },
+            axles: CatalogAxles {
+                front_axle: CatalogFrontAxle {
+                    max_steering: Value::Literal(0.5),
+                    wheel_diameter: Value::Literal(0.6),
+                    track_width: Value::Literal(1.7),
+                    position_x: Value::Literal(2.8),
+                    position_z: Value::Literal(0.25),
+                },
+                rear_axle: CatalogRearAxle {
+                    max_steering: Value::Literal(0.0),
+                    wheel_diameter: Value::Literal(0.6),
+                    track_width: Value::Literal(1.7),
+                    position_x: Value::Literal(0.0),
+                    position_z: Value::Literal(0.25),
+                },
+            },
+            properties: None,
+            parameter_declarations: None,
+        };
+        
+        let mut parameters = HashMap::new();
+        parameters.insert("MaxSpeedParam".to_string(), "180.0".to_string());
+        
+        let resolved = catalog_vehicle.into_scenario_entity(parameters).unwrap();
+        assert_eq!(resolved.performance.max_speed.as_literal().unwrap(), &180.0);
+        assert_eq!(resolved.name.as_literal().unwrap(), "TestVehicle");
+    }
+}

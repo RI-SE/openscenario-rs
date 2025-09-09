@@ -13,3 +13,10 @@
 //! - Supporting modular scenario design through reusable components
 //! - Enabling catalog validation and dependency management
 //! - Facilitating catalog evolution and version compatibility
+
+pub mod locations;
+pub mod entities;
+
+// Re-export catalog types
+pub use entities::*;
+pub use locations::*;
