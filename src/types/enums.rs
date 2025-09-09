@@ -1355,6 +1355,120 @@ impl FromStr for RoutingAlgorithm {
     }
 }
 
+/// Lateral displacement enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LateralDisplacement {
+    #[serde(rename = "any")]
+    Any,
+    #[serde(rename = "leftToReferencedEntity")]
+    LeftToReferencedEntity,
+    #[serde(rename = "rightToReferencedEntity")]
+    RightToReferencedEntity,
+}
+
+/// Longitudinal displacement enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LongitudinalDisplacement {
+    #[serde(rename = "any")]
+    Any,
+    #[serde(rename = "trailingReferencedEntity")]
+    TrailingReferencedEntity,
+    #[serde(rename = "leadingReferencedEntity")]
+    LeadingReferencedEntity,
+}
+
+/// Cloud state enumeration (deprecated)
+#[deprecated(note = "CloudState is deprecated, use FractionalCloudCover instead")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CloudState {
+    #[serde(rename = "cloudy")]
+    Cloudy,
+    #[serde(rename = "free")]
+    Free,
+    #[serde(rename = "overcast")]
+    Overcast,
+    #[serde(rename = "rainy")]
+    Rainy,
+    #[serde(rename = "skyOff")]
+    SkyOff,
+}
+
+impl fmt::Display for LateralDisplacement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            LateralDisplacement::Any => "any",
+            LateralDisplacement::LeftToReferencedEntity => "leftToReferencedEntity",
+            LateralDisplacement::RightToReferencedEntity => "rightToReferencedEntity",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for LateralDisplacement {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "any" => Ok(LateralDisplacement::Any),
+            "leftToReferencedEntity" => Ok(LateralDisplacement::LeftToReferencedEntity),
+            "rightToReferencedEntity" => Ok(LateralDisplacement::RightToReferencedEntity),
+            _ => Err(format!("Invalid lateral displacement: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for LongitudinalDisplacement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            LongitudinalDisplacement::Any => "any",
+            LongitudinalDisplacement::TrailingReferencedEntity => "trailingReferencedEntity",
+            LongitudinalDisplacement::LeadingReferencedEntity => "leadingReferencedEntity",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for LongitudinalDisplacement {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "any" => Ok(LongitudinalDisplacement::Any),
+            "trailingReferencedEntity" => Ok(LongitudinalDisplacement::TrailingReferencedEntity),
+            "leadingReferencedEntity" => Ok(LongitudinalDisplacement::LeadingReferencedEntity),
+            _ => Err(format!("Invalid longitudinal displacement: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for CloudState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            CloudState::Cloudy => "cloudy",
+            CloudState::Free => "free",
+            CloudState::Overcast => "overcast",
+            CloudState::Rainy => "rainy",
+            CloudState::SkyOff => "skyOff",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for CloudState {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "cloudy" => Ok(CloudState::Cloudy),
+            "free" => Ok(CloudState::Free),
+            "overcast" => Ok(CloudState::Overcast),
+            "rainy" => Ok(CloudState::Rainy),
+            "skyOff" => Ok(CloudState::SkyOff),
+            _ => Err(format!("Invalid cloud state: {}", s)),
+        }
+    }
+}
+
 // TODO: Add remaining enums incrementally (Week 5+)
 // TODO: All geometry and positioning enums (DirectionalDimension, etc.)
 // TODO: All vehicle and pedestrian behavior enums
@@ -1571,5 +1685,62 @@ mod tests {
         assert_eq!("shortest".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Shortest);
         assert_eq!("undefined".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Undefined);
         assert!("invalid".parse::<RoutingAlgorithm>().is_err());
+    }
+
+    #[test]
+    fn test_lateral_displacement_display() {
+        assert_eq!(LateralDisplacement::Any.to_string(), "any");
+        assert_eq!(LateralDisplacement::LeftToReferencedEntity.to_string(), "leftToReferencedEntity");
+        assert_eq!(LateralDisplacement::RightToReferencedEntity.to_string(), "rightToReferencedEntity");
+    }
+
+    #[test]
+    fn test_lateral_displacement_from_str() {
+        assert_eq!("any".parse::<LateralDisplacement>().unwrap(), LateralDisplacement::Any);
+        assert_eq!("leftToReferencedEntity".parse::<LateralDisplacement>().unwrap(), LateralDisplacement::LeftToReferencedEntity);
+        assert_eq!("rightToReferencedEntity".parse::<LateralDisplacement>().unwrap(), LateralDisplacement::RightToReferencedEntity);
+        assert!("invalid".parse::<LateralDisplacement>().is_err());
+    }
+
+    #[test]
+    fn test_longitudinal_displacement_display() {
+        assert_eq!(LongitudinalDisplacement::Any.to_string(), "any");
+        assert_eq!(LongitudinalDisplacement::TrailingReferencedEntity.to_string(), "trailingReferencedEntity");
+        assert_eq!(LongitudinalDisplacement::LeadingReferencedEntity.to_string(), "leadingReferencedEntity");
+    }
+
+    #[test]
+    fn test_longitudinal_displacement_from_str() {
+        assert_eq!("any".parse::<LongitudinalDisplacement>().unwrap(), LongitudinalDisplacement::Any);
+        assert_eq!("trailingReferencedEntity".parse::<LongitudinalDisplacement>().unwrap(), LongitudinalDisplacement::TrailingReferencedEntity);
+        assert_eq!("leadingReferencedEntity".parse::<LongitudinalDisplacement>().unwrap(), LongitudinalDisplacement::LeadingReferencedEntity);
+        assert!("invalid".parse::<LongitudinalDisplacement>().is_err());
+    }
+
+    #[test]
+    fn test_cloud_state_display() {
+        assert_eq!(CloudState::Cloudy.to_string(), "cloudy");
+        assert_eq!(CloudState::Free.to_string(), "free");
+        assert_eq!(CloudState::Overcast.to_string(), "overcast");
+        assert_eq!(CloudState::Rainy.to_string(), "rainy");
+        assert_eq!(CloudState::SkyOff.to_string(), "skyOff");
+    }
+
+    #[test]
+    fn test_cloud_state_from_str() {
+        assert_eq!("cloudy".parse::<CloudState>().unwrap(), CloudState::Cloudy);
+        assert_eq!("free".parse::<CloudState>().unwrap(), CloudState::Free);
+        assert_eq!("overcast".parse::<CloudState>().unwrap(), CloudState::Overcast);
+        assert_eq!("rainy".parse::<CloudState>().unwrap(), CloudState::Rainy);
+        assert_eq!("skyOff".parse::<CloudState>().unwrap(), CloudState::SkyOff);
+        assert!("invalid".parse::<CloudState>().is_err());
+    }
+
+    #[test]
+    fn test_cloud_state_deprecation_warning() {
+        // This test documents that CloudState is deprecated
+        // The deprecation warning should be shown when using these types
+        let _state = CloudState::Free;
+        // If CloudState is used in real code, developers should migrate to FractionalCloudCover
     }
 }
