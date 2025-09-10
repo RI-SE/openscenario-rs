@@ -14,17 +14,21 @@
 //! - Offering copy-paste starting point for basic use cases
 //! - Validating API ergonomics and developer experience
 
+use openscenario_rs::parse_file;
+
 use openscenario_rs::parse_str;
+use openscenario_rs::types::entities::EntityObject;
+use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse a scenario file
-    let xml = fs::read_to_string(
-        "xosc/concrete_scenarios/alks_scenario_4_1_1_free_driving_template.xosc",
-    )
-    .expect("Failed to read cut_in_101_exam.xosc file");
+    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        .expect("Failed to read cut_in_101_exam.xosc file");
+    println!("read xml");
+    println!("{:?}", parse_str(&xml));
     if let Ok(scenario) = parse_str(&xml) {
-        let _storyboard = &scenario.storyboard;
+        let storyboard = &scenario.storyboard;
         // Access file header information
         println!("Scenario: {:?}", scenario.file_header.description);
         println!("Author: {:?}", scenario.file_header.author);
@@ -35,6 +39,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  - {:?}", entity.name);
         }
     }
+    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        .expect("Failed to read cut_in_101_exam.xosc file");
 
     let result = parse_str(&xml);
 
@@ -55,9 +61,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 scenario.file_header.date.as_literal().unwrap(),
                 "2021-11-02T16:20:00"
             );
-
-            let st = quick_xml::se::to_string(&scenario);
-            print!("{:?}", st);
         }
         Err(e) => {
             // For now, we expect parsing to potentially fail due to incomplete implementation
@@ -68,7 +71,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // This is acceptable for MVP - we're testing the framework, not full parsing capability
         }
     }
-
     Ok(())
 }
 
