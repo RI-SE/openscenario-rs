@@ -587,17 +587,26 @@ fn can_validate_trajectory_following_modes() {
     // cut_in_101_exam.xosc uses followingMode="follow"
     let mut routing_actions_found = 0;
     
-    let init = &scenario.storyboard.init;
-    for private in &init.actions.private_actions {
-        for action_wrapper in &private.private_actions {
-            if let Some(routing) = &action_wrapper.routing_action {
-                if let Some(follow_action) = &routing.follow_trajectory_action {
-                    routing_actions_found += 1;
-                    
-                    use openscenario_rs::types::enums::FollowingMode;
-                    assert_eq!(follow_action.trajectory_following_mode.following_mode, 
-                              FollowingMode::Follow,
-                              "cut_in_101_exam.xosc uses followingMode='follow'");
+    // RoutingActions are in the Story structure, not Init - look in stories
+    for story in &scenario.storyboard.stories {
+        for act in &story.acts {
+            for maneuver_group in &act.maneuver_groups {
+                for maneuver in &maneuver_group.maneuvers {
+                    for event in &maneuver.events {
+                        let action = &event.action;
+                        if let Some(ref private_action) = action.private_action {
+                            if let Some(routing) = &private_action.routing_action {
+                                if let Some(follow_action) = &routing.follow_trajectory_action {
+                                    routing_actions_found += 1;
+                                    
+                                    use openscenario_rs::types::enums::FollowingMode;
+                                    assert_eq!(follow_action.trajectory_following_mode.following_mode, 
+                                              FollowingMode::Follow,
+                                              "cut_in_101_exam.xosc uses followingMode='follow'");
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
