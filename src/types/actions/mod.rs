@@ -17,7 +17,7 @@
 pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
 pub mod control;    // Phase 4B: Controller actions 
 // pub mod appearance; // Appearance actions (skip for MVP)
-// pub mod traffic;    // Traffic actions (skip for MVP)
+pub mod traffic;    // Phase 4C: Traffic actions
 
 // PHASE 4A: Export all movement actions
 pub use movement::{
@@ -44,9 +44,20 @@ pub use control::{
     ManualGear, AutomaticGear, AutomaticGearType
 };
 
+// PHASE 4C: Export all traffic actions
+pub use traffic::{
+    // Core traffic actions
+    TrafficSourceAction, TrafficSinkAction, TrafficSwarmAction, TrafficAreaAction,
+    TrafficSignalAction, TrafficSignalStateAction, TrafficSignalControllerAction,
+    TrafficStopAction,
+    // Supporting types
+    TrafficDefinition, VehicleCategoryDistribution, ControllerDistribution,
+    CentralSwarmObject, TrafficArea, TrafficAreaVertex, VehicleCategory
+};
+
 use serde::{Deserialize, Serialize};
 
-// PHASE 4A+4B: Complete Action enum with movement and controller actions
+// PHASE 4A+4B+4C: Complete Action enum with movement, controller, and traffic actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Action { 
@@ -77,6 +88,16 @@ pub enum Action {
     OverrideGear(OverrideControllerValueActionGear),
     OverrideParkingBrake(OverrideControllerValueActionParkingBrake),
     OverrideClutch(OverrideControllerValueActionClutch),
+    
+    // Phase 4C: Traffic actions
+    TrafficSource(TrafficSourceAction),
+    TrafficSink(TrafficSinkAction),
+    TrafficSwarm(TrafficSwarmAction),
+    TrafficArea(TrafficAreaAction),
+    TrafficSignal(TrafficSignalAction),
+    TrafficSignalState(TrafficSignalStateAction),
+    TrafficSignalController(TrafficSignalControllerAction),
+    TrafficStop(TrafficStopAction),
 }
 
 impl Default for Action {
