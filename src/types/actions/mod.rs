@@ -15,7 +15,7 @@
 //! - Facilitating action validation and constraint enforcement
 
 pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
-// pub mod control;    // Controller actions (skip for MVP)
+pub mod control;    // Phase 4B: Controller actions 
 // pub mod appearance; // Appearance actions (skip for MVP)
 // pub mod traffic;    // Traffic actions (skip for MVP)
 
@@ -32,9 +32,21 @@ pub use movement::{
     LaneChangeTarget, LaneOffsetTarget, DynamicConstraints, FinalSpeed
 };
 
+// PHASE 4B: Export all controller actions
+pub use control::{
+    // Core controller actions
+    AssignControllerAction, ActivateControllerAction, OverrideControllerValueAction,
+    // Individual override actions
+    OverrideControllerValueActionBrake, OverrideControllerValueActionThrottle,
+    OverrideControllerValueActionSteeringWheel, OverrideControllerValueActionGear,
+    OverrideControllerValueActionParkingBrake, OverrideControllerValueActionClutch,
+    // Supporting types
+    ManualGear, AutomaticGear, AutomaticGearType
+};
+
 use serde::{Deserialize, Serialize};
 
-// PHASE 4A: Complete Action enum with all movement actions
+// PHASE 4A+4B: Complete Action enum with movement and controller actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Action { 
@@ -54,6 +66,17 @@ pub enum Action {
     SpeedProfile(SpeedProfileAction),
     Synchronize(SynchronizeAction),
     AcquirePosition(AcquirePositionAction),
+    
+    // Phase 4B: Controller actions
+    AssignController(AssignControllerAction),
+    ActivateController(ActivateControllerAction),
+    OverrideControllerValue(OverrideControllerValueAction),
+    OverrideBrake(OverrideControllerValueActionBrake),
+    OverrideThrottle(OverrideControllerValueActionThrottle),
+    OverrideSteeringWheel(OverrideControllerValueActionSteeringWheel),
+    OverrideGear(OverrideControllerValueActionGear),
+    OverrideParkingBrake(OverrideControllerValueActionParkingBrake),
+    OverrideClutch(OverrideControllerValueActionClutch),
 }
 
 impl Default for Action {

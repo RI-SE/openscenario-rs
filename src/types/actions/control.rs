@@ -1,450 +1,538 @@
-//! Controller and control override action types
+//! Phase 4B: Controller Actions Implementation
 //!
 //! This file contains:
-//! - Controller assignment and activation actions  
+//! - Controller assignment and activation actions following OpenSCENARIO specification  
 //! - Override actions for manual control (throttle, brake, steering, gear)
-//! - Controller configuration and parameter setting
-//! - Control system integration and handoff logic
-//! - Multi-controller coordination and conflict resolution
+//! - Controller configuration and parameter setting per OpenSCENARIO XSD schema
+//! - Gear control types (manual/automatic) and supporting enumerations
 //!
 //! Contributes to project by:
 //! - Enabling realistic vehicle control through AI controllers and manual overrides
 //! - Supporting simulation of different driver behaviors and capabilities
 //! - Providing fine-grained control over vehicle dynamics and responses
-//! - Facilitating testing of control systems and human-machine interfaces
-//! - Enabling smooth transitions between automated and manual control modes
+//! - Following complete OpenSCENARIO action specification for controller management
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::Value;
-use crate::types::controllers::{
-    ActivateControllerAction, OverrideControllerValueAction, ControllerAssignment
-};
+use crate::types::basic::Boolean;
+use crate::types::controllers::Controller;
+use crate::types::catalogs::references::CatalogReference;
+use crate::types::catalogs::entities::CatalogController;
 
-/// Control action wrapper that encompasses all controller-related actions.
-///
-/// This wrapper provides a unified interface for all types of controller actions,
-/// from activation and parameter overrides to manual control inputs.
+// PHASE 4B: Core Controller Actions Implementation
+
+/// Assign controller action for controller assignment with catalog support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum ControlAction {
-    /// Activate a controller for an entity
-    #[serde(rename = "ActivateControllerAction")]
-    ActivateController(ActivateControllerAction),
-
-    /// Override controller parameter values
-    #[serde(rename = "OverrideControllerValueAction")]
-    OverrideController(OverrideControllerValueAction),
-
-    /// Assign a controller to an entity
-    #[serde(rename = "ControllerAssignment")]
-    AssignController(ControllerAssignment),
-
-    /// Manual throttle override
-    #[serde(rename = "ThrottleAction")]
-    Throttle(ThrottleAction),
-
-    /// Manual brake override
-    #[serde(rename = "BrakeAction")]
-    Brake(BrakeAction),
-
-    /// Manual steering override  
-    #[serde(rename = "SteeringAction")]
-    Steering(SteeringAction),
-
-    /// Manual gear change
-    #[serde(rename = "GearAction")]
-    Gear(GearAction),
-
-    /// Manual clutch override
-    #[serde(rename = "ClutchAction")]
-    Clutch(ClutchAction),
-
-    /// Manual parking brake control
-    #[serde(rename = "ParkingBrakeAction")]
-    ParkingBrake(ParkingBrakeAction),
+pub struct AssignControllerAction {
+    #[serde(rename = "Controller")]
+    pub controller: Option<Controller>,
+    #[serde(rename = "CatalogReference")]
+    pub catalog_reference: Option<CatalogReference<CatalogController>>,
 }
 
-/// Manual throttle control action.
-///
-/// Overrides automatic throttle control with a specific throttle value.
+/// Activate controller action for controller activation control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ThrottleAction {
-    /// Throttle pedal position (0.0 = no throttle, 1.0 = full throttle)
-    #[serde(rename = "@value")]
-    pub value: Value<f64>,
+pub struct ActivateControllerAction {
+    #[serde(rename = "@longitudinal")]
+    pub longitudinal: Option<Boolean>,
+    #[serde(rename = "@lateral")]
+    pub lateral: Option<Boolean>,
+    #[serde(rename = "@lighting")]
+    pub lighting: Option<Boolean>,
+    #[serde(rename = "@animation")]
+    pub animation: Option<Boolean>,
+}
 
-    /// Whether this override is currently active
+/// Override controller value action - composite override action
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideControllerValueAction {
+    #[serde(rename = "Throttle")]
+    pub throttle: Option<OverrideControllerValueActionThrottle>,
+    #[serde(rename = "Brake")]
+    pub brake: Option<OverrideControllerValueActionBrake>,
+    #[serde(rename = "Clutch")]
+    pub clutch: Option<OverrideControllerValueActionClutch>,
+    #[serde(rename = "ParkingBrake")]
+    pub parking_brake: Option<OverrideControllerValueActionParkingBrake>,
+    #[serde(rename = "SteeringWheel")]
+    pub steering_wheel: Option<OverrideControllerValueActionSteeringWheel>,
+    #[serde(rename = "Gear")]
+    pub gear: Option<OverrideControllerValueActionGear>,
+}
+
+/// Individual Override Actions (6 types)
+
+/// Override brake action
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideControllerValueActionBrake {
     #[serde(rename = "@active")]
-    pub active: Value<bool>,
-}
-
-impl Default for ThrottleAction {
-    fn default() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(true),
-        }
-    }
-}
-
-/// Manual brake control action.
-///
-/// Overrides automatic brake control with a specific brake force.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BrakeAction {
-    /// Brake pedal position (0.0 = no braking, 1.0 = full braking)
+    pub active: Boolean,
     #[serde(rename = "@value")]
-    pub value: Value<f64>,
-
-    /// Whether this override is currently active
-    #[serde(rename = "@active")]
-    pub active: Value<bool>,
+    pub value: f64,
 }
 
-impl Default for BrakeAction {
-    fn default() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(true),
-        }
-    }
-}
-
-/// Manual steering control action.
-///
-/// Overrides automatic steering control with a specific steering angle.
+/// Override throttle action
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SteeringAction {
-    /// Steering wheel angle in radians (negative = left, positive = right)
+pub struct OverrideControllerValueActionThrottle {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
     #[serde(rename = "@value")]
-    pub value: Value<f64>,
-
-    /// Whether this override is currently active
-    #[serde(rename = "@active")]
-    pub active: Value<bool>,
+    pub value: f64,
 }
 
-impl Default for SteeringAction {
-    fn default() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(true),
-        }
-    }
-}
-
-/// Manual gear selection action.
-///
-/// Overrides automatic transmission with a specific gear selection.
+/// Override steering wheel action
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct GearAction {
-    /// Gear selection (gear number for manual, mode for automatic)
+pub struct OverrideControllerValueActionSteeringWheel {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value")]
+    pub value: f64,
+}
+
+/// Override gear action
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideControllerValueActionGear {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "ManualGear")]
+    pub manual_gear: Option<ManualGear>,
+    #[serde(rename = "AutomaticGear")]
+    pub automatic_gear: Option<AutomaticGear>,
+}
+
+/// Override parking brake action
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideControllerValueActionParkingBrake {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@force")]
+    pub force: Option<f64>,
+}
+
+/// Override clutch action
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideControllerValueActionClutch {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value")]
+    pub value: f64,
+}
+
+// PHASE 4B: Supporting Types for Gear Control
+
+/// Manual gear specification
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ManualGear {
     #[serde(rename = "@gear")]
-    pub gear: Value<String>,
-
-    /// Whether this override is currently active
-    #[serde(rename = "@active")]
-    pub active: Value<bool>,
+    pub gear: i32,
 }
 
-impl Default for GearAction {
-    fn default() -> Self {
-        Self {
-            gear: Value::Literal("neutral".to_string()),
-            active: Value::Literal(true),
-        }
-    }
-}
-
-/// Manual clutch control action.
-///
-/// Overrides automatic clutch control with a specific clutch position.
+/// Automatic gear specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ClutchAction {
-    /// Clutch pedal position (0.0 = engaged, 1.0 = fully disengaged)
-    #[serde(rename = "@value")]
-    pub value: Value<f64>,
-
-    /// Whether this override is currently active
-    #[serde(rename = "@active")]
-    pub active: Value<bool>,
+pub struct AutomaticGear {
+    #[serde(rename = "@gear")]
+    pub gear: AutomaticGearType,
 }
 
-impl Default for ClutchAction {
-    fn default() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(true),
-        }
-    }
-}
-
-/// Manual parking brake control action.
-///
-/// Controls the parking brake state independently of the main brake system.
+/// Automatic gear type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ParkingBrakeAction {
-    /// Parking brake force (0.0 = released, 1.0 = fully engaged)
-    #[serde(rename = "@value")]
-    pub value: Value<f64>,
-
-    /// Whether the parking brake is currently active
-    #[serde(rename = "@active")]
-    pub active: Value<bool>,
+pub enum AutomaticGearType {
+    #[serde(rename = "park")]
+    Park,
+    #[serde(rename = "reverse")]
+    Reverse,
+    #[serde(rename = "neutral")]
+    Neutral,
+    #[serde(rename = "drive")]
+    Drive,
 }
 
-impl Default for ParkingBrakeAction {
+// PHASE 4B: Default implementations
+
+impl Default for AssignControllerAction {
     fn default() -> Self {
         Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(false),
+            controller: Some(Controller::default()),
+            catalog_reference: None,
         }
     }
 }
 
-// Helper implementations for common control operations
-
-impl ThrottleAction {
-    /// Creates a throttle action with the specified value.
-    pub fn new(value: f64) -> Self {
+impl Default for ActivateControllerAction {
+    fn default() -> Self {
         Self {
-            value: Value::Literal(value.clamp(0.0, 1.0)),
-            active: Value::Literal(true),
-        }
-    }
-
-    /// Creates an inactive throttle action.
-    pub fn inactive() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(false),
+            longitudinal: Some(Boolean::literal(true)),
+            lateral: Some(Boolean::literal(true)),
+            lighting: None,
+            animation: None,
         }
     }
 }
 
-impl BrakeAction {
-    /// Creates a brake action with the specified value.
-    pub fn new(value: f64) -> Self {
+impl Default for OverrideControllerValueAction {
+    fn default() -> Self {
         Self {
-            value: Value::Literal(value.clamp(0.0, 1.0)),
-            active: Value::Literal(true),
-        }
-    }
-
-    /// Creates an inactive brake action.
-    pub fn inactive() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(false),
+            throttle: None,
+            brake: None,
+            clutch: None,
+            parking_brake: None,
+            steering_wheel: None,
+            gear: None,
         }
     }
 }
 
-impl SteeringAction {
-    /// Creates a steering action with the specified angle in radians.
-    pub fn new(angle_rad: f64) -> Self {
+impl Default for OverrideControllerValueActionBrake {
+    fn default() -> Self {
         Self {
-            value: Value::Literal(angle_rad),
-            active: Value::Literal(true),
-        }
-    }
-
-    /// Creates a steering action with the specified angle in degrees.
-    pub fn from_degrees(angle_deg: f64) -> Self {
-        Self::new(angle_deg.to_radians())
-    }
-
-    /// Creates an inactive steering action.
-    pub fn inactive() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(false),
+            active: Boolean::literal(true),
+            value: 0.0,
         }
     }
 }
 
-impl GearAction {
-    /// Creates a gear action for the specified gear.
-    pub fn new(gear: String) -> Self {
+impl Default for OverrideControllerValueActionThrottle {
+    fn default() -> Self {
         Self {
-            gear: Value::Literal(gear),
-            active: Value::Literal(true),
+            active: Boolean::literal(true),
+            value: 0.0,
+        }
+    }
+}
+
+impl Default for OverrideControllerValueActionSteeringWheel {
+    fn default() -> Self {
+        Self {
+            active: Boolean::literal(true),
+            value: 0.0,
+        }
+    }
+}
+
+impl Default for OverrideControllerValueActionGear {
+    fn default() -> Self {
+        Self {
+            active: Boolean::literal(true),
+            manual_gear: Some(ManualGear::default()),
+            automatic_gear: None,
+        }
+    }
+}
+
+impl Default for OverrideControllerValueActionParkingBrake {
+    fn default() -> Self {
+        Self {
+            active: Boolean::literal(false),
+            force: Some(0.0),
+        }
+    }
+}
+
+impl Default for OverrideControllerValueActionClutch {
+    fn default() -> Self {
+        Self {
+            active: Boolean::literal(true),
+            value: 0.0,
+        }
+    }
+}
+
+impl Default for ManualGear {
+    fn default() -> Self {
+        Self {
+            gear: 1,
+        }
+    }
+}
+
+impl Default for AutomaticGear {
+    fn default() -> Self {
+        Self {
+            gear: AutomaticGearType::Drive,
+        }
+    }
+}
+
+impl Default for AutomaticGearType {
+    fn default() -> Self {
+        AutomaticGearType::Drive
+    }
+}
+
+// PHASE 4B: Helper implementations
+
+impl AssignControllerAction {
+    /// Create assignment with direct controller
+    pub fn with_controller(controller: Controller) -> Self {
+        Self {
+            controller: Some(controller),
+            catalog_reference: None,
         }
     }
 
-    /// Creates a gear action for neutral.
+    /// Create assignment with catalog reference
+    pub fn with_catalog_reference(catalog_reference: CatalogReference<CatalogController>) -> Self {
+        Self {
+            controller: None,
+            catalog_reference: Some(catalog_reference),
+        }
+    }
+}
+
+impl ActivateControllerAction {
+    /// Create activation with all control domains
+    pub fn all_domains(longitudinal: bool, lateral: bool, lighting: bool, animation: bool) -> Self {
+        Self {
+            longitudinal: Some(Boolean::literal(longitudinal)),
+            lateral: Some(Boolean::literal(lateral)),
+            lighting: Some(Boolean::literal(lighting)),
+            animation: Some(Boolean::literal(animation)),
+        }
+    }
+
+    /// Create activation for movement only (longitudinal + lateral)
+    pub fn movement_only() -> Self {
+        Self {
+            longitudinal: Some(Boolean::literal(true)),
+            lateral: Some(Boolean::literal(true)),
+            lighting: None,
+            animation: None,
+        }
+    }
+}
+
+impl OverrideControllerValueAction {
+    /// Create brake override
+    pub fn brake_override(active: bool, value: f64) -> Self {
+        Self {
+            brake: Some(OverrideControllerValueActionBrake {
+                active: Boolean::literal(active),
+                value,
+            }),
+            throttle: None,
+            clutch: None,
+            parking_brake: None,
+            steering_wheel: None,
+            gear: None,
+        }
+    }
+
+    /// Create throttle override
+    pub fn throttle_override(active: bool, value: f64) -> Self {
+        Self {
+            throttle: Some(OverrideControllerValueActionThrottle {
+                active: Boolean::literal(active),
+                value,
+            }),
+            brake: None,
+            clutch: None,
+            parking_brake: None,
+            steering_wheel: None,
+            gear: None,
+        }
+    }
+
+    /// Create steering override
+    pub fn steering_override(active: bool, value: f64) -> Self {
+        Self {
+            steering_wheel: Some(OverrideControllerValueActionSteeringWheel {
+                active: Boolean::literal(active),
+                value,
+            }),
+            brake: None,
+            throttle: None,
+            clutch: None,
+            parking_brake: None,
+            gear: None,
+        }
+    }
+}
+
+impl ManualGear {
+    /// Create manual gear for specific gear number
+    pub fn new(gear: i32) -> Self {
+        Self { gear }
+    }
+
+    /// Neutral gear
     pub fn neutral() -> Self {
-        Self::new("neutral".to_string())
+        Self::new(0)
     }
 
-    /// Creates a gear action for park.
-    pub fn park() -> Self {
-        Self::new("park".to_string())
+    /// First gear
+    pub fn first() -> Self {
+        Self::new(1)
     }
 
-    /// Creates a gear action for reverse.
+    /// Reverse gear
     pub fn reverse() -> Self {
-        Self::new("reverse".to_string())
+        Self::new(-1)
+    }
+}
+
+impl AutomaticGear {
+    /// Create automatic gear for park
+    pub fn park() -> Self {
+        Self { gear: AutomaticGearType::Park }
     }
 
-    /// Creates a gear action for drive.
+    /// Create automatic gear for reverse
+    pub fn reverse() -> Self {
+        Self { gear: AutomaticGearType::Reverse }
+    }
+
+    /// Create automatic gear for neutral
+    pub fn neutral() -> Self {
+        Self { gear: AutomaticGearType::Neutral }
+    }
+
+    /// Create automatic gear for drive
     pub fn drive() -> Self {
-        Self::new("drive".to_string())
+        Self { gear: AutomaticGearType::Drive }
     }
 }
 
-impl ClutchAction {
-    /// Creates a clutch action with the specified position.
-    pub fn new(position: f64) -> Self {
-        Self {
-            value: Value::Literal(position.clamp(0.0, 1.0)),
-            active: Value::Literal(true),
-        }
-    }
-
-    /// Creates a clutch action for fully engaged clutch.
-    pub fn engaged() -> Self {
-        Self::new(0.0)
-    }
-
-    /// Creates a clutch action for fully disengaged clutch.
-    pub fn disengaged() -> Self {
-        Self::new(1.0)
-    }
-}
-
-impl ParkingBrakeAction {
-    /// Creates a parking brake action with the specified force.
-    pub fn new(force: f64) -> Self {
-        Self {
-            value: Value::Literal(force.clamp(0.0, 1.0)),
-            active: Value::Literal(true),
-        }
-    }
-
-    /// Creates a parking brake action for released state.
-    pub fn released() -> Self {
-        Self {
-            value: Value::Literal(0.0),
-            active: Value::Literal(false),
-        }
-    }
-
-    /// Creates a parking brake action for engaged state.
-    pub fn engaged() -> Self {
-        Self::new(1.0)
-    }
-}
-
+// PHASE 4B: Unit tests for all controller actions
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::controllers::ActivateControllerAction;
+    use crate::types::controllers::Controller;
 
     #[test]
-    fn test_throttle_action_creation() {
-        let throttle = ThrottleAction::new(0.75);
-        assert_eq!(throttle.value.as_literal().unwrap(), &0.75);
-        assert_eq!(throttle.active.as_literal().unwrap(), &true);
-
-        let inactive_throttle = ThrottleAction::inactive();
-        assert_eq!(inactive_throttle.active.as_literal().unwrap(), &false);
-    }
-
-    #[test]
-    fn test_brake_action_creation() {
-        let brake = BrakeAction::new(0.5);
-        assert_eq!(brake.value.as_literal().unwrap(), &0.5);
-        assert_eq!(brake.active.as_literal().unwrap(), &true);
-    }
-
-    #[test]
-    fn test_steering_action_creation() {
-        let steering = SteeringAction::new(0.5);
-        assert_eq!(steering.value.as_literal().unwrap(), &0.5);
-
-        let steering_degrees = SteeringAction::from_degrees(90.0);
-        assert!((steering_degrees.value.as_literal().unwrap() - std::f64::consts::FRAC_PI_2).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_gear_action_creation() {
-        let gear = GearAction::drive();
-        assert_eq!(gear.gear.as_literal().unwrap(), "drive");
-
-        let neutral = GearAction::neutral();
-        assert_eq!(neutral.gear.as_literal().unwrap(), "neutral");
-    }
-
-    #[test]
-    fn test_clutch_action_creation() {
-        let engaged = ClutchAction::engaged();
-        assert_eq!(engaged.value.as_literal().unwrap(), &0.0);
-
-        let disengaged = ClutchAction::disengaged();
-        assert_eq!(disengaged.value.as_literal().unwrap(), &1.0);
-    }
-
-    #[test]
-    fn test_parking_brake_action_creation() {
-        let released = ParkingBrakeAction::released();
-        assert_eq!(released.value.as_literal().unwrap(), &0.0);
-        assert_eq!(released.active.as_literal().unwrap(), &false);
-
-        let engaged = ParkingBrakeAction::engaged();
-        assert_eq!(engaged.value.as_literal().unwrap(), &1.0);
-        assert_eq!(engaged.active.as_literal().unwrap(), &true);
-    }
-
-    #[test]
-    fn test_control_action_variants() {
-        let activate = ControlAction::ActivateController(ActivateControllerAction::default());
-        let throttle = ControlAction::Throttle(ThrottleAction::new(0.5));
-        let brake = ControlAction::Brake(BrakeAction::new(0.3));
-
-        // All variants should be valid
-        match activate {
-            ControlAction::ActivateController(_) => (),
-            _ => panic!("Expected ActivateController variant"),
-        }
-
-        match throttle {
-            ControlAction::Throttle(_) => (),
-            _ => panic!("Expected Throttle variant"),
-        }
-
-        match brake {
-            ControlAction::Brake(_) => (),
-            _ => panic!("Expected Brake variant"),
-        }
-    }
-
-    #[test]
-    fn test_throttle_value_clamping() {
-        let over_max = ThrottleAction::new(1.5);
-        assert_eq!(over_max.value.as_literal().unwrap(), &1.0);
-
-        let under_min = ThrottleAction::new(-0.5);
-        assert_eq!(under_min.value.as_literal().unwrap(), &0.0);
-    }
-
-    #[test]
-    fn test_control_action_serialization() {
-        let throttle = ThrottleAction::new(0.8);
+    fn test_assign_controller_action_creation() {
+        let controller = Controller::default();
+        let action = AssignControllerAction::with_controller(controller);
         
-        // Test XML serialization
-        let xml = quick_xml::se::to_string(&throttle).unwrap();
-        assert!(xml.contains("0.8"));
-        assert!(xml.contains("true"));
+        assert!(action.controller.is_some());
+        assert!(action.catalog_reference.is_none());
+    }
 
-        // Test deserialization
-        let deserialized: ThrottleAction = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(throttle, deserialized);
+    #[test]
+    fn test_activate_controller_action_creation() {
+        let action = ActivateControllerAction::all_domains(true, true, false, false);
+        
+        assert_eq!(action.longitudinal.unwrap().as_literal(), Some(&true));
+        assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
+        assert_eq!(action.lighting.unwrap().as_literal(), Some(&false));
+        assert_eq!(action.animation.unwrap().as_literal(), Some(&false));
+    }
+
+    #[test]
+    fn test_activate_controller_movement_only() {
+        let action = ActivateControllerAction::movement_only();
+        
+        assert_eq!(action.longitudinal.unwrap().as_literal(), Some(&true));
+        assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
+        assert!(action.lighting.is_none());
+        assert!(action.animation.is_none());
+    }
+
+    #[test]
+    fn test_override_controller_brake() {
+        let action = OverrideControllerValueAction::brake_override(true, 0.7);
+        
+        assert!(action.brake.is_some());
+        let brake = action.brake.unwrap();
+        assert_eq!(brake.active.as_literal(), Some(&true));
+        assert_eq!(brake.value, 0.7);
+        
+        assert!(action.throttle.is_none());
+        assert!(action.steering_wheel.is_none());
+    }
+
+    #[test]
+    fn test_override_controller_throttle() {
+        let action = OverrideControllerValueAction::throttle_override(true, 0.5);
+        
+        assert!(action.throttle.is_some());
+        let throttle = action.throttle.unwrap();
+        assert_eq!(throttle.active.as_literal(), Some(&true));
+        assert_eq!(throttle.value, 0.5);
+    }
+
+    #[test]
+    fn test_override_controller_steering() {
+        let action = OverrideControllerValueAction::steering_override(true, 0.2);
+        
+        assert!(action.steering_wheel.is_some());
+        let steering = action.steering_wheel.unwrap();
+        assert_eq!(steering.active.as_literal(), Some(&true));
+        assert_eq!(steering.value, 0.2);
+    }
+
+    #[test]
+    fn test_manual_gear_creation() {
+        let first_gear = ManualGear::first();
+        assert_eq!(first_gear.gear, 1);
+        
+        let neutral = ManualGear::neutral();
+        assert_eq!(neutral.gear, 0);
+        
+        let reverse = ManualGear::reverse();
+        assert_eq!(reverse.gear, -1);
+    }
+
+    #[test]
+    fn test_automatic_gear_creation() {
+        let park = AutomaticGear::park();
+        assert_eq!(park.gear, AutomaticGearType::Park);
+        
+        let drive = AutomaticGear::drive();
+        assert_eq!(drive.gear, AutomaticGearType::Drive);
+        
+        let reverse = AutomaticGear::reverse();
+        assert_eq!(reverse.gear, AutomaticGearType::Reverse);
+        
+        let neutral = AutomaticGear::neutral();
+        assert_eq!(neutral.gear, AutomaticGearType::Neutral);
+    }
+
+    #[test]
+    fn test_gear_override_action() {
+        let gear_action = OverrideControllerValueActionGear {
+            active: Boolean::literal(true),
+            manual_gear: Some(ManualGear::first()),
+            automatic_gear: None,
+        };
+        
+        assert_eq!(gear_action.active.as_literal(), Some(&true));
+        assert!(gear_action.manual_gear.is_some());
+        assert!(gear_action.automatic_gear.is_none());
+        assert_eq!(gear_action.manual_gear.unwrap().gear, 1);
+    }
+
+    #[test]
+    fn test_parking_brake_action() {
+        let parking_brake = OverrideControllerValueActionParkingBrake {
+            active: Boolean::literal(true),
+            force: Some(1.0),
+        };
+        
+        assert_eq!(parking_brake.active.as_literal(), Some(&true));
+        assert_eq!(parking_brake.force, Some(1.0));
+    }
+
+    #[test]
+    fn test_clutch_action() {
+        let clutch = OverrideControllerValueActionClutch {
+            active: Boolean::literal(true),
+            value: 0.5,
+        };
+        
+        assert_eq!(clutch.active.as_literal(), Some(&true));
+        assert_eq!(clutch.value, 0.5);
+    }
+
+    #[test]
+    fn test_controller_action_defaults() {
+        let assign = AssignControllerAction::default();
+        assert!(assign.controller.is_some());
+        
+        let activate = ActivateControllerAction::default();
+        assert_eq!(activate.longitudinal.unwrap().as_literal(), Some(&true));
+        assert_eq!(activate.lateral.unwrap().as_literal(), Some(&true));
+        
+        let override_action = OverrideControllerValueAction::default();
+        assert!(override_action.brake.is_none());
+        assert!(override_action.throttle.is_none());
     }
 }
