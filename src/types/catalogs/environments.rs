@@ -4,7 +4,8 @@
 //! environment configurations across multiple scenarios with parameter substitution.
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{Value, ParameterDeclarations, Double, Boolean, OSString};
+use crate::types::basic::{Value, ParameterDeclarations, ParameterDeclaration, Double, Boolean, OSString};
+use crate::types::enums::ParameterType;
 use crate::types::environment::{Environment, TimeOfDay, Weather, Sun, Fog, Precipitation, RoadCondition};
 
 /// Environment catalog containing reusable environment definitions
@@ -141,15 +142,15 @@ impl Default for CatalogWeather {
 pub struct CatalogSun {
     /// Light intensity (0.0-1.0, can be parameterized)
     #[serde(rename = "@intensity")]
-    pub intensity: Value<Double>,
+    pub intensity: Double,
     
     /// Sun azimuth angle in radians (can be parameterized)
     #[serde(rename = "@azimuth")]
-    pub azimuth: Value<Double>,
+    pub azimuth: Double,
     
     /// Sun elevation angle in radians (can be parameterized)
     #[serde(rename = "@elevation")]
-    pub elevation: Value<Double>,
+    pub elevation: Double,
 }
 
 impl Default for CatalogSun {
@@ -168,7 +169,7 @@ impl Default for CatalogSun {
 pub struct CatalogFog {
     /// Visual range in meters (can be parameterized)
     #[serde(rename = "@visualRange")]
-    pub visual_range: Value<Double>,
+    pub visual_range: Double,
     
     /// Optional fog bounding box for localized fog
     #[serde(rename = "BoundingBox", skip_serializing_if = "Option::is_none")]
@@ -194,7 +195,7 @@ pub struct CatalogPrecipitation {
     
     /// Precipitation intensity (0.0-1.0, can be parameterized)
     #[serde(rename = "@intensity")]
-    pub intensity: Value<Double>,
+    pub intensity: Double,
 }
 
 impl Default for CatalogPrecipitation {
@@ -212,15 +213,15 @@ impl Default for CatalogPrecipitation {
 pub struct CatalogRoadCondition {
     /// Friction scale factor (can be parameterized)
     #[serde(rename = "@frictionScaleFactor")]
-    pub friction_scale_factor: Value<Double>,
+    pub friction_scale_factor: Double,
     
     /// Optional wetness factor (0.0-1.0, can be parameterized)
     #[serde(rename = "@wetness", skip_serializing_if = "Option::is_none")]
-    pub wetness: Option<Value<Double>>,
+    pub wetness: Option<Double>,
     
     /// Optional surface roughness (can be parameterized)
     #[serde(rename = "@roughness", skip_serializing_if = "Option::is_none")]
-    pub roughness: Option<Value<Double>>,
+    pub roughness: Option<Double>,
 }
 
 impl Default for CatalogRoadCondition {
@@ -433,7 +434,7 @@ impl CatalogWeather {
     }
     
     /// Creates rainy weather conditions
-    pub fn rainy(intensity: Value<Double>) -> Self {
+    pub fn rainy(intensity: Double) -> Self {
         Self {
             cloud_state: Value::Literal("rainy".to_string()),
             sun: CatalogSun {
@@ -577,9 +578,10 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![
                 ParameterDeclaration {
-                    name: "visibility".to_string(),
-                    parameter_type: "double".to_string(),
-                    value: "10000.0".to_string(),
+                    name: OSString::literal("visibility".to_string()),
+                    parameter_type: ParameterType::Double,
+                    value: OSString::literal("10000.0".to_string()),
+                    constraint_group: None,
                 }
             ],
         };

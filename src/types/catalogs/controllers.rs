@@ -4,7 +4,8 @@
 //! controller definitions across multiple scenarios with parameter substitution.
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{Value, ParameterDeclarations};
+use crate::types::basic::{Value, ParameterDeclarations, ParameterDeclaration, OSString};
+use crate::types::enums::ParameterType;
 use crate::types::controllers::Controller;
 use crate::types::entities::vehicle::{Properties, Property};
 use crate::types::enums::ControllerType;
@@ -233,7 +234,7 @@ impl ControllerProperties {
         
         Properties {
             properties: scenario_properties,
-            files: None,
+            files: vec![],
         }
     }
 }
@@ -351,9 +352,10 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![
                 ParameterDeclaration {
-                    name: "speed".to_string(),
-                    parameter_type: "double".to_string(),
-                    value: "30.0".to_string(),
+                    name: OSString::literal("speed".to_string()),
+                    parameter_type: ParameterType::Double,
+                    value: OSString::literal("30.0".to_string()),
+                    constraint_group: None,
                 }
             ],
         };

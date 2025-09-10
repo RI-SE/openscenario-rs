@@ -20,9 +20,11 @@ use crate::types::controllers::Controller;
 pub mod loader;
 pub mod resolver;
 pub mod parameters;
+pub mod cache;
 
 // Re-export key types for convenience
-pub use loader::{CatalogLoader, CatalogCache};
+pub use loader::CatalogLoader;
+pub use cache::CatalogCache;
 pub use resolver::{CatalogResolver, ResolvedCatalog};
 pub use parameters::ParameterSubstitutionEngine;
 
@@ -294,7 +296,8 @@ impl CatalogManager {
 
     /// Get cache statistics
     pub fn cache_stats(&self) -> (usize, usize) {
-        self.cache.stats()
+        let stats = self.cache.stats();
+        (stats.entries, stats.memory_usage)
     }
 
     /// Get access to the parameter engine for custom parameter operations

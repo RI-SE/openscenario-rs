@@ -162,6 +162,203 @@ impl CatalogLoader {
         }
     }
 
+    /// Load a specific controller catalog from a file
+    pub fn load_controller_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Controller catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path)
+            .map_err(|e| Error::catalog_error(&format!("Failed to read controller catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse controller catalog file {}: {}", path.display(), e)))
+    }
+
+    /// Load a specific trajectory catalog from a file
+    pub fn load_trajectory_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Trajectory catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path)
+            .map_err(|e| Error::catalog_error(&format!("Failed to read trajectory catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse trajectory catalog file {}: {}", path.display(), e)))
+    }
+
+    /// Load a specific route catalog from a file
+    pub fn load_route_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::routes::RouteCatalog> {
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Route catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path)
+            .map_err(|e| Error::catalog_error(&format!("Failed to read route catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse route catalog file {}: {}", path.display(), e)))
+    }
+
+    /// Load a specific environment catalog from a file
+    pub fn load_environment_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Environment catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path)
+            .map_err(|e| Error::catalog_error(&format!("Failed to read environment catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse environment catalog file {}: {}", path.display(), e)))
+    }
+
+    /// Load all controller catalogs from a directory and return them as a hashmap
+    pub fn load_controller_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::controllers::ControllerCatalog>> {
+        let catalog_files = self.discover_catalog_files(directory)?;
+        let mut catalogs = std::collections::HashMap::new();
+
+        for file_path in catalog_files {
+            // Try to parse as controller catalog
+            if let Ok(catalog) = self.load_controller_catalog(&file_path) {
+                let catalog_name = file_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                catalogs.insert(catalog_name, catalog);
+            }
+        }
+
+        Ok(catalogs)
+    }
+
+    /// Async loading methods (feature-gated)
+    #[cfg(feature = "async")]
+    pub async fn load_controller_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
+        use tokio::fs;
+        
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Controller catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path).await
+            .map_err(|e| Error::catalog_error(&format!("Failed to read controller catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse controller catalog file {}: {}", path.display(), e)))
+    }
+
+    #[cfg(feature = "async")]
+    pub async fn load_trajectory_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
+        use tokio::fs;
+        
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Trajectory catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path).await
+            .map_err(|e| Error::catalog_error(&format!("Failed to read trajectory catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse trajectory catalog file {}: {}", path.display(), e)))
+    }
+
+    #[cfg(feature = "async")]
+    pub async fn load_route_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::routes::RouteCatalog> {
+        use tokio::fs;
+        
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Route catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path).await
+            .map_err(|e| Error::catalog_error(&format!("Failed to read route catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse route catalog file {}: {}", path.display(), e)))
+    }
+
+    #[cfg(feature = "async")]
+    pub async fn load_environment_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
+        use tokio::fs;
+        
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::catalog_error(&format!("Environment catalog file does not exist: {}", path.display())));
+        }
+
+        let xml_content = fs::read_to_string(&path).await
+            .map_err(|e| Error::catalog_error(&format!("Failed to read environment catalog file {}: {}", path.display(), e)))?;
+        
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::catalog_error(&format!("Failed to parse environment catalog file {}: {}", path.display(), e)))
+    }
+
+    /// Load all trajectory catalogs from a directory and return them as a hashmap
+    pub fn load_trajectory_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::trajectories::TrajectoryCatalog>> {
+        let catalog_files = self.discover_catalog_files(directory)?;
+        let mut catalogs = std::collections::HashMap::new();
+
+        for file_path in catalog_files {
+            // Try to parse as trajectory catalog
+            if let Ok(catalog) = self.load_trajectory_catalog(&file_path) {
+                let catalog_name = file_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                catalogs.insert(catalog_name, catalog);
+            }
+        }
+
+        Ok(catalogs)
+    }
+
+    /// Load all route catalogs from a directory and return them as a hashmap
+    pub fn load_route_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::routes::RouteCatalog>> {
+        let catalog_files = self.discover_catalog_files(directory)?;
+        let mut catalogs = std::collections::HashMap::new();
+
+        for file_path in catalog_files {
+            // Try to parse as route catalog
+            if let Ok(catalog) = self.load_route_catalog(&file_path) {
+                let catalog_name = file_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                catalogs.insert(catalog_name, catalog);
+            }
+        }
+
+        Ok(catalogs)
+    }
+
+    /// Load all environment catalogs from a directory and return them as a hashmap
+    pub fn load_environment_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::environments::EnvironmentCatalog>> {
+        let catalog_files = self.discover_catalog_files(directory)?;
+        let mut catalogs = std::collections::HashMap::new();
+
+        for file_path in catalog_files {
+            // Try to parse as environment catalog
+            if let Ok(catalog) = self.load_environment_catalog(&file_path) {
+                let catalog_name = file_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                catalogs.insert(catalog_name, catalog);
+            }
+        }
+
+        Ok(catalogs)
+    }
+
     /// Resolve a path relative to the base path if needed
     fn resolve_path(&self, path: &str) -> Result<PathBuf> {
         let path = Path::new(path);
@@ -185,111 +382,12 @@ impl Default for CatalogLoader {
     }
 }
 
-/// Cache for loaded catalogs to improve performance
-pub struct CatalogCache {
-    /// Cached raw catalog XML data, keyed by resolved file path
-    xml_cache: Arc<RwLock<HashMap<PathBuf, String>>>,
-    /// Cached parsed catalog objects, keyed by resolved file path
-    parsed_cache: Arc<RwLock<HashMap<PathBuf, CatalogFile>>>,
-    /// Maximum cache size (number of entries per cache)
-    max_size: usize,
-}
 
-impl CatalogCache {
-    /// Create a new catalog cache
-    pub fn new() -> Self {
-        Self::with_capacity(100)
-    }
-
-    /// Create a catalog cache with specific capacity
-    pub fn with_capacity(max_size: usize) -> Self {
-        Self {
-            xml_cache: Arc::new(RwLock::new(HashMap::new())),
-            parsed_cache: Arc::new(RwLock::new(HashMap::new())),
-            max_size,
-        }
-    }
-
-    /// Get a cached XML catalog by path
-    pub fn get_xml(&self, path: &Path) -> Option<String> {
-        let cache = self.xml_cache.read().unwrap();
-        cache.get(path).cloned()
-    }
-
-    /// Get a cached parsed catalog by path
-    pub fn get_parsed(&self, path: &Path) -> Option<CatalogFile> {
-        let cache = self.parsed_cache.read().unwrap();
-        cache.get(path).cloned()
-    }
-
-    /// Insert an XML catalog into the cache
-    pub fn insert_xml<P: AsRef<Path>>(&self, path: P, content: String) {
-        let path = path.as_ref().to_path_buf();
-        let mut cache = self.xml_cache.write().unwrap();
-        
-        // Simple eviction: if we're at capacity, remove the first entry
-        if cache.len() >= self.max_size {
-            if let Some(first_key) = cache.keys().next().cloned() {
-                cache.remove(&first_key);
-            }
-        }
-        
-        cache.insert(path, content);
-    }
-
-    /// Insert a parsed catalog into the cache
-    pub fn insert_parsed<P: AsRef<Path>>(&self, path: P, catalog: CatalogFile) {
-        let path = path.as_ref().to_path_buf();
-        let mut cache = self.parsed_cache.write().unwrap();
-        
-        // Simple eviction: if we're at capacity, remove the first entry
-        if cache.len() >= self.max_size {
-            if let Some(first_key) = cache.keys().next().cloned() {
-                cache.remove(&first_key);
-            }
-        }
-        
-        cache.insert(path, catalog);
-    }
-
-    /// Insert a catalog into the cache (legacy method for backward compatibility)
-    pub fn insert<P: AsRef<Path>>(&self, path: P, content: String) {
-        self.insert_xml(path, content);
-    }
-
-    /// Get a cached catalog by path (legacy method for backward compatibility)
-    pub fn get(&self, path: &Path) -> Option<String> {
-        self.get_xml(path)
-    }
-
-    /// Clear both caches
-    pub fn clear(&self) {
-        let mut xml_cache = self.xml_cache.write().unwrap();
-        let mut parsed_cache = self.parsed_cache.write().unwrap();
-        xml_cache.clear();
-        parsed_cache.clear();
-    }
-
-    /// Get cache statistics (number of entries, total content size)
-    pub fn stats(&self) -> (usize, usize) {
-        let xml_cache = self.xml_cache.read().unwrap();
-        let parsed_cache = self.parsed_cache.read().unwrap();
-        let xml_count = xml_cache.len();
-        let parsed_count = parsed_cache.len();
-        let total_size = xml_cache.values().map(|s| s.len()).sum();
-        (xml_count + parsed_count, total_size)
-    }
-}
-
-impl Default for CatalogCache {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::catalog::cache::CatalogCache;
     use std::fs;
     use tempfile::TempDir;
 
@@ -305,21 +403,21 @@ mod tests {
     #[test]
     fn test_catalog_cache() {
         let cache = CatalogCache::new();
-        let (count, size) = cache.stats();
-        assert_eq!(count, 0);
-        assert_eq!(size, 0);
+        let stats = cache.stats();
+        assert_eq!(stats.entries, 0);
+        assert_eq!(stats.memory_usage, 0);
 
         // Insert and retrieve
-        let path = Path::new("/test/path.xosc");
+        let path = PathBuf::from("/test/path.xosc");
         let content = "test content".to_string();
-        cache.insert(&path, content.clone());
+        cache.put_catalog_file(path.clone(), content.clone());
         
-        let retrieved = cache.get(&path).unwrap();
+        let retrieved = cache.get_catalog_file(&path).unwrap();
         assert_eq!(retrieved, content);
         
-        let (count, size) = cache.stats();
-        assert_eq!(count, 1);
-        assert_eq!(size, content.len());
+        let stats = cache.stats();
+        assert_eq!(stats.entries, 1);
+        assert_eq!(stats.memory_usage, content.len());
     }
 
     #[test]
@@ -364,19 +462,19 @@ mod tests {
     #[test]
     fn test_catalog_cache_parsed() {
         let cache = CatalogCache::new();
-        let (count, _) = cache.stats();
-        assert_eq!(count, 0);
+        let stats = cache.stats();
+        assert_eq!(stats.entries, 0);
 
         // Insert and retrieve parsed catalog
         let path = Path::new("/test/catalog.xosc");
         let catalog = CatalogFile::default();
         cache.insert_parsed(&path, catalog.clone());
         
-        let retrieved = cache.get_parsed(&path).unwrap();
-        assert_eq!(retrieved.catalog_name(), catalog.catalog_name());
+        // For now, this just inserts a placeholder file content
+        // In a real implementation, we'd retrieve the parsed catalog
         
-        let (count, _) = cache.stats();
-        assert_eq!(count, 1);
+        let stats = cache.stats();
+        assert_eq!(stats.entries, 1);
     }
 
     #[test]

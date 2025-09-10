@@ -4,7 +4,8 @@
 //! trajectory definitions across multiple scenarios with parameter substitution.
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{Value, ParameterDeclarations, Double, OSString};
+use crate::types::basic::{Value, ParameterDeclarations, ParameterDeclaration, Double, OSString};
+use crate::types::enums::ParameterType;
 use crate::types::positions::trajectory::{TrajectoryShape, Polyline, Clothoid, Vertex};
 use crate::types::geometry::shapes::BoundingBox;
 use crate::types::positions::Position;
@@ -250,7 +251,7 @@ impl CatalogTrajectory {
             CatalogTrajectoryShape::Polyline(polyline) => {
                 let vertices = polyline.vertices.iter().map(|v| {
                     crate::types::positions::trajectory::Vertex {
-                        time: v.time.as_ref().and_then(|t| t.as_literal().copied()),
+                        time: v.time.as_ref().and_then(|t| t.as_literal().copied()).map(Value::Literal),
                         position: v.position.clone(),
                     }
                 }).collect();
@@ -261,9 +262,9 @@ impl CatalogTrajectory {
             }
             CatalogTrajectoryShape::Clothoid(clothoid) => {
                 TrajectoryShape::Clothoid(crate::types::positions::trajectory::Clothoid {
-                    curvature: clothoid.curvature.as_literal().copied().unwrap_or(0.0),
-                    curvature_dot: clothoid.curvature_dot.as_literal().copied().unwrap_or(0.0),
-                    length: clothoid.length.as_literal().copied().unwrap_or(1.0),
+                    curvature: Value::Literal(clothoid.curvature.as_literal().copied().unwrap_or(0.0)),
+                    curvature_dot: Value::Literal(clothoid.curvature_dot.as_literal().copied().unwrap_or(0.0)),
+                    length: Value::Literal(clothoid.length.as_literal().copied().unwrap_or(1.0)),
                     start_position: clothoid.start_position.clone(),
                 })
             }
@@ -295,7 +296,7 @@ impl CatalogPolyline {
     }
     
     /// Adds a vertex to this polyline
-    pub fn add_vertex(&mut self, position: Position, time: Option<Value<Double>>) {
+    pub fn add_vertex(&mut self, position: Position, time: Option<Double>) {
         self.vertices.push(CatalogVertex { time, position });
     }
 }
@@ -303,9 +304,9 @@ impl CatalogPolyline {
 impl CatalogClothoid {
     /// Creates a new clothoid with the specified parameters
     pub fn new(
-        curvature: Value<Double>,
-        curvature_dot: Value<Double>,
-        length: Value<Double>,
+        curvature: Double,
+        curvature_dot: Double,
+        length: Double,
     ) -> Self {
         Self {
             curvature,
@@ -317,9 +318,9 @@ impl CatalogClothoid {
     
     /// Creates a clothoid with a start position
     pub fn with_start_position(
-        curvature: Value<Double>,
-        curvature_dot: Value<Double>,
-        length: Value<Double>,
+        curvature: Double,
+        curvature_dot: Double,
+        length: Double,
         start_position: Position,
     ) -> Self {
         Self {
@@ -342,12 +343,12 @@ impl CatalogNurbs {
     }
     
     /// Adds a control point to this NURBS curve
-    pub fn add_control_point(&mut self, position: Position, weight: Option<Value<Double>>) {
+    pub fn add_control_point(&mut self, position: Position, weight: Option<Double>) {
         self.control_points.push(NurbsControlPoint { position, weight });
     }
     
     /// Adds a knot to this NURBS curve
-    pub fn add_knot(&mut self, value: Value<Double>) {
+    pub fn add_knot(&mut self, value: Double) {
         self.knots.push(NurbsKnot { value });
     }
 }
@@ -362,7 +363,7 @@ impl NurbsControlPoint {
     }
     
     /// Creates a weighted control point
-    pub fn with_weight(position: Position, weight: Value<Double>) -> Self {
+    pub fn with_weight(position: Position, weight: Double) -> Self {
         Self {
             position,
             weight: Some(weight),
@@ -372,7 +373,7 @@ impl NurbsControlPoint {
 
 impl NurbsKnot {
     /// Creates a new knot with the specified value
-    pub fn new(value: Value<Double>) -> Self {
+    pub fn new(value: Double) -> Self {
         Self { value }
     }
 }
@@ -435,14 +436,50 @@ mod tests {
     
     #[test]
     fn test_catalog_polyline() {
-        let pos1 = Position::World(WorldPosition::new(0.0, 0.0, 0.0, None, None, None));
-        let pos2 = Position::World(WorldPosition::new(10.0, 0.0, 0.0, None, None, None));
+        let pos1 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(0.0),
+                y: Value::Literal(0.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
+        let pos2 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(10.0),
+                y: Value::Literal(0.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
         
         let mut polyline = CatalogPolyline::from_positions(vec![pos1, pos2]);
         
         assert_eq!(polyline.vertices.len(), 2);
         
-        let pos3 = Position::World(WorldPosition::new(20.0, 0.0, 0.0, None, None, None));
+        let pos3 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(20.0),
+                y: Value::Literal(0.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
         polyline.add_vertex(pos3, Some(Value::Literal(10.0)));
         
         assert_eq!(polyline.vertices.len(), 3);
@@ -466,8 +503,32 @@ mod tests {
     fn test_catalog_nurbs() {
         let mut nurbs = CatalogNurbs::new(Value::Literal(3));
         
-        let pos1 = Position::World(WorldPosition::new(0.0, 0.0, 0.0, None, None, None));
-        let pos2 = Position::World(WorldPosition::new(5.0, 5.0, 0.0, None, None, None));
+        let pos1 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(0.0),
+                y: Value::Literal(0.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
+        let pos2 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(5.0),
+                y: Value::Literal(5.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
         
         nurbs.add_control_point(pos1, Some(Value::Literal(1.0)));
         nurbs.add_control_point(pos2, None);
@@ -487,9 +548,10 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![
                 ParameterDeclaration {
-                    name: "length".to_string(),
-                    parameter_type: "double".to_string(),
-                    value: "100.0".to_string(),
+                    name: OSString::literal("length".to_string()),
+                    parameter_type: ParameterType::Double,
+                    value: OSString::literal("100.0".to_string()),
+                    constraint_group: None,
                 }
             ],
         };
@@ -551,11 +613,35 @@ mod tests {
             vertices: vec![
                 CatalogVertex {
                     time: Some(Value::Literal(0.0)),
-                    position: Position::World(WorldPosition::new(0.0, 0.0, 0.0, None, None, None)),
+                    position: Position {
+                        world_position: Some(WorldPosition {
+                            x: Value::Literal(0.0),
+                            y: Value::Literal(0.0),
+                            z: Some(Value::Literal(0.0)),
+                            h: None,
+                            p: None,
+                            r: None,
+                        }),
+                        relative_world_position: None,
+                        road_position: None,
+                        lane_position: None,
+                    },
                 },
                 CatalogVertex {
                     time: Some(Value::Literal(5.0)),
-                    position: Position::World(WorldPosition::new(10.0, 0.0, 0.0, None, None, None)),
+                    position: Position {
+                        world_position: Some(WorldPosition {
+                            x: Value::Literal(10.0),
+                            y: Value::Literal(0.0),
+                            z: Some(Value::Literal(0.0)),
+                            h: None,
+                            p: None,
+                            r: None,
+                        }),
+                        relative_world_position: None,
+                        road_position: None,
+                        lane_position: None,
+                    },
                 }
             ],
         });

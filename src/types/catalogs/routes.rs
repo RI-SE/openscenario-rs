@@ -4,7 +4,8 @@
 //! route definitions across multiple scenarios with parameter substitution.
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{Value, ParameterDeclarations, Double};
+use crate::types::basic::{Value, ParameterDeclarations, ParameterDeclaration, Double, OSString};
+use crate::types::enums::ParameterType;
 use crate::types::positions::Position;
 use crate::types::enums::{RouteStrategy, RoutingAlgorithm};
 
@@ -93,11 +94,11 @@ pub struct RouteWaypoint {
     
     /// Time constraint for reaching this waypoint
     #[serde(rename = "@time", skip_serializing_if = "Option::is_none")]
-    pub time: Option<Value<Double>>,
+    pub time: Option<Double>,
     
     /// Speed constraint at this waypoint
     #[serde(rename = "@speed", skip_serializing_if = "Option::is_none")]
-    pub speed: Option<Value<Double>>,
+    pub speed: Option<Double>,
     
     /// Lane constraints at this waypoint
     #[serde(rename = "LaneConstraints", skip_serializing_if = "Option::is_none")]
@@ -109,7 +110,19 @@ impl Default for RouteWaypoint {
         use crate::types::positions::WorldPosition;
         
         Self {
-            position: Position::World(WorldPosition::new(0.0, 0.0, 0.0, None, None, None)),
+            position: Position {
+                world_position: Some(WorldPosition {
+                    x: Value::Literal(0.0),
+                    y: Value::Literal(0.0),
+                    z: Some(Value::Literal(0.0)),
+                    h: None,
+                    p: None,
+                    r: None,
+                }),
+                relative_world_position: None,
+                road_position: None,
+                lane_position: None,
+            },
             route_strategy: None,
             routing_algorithm: None,
             time: None,
@@ -315,7 +328,7 @@ impl RouteWaypoint {
     }
     
     /// Creates a waypoint with timing constraint
-    pub fn with_time(position: Position, time: Value<Double>) -> Self {
+    pub fn with_time(position: Position, time: Double) -> Self {
         Self {
             position,
             route_strategy: None,
@@ -327,7 +340,7 @@ impl RouteWaypoint {
     }
     
     /// Creates a waypoint with speed constraint
-    pub fn with_speed(position: Position, speed: Value<Double>) -> Self {
+    pub fn with_speed(position: Position, speed: Double) -> Self {
         Self {
             position,
             route_strategy: None,
@@ -475,8 +488,32 @@ mod tests {
     fn test_route_waypoints() {
         let mut route = CatalogRoute::new("WaypointRoute".to_string());
         
-        let pos1 = Position::World(WorldPosition::new(0.0, 0.0, 0.0, None, None, None));
-        let pos2 = Position::World(WorldPosition::new(10.0, 0.0, 0.0, None, None, None));
+        let pos1 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(0.0),
+                y: Value::Literal(0.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
+        let pos2 = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(10.0),
+                y: Value::Literal(0.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
         
         route.add_position_waypoint(pos1);
         
@@ -490,7 +527,19 @@ mod tests {
     
     #[test]
     fn test_waypoint_creation() {
-        let pos = Position::World(WorldPosition::new(5.0, 10.0, 0.0, None, None, None));
+        let pos = Position {
+            world_position: Some(WorldPosition {
+                x: Value::Literal(5.0),
+                y: Value::Literal(10.0),
+                z: Some(Value::Literal(0.0)),
+                h: None,
+                p: None,
+                r: None,
+            }),
+            relative_world_position: None,
+            road_position: None,
+            lane_position: None,
+        };
         
         let waypoint1 = RouteWaypoint::new(pos.clone());
         let waypoint2 = RouteWaypoint::with_strategy(pos.clone(), RouteStrategy::Shortest);
@@ -521,9 +570,10 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![
                 ParameterDeclaration {
-                    name: "targetSpeed".to_string(),
-                    parameter_type: "double".to_string(),
-                    value: "50.0".to_string(),
+                    name: OSString::literal("targetSpeed".to_string()),
+                    parameter_type: ParameterType::Double,
+                    value: OSString::literal("50.0".to_string()),
+                    constraint_group: None,
                 }
             ],
         };
