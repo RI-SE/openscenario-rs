@@ -8,6 +8,7 @@ use crate::types::basic::{Value, ParameterDeclarations};
 use crate::types::enums::ControllerType;
 use crate::types::distributions::ParameterValueDistribution;
 use crate::types::entities::vehicle::{Properties, Property};
+use crate::types::catalogs::references::ControllerCatalogReference;
 
 // Placeholder types that will be implemented in future modules
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -38,20 +39,7 @@ impl Default for ParameterAssignment {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CatalogReference {
-    pub catalog_name: Value<String>,
-    pub entry_name: Value<String>,
-}
-
-impl Default for CatalogReference {
-    fn default() -> Self {
-        Self {
-            catalog_name: Value::Literal("DefaultCatalog".to_string()),
-            entry_name: Value::Literal("DefaultEntry".to_string()),
-        }
-    }
-}
+// CatalogReference is now imported from crate::types::catalogs::references
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Directory {
@@ -114,7 +102,7 @@ pub struct ObjectController {
 
     /// Reference to a controller in a catalog
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub catalog_reference: Option<CatalogReference>,
+    pub catalog_reference: Option<ControllerCatalogReference>,
 }
 
 impl Default for ObjectController {
@@ -337,7 +325,7 @@ impl ObjectController {
     }
 
     /// Creates an ObjectController with a catalog reference.
-    pub fn with_catalog_reference(catalog_reference: CatalogReference) -> Self {
+    pub fn with_catalog_reference(catalog_reference: ControllerCatalogReference) -> Self {
         Self {
             controller: None,
             catalog_reference: Some(catalog_reference),

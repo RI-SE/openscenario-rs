@@ -544,27 +544,30 @@ fn can_parse_routing_actions_in_story_events() {
                 println!("✓ TeleportAction parsed");  
             }
             if let Some(routing) = &action_wrapper.routing_action {
-                // This validates the trajectory system integration
-                println!("✓ RoutingAction with FollowTrajectoryAction parsed");
-                
-                // Verify the trajectory has the expected structure
-                let trajectory = &routing.follow_trajectory_action.trajectory;
-                println!("  - Trajectory name: {}", trajectory.name.as_literal().unwrap_or(&"Unknown".to_string()));
-                println!("  - Trajectory closed: {}", trajectory.closed.as_literal().unwrap_or(&false));
-                
-                // Verify shape contains vertices
-                if let Some(polyline) = &trajectory.shape.polyline {
-                    println!("  - Polyline vertices: {}", polyline.vertices.len());
-                    assert!(!polyline.vertices.is_empty(), "Polyline must contain vertices");
-                } else {
-                    panic!("Expected polyline shape");
-                }
-                
-                // Verify trajectory following mode
-                use openscenario_rs::types::enums::FollowingMode;
-                match routing.follow_trajectory_action.trajectory_following_mode.following_mode {
-                    FollowingMode::Follow => println!("  - Following mode: Follow"),
-                    FollowingMode::Position => println!("  - Following mode: Position"),
+                if let Some(follow_action) = &routing.follow_trajectory_action {
+                    // This validates the trajectory system integration
+                    println!("✓ RoutingAction with FollowTrajectoryAction parsed");
+                    
+                    // Verify the trajectory has the expected structure
+                    if let Some(trajectory) = &follow_action.trajectory {
+                        println!("  - Trajectory name: {}", trajectory.name.as_literal().unwrap_or(&"Unknown".to_string()));
+                        println!("  - Trajectory closed: {}", trajectory.closed.as_literal().unwrap_or(&false));
+                        
+                        // Verify shape contains vertices
+                        if let Some(polyline) = &trajectory.shape.polyline {
+                            println!("  - Polyline vertices: {}", polyline.vertices.len());
+                            assert!(!polyline.vertices.is_empty(), "Polyline must contain vertices");
+                        } else {
+                            panic!("Expected polyline shape");
+                        }
+                        
+                        // Verify trajectory following mode
+                        use openscenario_rs::types::enums::FollowingMode;
+                        match follow_action.trajectory_following_mode.following_mode {
+                            FollowingMode::Follow => println!("  - Following mode: Follow"),
+                            FollowingMode::Position => println!("  - Following mode: Position"),
+                        }
+                    }
                 }
             }
         }
@@ -588,12 +591,14 @@ fn can_validate_trajectory_following_modes() {
     for private in &init.actions.private_actions {
         for action_wrapper in &private.private_actions {
             if let Some(routing) = &action_wrapper.routing_action {
-                routing_actions_found += 1;
-                
-                use openscenario_rs::types::enums::FollowingMode;
-                assert_eq!(routing.follow_trajectory_action.trajectory_following_mode.following_mode, 
-                          FollowingMode::Follow,
-                          "cut_in_101_exam.xosc uses followingMode='follow'");
+                if let Some(follow_action) = &routing.follow_trajectory_action {
+                    routing_actions_found += 1;
+                    
+                    use openscenario_rs::types::enums::FollowingMode;
+                    assert_eq!(follow_action.trajectory_following_mode.following_mode, 
+                              FollowingMode::Follow,
+                              "cut_in_101_exam.xosc uses followingMode='follow'");
+                }
             }
         }
     }
