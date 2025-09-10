@@ -19,16 +19,41 @@ pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
 // pub mod appearance; // Appearance actions (skip for MVP)
 // pub mod traffic;    // Traffic actions (skip for MVP)
 
-pub use movement::{SpeedAction, TeleportAction, RoutingAction, FollowTrajectoryAction, Trajectory, TrajectoryFollowingMode};
+// PHASE 4A: Export all movement actions
+pub use movement::{
+    // Original actions
+    SpeedAction, TeleportAction, RoutingAction, FollowTrajectoryAction, 
+    Trajectory, TrajectoryFollowingMode,
+    // New Phase 4A actions
+    LaneChangeAction, LaneOffsetAction, LateralAction, LateralDistanceAction,
+    LongitudinalAction, LongitudinalDistanceAction, SpeedProfileAction,
+    SynchronizeAction, AcquirePositionAction,
+    // Supporting types
+    LaneChangeTarget, LaneOffsetTarget, DynamicConstraints, FinalSpeed
+};
 
 use serde::{Deserialize, Serialize};
 
-// Define base Action enum for polymorphic handling
+// PHASE 4A: Complete Action enum with all movement actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Action { 
+    // Original actions
     Speed(SpeedAction), 
-    Teleport(TeleportAction) 
+    Teleport(TeleportAction),
+    FollowTrajectory(FollowTrajectoryAction),
+    Routing(RoutingAction),
+    
+    // Phase 4A: New movement actions
+    LaneChange(LaneChangeAction),
+    LaneOffset(LaneOffsetAction),
+    Lateral(LateralAction),
+    LateralDistance(LateralDistanceAction),
+    Longitudinal(LongitudinalAction),
+    LongitudinalDistance(LongitudinalDistanceAction),
+    SpeedProfile(SpeedProfileAction),
+    Synchronize(SynchronizeAction),
+    AcquirePosition(AcquirePositionAction),
 }
 
 impl Default for Action {
