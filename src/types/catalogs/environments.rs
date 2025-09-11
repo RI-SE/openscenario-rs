@@ -4,7 +4,6 @@
 //! environment configurations across multiple scenarios with parameter substitution.
 
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
-use crate::types::enums::ParameterType;
 use crate::types::environment::{
     Environment, Fog, Precipitation, RoadCondition, Sun, TimeOfDay, Weather,
 };

@@ -3,7 +3,6 @@
 //! This module defines types for road network definitions including
 //! logic files and road network references.
 
-use std::env::consts::OS;
 
 use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};

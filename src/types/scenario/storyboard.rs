@@ -1,6 +1,6 @@
 //! Storyboard and main scenario structure types
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{OSString, UnsignedShort};
 use crate::types::entities::Entities;
 use serde::{Deserialize, Serialize};
 

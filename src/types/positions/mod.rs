@@ -14,7 +14,7 @@
 //! - Supporting both absolute and relative positioning strategies
 //! - Facilitating spatial calculations and geometric operations
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 
 pub mod road;

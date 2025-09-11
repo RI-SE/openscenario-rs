@@ -6,12 +6,11 @@
 //! - Memory usage optimization for large catalog collections
 //! - Cache statistics and monitoring capabilities
 
-use crate::error::{Error, Result};
 use crate::types::catalogs::{
-    controllers::{ControllerCatalog, CatalogController},
-    trajectories::{TrajectoryCatalog, CatalogTrajectory},
-    routes::{RouteCatalog, CatalogRoute},
-    environments::{EnvironmentCatalog, CatalogEnvironment},
+    controllers::CatalogController,
+    trajectories::CatalogTrajectory,
+    routes::CatalogRoute,
+    environments::CatalogEnvironment,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;

@@ -3,11 +3,10 @@
 //! This module contains catalog-specific controller types that enable reuse of
 //! controller definitions across multiple scenarios with parameter substitution.
 
-use crate::types::basic::{Double, Int, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Int, OSString, ParameterDeclarations, Value};
 use crate::types::controllers::Controller;
 use crate::types::entities::vehicle::{Properties, Property};
 use crate::types::enums::ControllerType;
-use crate::types::enums::ParameterType;
 use serde::{Deserialize, Serialize};
 
 /// Controller catalog containing reusable controller definitions

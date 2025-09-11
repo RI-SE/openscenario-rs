@@ -4,9 +4,6 @@
 //! trajectory definitions across multiple scenarios with parameter substitution.
 
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
-use crate::types::enums::ParameterType;
-use crate::types::geometry::shapes::BoundingBox;
-use crate::types::positions::trajectory::{Clothoid, Polyline, TrajectoryShape, Vertex};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 

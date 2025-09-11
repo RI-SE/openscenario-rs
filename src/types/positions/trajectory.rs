@@ -1,6 +1,6 @@
 //! Trajectory and route-based position types for path following
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 
 /// Trajectory definition with shape and parameters

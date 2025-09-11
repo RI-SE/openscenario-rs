@@ -5,7 +5,7 @@ use crate::types::basic::Value;
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::OSString;
 /// Wrapper for deterministic parameter distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]

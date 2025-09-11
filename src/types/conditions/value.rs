@@ -15,7 +15,7 @@
 //! - Facilitating infrastructure integration through signal state monitoring
 //! - Enabling custom condition logic through extensible user-defined types
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::Double;
 use crate::types::enums::Rule;
 use serde::{Deserialize, Serialize};
 

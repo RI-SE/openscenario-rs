@@ -4,7 +4,6 @@
 //! route definitions across multiple scenarios with parameter substitution.
 
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
-use crate::types::enums::ParameterType;
 use crate::types::enums::{RouteStrategy, RoutingAlgorithm};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};

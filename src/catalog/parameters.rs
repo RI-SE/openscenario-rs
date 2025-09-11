@@ -8,7 +8,6 @@
 
 use crate::error::{Error, Result};
 use crate::types::basic::Value;
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use crate::types::catalogs::entities::{CatalogEntity, ParameterDefinition};
 use regex::Regex;
 use std::collections::HashMap;

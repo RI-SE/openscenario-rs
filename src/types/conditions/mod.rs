@@ -21,7 +21,7 @@ pub mod value; // Value-based conditions
 pub use entity::{ByEntityCondition, SpeedCondition};
 pub use value::{ByValueCondition, SimulationTimeCondition};
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 
 // Define base condition enum for polymorphic handling

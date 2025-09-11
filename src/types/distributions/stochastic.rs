@@ -1,7 +1,7 @@
 //! Stochastic distribution types for probabilistic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort, Value};
+use crate::types::basic::{OSString, Value};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 

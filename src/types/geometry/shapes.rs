@@ -1,6 +1,6 @@
 //! Basic geometric shapes for OpenSCENARIO
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::Double;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 

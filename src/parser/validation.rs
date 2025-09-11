@@ -16,17 +16,11 @@
 
 use crate::{
     types::{
-        basic::{ParameterDeclarations, ParameterDeclaration},
         entities::{Entities, ScenarioObject},
         scenario::{storyboard::Storyboard, ScenarioStory, story::{Act, ManeuverGroup, Maneuver, Event}},
-        actions::Action,
-        scenario::triggers::{Trigger, ConditionGroup, Condition},
-        scenario::triggers::ConditionType,
-        catalogs::references::{CatalogReference, VehicleCatalogReference, ControllerCatalogReference},
-        Validate, ValidationContext, EntityRef, CatalogRef, ObjectType,
+        scenario::triggers::Condition, ValidationContext, EntityRef, ObjectType,
     },
     OpenScenario, FileHeader,
-    error::{Error, Result},
 };
 use std::collections::{HashMap, HashSet};
 
@@ -173,7 +167,7 @@ impl ScenarioValidator {
     /// Validate a complete OpenSCENARIO document
     pub fn validate_scenario(&mut self, scenario: &OpenScenario) -> ValidationResult {
         let start_time = std::time::Instant::now();
-        let mut context = self.build_validation_context(scenario);
+        let context = self.build_validation_context(scenario);
         let mut result = ValidationResult {
             errors: Vec::new(),
             warnings: Vec::new(),

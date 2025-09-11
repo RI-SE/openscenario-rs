@@ -1,6 +1,6 @@
 //! Vehicle entity definition
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{Double, OSString};
 use crate::types::enums::VehicleCategory;
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};

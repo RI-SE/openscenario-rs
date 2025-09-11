@@ -14,7 +14,7 @@
 //! - Facilitating road-following and path planning algorithms
 //! - Supporting both absolute and relative road-based positioning
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 
 /// Orientation definition for positions

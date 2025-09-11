@@ -13,7 +13,7 @@
 //! - Providing integration with external environment systems
 //! - Facilitating environment-dependent scenario validation
 
-use crate::types::basic::{Boolean, Double, Int, OSString};
+use crate::types::basic::{Boolean, OSString};
 use serde::{Deserialize, Serialize};
 
 pub mod road;

@@ -11,10 +11,8 @@ use crate::types::basic::Directory;
 use crate::types::catalogs::files::CatalogFile;
 use crate::types::catalogs::entities::{CatalogVehicle, CatalogController, CatalogPedestrian};
 use crate::parser::xml::{parse_catalog_from_file, parse_catalog_from_str};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::sync::{Arc, RwLock};
 
 /// Catalog file loader that handles file system operations
 pub struct CatalogLoader {

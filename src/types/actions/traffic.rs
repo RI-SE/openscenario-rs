@@ -14,7 +14,7 @@
 //! - Facilitating intersection and traffic signal simulation
 //! - Following complete OpenSCENARIO specification for traffic management
 
-use crate::types::basic::{Boolean, Double, Int, OSString};
+use crate::types::basic::{Boolean, Double, OSString};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 

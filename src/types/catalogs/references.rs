@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::OSString;
 
 /// Enhanced catalog reference with generic type parameter for type safety
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

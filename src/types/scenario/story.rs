@@ -14,7 +14,7 @@
 //! - Providing flexible actor assignment and role management
 //! - Facilitating scenario reuse through parameterized stories
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{OSString, UnsignedInt};
 use crate::types::enums::Priority;
 use serde::{Deserialize, Serialize};
 

@@ -6,10 +6,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::error::Result;
-use crate::types::basic::{Value, OSString, Double, Int, Boolean, UnsignedInt, UnsignedShort};
+use crate::types::basic::{Value, OSString, Double};
 use crate::types::entities::{vehicle, pedestrian};
 use crate::types::geometry::BoundingBox;
-use crate::types::controllers::{Controller, ParameterAssignments};
+use crate::types::controllers::Controller;
 use crate::types::enums::{ControllerType, PedestrianCategory};
 
 /// Trait for types that can be loaded from catalog files and resolved into scenario entities

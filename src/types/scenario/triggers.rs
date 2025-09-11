@@ -14,7 +14,7 @@
 //! - Facilitating entity-aware trigger conditions and responses
 //! - Supporting deterministic event ordering and priority handling
 
-use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::basic::{Double, OSString};
 use crate::types::conditions::{ByEntityCondition, ByValueCondition};
 use crate::types::enums::{ConditionEdge, TriggeringEntitiesRule};
 use serde::{Deserialize, Serialize};
