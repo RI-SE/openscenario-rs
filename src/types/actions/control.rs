@@ -12,11 +12,11 @@
 //! - Providing fine-grained control over vehicle dynamics and responses
 //! - Following complete OpenSCENARIO action specification for controller management
 
-use serde::{Deserialize, Serialize};
 use crate::types::basic::Boolean;
-use crate::types::controllers::Controller;
-use crate::types::catalogs::references::CatalogReference;
 use crate::types::catalogs::entities::CatalogController;
+use crate::types::catalogs::references::CatalogReference;
+use crate::types::controllers::Controller;
+use serde::{Deserialize, Serialize};
 
 // PHASE 4B: Core Controller Actions Implementation
 
@@ -238,9 +238,7 @@ impl Default for OverrideControllerValueActionClutch {
 
 impl Default for ManualGear {
     fn default() -> Self {
-        Self {
-            gear: 1,
-        }
+        Self { gear: 1 }
     }
 }
 
@@ -372,22 +370,30 @@ impl ManualGear {
 impl AutomaticGear {
     /// Create automatic gear for park
     pub fn park() -> Self {
-        Self { gear: AutomaticGearType::Park }
+        Self {
+            gear: AutomaticGearType::Park,
+        }
     }
 
     /// Create automatic gear for reverse
     pub fn reverse() -> Self {
-        Self { gear: AutomaticGearType::Reverse }
+        Self {
+            gear: AutomaticGearType::Reverse,
+        }
     }
 
     /// Create automatic gear for neutral
     pub fn neutral() -> Self {
-        Self { gear: AutomaticGearType::Neutral }
+        Self {
+            gear: AutomaticGearType::Neutral,
+        }
     }
 
     /// Create automatic gear for drive
     pub fn drive() -> Self {
-        Self { gear: AutomaticGearType::Drive }
+        Self {
+            gear: AutomaticGearType::Drive,
+        }
     }
 }
 
@@ -401,7 +407,7 @@ mod tests {
     fn test_assign_controller_action_creation() {
         let controller = Controller::default();
         let action = AssignControllerAction::with_controller(controller);
-        
+
         assert!(action.controller.is_some());
         assert!(action.catalog_reference.is_none());
     }
@@ -409,7 +415,7 @@ mod tests {
     #[test]
     fn test_activate_controller_action_creation() {
         let action = ActivateControllerAction::all_domains(true, true, false, false);
-        
+
         assert_eq!(action.longitudinal.unwrap().as_literal(), Some(&true));
         assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
         assert_eq!(action.lighting.unwrap().as_literal(), Some(&false));
@@ -419,7 +425,7 @@ mod tests {
     #[test]
     fn test_activate_controller_movement_only() {
         let action = ActivateControllerAction::movement_only();
-        
+
         assert_eq!(action.longitudinal.unwrap().as_literal(), Some(&true));
         assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
         assert!(action.lighting.is_none());
@@ -429,12 +435,12 @@ mod tests {
     #[test]
     fn test_override_controller_brake() {
         let action = OverrideControllerValueAction::brake_override(true, 0.7);
-        
+
         assert!(action.brake.is_some());
         let brake = action.brake.unwrap();
         assert_eq!(brake.active.as_literal(), Some(&true));
         assert_eq!(brake.value, 0.7);
-        
+
         assert!(action.throttle.is_none());
         assert!(action.steering_wheel.is_none());
     }
@@ -442,7 +448,7 @@ mod tests {
     #[test]
     fn test_override_controller_throttle() {
         let action = OverrideControllerValueAction::throttle_override(true, 0.5);
-        
+
         assert!(action.throttle.is_some());
         let throttle = action.throttle.unwrap();
         assert_eq!(throttle.active.as_literal(), Some(&true));
@@ -452,7 +458,7 @@ mod tests {
     #[test]
     fn test_override_controller_steering() {
         let action = OverrideControllerValueAction::steering_override(true, 0.2);
-        
+
         assert!(action.steering_wheel.is_some());
         let steering = action.steering_wheel.unwrap();
         assert_eq!(steering.active.as_literal(), Some(&true));
@@ -463,10 +469,10 @@ mod tests {
     fn test_manual_gear_creation() {
         let first_gear = ManualGear::first();
         assert_eq!(first_gear.gear, 1);
-        
+
         let neutral = ManualGear::neutral();
         assert_eq!(neutral.gear, 0);
-        
+
         let reverse = ManualGear::reverse();
         assert_eq!(reverse.gear, -1);
     }
@@ -475,13 +481,13 @@ mod tests {
     fn test_automatic_gear_creation() {
         let park = AutomaticGear::park();
         assert_eq!(park.gear, AutomaticGearType::Park);
-        
+
         let drive = AutomaticGear::drive();
         assert_eq!(drive.gear, AutomaticGearType::Drive);
-        
+
         let reverse = AutomaticGear::reverse();
         assert_eq!(reverse.gear, AutomaticGearType::Reverse);
-        
+
         let neutral = AutomaticGear::neutral();
         assert_eq!(neutral.gear, AutomaticGearType::Neutral);
     }
@@ -493,7 +499,7 @@ mod tests {
             manual_gear: Some(ManualGear::first()),
             automatic_gear: None,
         };
-        
+
         assert_eq!(gear_action.active.as_literal(), Some(&true));
         assert!(gear_action.manual_gear.is_some());
         assert!(gear_action.automatic_gear.is_none());
@@ -506,7 +512,7 @@ mod tests {
             active: Boolean::literal(true),
             force: Some(1.0),
         };
-        
+
         assert_eq!(parking_brake.active.as_literal(), Some(&true));
         assert_eq!(parking_brake.force, Some(1.0));
     }
@@ -517,7 +523,7 @@ mod tests {
             active: Boolean::literal(true),
             value: 0.5,
         };
-        
+
         assert_eq!(clutch.active.as_literal(), Some(&true));
         assert_eq!(clutch.value, 0.5);
     }
@@ -526,13 +532,14 @@ mod tests {
     fn test_controller_action_defaults() {
         let assign = AssignControllerAction::default();
         assert!(assign.controller.is_some());
-        
+
         let activate = ActivateControllerAction::default();
         assert_eq!(activate.longitudinal.unwrap().as_literal(), Some(&true));
         assert_eq!(activate.lateral.unwrap().as_literal(), Some(&true));
-        
+
         let override_action = OverrideControllerValueAction::default();
         assert!(override_action.brake.is_none());
         assert!(override_action.throttle.is_none());
     }
 }
+

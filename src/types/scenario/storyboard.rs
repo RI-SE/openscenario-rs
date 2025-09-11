@@ -1,8 +1,8 @@
 //! Storyboard and main scenario structure types
 
-use serde::{Deserialize, Serialize};
-use crate::types::basic::{OSString, UnsignedShort};
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use crate::types::entities::Entities;
+use serde::{Deserialize, Serialize};
 
 /// Root OpenSCENARIO document structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,19 +10,22 @@ use crate::types::entities::Entities;
 pub struct OpenScenario {
     #[serde(rename = "FileHeader")]
     pub file_header: FileHeader,
-    
-    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+
+    #[serde(
+        rename = "ParameterDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
-    
+
     #[serde(rename = "CatalogLocations", skip_serializing_if = "Option::is_none")]
     pub catalog_locations: Option<crate::types::catalogs::locations::CatalogLocations>,
-    
+
     #[serde(rename = "RoadNetwork", skip_serializing_if = "Option::is_none")]
     pub road_network: Option<crate::types::road::RoadNetwork>,
-    
+
     #[serde(rename = "Entities", default)]
     pub entities: Entities,
-    
+
     #[serde(rename = "Storyboard")]
     pub storyboard: Storyboard,
 }
@@ -88,3 +91,4 @@ impl Default for OpenScenario {
         }
     }
 }
+

@@ -13,34 +13,37 @@
 //! - Supporting complex trigger logic through condition combinations
 //! - Enabling event-driven scenario execution and timing control
 //! - Facilitating condition debugging and state introspection
+use crate::types::enums::ConditionEdge;
 
-pub mod entity;  // Entity-based conditions
-pub mod value;   // Value-based conditions
+pub mod entity; // Entity-based conditions
+pub mod value; // Value-based conditions
 
-pub use value::{SimulationTimeCondition, ByValueCondition};
-pub use entity::{SpeedCondition, ByEntityCondition};
+pub use entity::{ByEntityCondition, SpeedCondition};
+pub use value::{ByValueCondition, SimulationTimeCondition};
 
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use serde::{Deserialize, Serialize};
 
 // Define base condition enum for polymorphic handling
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum Condition { 
-  SimulationTime(SimulationTimeCondition), 
-  Speed(SpeedCondition) 
+pub enum Condition {
+    SimulationTime(SimulationTimeCondition),
+    Speed(SpeedCondition),
 }
 
 // Define condition wrapper with common attributes
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionWrapper { 
-  #[serde(rename = "@name")] pub name: String, 
-  #[serde(rename = "@conditionEdge")] pub edge: ConditionEdge,
-  #[serde(rename = "@delay")] pub delay: Double,
-  #[serde(flatten)] pub condition: Condition 
+pub struct ConditionWrapper {
+    #[serde(rename = "@name")]
+    pub name: String,
+    #[serde(rename = "@conditionEdge")]
+    pub edge: ConditionEdge,
+    #[serde(rename = "@delay")]
+    pub delay: Double,
+    #[serde(flatten)]
+    pub condition: Condition,
 }
-
-use crate::types::{Double};
-use crate::types::enums::{ConditionEdge};
 
 // Add condition evaluation trait (later phases) - KEEP AS FUTURE WORK
 // pub trait EvaluateCondition { fn evaluate(&self, ctx: &SimulationContext) -> bool; }

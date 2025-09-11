@@ -1,3 +1,4 @@
+use crate::types::basic::{OSString, Double, Int, Boolean, UnsignedInt, UnsignedShort};
 //! Mathematical utility functions for geometric and numeric calculations
 //!
 //! This file contains:

@@ -1,3 +1,4 @@
+use crate::types::basic::{OSString, Double, Int, Boolean, UnsignedInt, UnsignedShort};
 //! Geometric utility functions for spatial calculations and operations
 //!
 //! This file contains:

@@ -14,29 +14,26 @@
 //! - Enabling entity coordination through synchronization actions
 //! - Offering flexible target specification (absolute vs. relative positioning)
 
-use crate::types::{Double};
-use crate::types::basic::{OSString, Boolean};
-use crate::types::enums::{DynamicsDimension, DynamicsShape, SpeedTargetValueType, FollowingMode};
-use crate::types::positions::Position;
-use crate::types::geometry::shapes::Shape;
+use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::catalogs::entities::{CatalogRoute, CatalogTrajectory};
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
-use crate::types::catalogs::entities::{CatalogTrajectory, CatalogRoute};
+use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode, SpeedTargetValueType};
+use crate::types::geometry::shapes::Shape;
+use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
-pub struct SpeedAction { 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct SpeedAction {
     #[serde(rename = "SpeedActionDynamics")]
-    pub speed_action_dynamics: TransitionDynamics, 
+    pub speed_action_dynamics: TransitionDynamics,
     #[serde(rename = "SpeedActionTarget")]
-    pub speed_action_target: SpeedActionTarget 
+    pub speed_action_target: SpeedActionTarget,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
-pub struct TeleportAction { 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TeleportAction {
     #[serde(rename = "Position")]
-    pub position: Position 
+    pub position: Position,
 }
 
 // Remove duplicate import
@@ -54,16 +51,22 @@ pub struct TransitionDynamics {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedActionTarget {
-    #[serde(rename = "AbsoluteTargetSpeed", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "AbsoluteTargetSpeed",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub absolute: Option<AbsoluteTargetSpeed>,
-    #[serde(rename = "RelativeTargetSpeed", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "RelativeTargetSpeed",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative: Option<RelativeTargetSpeed>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct AbsoluteTargetSpeed { 
+pub struct AbsoluteTargetSpeed {
     #[serde(rename = "@value")]
-    pub value: Double 
+    pub value: Double,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -95,7 +98,7 @@ pub struct TrajectoryRef {
     /// Direct trajectory definition
     #[serde(rename = "Trajectory", skip_serializing_if = "Option::is_none")]
     pub trajectory: Option<Trajectory>,
-    
+
     /// Reference to a trajectory in a catalog
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
     pub catalog_reference: Option<CatalogReference<CatalogTrajectory>>,
@@ -114,11 +117,11 @@ pub struct FollowTrajectoryAction {
     /// Direct trajectory definition (for backward compatibility)
     #[serde(rename = "Trajectory", skip_serializing_if = "Option::is_none")]
     pub trajectory: Option<Trajectory>,
-    
+
     /// Reference to a trajectory in a catalog
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
     pub catalog_reference: Option<CatalogReference<CatalogTrajectory>>,
-    
+
     #[serde(rename = "TrajectoryFollowingMode")]
     pub trajectory_following_mode: TrajectoryFollowingMode,
 }
@@ -149,7 +152,7 @@ pub struct RouteRef {
     /// Direct route definition
     #[serde(rename = "Route", skip_serializing_if = "Option::is_none")]
     pub route: Option<Route>,
-    
+
     /// Reference to a route in a catalog
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
     pub catalog_reference: Option<CatalogReference<CatalogRoute>>,
@@ -167,9 +170,12 @@ pub struct FollowRouteAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoutingAction {
     /// Follow trajectory action
-    #[serde(rename = "FollowTrajectoryAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "FollowTrajectoryAction",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub follow_trajectory_action: Option<FollowTrajectoryAction>,
-    
+
     /// Follow route action
     #[serde(rename = "FollowRouteAction", skip_serializing_if = "Option::is_none")]
     pub follow_route_action: Option<FollowRouteAction>,
@@ -412,7 +418,6 @@ pub struct AcquirePositionAction {
 
 // Default implementations
 
-
 impl Default for TransitionDynamics {
     fn default() -> Self {
         Self {
@@ -504,8 +509,6 @@ impl Default for FollowRouteAction {
     }
 }
 
-
-
 // Helper implementations for catalog-based actions
 
 impl TrajectoryRef {
@@ -516,7 +519,7 @@ impl TrajectoryRef {
             catalog_reference: None,
         }
     }
-    
+
     /// Create a trajectory reference with catalog reference
     pub fn with_catalog_reference(catalog_reference: CatalogReference<CatalogTrajectory>) -> Self {
         Self {
@@ -524,19 +527,23 @@ impl TrajectoryRef {
             catalog_reference: Some(catalog_reference),
         }
     }
-    
+
     /// Create a trajectory reference from catalog name and entry name
     pub fn from_catalog(catalog_name: String, entry_name: String) -> Self {
         Self::with_catalog_reference(CatalogReference::new(catalog_name, entry_name))
     }
-    
+
     /// Create a trajectory reference from catalog with parameters
     pub fn from_catalog_with_parameters(
-        catalog_name: String, 
-        entry_name: String, 
-        parameters: Vec<ParameterAssignment>
+        catalog_name: String,
+        entry_name: String,
+        parameters: Vec<ParameterAssignment>,
     ) -> Self {
-        Self::with_catalog_reference(CatalogReference::with_parameters(catalog_name, entry_name, parameters))
+        Self::with_catalog_reference(CatalogReference::with_parameters(
+            catalog_name,
+            entry_name,
+            parameters,
+        ))
     }
 }
 
@@ -548,7 +555,7 @@ impl RouteRef {
             catalog_reference: None,
         }
     }
-    
+
     /// Create a route reference with catalog reference
     pub fn with_catalog_reference(catalog_reference: CatalogReference<CatalogRoute>) -> Self {
         Self {
@@ -556,19 +563,23 @@ impl RouteRef {
             catalog_reference: Some(catalog_reference),
         }
     }
-    
+
     /// Create a route reference from catalog name and entry name
     pub fn from_catalog(catalog_name: String, entry_name: String) -> Self {
         Self::with_catalog_reference(CatalogReference::new(catalog_name, entry_name))
     }
-    
+
     /// Create a route reference from catalog with parameters
     pub fn from_catalog_with_parameters(
-        catalog_name: String, 
-        entry_name: String, 
-        parameters: Vec<ParameterAssignment>
+        catalog_name: String,
+        entry_name: String,
+        parameters: Vec<ParameterAssignment>,
     ) -> Self {
-        Self::with_catalog_reference(CatalogReference::with_parameters(catalog_name, entry_name, parameters))
+        Self::with_catalog_reference(CatalogReference::with_parameters(
+            catalog_name,
+            entry_name,
+            parameters,
+        ))
     }
 }
 
@@ -581,7 +592,7 @@ impl FollowTrajectoryAction {
             trajectory_following_mode: TrajectoryFollowingMode { following_mode },
         }
     }
-    
+
     /// Create a follow trajectory action with catalog reference
     pub fn with_catalog_reference(
         catalog_reference: CatalogReference<CatalogTrajectory>,
@@ -593,16 +604,16 @@ impl FollowTrajectoryAction {
             trajectory_following_mode: TrajectoryFollowingMode { following_mode },
         }
     }
-    
+
     /// Create a follow trajectory action from catalog name and entry name
     pub fn from_catalog(
-        catalog_name: String, 
+        catalog_name: String,
         entry_name: String,
         following_mode: FollowingMode,
     ) -> Self {
         Self::with_catalog_reference(
             CatalogReference::new(catalog_name, entry_name),
-            following_mode
+            following_mode,
         )
     }
 }
@@ -614,14 +625,14 @@ impl FollowRouteAction {
             route_ref: RouteRef::with_route(route),
         }
     }
-    
+
     /// Create a follow route action with catalog reference
     pub fn with_catalog_reference(catalog_reference: CatalogReference<CatalogRoute>) -> Self {
         Self {
             route_ref: RouteRef::with_catalog_reference(catalog_reference),
         }
     }
-    
+
     /// Create a follow route action from catalog name and entry name
     pub fn from_catalog(catalog_name: String, entry_name: String) -> Self {
         Self {
@@ -638,7 +649,7 @@ impl RoutingAction {
             follow_route_action: None,
         }
     }
-    
+
     /// Create a routing action with route following
     pub fn with_route(action: FollowRouteAction) -> Self {
         Self {
@@ -646,7 +657,7 @@ impl RoutingAction {
             follow_route_action: Some(action),
         }
     }
-    
+
     /// Create a routing action with trajectory from catalog
     pub fn with_trajectory_from_catalog(
         catalog_name: String,
@@ -654,10 +665,12 @@ impl RoutingAction {
         following_mode: FollowingMode,
     ) -> Self {
         Self::with_trajectory(FollowTrajectoryAction::from_catalog(
-            catalog_name, entry_name, following_mode
+            catalog_name,
+            entry_name,
+            following_mode,
         ))
     }
-    
+
     /// Create a routing action with route from catalog
     pub fn with_route_from_catalog(catalog_name: String, entry_name: String) -> Self {
         Self::with_route(FollowRouteAction::from_catalog(catalog_name, entry_name))
@@ -695,9 +708,7 @@ impl Default for RelativeTargetLane {
 
 impl Default for AbsoluteTargetLane {
     fn default() -> Self {
-        Self {
-            value: 1,
-        }
+        Self { value: 1 }
     }
 }
 
@@ -714,7 +725,9 @@ impl Default for LaneOffsetAction {
 impl Default for LaneOffsetTarget {
     fn default() -> Self {
         Self {
-            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(AbsoluteTargetLaneOffset::default()),
+            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(
+                AbsoluteTargetLaneOffset::default(),
+            ),
         }
     }
 }
@@ -730,16 +743,16 @@ impl Default for RelativeTargetLaneOffset {
 
 impl Default for AbsoluteTargetLaneOffset {
     fn default() -> Self {
-        Self {
-            value: 0.0,
-        }
+        Self { value: 0.0 }
     }
 }
 
 impl Default for LateralAction {
     fn default() -> Self {
         Self {
-            lateral_action_choice: LateralActionChoice::LaneChangeAction(LaneChangeAction::default()),
+            lateral_action_choice: LateralActionChoice::LaneChangeAction(
+                LaneChangeAction::default(),
+            ),
         }
     }
 }
@@ -759,7 +772,9 @@ impl Default for LateralDistanceAction {
 impl Default for LongitudinalAction {
     fn default() -> Self {
         Self {
-            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(SpeedAction::default()),
+            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(
+                SpeedAction::default(),
+            ),
         }
     }
 }
@@ -825,17 +840,13 @@ impl Default for FinalSpeed {
 
 impl Default for AbsoluteSpeed {
     fn default() -> Self {
-        Self {
-            value: 10.0,
-        }
+        Self { value: 10.0 }
     }
 }
 
 impl Default for RelativeSpeedToMaster {
     fn default() -> Self {
-        Self {
-            value: 0.0,
-        }
+        Self { value: 0.0 }
     }
 }
 
@@ -851,15 +862,21 @@ impl Default for AcquirePositionAction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::positions::Position;
     use crate::types::enums::{DynamicsDimension, DynamicsShape};
+    use crate::types::positions::Position;
 
     #[test]
     fn test_lane_change_action_creation() {
         let action = LaneChangeAction::default();
         assert!(action.target_lane_offset.is_none());
-        assert_eq!(action.lane_change_action_dynamics.dynamics_dimension, DynamicsDimension::Time);
-        assert_eq!(action.lane_change_action_dynamics.dynamics_shape, DynamicsShape::Linear);
+        assert_eq!(
+            action.lane_change_action_dynamics.dynamics_dimension,
+            DynamicsDimension::Time
+        );
+        assert_eq!(
+            action.lane_change_action_dynamics.dynamics_shape,
+            DynamicsShape::Linear
+        );
     }
 
     #[test]
@@ -871,7 +888,7 @@ mod tests {
         let target = LaneChangeTarget {
             target_choice: LaneChangeTargetChoice::RelativeTargetLane(relative_target),
         };
-        
+
         if let LaneChangeTargetChoice::RelativeTargetLane(rel) = target.target_choice {
             assert_eq!(rel.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
             assert_eq!(rel.value, 2);
@@ -884,7 +901,10 @@ mod tests {
     fn test_lane_offset_action_creation() {
         let action = LaneOffsetAction::default();
         assert_eq!(action.continuous.as_literal(), Some(&false));
-        assert_eq!(action.lane_offset_action_dynamics.dynamics_dimension, DynamicsDimension::Time);
+        assert_eq!(
+            action.lane_offset_action_dynamics.dynamics_dimension,
+            DynamicsDimension::Time
+        );
     }
 
     #[test]
@@ -899,12 +919,15 @@ mod tests {
                 max_speed: Some(50.0),
             }),
         };
-        
-        assert_eq!(action.entity_ref.as_literal(), Some(&"TargetEntity".to_string()));
+
+        assert_eq!(
+            action.entity_ref.as_literal(),
+            Some(&"TargetEntity".to_string())
+        );
         assert_eq!(action.distance, 3.5);
         assert_eq!(action.freespace.unwrap().as_literal(), Some(&true));
         assert_eq!(action.continuous.as_literal(), Some(&false));
-        
+
         let constraints = action.dynamic_constraints.unwrap();
         assert_eq!(constraints.max_lateral_acc, Some(2.0));
         assert_eq!(constraints.max_speed, Some(50.0));
@@ -914,23 +937,27 @@ mod tests {
     fn test_longitudinal_action_choices() {
         // Test with SpeedAction
         let speed_action = LongitudinalAction {
-            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(SpeedAction::default()),
+            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(
+                SpeedAction::default(),
+            ),
         };
-        
+
         if let LongitudinalActionChoice::SpeedAction(_) = speed_action.longitudinal_action_choice {
             // Expected
         } else {
             panic!("Expected SpeedAction");
         }
-        
+
         // Test with LongitudinalDistanceAction
         let distance_action = LongitudinalAction {
             longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
-                LongitudinalDistanceAction::default()
+                LongitudinalDistanceAction::default(),
             ),
         };
-        
-        if let LongitudinalActionChoice::LongitudinalDistanceAction(dist) = distance_action.longitudinal_action_choice {
+
+        if let LongitudinalActionChoice::LongitudinalDistanceAction(dist) =
+            distance_action.longitudinal_action_choice
+        {
             assert_eq!(dist.distance, 10.0);
         } else {
             panic!("Expected LongitudinalDistanceAction");
@@ -939,9 +966,15 @@ mod tests {
 
     #[test]
     fn test_speed_profile_action_creation() {
-        let entry1 = SpeedProfileEntry { time: 0.0, speed: 10.0 };
-        let entry2 = SpeedProfileEntry { time: 5.0, speed: 20.0 };
-        
+        let entry1 = SpeedProfileEntry {
+            time: 0.0,
+            speed: 10.0,
+        };
+        let entry2 = SpeedProfileEntry {
+            time: 5.0,
+            speed: 20.0,
+        };
+
         let action = SpeedProfileAction {
             entity_ref: Some(OSString::literal("RefEntity".to_string())),
             dynamic_constraints: Some(DynamicConstraints {
@@ -950,8 +983,11 @@ mod tests {
             }),
             entries: vec![entry1, entry2],
         };
-        
-        assert_eq!(action.entity_ref.unwrap().as_literal(), Some(&"RefEntity".to_string()));
+
+        assert_eq!(
+            action.entity_ref.unwrap().as_literal(),
+            Some(&"RefEntity".to_string())
+        );
         assert_eq!(action.entries.len(), 2);
         assert_eq!(action.entries[0].time, 0.0);
         assert_eq!(action.entries[0].speed, 10.0);
@@ -969,9 +1005,12 @@ mod tests {
                 speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed { value: 15.0 }),
             }),
         };
-        
-        assert_eq!(action.target_entity_ref.as_literal(), Some(&"SyncTarget".to_string()));
-        
+
+        assert_eq!(
+            action.target_entity_ref.as_literal(),
+            Some(&"SyncTarget".to_string())
+        );
+
         if let Some(final_speed) = action.final_speed {
             if let FinalSpeedChoice::AbsoluteSpeed(abs_speed) = final_speed.speed_choice {
                 assert_eq!(abs_speed.value, 15.0);
@@ -986,9 +1025,12 @@ mod tests {
         let action = AcquirePositionAction {
             position: Position::default(),
         };
-        
+
         // Just ensure it compiles and has the expected structure
-        assert_eq!(std::mem::size_of_val(&action.position), std::mem::size_of::<Position>());
+        assert_eq!(
+            std::mem::size_of_val(&action.position),
+            std::mem::size_of::<Position>()
+        );
     }
 
     #[test]
@@ -997,10 +1039,10 @@ mod tests {
             max_lateral_acc: Some(3.0),
             max_speed: Some(80.0),
         };
-        
+
         assert_eq!(constraints.max_lateral_acc, Some(3.0));
         assert_eq!(constraints.max_speed, Some(80.0));
-        
+
         let empty_constraints = DynamicConstraints::default();
         assert!(empty_constraints.max_lateral_acc.is_none());
         assert!(empty_constraints.max_speed.is_none());
@@ -1012,16 +1054,18 @@ mod tests {
         let abs_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed { value: 25.0 }),
         };
-        
+
         if let FinalSpeedChoice::AbsoluteSpeed(abs) = abs_final.speed_choice {
             assert_eq!(abs.value, 25.0);
         }
-        
+
         // Test relative speed to master
         let rel_final = FinalSpeed {
-            speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster { value: -5.0 }),
+            speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
+                value: -5.0,
+            }),
         };
-        
+
         if let FinalSpeedChoice::RelativeSpeedToMaster(rel) = rel_final.speed_choice {
             assert_eq!(rel.value, -5.0);
         }
@@ -1032,13 +1076,16 @@ mod tests {
         // Test that all new action types have working defaults
         let lane_change = LaneChangeAction::default();
         assert!(lane_change.target_lane_offset.is_none());
-        
+
         let lane_offset = LaneOffsetAction::default();
         assert_eq!(lane_offset.continuous.as_literal(), Some(&false));
-        
+
         let sync_action = SynchronizeAction::default();
-        assert_eq!(sync_action.target_entity_ref.as_literal(), Some(&"DefaultEntity".to_string()));
-        
+        assert_eq!(
+            sync_action.target_entity_ref.as_literal(),
+            Some(&"DefaultEntity".to_string())
+        );
+
         let acquire_action = AcquirePositionAction::default();
         // Just verify it compiles and creates successfully
         let _ = acquire_action.position;
@@ -1047,3 +1094,4 @@ mod tests {
 
 // Add movement action validation
 // impl ValidateAction for SpeedAction, TeleportAction
+

@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::error::Result;
-use crate::types::basic::Value;
+use crate::types::basic::{Value, OSString, Double, Int, Boolean, UnsignedInt, UnsignedShort};
 use crate::types::entities::{vehicle, pedestrian};
 use crate::types::geometry::BoundingBox;
 use crate::types::controllers::{Controller, ParameterAssignments};
@@ -49,7 +49,7 @@ pub struct CatalogVehicle {
     
     /// Vehicle category (can be parameterized)
     #[serde(rename = "@vehicleCategory")]
-    pub vehicle_category: Value<String>,
+    pub vehicle_category: OSString,
     
     /// Bounding box (can have parameterized dimensions)
     #[serde(rename = "BoundingBox")]
@@ -76,11 +76,11 @@ pub struct CatalogVehicle {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogPerformance {
     #[serde(rename = "@maxSpeed")]
-    pub max_speed: Value<f64>,
+    pub max_speed: Double,
     #[serde(rename = "@maxAcceleration")]
-    pub max_acceleration: Value<f64>,
+    pub max_acceleration: Double,
     #[serde(rename = "@maxDeceleration")]
-    pub max_deceleration: Value<f64>,
+    pub max_deceleration: Double,
 }
 
 /// Axles with parameter support
@@ -96,30 +96,30 @@ pub struct CatalogAxles {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogFrontAxle {
     #[serde(rename = "@maxSteering")]
-    pub max_steering: Value<f64>,
+    pub max_steering: Double,
     #[serde(rename = "@wheelDiameter")]
-    pub wheel_diameter: Value<f64>,
+    pub wheel_diameter: Double,
     #[serde(rename = "@trackWidth")]
-    pub track_width: Value<f64>,
+    pub track_width: Double,
     #[serde(rename = "@positionX")]
-    pub position_x: Value<f64>,
+    pub position_x: Double,
     #[serde(rename = "@positionZ")]
-    pub position_z: Value<f64>,
+    pub position_z: Double,
 }
 
 /// Rear axle with parameter support
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogRearAxle {
     #[serde(rename = "@maxSteering")]
-    pub max_steering: Value<f64>,
+    pub max_steering: Double,
     #[serde(rename = "@wheelDiameter")]
-    pub wheel_diameter: Value<f64>,
+    pub wheel_diameter: Double,
     #[serde(rename = "@trackWidth")]
-    pub track_width: Value<f64>,
+    pub track_width: Double,
     #[serde(rename = "@positionX")]
-    pub position_x: Value<f64>,
+    pub position_x: Double,
     #[serde(rename = "@positionZ")]
-    pub position_z: Value<f64>,
+    pub position_z: Double,
 }
 
 impl CatalogEntity for CatalogVehicle {
@@ -209,7 +209,7 @@ impl CatalogVehicle {
     }
     
     /// Helper method to resolve vehicle category parameter
-    fn resolve_vehicle_category(&self, category: &Value<String>, parameters: &HashMap<String, String>) -> Result<crate::types::enums::VehicleCategory> {
+    fn resolve_vehicle_category(&self, category: &OSString, parameters: &HashMap<String, String>) -> Result<crate::types::enums::VehicleCategory> {
         let category_str = category.resolve(parameters)?;
         match category_str.as_str() {
             "car" => Ok(crate::types::enums::VehicleCategory::Car),
@@ -235,7 +235,7 @@ pub struct CatalogController {
     
     /// Type of controller (can be parameterized)
     #[serde(rename = "@controllerType")]
-    pub controller_type: Value<String>,
+    pub controller_type: OSString,
     
     /// Parameter declarations for this catalog controller
     #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
@@ -293,7 +293,7 @@ impl CatalogController {
     }
     
     /// Helper method to resolve controller type parameter
-    fn resolve_controller_type(&self, controller_type: &Value<String>, parameters: &HashMap<String, String>) -> Result<ControllerType> {
+    fn resolve_controller_type(&self, controller_type: &OSString, parameters: &HashMap<String, String>) -> Result<ControllerType> {
         let type_str = controller_type.resolve(parameters)?;
         match type_str.as_str() {
             "movement" => Ok(ControllerType::Movement),
@@ -318,7 +318,7 @@ pub struct CatalogPedestrian {
     
     /// Category of pedestrian (can be parameterized)
     #[serde(rename = "@pedestrianCategory")]
-    pub pedestrian_category: Value<String>,
+    pub pedestrian_category: OSString,
     
     /// Bounding box (can have parameterized dimensions)
     #[serde(rename = "BoundingBox")]
@@ -375,7 +375,7 @@ impl CatalogPedestrian {
     }
     
     /// Helper method to resolve pedestrian category parameter
-    fn resolve_pedestrian_category(&self, category: &Value<String>, parameters: &HashMap<String, String>) -> Result<PedestrianCategory> {
+    fn resolve_pedestrian_category(&self, category: &OSString, parameters: &HashMap<String, String>) -> Result<PedestrianCategory> {
         let category_str = category.resolve(parameters)?;
         match category_str.as_str() {
             "pedestrian" => Ok(PedestrianCategory::Pedestrian),
@@ -544,7 +544,7 @@ mod tests {
         let mut parameters = HashMap::new();
         parameters.insert("TestParam".to_string(), "42.0".to_string());
         
-        let value: Value<f64> = Value::Parameter("TestParam".to_string());
+        let value: Double = Value::Parameter("TestParam".to_string());
         let resolved = value.resolve(&parameters).unwrap();
         assert_eq!(resolved, 42.0);
     }

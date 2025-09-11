@@ -18,3 +18,4 @@ fn main() {
     println!("Scenario builder example placeholder");
     // TODO: Implement scenario builder example
 }
+

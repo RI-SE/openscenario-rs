@@ -14,23 +14,26 @@
 //! - Supporting both absolute and relative positioning strategies
 //! - Facilitating spatial calculations and geometric operations
 
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{Double, OSString};
 
 pub mod road;
-pub mod world;
 pub mod trajectory;
+pub mod world;
 
-pub use road::{RoadPosition, LanePosition, Orientation};
-pub use world::WorldPosition;
+pub use road::{LanePosition, Orientation, RoadPosition};
 pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryRef};
+pub use world::WorldPosition;
 
 /// Wrapper for Position element that contains position variants
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Position {
     #[serde(rename = "WorldPosition", skip_serializing_if = "Option::is_none")]
     pub world_position: Option<WorldPosition>,
-    #[serde(rename = "RelativeWorldPosition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "RelativeWorldPosition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_world_position: Option<RelativeWorldPosition>,
     #[serde(rename = "RoadPosition", skip_serializing_if = "Option::is_none")]
     pub road_position: Option<RoadPosition>,
@@ -38,8 +41,6 @@ pub struct Position {
     pub lane_position: Option<LanePosition>,
     // Other position types will be added later as Optional fields
 }
-
-
 
 /// Relative world position relative to an entity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -67,8 +68,6 @@ impl Default for Position {
     }
 }
 
-
-
 impl Default for RelativeWorldPosition {
     fn default() -> Self {
         Self {
@@ -79,3 +78,4 @@ impl Default for RelativeWorldPosition {
         }
     }
 }
+

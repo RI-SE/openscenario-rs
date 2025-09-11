@@ -1,12 +1,11 @@
 //! Basic geometric shapes for OpenSCENARIO
 
-use serde::{Deserialize, Serialize};
-use crate::types::basic::{Double};
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use crate::types::positions::Position;
+use serde::{Deserialize, Serialize};
 
 /// Three-dimensional bounding box for entity spatial extents
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct BoundingBox {
     /// Center position of the bounding box
     #[serde(rename = "Center")]
@@ -44,7 +43,6 @@ pub struct Dimensions {
     pub height: Double,
 }
 
-
 impl Default for Center {
     fn default() -> Self {
         Self {
@@ -58,7 +56,7 @@ impl Default for Center {
 impl Default for Dimensions {
     fn default() -> Self {
         Self {
-            width: crate::types::basic::Value::literal(2.0),  // Default car width
+            width: crate::types::basic::Value::literal(2.0), // Default car width
             length: crate::types::basic::Value::literal(4.5), // Default car length
             height: crate::types::basic::Value::literal(1.5), // Default car height
         }
@@ -121,12 +119,12 @@ mod tests {
     #[test]
     fn test_bounding_box_default() {
         let bbox = BoundingBox::default();
-        
+
         // Center should be at origin
         assert_eq!(bbox.center.x.as_literal().unwrap(), &0.0);
         assert_eq!(bbox.center.y.as_literal().unwrap(), &0.0);
         assert_eq!(bbox.center.z.as_literal().unwrap(), &0.0);
-        
+
         // Default dimensions should be car-like
         assert_eq!(bbox.dimensions.width.as_literal().unwrap(), &2.0);
         assert_eq!(bbox.dimensions.length.as_literal().unwrap(), &4.5);
@@ -136,7 +134,7 @@ mod tests {
     #[test]
     fn test_trajectory_vertex() {
         use crate::types::positions::{Position, WorldPosition};
-        
+
         let vertex = Vertex {
             time: crate::types::basic::Value::literal(0.04),
             position: Position {
@@ -146,14 +144,14 @@ mod tests {
                 lane_position: None,
             },
         };
-        
+
         assert_eq!(vertex.time.as_literal().unwrap(), &0.04);
     }
 
     #[test]
     fn test_polyline_structure() {
         use crate::types::positions::{Position, WorldPosition};
-        
+
         let polyline = Polyline {
             vertices: vec![
                 Vertex {
@@ -176,7 +174,7 @@ mod tests {
                 },
             ],
         };
-        
+
         assert_eq!(polyline.vertices.len(), 2);
         assert_eq!(polyline.vertices[0].time.as_literal().unwrap(), &0.0);
         assert_eq!(polyline.vertices[1].time.as_literal().unwrap(), &0.04);
@@ -185,7 +183,7 @@ mod tests {
     #[test]
     fn test_shape_serialization() {
         use crate::types::positions::{Position, WorldPosition};
-        
+
         let shape = Shape {
             polyline: Some(Polyline {
                 vertices: vec![Vertex {
@@ -199,7 +197,7 @@ mod tests {
                 }],
             }),
         };
-        
+
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(xml.contains("<Polyline"));
         assert!(xml.contains("time=\"1\""));
@@ -219,10 +217,11 @@ mod tests {
                 height: crate::types::basic::Value::literal(1.4),
             },
         };
-        
+
         // Test that serialization works
         let xml = quick_xml::se::to_string(&bbox).unwrap();
         assert!(xml.contains("x=\"1\""));
         assert!(xml.contains("width=\"1.8\""));
     }
 }
+

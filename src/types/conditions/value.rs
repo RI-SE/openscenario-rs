@@ -15,8 +15,8 @@
 //! - Facilitating infrastructure integration through signal state monitoring
 //! - Enabling custom condition logic through extensible user-defined types
 
-use crate::types::{Double};
-use crate::types::enums::{Rule};
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::enums::Rule;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -31,7 +31,10 @@ pub struct SimulationTimeCondition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ByValueCondition {
     /// Simulation time-based condition
-    #[serde(rename = "SimulationTimeCondition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "SimulationTimeCondition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub simulation_time: Option<SimulationTimeCondition>,
     // More value conditions will be added later as optional fields
 }
@@ -52,3 +55,4 @@ impl Default for ByValueCondition {
         }
     }
 }
+

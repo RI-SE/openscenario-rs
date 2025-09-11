@@ -14,9 +14,9 @@
 //! - Facilitating intersection and traffic signal simulation
 //! - Following complete OpenSCENARIO specification for traffic management
 
-use serde::{Deserialize, Serialize};
-use crate::types::basic::{Boolean, OSString, Double};
+use crate::types::basic::{Boolean, Double, Int, OSString};
 use crate::types::positions::Position;
+use serde::{Deserialize, Serialize};
 
 // PHASE 4C: Core Traffic Management Actions
 
@@ -206,7 +206,7 @@ pub struct TrafficAreaVertex {
 impl Default for TrafficSourceAction {
     fn default() -> Self {
         Self {
-            rate: 10.0, // 10 vehicles per minute
+            rate: 10.0,           // 10 vehicles per minute
             velocity: Some(50.0), // 50 km/h default velocity
             position: Position::default(),
             traffic_definition: TrafficDefinition::default(),
@@ -217,7 +217,7 @@ impl Default for TrafficSourceAction {
 impl Default for TrafficSinkAction {
     fn default() -> Self {
         Self {
-            rate: 10.0, // 10 vehicles per minute
+            rate: 10.0,   // 10 vehicles per minute
             radius: 50.0, // 50 meter radius
             position: Position::default(),
             traffic_definition: None,
@@ -251,7 +251,7 @@ impl Default for TrafficSignalAction {
     fn default() -> Self {
         Self {
             signal_action_choice: TrafficSignalActionChoice::TrafficSignalStateAction(
-                TrafficSignalStateAction::default()
+                TrafficSignalStateAction::default(),
             ),
         }
     }
@@ -316,12 +316,10 @@ impl Default for VehicleCategoryDistribution {
 impl Default for ControllerDistribution {
     fn default() -> Self {
         Self {
-            entries: vec![
-                ControllerDistributionEntry {
-                    weight: 1.0,
-                    controller: OSString::literal("DefaultTrafficController".to_string()),
-                }
-            ],
+            entries: vec![ControllerDistributionEntry {
+                weight: 1.0,
+                controller: OSString::literal("DefaultTrafficController".to_string()),
+            }],
         }
     }
 }
@@ -377,7 +375,12 @@ impl TrafficSourceAction {
     }
 
     /// Create traffic source with velocity
-    pub fn with_velocity(rate: f64, velocity: f64, position: Position, traffic_definition: TrafficDefinition) -> Self {
+    pub fn with_velocity(
+        rate: f64,
+        velocity: f64,
+        position: Position,
+        traffic_definition: TrafficDefinition,
+    ) -> Self {
         Self {
             rate,
             velocity: Some(velocity),
@@ -400,10 +403,10 @@ impl TrafficSinkAction {
 
     /// Create traffic sink with traffic definition
     pub fn with_traffic_definition(
-        rate: f64, 
-        radius: f64, 
-        position: Position, 
-        traffic_definition: TrafficDefinition
+        rate: f64,
+        radius: f64,
+        position: Position,
+        traffic_definition: TrafficDefinition,
     ) -> Self {
         Self {
             rate,
@@ -454,7 +457,7 @@ impl TrafficSignalAction {
                 TrafficSignalStateAction {
                     name: OSString::literal(name),
                     state: OSString::literal(state),
-                }
+                },
             ),
         }
     }
@@ -466,7 +469,7 @@ impl TrafficSignalAction {
                 TrafficSignalControllerAction {
                     traffic_signal_controller_ref: OSString::literal(controller_ref),
                     phase_ref: OSString::literal(phase_ref),
-                }
+                },
             ),
         }
     }
@@ -507,8 +510,8 @@ impl TrafficDefinition {
 
     /// Create traffic definition with both vehicles and controllers
     pub fn with_both(
-        vehicles: VehicleCategoryDistribution, 
-        controllers: ControllerDistribution
+        vehicles: VehicleCategoryDistribution,
+        controllers: ControllerDistribution,
     ) -> Self {
         Self {
             vehicle_category_distribution: Some(vehicles),
@@ -606,14 +609,14 @@ impl TrafficArea {
     pub fn circle(center_x: f64, center_y: f64, radius: f64, segments: u32) -> Self {
         let mut vertices = Vec::new();
         let segment_angle = 2.0 * std::f64::consts::PI / segments as f64;
-        
+
         for i in 0..segments {
             let angle = i as f64 * segment_angle;
             let x = center_x + radius * angle.cos();
             let y = center_y + radius * angle.sin();
             vertices.push(TrafficAreaVertex::new(x, y, 0.0));
         }
-        
+
         Self { vertices }
     }
 }
@@ -626,12 +629,9 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_creation() {
-        let source = TrafficSourceAction::new(
-            15.0, 
-            Position::default(), 
-            TrafficDefinition::default()
-        );
-        
+        let source =
+            TrafficSourceAction::new(15.0, Position::default(), TrafficDefinition::default());
+
         assert_eq!(source.rate, 15.0);
         assert!(source.velocity.is_none());
     }
@@ -639,12 +639,12 @@ mod tests {
     #[test]
     fn test_traffic_source_with_velocity() {
         let source = TrafficSourceAction::with_velocity(
-            20.0, 
-            60.0, 
-            Position::default(), 
-            TrafficDefinition::default()
+            20.0,
+            60.0,
+            Position::default(),
+            TrafficDefinition::default(),
         );
-        
+
         assert_eq!(source.rate, 20.0);
         assert_eq!(source.velocity, Some(60.0));
     }
@@ -652,7 +652,7 @@ mod tests {
     #[test]
     fn test_traffic_sink_action_creation() {
         let sink = TrafficSinkAction::new(10.0, 30.0, Position::default());
-        
+
         assert_eq!(sink.rate, 10.0);
         assert_eq!(sink.radius, 30.0);
         assert!(sink.traffic_definition.is_none());
@@ -661,12 +661,12 @@ mod tests {
     #[test]
     fn test_traffic_sink_with_definition() {
         let sink = TrafficSinkAction::with_traffic_definition(
-            12.0, 
-            40.0, 
-            Position::default(), 
-            TrafficDefinition::default()
+            12.0,
+            40.0,
+            Position::default(),
+            TrafficDefinition::default(),
         );
-        
+
         assert_eq!(sink.rate, 12.0);
         assert_eq!(sink.radius, 40.0);
         assert!(sink.traffic_definition.is_some());
@@ -681,8 +681,11 @@ mod tests {
             15,
             TrafficDefinition::default(),
         );
-        
-        assert_eq!(swarm.central_object.as_literal(), Some(&"LeadVehicle".to_string()));
+
+        assert_eq!(
+            swarm.central_object.as_literal(),
+            Some(&"LeadVehicle".to_string())
+        );
         assert_eq!(swarm.inner_radius, 5.0);
         assert_eq!(swarm.outer_radius, 25.0);
         assert_eq!(swarm.number_of_vehicles, 15);
@@ -696,9 +699,9 @@ mod tests {
             TrafficAreaVertex::new(50.0, 50.0, 0.0),
             TrafficAreaVertex::new(0.0, 50.0, 0.0),
         ];
-        
+
         let area = TrafficAreaAction::new(vertices.clone(), TrafficDefinition::default());
-        
+
         assert_eq!(area.traffic_area.vertices.len(), 4);
         assert_eq!(area.traffic_area.vertices[0].x(), Some(&0.0));
         assert_eq!(area.traffic_area.vertices[1].x(), Some(&50.0));
@@ -706,13 +709,16 @@ mod tests {
 
     #[test]
     fn test_traffic_signal_state_action() {
-        let signal = TrafficSignalAction::state_action(
-            "Intersection1".to_string(),
-            "red".to_string(),
-        );
-        
-        if let TrafficSignalActionChoice::TrafficSignalStateAction(state_action) = signal.signal_action_choice {
-            assert_eq!(state_action.name.as_literal(), Some(&"Intersection1".to_string()));
+        let signal =
+            TrafficSignalAction::state_action("Intersection1".to_string(), "red".to_string());
+
+        if let TrafficSignalActionChoice::TrafficSignalStateAction(state_action) =
+            signal.signal_action_choice
+        {
+            assert_eq!(
+                state_action.name.as_literal(),
+                Some(&"Intersection1".to_string())
+            );
             assert_eq!(state_action.state.as_literal(), Some(&"red".to_string()));
         } else {
             panic!("Expected TrafficSignalStateAction");
@@ -721,14 +727,20 @@ mod tests {
 
     #[test]
     fn test_traffic_signal_controller_action() {
-        let signal = TrafficSignalAction::controller_action(
-            "Controller1".to_string(),
-            "Phase2".to_string(),
-        );
-        
-        if let TrafficSignalActionChoice::TrafficSignalControllerAction(controller_action) = signal.signal_action_choice {
-            assert_eq!(controller_action.traffic_signal_controller_ref.as_literal(), Some(&"Controller1".to_string()));
-            assert_eq!(controller_action.phase_ref.as_literal(), Some(&"Phase2".to_string()));
+        let signal =
+            TrafficSignalAction::controller_action("Controller1".to_string(), "Phase2".to_string());
+
+        if let TrafficSignalActionChoice::TrafficSignalControllerAction(controller_action) =
+            signal.signal_action_choice
+        {
+            assert_eq!(
+                controller_action.traffic_signal_controller_ref.as_literal(),
+                Some(&"Controller1".to_string())
+            );
+            assert_eq!(
+                controller_action.phase_ref.as_literal(),
+                Some(&"Phase2".to_string())
+            );
         } else {
             panic!("Expected TrafficSignalControllerAction");
         }
@@ -738,7 +750,7 @@ mod tests {
     fn test_traffic_stop_action() {
         let enable = TrafficStopAction::enable();
         assert_eq!(enable.enable.as_literal(), Some(&true));
-        
+
         let disable = TrafficStopAction::disable();
         assert_eq!(disable.enable.as_literal(), Some(&false));
     }
@@ -747,8 +759,11 @@ mod tests {
     fn test_vehicle_category_distribution() {
         let mixed = VehicleCategoryDistribution::mixed_traffic();
         assert_eq!(mixed.entries.len(), 3);
-        assert!(mixed.entries.iter().any(|e| matches!(e.category, VehicleCategory::Car)));
-        
+        assert!(mixed
+            .entries
+            .iter()
+            .any(|e| matches!(e.category, VehicleCategory::Car)));
+
         let urban = VehicleCategoryDistribution::urban_traffic();
         assert_eq!(urban.entries.len(), 3);
         assert_eq!(urban.entries[0].weight, 0.85); // Mostly cars
@@ -758,9 +773,9 @@ mod tests {
     fn test_traffic_definition_creation() {
         let vehicles = VehicleCategoryDistribution::urban_traffic();
         let controllers = ControllerDistribution::single_controller("AI1".to_string(), 1.0);
-        
+
         let definition = TrafficDefinition::with_both(vehicles, controllers);
-        
+
         assert!(definition.vehicle_category_distribution.is_some());
         assert!(definition.controller_distribution.is_some());
     }
@@ -773,10 +788,10 @@ mod tests {
         assert_eq!(rect.vertices[0].y(), Some(&20.0));
         assert_eq!(rect.vertices[2].x(), Some(&40.0)); // 10 + 30
         assert_eq!(rect.vertices[2].y(), Some(&60.0)); // 20 + 40
-        
+
         let circle = TrafficArea::circle(0.0, 0.0, 10.0, 8);
         assert_eq!(circle.vertices.len(), 8);
-        
+
         // First vertex should be at (10, 0) for angle 0
         assert!((circle.vertices[0].x().unwrap() - 10.0).abs() < 1e-10);
         assert!((circle.vertices[0].y().unwrap() - 0.0).abs() < 1e-10);
@@ -787,12 +802,21 @@ mod tests {
         let car = VehicleCategory::Car;
         let truck = VehicleCategory::Truck;
         let bike = VehicleCategory::Bicycle;
-        
+
         // Test that enum variants exist and can be used
-        let entry1 = VehicleCategoryDistributionEntry { category: car, weight: 0.6 };
-        let entry2 = VehicleCategoryDistributionEntry { category: truck, weight: 0.3 };
-        let entry3 = VehicleCategoryDistributionEntry { category: bike, weight: 0.1 };
-        
+        let entry1 = VehicleCategoryDistributionEntry {
+            category: car,
+            weight: 0.6,
+        };
+        let entry2 = VehicleCategoryDistributionEntry {
+            category: truck,
+            weight: 0.3,
+        };
+        let entry3 = VehicleCategoryDistributionEntry {
+            category: bike,
+            weight: 0.1,
+        };
+
         assert_eq!(entry1.weight, 0.6);
         assert_eq!(entry2.weight, 0.3);
         assert_eq!(entry3.weight, 0.1);
@@ -803,17 +827,18 @@ mod tests {
         let source = TrafficSourceAction::default();
         assert_eq!(source.rate, 10.0);
         assert_eq!(source.velocity, Some(50.0));
-        
+
         let sink = TrafficSinkAction::default();
         assert_eq!(sink.rate, 10.0);
         assert_eq!(sink.radius, 50.0);
-        
+
         let swarm = TrafficSwarmAction::default();
         assert_eq!(swarm.number_of_vehicles, 20);
         assert_eq!(swarm.inner_radius, 10.0);
         assert_eq!(swarm.outer_radius, 50.0);
-        
+
         let stop = TrafficStopAction::default();
         assert_eq!(stop.enable.as_literal(), Some(&true));
     }
 }
+

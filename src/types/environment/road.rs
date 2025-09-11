@@ -10,8 +10,8 @@
 //! - Providing road condition setup for OpenSCENARIO scenarios
 //! - Supporting variable road conditions for weather-dependent testing
 
-use serde::{Deserialize, Serialize};
 use crate::types::basic::Double;
+use serde::{Deserialize, Serialize};
 
 /// Road surface conditions affecting vehicle dynamics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,3 +27,4 @@ impl Default for RoadCondition {
         }
     }
 }
+

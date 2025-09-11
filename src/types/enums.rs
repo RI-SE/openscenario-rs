@@ -1491,8 +1491,14 @@ mod tests {
 
     #[test]
     fn test_vehicle_category_from_str() {
-        assert_eq!("car".parse::<VehicleCategory>().unwrap(), VehicleCategory::Car);
-        assert_eq!("truck".parse::<VehicleCategory>().unwrap(), VehicleCategory::Truck);
+        assert_eq!(
+            "car".parse::<VehicleCategory>().unwrap(),
+            VehicleCategory::Car
+        );
+        assert_eq!(
+            "truck".parse::<VehicleCategory>().unwrap(),
+            VehicleCategory::Truck
+        );
         assert!("invalid".parse::<VehicleCategory>().is_err());
     }
 
@@ -1511,8 +1517,14 @@ mod tests {
 
     #[test]
     fn test_misc_object_category_from_str() {
-        assert_eq!("barrier".parse::<MiscObjectCategory>().unwrap(), MiscObjectCategory::Barrier);
-        assert_eq!("obstacle".parse::<MiscObjectCategory>().unwrap(), MiscObjectCategory::Obstacle);
+        assert_eq!(
+            "barrier".parse::<MiscObjectCategory>().unwrap(),
+            MiscObjectCategory::Barrier
+        );
+        assert_eq!(
+            "obstacle".parse::<MiscObjectCategory>().unwrap(),
+            MiscObjectCategory::Obstacle
+        );
         assert!("invalid".parse::<MiscObjectCategory>().is_err());
     }
 
@@ -1554,14 +1566,23 @@ mod tests {
 
     #[test]
     fn test_angle_type_from_str() {
-        assert_eq!("relative".parse::<AngleType>().unwrap(), AngleType::Relative);
-        assert_eq!("absolute".parse::<AngleType>().unwrap(), AngleType::Absolute);
+        assert_eq!(
+            "relative".parse::<AngleType>().unwrap(),
+            AngleType::Relative
+        );
+        assert_eq!(
+            "absolute".parse::<AngleType>().unwrap(),
+            AngleType::Absolute
+        );
         assert!("invalid".parse::<AngleType>().is_err());
     }
 
     #[test]
     fn test_directional_dimension_display() {
-        assert_eq!(DirectionalDimension::Longitudinal.to_string(), "longitudinal");
+        assert_eq!(
+            DirectionalDimension::Longitudinal.to_string(),
+            "longitudinal"
+        );
         assert_eq!(DirectionalDimension::Lateral.to_string(), "lateral");
         assert_eq!(DirectionalDimension::Vertical.to_string(), "vertical");
     }
@@ -1569,7 +1590,10 @@ mod tests {
     #[test]
     fn test_vehicle_component_type_display() {
         assert_eq!(VehicleComponentType::Hood.to_string(), "hood");
-        assert_eq!(VehicleComponentType::DoorFrontLeft.to_string(), "doorFrontLeft");
+        assert_eq!(
+            VehicleComponentType::DoorFrontLeft.to_string(),
+            "doorFrontLeft"
+        );
     }
 
     #[test]
@@ -1595,10 +1619,22 @@ mod tests {
 
     #[test]
     fn test_automatic_gear_type_from_str() {
-        assert_eq!("n".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Neutral);
-        assert_eq!("p".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Park);
-        assert_eq!("r".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Reverse);
-        assert_eq!("d".parse::<AutomaticGearType>().unwrap(), AutomaticGearType::Drive);
+        assert_eq!(
+            "n".parse::<AutomaticGearType>().unwrap(),
+            AutomaticGearType::Neutral
+        );
+        assert_eq!(
+            "p".parse::<AutomaticGearType>().unwrap(),
+            AutomaticGearType::Park
+        );
+        assert_eq!(
+            "r".parse::<AutomaticGearType>().unwrap(),
+            AutomaticGearType::Reverse
+        );
+        assert_eq!(
+            "d".parse::<AutomaticGearType>().unwrap(),
+            AutomaticGearType::Drive
+        );
         assert!("invalid".parse::<AutomaticGearType>().is_err());
     }
 
@@ -1611,9 +1647,18 @@ mod tests {
 
     #[test]
     fn test_fractional_cloud_cover_from_str() {
-        assert_eq!("zeroOktas".parse::<FractionalCloudCover>().unwrap(), FractionalCloudCover::ZeroOktas);
-        assert_eq!("fiveOktas".parse::<FractionalCloudCover>().unwrap(), FractionalCloudCover::FiveOktas);
-        assert_eq!("nineOktas".parse::<FractionalCloudCover>().unwrap(), FractionalCloudCover::NineOktas);
+        assert_eq!(
+            "zeroOktas".parse::<FractionalCloudCover>().unwrap(),
+            FractionalCloudCover::ZeroOktas
+        );
+        assert_eq!(
+            "fiveOktas".parse::<FractionalCloudCover>().unwrap(),
+            FractionalCloudCover::FiveOktas
+        );
+        assert_eq!(
+            "nineOktas".parse::<FractionalCloudCover>().unwrap(),
+            FractionalCloudCover::NineOktas
+        );
         assert!("invalid".parse::<FractionalCloudCover>().is_err());
     }
 
@@ -1627,44 +1672,97 @@ mod tests {
 
     #[test]
     fn test_pedestrian_motion_type_from_str() {
-        assert_eq!("standing".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::Standing);
-        assert_eq!("walking".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::Walking);
-        assert_eq!("running".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::Running);
-        assert_eq!("bendingDown".parse::<PedestrianMotionType>().unwrap(), PedestrianMotionType::BendingDown);
+        assert_eq!(
+            "standing".parse::<PedestrianMotionType>().unwrap(),
+            PedestrianMotionType::Standing
+        );
+        assert_eq!(
+            "walking".parse::<PedestrianMotionType>().unwrap(),
+            PedestrianMotionType::Walking
+        );
+        assert_eq!(
+            "running".parse::<PedestrianMotionType>().unwrap(),
+            PedestrianMotionType::Running
+        );
+        assert_eq!(
+            "bendingDown".parse::<PedestrianMotionType>().unwrap(),
+            PedestrianMotionType::BendingDown
+        );
         assert!("invalid".parse::<PedestrianMotionType>().is_err());
     }
 
     #[test]
     fn test_pedestrian_gesture_type_display() {
-        assert_eq!(PedestrianGestureType::PhoneCallRightHand.to_string(), "phoneCallRightHand");
-        assert_eq!(PedestrianGestureType::WavingLeftArm.to_string(), "wavingLeftArm");
-        assert_eq!(PedestrianGestureType::CoffeeRightHand.to_string(), "coffeeRightHand");
-        assert_eq!(PedestrianGestureType::SandwichLeftHand.to_string(), "sandwichLeftHand");
+        assert_eq!(
+            PedestrianGestureType::PhoneCallRightHand.to_string(),
+            "phoneCallRightHand"
+        );
+        assert_eq!(
+            PedestrianGestureType::WavingLeftArm.to_string(),
+            "wavingLeftArm"
+        );
+        assert_eq!(
+            PedestrianGestureType::CoffeeRightHand.to_string(),
+            "coffeeRightHand"
+        );
+        assert_eq!(
+            PedestrianGestureType::SandwichLeftHand.to_string(),
+            "sandwichLeftHand"
+        );
     }
 
     #[test]
     fn test_pedestrian_gesture_type_from_str() {
-        assert_eq!("phoneCallRightHand".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::PhoneCallRightHand);
-        assert_eq!("wavingLeftArm".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::WavingLeftArm);
-        assert_eq!("coffeeRightHand".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::CoffeeRightHand);
-        assert_eq!("sandwichLeftHand".parse::<PedestrianGestureType>().unwrap(), PedestrianGestureType::SandwichLeftHand);
+        assert_eq!(
+            "phoneCallRightHand"
+                .parse::<PedestrianGestureType>()
+                .unwrap(),
+            PedestrianGestureType::PhoneCallRightHand
+        );
+        assert_eq!(
+            "wavingLeftArm".parse::<PedestrianGestureType>().unwrap(),
+            PedestrianGestureType::WavingLeftArm
+        );
+        assert_eq!(
+            "coffeeRightHand".parse::<PedestrianGestureType>().unwrap(),
+            PedestrianGestureType::CoffeeRightHand
+        );
+        assert_eq!(
+            "sandwichLeftHand".parse::<PedestrianGestureType>().unwrap(),
+            PedestrianGestureType::SandwichLeftHand
+        );
         assert!("invalid".parse::<PedestrianGestureType>().is_err());
     }
 
     #[test]
     fn test_route_strategy_display() {
         assert_eq!(RouteStrategy::Fastest.to_string(), "fastest");
-        assert_eq!(RouteStrategy::LeastIntersections.to_string(), "leastIntersections");
+        assert_eq!(
+            RouteStrategy::LeastIntersections.to_string(),
+            "leastIntersections"
+        );
         assert_eq!(RouteStrategy::Random.to_string(), "random");
         assert_eq!(RouteStrategy::Shortest.to_string(), "shortest");
     }
 
     #[test]
     fn test_route_strategy_from_str() {
-        assert_eq!("fastest".parse::<RouteStrategy>().unwrap(), RouteStrategy::Fastest);
-        assert_eq!("leastIntersections".parse::<RouteStrategy>().unwrap(), RouteStrategy::LeastIntersections);
-        assert_eq!("random".parse::<RouteStrategy>().unwrap(), RouteStrategy::Random);
-        assert_eq!("shortest".parse::<RouteStrategy>().unwrap(), RouteStrategy::Shortest);
+        assert_eq!(
+            "fastest".parse::<RouteStrategy>().unwrap(),
+            RouteStrategy::Fastest
+        );
+        assert_eq!(
+            "leastIntersections".parse::<RouteStrategy>().unwrap(),
+            RouteStrategy::LeastIntersections
+        );
+        assert_eq!(
+            "random".parse::<RouteStrategy>().unwrap(),
+            RouteStrategy::Random
+        );
+        assert_eq!(
+            "shortest".parse::<RouteStrategy>().unwrap(),
+            RouteStrategy::Shortest
+        );
         assert!("invalid".parse::<RouteStrategy>().is_err());
     }
 
@@ -1672,48 +1770,104 @@ mod tests {
     fn test_routing_algorithm_display() {
         assert_eq!(RoutingAlgorithm::AssignedRoute.to_string(), "assignedRoute");
         assert_eq!(RoutingAlgorithm::Fastest.to_string(), "fastest");
-        assert_eq!(RoutingAlgorithm::LeastIntersections.to_string(), "leastIntersections");
+        assert_eq!(
+            RoutingAlgorithm::LeastIntersections.to_string(),
+            "leastIntersections"
+        );
         assert_eq!(RoutingAlgorithm::Shortest.to_string(), "shortest");
         assert_eq!(RoutingAlgorithm::Undefined.to_string(), "undefined");
     }
 
     #[test]
     fn test_routing_algorithm_from_str() {
-        assert_eq!("assignedRoute".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::AssignedRoute);
-        assert_eq!("fastest".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Fastest);
-        assert_eq!("leastIntersections".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::LeastIntersections);
-        assert_eq!("shortest".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Shortest);
-        assert_eq!("undefined".parse::<RoutingAlgorithm>().unwrap(), RoutingAlgorithm::Undefined);
+        assert_eq!(
+            "assignedRoute".parse::<RoutingAlgorithm>().unwrap(),
+            RoutingAlgorithm::AssignedRoute
+        );
+        assert_eq!(
+            "fastest".parse::<RoutingAlgorithm>().unwrap(),
+            RoutingAlgorithm::Fastest
+        );
+        assert_eq!(
+            "leastIntersections".parse::<RoutingAlgorithm>().unwrap(),
+            RoutingAlgorithm::LeastIntersections
+        );
+        assert_eq!(
+            "shortest".parse::<RoutingAlgorithm>().unwrap(),
+            RoutingAlgorithm::Shortest
+        );
+        assert_eq!(
+            "undefined".parse::<RoutingAlgorithm>().unwrap(),
+            RoutingAlgorithm::Undefined
+        );
         assert!("invalid".parse::<RoutingAlgorithm>().is_err());
     }
 
     #[test]
     fn test_lateral_displacement_display() {
         assert_eq!(LateralDisplacement::Any.to_string(), "any");
-        assert_eq!(LateralDisplacement::LeftToReferencedEntity.to_string(), "leftToReferencedEntity");
-        assert_eq!(LateralDisplacement::RightToReferencedEntity.to_string(), "rightToReferencedEntity");
+        assert_eq!(
+            LateralDisplacement::LeftToReferencedEntity.to_string(),
+            "leftToReferencedEntity"
+        );
+        assert_eq!(
+            LateralDisplacement::RightToReferencedEntity.to_string(),
+            "rightToReferencedEntity"
+        );
     }
 
     #[test]
     fn test_lateral_displacement_from_str() {
-        assert_eq!("any".parse::<LateralDisplacement>().unwrap(), LateralDisplacement::Any);
-        assert_eq!("leftToReferencedEntity".parse::<LateralDisplacement>().unwrap(), LateralDisplacement::LeftToReferencedEntity);
-        assert_eq!("rightToReferencedEntity".parse::<LateralDisplacement>().unwrap(), LateralDisplacement::RightToReferencedEntity);
+        assert_eq!(
+            "any".parse::<LateralDisplacement>().unwrap(),
+            LateralDisplacement::Any
+        );
+        assert_eq!(
+            "leftToReferencedEntity"
+                .parse::<LateralDisplacement>()
+                .unwrap(),
+            LateralDisplacement::LeftToReferencedEntity
+        );
+        assert_eq!(
+            "rightToReferencedEntity"
+                .parse::<LateralDisplacement>()
+                .unwrap(),
+            LateralDisplacement::RightToReferencedEntity
+        );
         assert!("invalid".parse::<LateralDisplacement>().is_err());
     }
 
     #[test]
     fn test_longitudinal_displacement_display() {
         assert_eq!(LongitudinalDisplacement::Any.to_string(), "any");
-        assert_eq!(LongitudinalDisplacement::TrailingReferencedEntity.to_string(), "trailingReferencedEntity");
-        assert_eq!(LongitudinalDisplacement::LeadingReferencedEntity.to_string(), "leadingReferencedEntity");
+        assert_eq!(
+            LongitudinalDisplacement::TrailingReferencedEntity.to_string(),
+            "trailingReferencedEntity"
+        );
+        assert_eq!(
+            LongitudinalDisplacement::LeadingReferencedEntity.to_string(),
+            "leadingReferencedEntity"
+        );
     }
 
     #[test]
     fn test_longitudinal_displacement_from_str() {
-        assert_eq!("any".parse::<LongitudinalDisplacement>().unwrap(), LongitudinalDisplacement::Any);
-        assert_eq!("trailingReferencedEntity".parse::<LongitudinalDisplacement>().unwrap(), LongitudinalDisplacement::TrailingReferencedEntity);
-        assert_eq!("leadingReferencedEntity".parse::<LongitudinalDisplacement>().unwrap(), LongitudinalDisplacement::LeadingReferencedEntity);
+        assert_eq!(
+            "any".parse::<LongitudinalDisplacement>().unwrap(),
+            LongitudinalDisplacement::Any
+        );
+        assert_eq!(
+            "trailingReferencedEntity"
+                .parse::<LongitudinalDisplacement>()
+                .unwrap(),
+            LongitudinalDisplacement::TrailingReferencedEntity
+        );
+        assert_eq!(
+            "leadingReferencedEntity"
+                .parse::<LongitudinalDisplacement>()
+                .unwrap(),
+            LongitudinalDisplacement::LeadingReferencedEntity
+        );
         assert!("invalid".parse::<LongitudinalDisplacement>().is_err());
     }
 
@@ -1730,7 +1884,10 @@ mod tests {
     fn test_cloud_state_from_str() {
         assert_eq!("cloudy".parse::<CloudState>().unwrap(), CloudState::Cloudy);
         assert_eq!("free".parse::<CloudState>().unwrap(), CloudState::Free);
-        assert_eq!("overcast".parse::<CloudState>().unwrap(), CloudState::Overcast);
+        assert_eq!(
+            "overcast".parse::<CloudState>().unwrap(),
+            CloudState::Overcast
+        );
         assert_eq!("rainy".parse::<CloudState>().unwrap(), CloudState::Rainy);
         assert_eq!("skyOff".parse::<CloudState>().unwrap(), CloudState::SkyOff);
         assert!("invalid".parse::<CloudState>().is_err());
@@ -1744,3 +1901,4 @@ mod tests {
         // If CloudState is used in real code, developers should migrate to FractionalCloudCover
     }
 }
+

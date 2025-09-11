@@ -10,7 +10,7 @@ use std::collections::HashMap;
 pub mod basic;
 pub mod enums;
 
-// Entity and object types  
+// Entity and object types
 pub mod entities;
 pub mod geometry;
 
@@ -27,65 +27,81 @@ pub mod environment;
 
 // Advanced features (to be expanded)
 pub mod catalogs;
-pub mod distributions;
 pub mod controllers;
+pub mod distributions;
 
 // Road network types
 pub mod road;
 
 // Re-export commonly used types for convenience
 pub use basic::{
-    Value, OSString, Double, Int, UnsignedInt, UnsignedShort, Boolean,
-    ParameterDeclarations, ParameterDeclaration, ValueConstraintGroup, ValueConstraint, Range,
-    Directory
+    Boolean, Directory, Double, Int, OSString, ParameterDeclaration, ParameterDeclarations, Range,
+    UnsignedInt, UnsignedShort, Value, ValueConstraint, ValueConstraintGroup,
 };
 pub use enums::{
-    VehicleCategory, PedestrianCategory, ObjectType, Rule, ConditionEdge,
-    Priority, ParameterType, TriggeringEntitiesRule,
-    DynamicsDimension, DynamicsShape, MiscObjectCategory, ControllerType,
-    PrecipitationType, Wetness, ColorType, Role, AngleType, DirectionalDimension,
-    VehicleComponentType, VehicleLightType, LightMode, AutomaticGearType,
-    FractionalCloudCover, PedestrianMotionType, PedestrianGestureType,
-    RouteStrategy, RoutingAlgorithm
+    AngleType, AutomaticGearType, ColorType, ConditionEdge, ControllerType, DirectionalDimension,
+    DynamicsDimension, DynamicsShape, FractionalCloudCover, LightMode, MiscObjectCategory,
+    ObjectType, ParameterType, PedestrianCategory, PedestrianGestureType, PedestrianMotionType,
+    PrecipitationType, Priority, Role, RouteStrategy, RoutingAlgorithm, Rule,
+    TriggeringEntitiesRule, VehicleCategory, VehicleComponentType, VehicleLightType, Wetness,
 };
-pub use scenario::storyboard::{OpenScenario, FileHeader, Storyboard};
-pub use scenario::init::{Init, Actions, GlobalAction, EnvironmentAction, Private, PrivateActionWrapper, PrivateActionType, LongitudinalAction};
-pub use environment::{Environment, TimeOfDay, Weather, Sun, Fog, Precipitation, RoadCondition};
+pub use environment::{Environment, Fog, Precipitation, RoadCondition, Sun, TimeOfDay, Weather};
+pub use scenario::init::{
+    Actions, EnvironmentAction, GlobalAction, Init, LongitudinalAction, Private, PrivateActionType,
+    PrivateActionWrapper,
+};
+pub use scenario::storyboard::{FileHeader, OpenScenario, Storyboard};
 
 // Re-export distribution types
 pub use distributions::{
-    ParameterValueDistribution, DistributionDefinition, UserDefinedDistribution,
-    DistributionSampler, ValidateDistribution,
+    DeterministicMultiParameterDistribution,
+    DeterministicMultiParameterDistributionType,
     // Deterministic types
-    DeterministicParameterDistribution, DeterministicSingleParameterDistribution, 
-    DeterministicMultiParameterDistribution, DeterministicSingleParameterDistributionType,
-    DeterministicMultiParameterDistributionType, DistributionSet, DistributionSetElement,
-    DistributionRange, ValueSetDistribution, ParameterValueSet, ParameterAssignment,
+    DeterministicParameterDistribution,
+    DeterministicSingleParameterDistribution,
+    DeterministicSingleParameterDistributionType,
+    DistributionDefinition,
+    DistributionRange,
+    DistributionSampler,
+    DistributionSet,
+    DistributionSetElement,
+    Histogram,
+    HistogramBin,
+    LogNormalDistribution,
+    NormalDistribution,
+    ParameterAssignment,
+    ParameterValueDistribution,
+    ParameterValueSet,
+    PoissonDistribution,
+    ProbabilityDistributionSet,
+    ProbabilityDistributionSetElement,
     // Stochastic types
-    StochasticDistribution, StochasticDistributionType, ProbabilityDistributionSet,
-    ProbabilityDistributionSetElement, NormalDistribution, LogNormalDistribution,
-    UniformDistribution, PoissonDistribution, Histogram, HistogramBin,
+    StochasticDistribution,
+    StochasticDistributionType,
+    UniformDistribution,
+    UserDefinedDistribution,
+    ValidateDistribution,
+    ValueSetDistribution,
 };
 
 // Re-export controller types
 pub use controllers::{
-    Controller, ObjectController, ControllerProperties,
-    ActivateControllerAction, OverrideControllerValueAction,
-    ControllerAssignment, ControllerDistribution,
+    ActivateControllerAction, Controller, ControllerAssignment, ControllerDistribution,
+    ControllerProperties, ObjectController, OverrideControllerValueAction,
 };
 
 // Re-export catalog location types
 pub use catalogs::locations::{
-    VehicleCatalogLocation, ControllerCatalogLocation, PedestrianCatalogLocation,
-    MiscObjectCatalogLocation, EnvironmentCatalogLocation, ManeuverCatalogLocation,
-    TrajectoryCatalogLocation, RouteCatalogLocation, CatalogLocations,
+    CatalogLocations, ControllerCatalogLocation, EnvironmentCatalogLocation,
+    ManeuverCatalogLocation, MiscObjectCatalogLocation, PedestrianCatalogLocation,
+    RouteCatalogLocation, TrajectoryCatalogLocation, VehicleCatalogLocation,
 };
 
 // Re-export entity types (when implemented)
 // pub use entities::{Vehicle, Pedestrian, MiscObject, Entities, ScenarioObject};
 
 /// Common trait for types that support validation
-/// 
+///
 /// This trait will be implemented by all major OpenSCENARIO types to enable
 /// comprehensive validation of scenario documents.
 pub trait Validate {
@@ -94,7 +110,7 @@ pub trait Validate {
 }
 
 /// Common trait for types that support parameter resolution
-/// 
+///
 /// This trait enables resolution of ${parameter} references to their actual values
 /// using a parameter context containing the parameter definitions.
 pub trait Resolve<T> {
@@ -103,7 +119,7 @@ pub trait Resolve<T> {
 }
 
 /// Context for validation operations
-/// 
+///
 /// Contains references to entities, catalogs, and other global state needed
 /// for validating cross-references and constraints.
 #[derive(Debug, Default)]
@@ -121,13 +137,13 @@ impl ValidationContext {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Enable strict validation mode
     pub fn with_strict_mode(mut self) -> Self {
         self.strict_mode = true;
         self
     }
-    
+
     /// Add an entity to the validation registry
     pub fn add_entity(&mut self, name: std::string::String, entity_ref: EntityRef) {
         self.entities.insert(name, entity_ref);
@@ -135,7 +151,7 @@ impl ValidationContext {
 }
 
 /// Context for parameter resolution
-/// 
+///
 /// Contains the parameter values and scope information needed to resolve
 /// ${parameter} references to their actual values.
 #[derive(Debug, Default)]
@@ -151,13 +167,13 @@ impl ParameterContext {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add a parameter value
     pub fn with_parameter(mut self, name: std::string::String, value: std::string::String) -> Self {
         self.parameters.insert(name, value);
         self
     }
-    
+
     /// Get a parameter value by name
     pub fn get(&self, name: &str) -> Option<&str> {
         self.parameters.get(name).map(|s| s.as_str())
@@ -190,8 +206,8 @@ impl<T> Validate for Value<T> {
     }
 }
 
-impl<T: Clone> Resolve<T> for Value<T> 
-where 
+impl<T: Clone> Resolve<T> for Value<T>
+where
     T: std::str::FromStr,
     T::Err: std::fmt::Display,
 {
@@ -199,3 +215,4 @@ where
         self.resolve(&ctx.parameters)
     }
 }
+

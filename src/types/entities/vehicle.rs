@@ -1,9 +1,9 @@
 //! Vehicle entity definition
 
-use serde::{Deserialize, Serialize};
-use crate::types::basic::{OSString, Double};
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use crate::types::enums::VehicleCategory;
 use crate::types::geometry::BoundingBox;
+use serde::{Deserialize, Serialize};
 
 /// Vehicle performance characteristics
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -17,8 +17,7 @@ pub struct Performance {
 }
 
 /// Axle definitions for vehicle
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Axles {
     #[serde(rename = "FrontAxle")]
     pub front_axle: FrontAxle,
@@ -57,8 +56,7 @@ pub struct RearAxle {
 }
 
 /// Vehicle properties container
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Properties {
     #[serde(rename = "Property", default)]
     pub properties: Vec<Property>,
@@ -88,23 +86,23 @@ pub struct Vehicle {
     /// Name of the vehicle
     #[serde(rename = "@name")]
     pub name: OSString,
-    
+
     /// Category of the vehicle (car, truck, bus, etc.)
     #[serde(rename = "@vehicleCategory")]
     pub vehicle_category: VehicleCategory,
-    
+
     /// Bounding box defining the vehicle's spatial extents
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
-    
+
     /// Vehicle performance characteristics
     #[serde(rename = "Performance")]
     pub performance: Performance,
-    
+
     /// Axle definitions
     #[serde(rename = "Axles")]
     pub axles: Axles,
-    
+
     /// Vehicle properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
     pub properties: Option<Properties>,
@@ -144,8 +142,6 @@ impl Default for RearAxle {
     }
 }
 
-
-
 impl Default for Vehicle {
     fn default() -> Self {
         Self {
@@ -166,12 +162,15 @@ mod tests {
     #[test]
     fn test_vehicle_default() {
         let vehicle = Vehicle::default();
-        
+
         assert_eq!(vehicle.name.as_literal().unwrap(), "DefaultVehicle");
         assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
-        
+
         // Should have default bounding box
-        assert_eq!(vehicle.bounding_box.dimensions.width.as_literal().unwrap(), &2.0);
+        assert_eq!(
+            vehicle.bounding_box.dimensions.width.as_literal().unwrap(),
+            &2.0
+        );
     }
 
     #[test]
@@ -184,7 +183,7 @@ mod tests {
             axles: Axles::default(),
             properties: None,
         };
-        
+
         assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
         assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
     }
@@ -192,7 +191,7 @@ mod tests {
     #[test]
     fn test_vehicle_serialization() {
         let vehicle = Vehicle::default();
-        
+
         // Test that serialization works
         let xml = quick_xml::se::to_string(&vehicle).unwrap();
         assert!(xml.contains("name=\"DefaultVehicle\""));
@@ -200,3 +199,4 @@ mod tests {
         assert!(xml.contains("BoundingBox"));
     }
 }
+

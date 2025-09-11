@@ -6,14 +6,13 @@
 //! - Parameter substitution during resolution
 //! - Integration of resolved content into scenarios
 
-use crate::error::{Error, Result};
-use crate::types::catalogs::controllers::{ControllerCatalog, CatalogController};
-use crate::types::catalogs::trajectories::{TrajectoryCatalog, CatalogTrajectory};
-use crate::types::catalogs::routes::{RouteCatalog, CatalogRoute};
-use crate::types::catalogs::environments::{EnvironmentCatalog, CatalogEnvironment};
 use crate::catalog::parameters::ParameterSubstitutionEngine;
+use crate::error::{Error, Result};
+use crate::types::catalogs::controllers::{CatalogController, ControllerCatalog};
+use crate::types::catalogs::environments::{CatalogEnvironment, EnvironmentCatalog};
+use crate::types::catalogs::routes::{CatalogRoute, RouteCatalog};
+use crate::types::catalogs::trajectories::{CatalogTrajectory, TrajectoryCatalog};
 use std::collections::{HashMap, HashSet};
-
 
 /// Represents a resolved catalog entity
 pub struct ResolvedCatalog<T> {
@@ -74,8 +73,6 @@ impl CatalogManager {
         }
     }
 
-
-
     /// Add a controller catalog
     pub fn add_controller_catalog(&mut self, name: String, catalog: ControllerCatalog) {
         self.controller_catalogs.insert(name, catalog);
@@ -111,26 +108,36 @@ impl CatalogManager {
         self.parameter_resolver.context()
     }
 
-
-
     /// Resolve controller reference from controller catalogs
-    pub fn resolve_controller_reference(&self, catalog_name: &str, entry_name: &str) -> Result<ResolvedCatalog<CatalogController>> {
+    pub fn resolve_controller_reference(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+    ) -> Result<ResolvedCatalog<CatalogController>> {
         self.resolve_controller_reference_with_params(catalog_name, entry_name, &HashMap::new())
     }
 
     /// Resolve controller reference with parameter overrides
-    pub fn resolve_controller_reference_with_params(&self, catalog_name: &str, entry_name: &str, params: &HashMap<String, String>) -> Result<ResolvedCatalog<CatalogController>> {
+    pub fn resolve_controller_reference_with_params(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<ResolvedCatalog<CatalogController>> {
         if let Some(catalog) = self.controller_catalogs.get(catalog_name) {
             for controller in &catalog.controllers {
                 if controller.name == entry_name {
-                    let resolved_controller = if !params.is_empty() || !self.parameter_resolver.context().is_empty() {
-                        // Apply parameter substitution if needed
-                        let _param_engine = self.parameter_resolver.with_additional_context(params.clone());
-                        // For now, return the original controller
-                        controller.clone()
-                    } else {
-                        controller.clone()
-                    };
+                    let resolved_controller =
+                        if !params.is_empty() || !self.parameter_resolver.context().is_empty() {
+                            // Apply parameter substitution if needed
+                            let _param_engine = self
+                                .parameter_resolver
+                                .with_additional_context(params.clone());
+                            // For now, return the original controller
+                            controller.clone()
+                        } else {
+                            controller.clone()
+                        };
 
                     return Ok(ResolvedCatalog::with_parameters(
                         resolved_controller,
@@ -142,17 +149,27 @@ impl CatalogManager {
             }
         }
         Err(Error::catalog_error(&format!(
-            "Controller '{}' not found in catalog '{}'", entry_name, catalog_name
+            "Controller '{}' not found in catalog '{}'",
+            entry_name, catalog_name
         )))
     }
 
     /// Resolve trajectory reference from trajectory catalogs
-    pub fn resolve_trajectory_reference(&self, catalog_name: &str, entry_name: &str) -> Result<ResolvedCatalog<CatalogTrajectory>> {
+    pub fn resolve_trajectory_reference(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+    ) -> Result<ResolvedCatalog<CatalogTrajectory>> {
         self.resolve_trajectory_reference_with_params(catalog_name, entry_name, &HashMap::new())
     }
 
     /// Resolve trajectory reference with parameter overrides
-    pub fn resolve_trajectory_reference_with_params(&self, catalog_name: &str, entry_name: &str, params: &HashMap<String, String>) -> Result<ResolvedCatalog<CatalogTrajectory>> {
+    pub fn resolve_trajectory_reference_with_params(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<ResolvedCatalog<CatalogTrajectory>> {
         if let Some(catalog) = self.trajectory_catalogs.get(catalog_name) {
             for trajectory in &catalog.trajectories {
                 if trajectory.name == entry_name {
@@ -166,17 +183,27 @@ impl CatalogManager {
             }
         }
         Err(Error::catalog_error(&format!(
-            "Trajectory '{}' not found in catalog '{}'", entry_name, catalog_name
+            "Trajectory '{}' not found in catalog '{}'",
+            entry_name, catalog_name
         )))
     }
 
     /// Resolve route reference from route catalogs
-    pub fn resolve_route_reference(&self, catalog_name: &str, entry_name: &str) -> Result<ResolvedCatalog<CatalogRoute>> {
+    pub fn resolve_route_reference(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+    ) -> Result<ResolvedCatalog<CatalogRoute>> {
         self.resolve_route_reference_with_params(catalog_name, entry_name, &HashMap::new())
     }
 
     /// Resolve route reference with parameter overrides
-    pub fn resolve_route_reference_with_params(&self, catalog_name: &str, entry_name: &str, params: &HashMap<String, String>) -> Result<ResolvedCatalog<CatalogRoute>> {
+    pub fn resolve_route_reference_with_params(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<ResolvedCatalog<CatalogRoute>> {
         if let Some(catalog) = self.route_catalogs.get(catalog_name) {
             for route in &catalog.routes {
                 if route.name == entry_name {
@@ -190,17 +217,27 @@ impl CatalogManager {
             }
         }
         Err(Error::catalog_error(&format!(
-            "Route '{}' not found in catalog '{}'", entry_name, catalog_name
+            "Route '{}' not found in catalog '{}'",
+            entry_name, catalog_name
         )))
     }
 
     /// Resolve environment reference from environment catalogs
-    pub fn resolve_environment_reference(&self, catalog_name: &str, entry_name: &str) -> Result<ResolvedCatalog<CatalogEnvironment>> {
+    pub fn resolve_environment_reference(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+    ) -> Result<ResolvedCatalog<CatalogEnvironment>> {
         self.resolve_environment_reference_with_params(catalog_name, entry_name, &HashMap::new())
     }
 
     /// Resolve environment reference with parameter overrides
-    pub fn resolve_environment_reference_with_params(&self, catalog_name: &str, entry_name: &str, params: &HashMap<String, String>) -> Result<ResolvedCatalog<CatalogEnvironment>> {
+    pub fn resolve_environment_reference_with_params(
+        &self,
+        catalog_name: &str,
+        entry_name: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<ResolvedCatalog<CatalogEnvironment>> {
         if let Some(catalog) = self.environment_catalogs.get(catalog_name) {
             for environment in &catalog.environments {
                 if environment.name == entry_name {
@@ -214,7 +251,8 @@ impl CatalogManager {
             }
         }
         Err(Error::catalog_error(&format!(
-            "Environment '{}' not found in catalog '{}'", entry_name, catalog_name
+            "Environment '{}' not found in catalog '{}'",
+            entry_name, catalog_name
         )))
     }
 }
@@ -339,18 +377,18 @@ mod tests {
     #[test]
     fn test_circular_dependency_detection() {
         let mut resolver = CatalogResolver::new();
-        
+
         // Start resolving a reference
         assert!(resolver.begin_resolution("vehicle1").is_ok());
         assert!(resolver.is_resolving("vehicle1"));
-        
+
         // Try to resolve the same reference again - should detect circular dependency
         assert!(resolver.begin_resolution("vehicle1").is_err());
-        
+
         // End the resolution
         resolver.end_resolution("vehicle1");
         assert!(!resolver.is_resolving("vehicle1"));
-        
+
         // Now we can start resolving it again
         assert!(resolver.begin_resolution("vehicle1").is_ok());
         resolver.end_resolution("vehicle1");
@@ -364,7 +402,7 @@ mod tests {
             "/path/to/catalog.xosc".to_string(),
             "TestVehicle".to_string(),
         );
-        
+
         assert_eq!(resolved.entity(), &entity);
         assert_eq!(resolved.metadata().catalog_path, "/path/to/catalog.xosc");
         assert_eq!(resolved.metadata().entity_name, "TestVehicle");
@@ -376,15 +414,16 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("MaxSpeed".to_string(), "60.0".to_string());
         params.insert("Color".to_string(), "Red".to_string());
-        
+
         let resolved = ResolvedCatalog::with_parameters(
             42u32,
             "/catalogs/vehicles.xosc".to_string(),
             "SportsCar".to_string(),
             params.clone(),
         );
-        
+
         assert_eq!(*resolved.entity(), 42u32);
         assert_eq!(resolved.metadata().parameter_substitutions, params);
     }
 }
+

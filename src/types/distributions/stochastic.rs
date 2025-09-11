@@ -1,7 +1,7 @@
 //! Stochastic distribution types for probabilistic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::Value;
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort, Value};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
@@ -11,9 +11,9 @@ pub struct StochasticDistribution {
     #[serde(flatten)]
     pub distribution_type: StochasticDistributionType,
     #[serde(rename = "@parameterName")]
-    pub parameter_name: Value<String>,
+    pub parameter_name: OSString,
     #[serde(rename = "@randomSeed", skip_serializing_if = "Option::is_none")]
-    pub random_seed: Option<Value<String>>,
+    pub random_seed: Option<OSString>,
 }
 
 /// Types of stochastic distributions
@@ -40,18 +40,18 @@ pub struct ProbabilityDistributionSet {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProbabilityDistributionSetElement {
     #[serde(rename = "@value")]
-    pub value: Value<String>,
+    pub value: OSString,
     #[serde(rename = "@weight")]
-    pub weight: Value<String>,
+    pub weight: OSString,
 }
 
 /// Normal (Gaussian) distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NormalDistribution {
     #[serde(rename = "@expectedValue")]
-    pub expected_value: Value<String>,
+    pub expected_value: OSString,
     #[serde(rename = "@variance")]
-    pub variance: Value<String>,
+    pub variance: OSString,
     #[serde(rename = "@range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
 }
@@ -60,9 +60,9 @@ pub struct NormalDistribution {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LogNormalDistribution {
     #[serde(rename = "@expectedValue")]
-    pub expected_value: Value<String>,
+    pub expected_value: OSString,
     #[serde(rename = "@variance")]
-    pub variance: Value<String>,
+    pub variance: OSString,
     #[serde(rename = "@range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
 }
@@ -78,7 +78,7 @@ pub struct UniformDistribution {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PoissonDistribution {
     #[serde(rename = "@expectedValue")]
-    pub expected_value: Value<String>,
+    pub expected_value: OSString,
     #[serde(rename = "@range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
 }
@@ -96,16 +96,16 @@ pub struct HistogramBin {
     #[serde(rename = "@range")]
     pub range: Range,
     #[serde(rename = "@weight")]
-    pub weight: Value<String>,
+    pub weight: OSString,
 }
 
 /// Range specification for distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Range {
     #[serde(rename = "@lowerLimit")]
-    pub lower_limit: Value<String>,
+    pub lower_limit: OSString,
     #[serde(rename = "@upperLimit")]
-    pub upper_limit: Value<String>,
+    pub upper_limit: OSString,
 }
 
 impl ValidateDistribution for StochasticDistribution {
@@ -125,8 +125,9 @@ impl ValidateDistribution for StochasticDistribution {
 impl ValidateDistribution for ProbabilityDistributionSet {
     fn validate(&self) -> Result<()> {
         if self.elements.is_empty() {
-            return Err(crate::error::Error::validation_error("elements",
-                "ProbabilityDistributionSet must have at least one element"
+            return Err(crate::error::Error::validation_error(
+                "elements",
+                "ProbabilityDistributionSet must have at least one element",
             ));
         }
         Ok(())
@@ -163,15 +164,16 @@ impl ValidateDistribution for PoissonDistribution {
 impl ValidateDistribution for Histogram {
     fn validate(&self) -> Result<()> {
         if self.bins.is_empty() {
-            return Err(crate::error::Error::validation_error("bins",
-                "Histogram must have at least one bin"
+            return Err(crate::error::Error::validation_error(
+                "bins",
+                "Histogram must have at least one bin",
             ));
         }
-        
+
         for bin in &self.bins {
             bin.validate()?;
         }
-        
+
         Ok(())
     }
 }
@@ -191,7 +193,7 @@ impl ValidateDistribution for Range {
 
 impl DistributionSampler for ProbabilityDistributionSet {
     type Output = String;
-    
+
     fn sample(&self) -> Result<Self::Output> {
         // For basic implementation, return the first element
         if let Some(first_element) = self.elements.first() {
@@ -205,12 +207,13 @@ impl DistributionSampler for ProbabilityDistributionSet {
                 )),
             }
         } else {
-            Err(crate::error::Error::validation_error("sampling",
-                "Cannot sample from empty probability distribution set"
+            Err(crate::error::Error::validation_error(
+                "sampling",
+                "Cannot sample from empty probability distribution set",
             ))
         }
     }
-    
+
     fn is_deterministic(&self) -> bool {
         false
     }
@@ -218,19 +221,20 @@ impl DistributionSampler for ProbabilityDistributionSet {
 
 impl DistributionSampler for UniformDistribution {
     type Output = String;
-    
+
     fn sample(&self) -> Result<Self::Output> {
         // For basic implementation, return a placeholder
         match (&self.range.lower_limit, &self.range.upper_limit) {
-            (Value::Literal(lower), Value::Literal(upper)) => {
+            (OSString::Literal(lower), OSString::Literal(upper)) => {
                 Ok(format!("uniform({}, {})", lower, upper))
-            },
-            _ => Err(crate::error::Error::validation_error("sampling",
-                "Cannot sample from parameterized distribution without parameter resolution"
+            }
+            _ => Err(crate::error::Error::validation_error(
+                "sampling",
+                "Cannot sample from parameterized distribution without parameter resolution",
             )),
         }
     }
-    
+
     fn is_deterministic(&self) -> bool {
         false
     }
@@ -245,17 +249,17 @@ mod tests {
         let valid_set = ProbabilityDistributionSet {
             elements: vec![
                 ProbabilityDistributionSetElement {
-                    value: Value::Literal("A".to_string()),
-                    weight: Value::Literal("0.6".to_string()),
+                    value: OSString::Literal("A".to_string()),
+                    weight: OSString::Literal("0.6".to_string()),
                 },
                 ProbabilityDistributionSetElement {
-                    value: Value::Literal("B".to_string()),
-                    weight: Value::Literal("0.4".to_string()),
+                    value: OSString::Literal("B".to_string()),
+                    weight: OSString::Literal("0.4".to_string()),
                 },
             ],
         };
         assert!(valid_set.validate().is_ok());
-        
+
         let empty_set = ProbabilityDistributionSet { elements: vec![] };
         assert!(empty_set.validate().is_err());
     }
@@ -277,7 +281,7 @@ mod tests {
                 upper_limit: Value::Literal("10.0".to_string()),
             },
         };
-        
+
         let sample = uniform.sample().unwrap();
         assert!(sample.contains("uniform"));
         assert!(!uniform.is_deterministic());
@@ -286,18 +290,16 @@ mod tests {
     #[test]
     fn test_histogram_validation() {
         let valid_histogram = Histogram {
-            bins: vec![
-                HistogramBin {
-                    range: Range {
-                        lower_limit: Value::Literal("0.0".to_string()),
-                        upper_limit: Value::Literal("5.0".to_string()),
-                    },
-                    weight: Value::Literal("0.3".to_string()),
+            bins: vec![HistogramBin {
+                range: Range {
+                    lower_limit: Value::Literal("0.0".to_string()),
+                    upper_limit: Value::Literal("5.0".to_string()),
                 },
-            ],
+                weight: Value::Literal("0.3".to_string()),
+            }],
         };
         assert!(valid_histogram.validate().is_ok());
-        
+
         let empty_histogram = Histogram { bins: vec![] };
         assert!(empty_histogram.validate().is_err());
     }

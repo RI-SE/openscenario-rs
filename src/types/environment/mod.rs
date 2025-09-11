@@ -13,14 +13,14 @@
 //! - Providing integration with external environment systems
 //! - Facilitating environment-dependent scenario validation
 
+use crate::types::basic::{Boolean, Double, Int, OSString};
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{OSString, Boolean};
 
-pub mod weather;
 pub mod road;
+pub mod weather;
 
-pub use weather::*;
 pub use road::*;
+pub use weather::*;
 
 /// Complete Environment container for scenario environmental setup
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn test_environment_default() {
         let environment = Environment::default();
-        
+
         assert_eq!(environment.name.as_literal().unwrap(), "DefaultEnvironment");
         assert_eq!(environment.time_of_day.date_time, "2021-01-01T12:00:00");
         assert!(!environment.time_of_day.animation.as_literal().unwrap());
@@ -126,3 +126,4 @@ mod tests {
         assert!(serialized.contains("<RoadCondition"));
     }
 }
+

@@ -1,6 +1,6 @@
 //! Trajectory and route-based position types for path following
 
-use crate::types::basic::{Double, OSString as XoscString};
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 use serde::{Deserialize, Serialize};
 
 /// Trajectory definition with shape and parameters
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "PascalCase")]
 pub struct Trajectory {
     /// Name of the trajectory
-    pub name: Option<XoscString>,
+    pub name: Option<OSString>,
     /// Whether the trajectory is closed (forms a loop)
     pub closed: Option<bool>,
     /// Shape definition of the trajectory
@@ -72,7 +72,7 @@ pub enum TrajectoryFollowingMode {
 #[serde(rename_all = "camelCase")]
 pub struct TrajectoryRef {
     /// Name/ID of the trajectory
-    pub trajectory: XoscString,
+    pub trajectory: OSString,
 }
 
 impl Default for Trajectory {
@@ -80,9 +80,8 @@ impl Default for Trajectory {
         Self {
             name: None,
             closed: None,
-            shape: TrajectoryShape::Polyline(Polyline {
-                vertex: Vec::new(),
-            }),
+            shape: TrajectoryShape::Polyline(Polyline { vertex: Vec::new() }),
         }
     }
 }
+

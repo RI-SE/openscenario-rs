@@ -14,7 +14,10 @@
 //! - Offering copy-paste starting point for basic use cases
 //! - Validating API ergonomics and developer experience
 
-use openscenario_rs::parse_str;
+use openscenario_rs::{
+    parse_str,
+    types::{catalogs::locations, VehicleCatalogLocation},
+};
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,38 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for entity in &scenario.entities.scenario_objects {
             println!("  - {:?}", entity.name);
         }
-    }
-
-    let result = parse_str(&xml);
-
-    match result {
-        Ok(scenario) => {
-            // Verify file header information
-            assert_eq!(
-                scenario.file_header.author.as_literal().unwrap(),
-                "OnSite_TOPS"
-            );
-            assert_eq!(
-                scenario.file_header.description.as_literal().unwrap(),
-                "scenario_highD"
-            );
-            assert_eq!(scenario.file_header.rev_major.as_literal().unwrap(), &1);
-            assert_eq!(scenario.file_header.rev_minor.as_literal().unwrap(), &0);
-            assert_eq!(
-                scenario.file_header.date.as_literal().unwrap(),
-                "2021-11-02T16:20:00"
-            );
-
-            let st = quick_xml::se::to_string(&scenario);
-            print!("{:?}", st);
-        }
-        Err(e) => {
-            // For now, we expect parsing to potentially fail due to incomplete implementation
-            println!(
-                "Expected parsing failure due to incomplete implementation: {}",
-                e
-            );
-            // This is acceptable for MVP - we're testing the framework, not full parsing capability
+        for e in &scenario.catalog_locations {
+            print!("{:#?}", e.vehicle_catalog);
         }
     }
 

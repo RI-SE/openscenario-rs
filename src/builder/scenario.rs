@@ -39,3 +39,4 @@
 // TODO: Add convenience methods for common patterns
 // TODO: pub fn with_ego_vehicle(mut self, vehicle: Vehicle) -> Self
 // TODO: pub fn with_simple_scenario_structure(mut self) -> Self
+

@@ -4,7 +4,7 @@
 //! including controller definitions, activation actions, and parameter management.
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{Value, ParameterDeclarations};
+use crate::types::basic::{OSString, Double, Int, Boolean, UnsignedInt, UnsignedShort, Value, ParameterDeclarations};
 use crate::types::enums::ControllerType;
 use crate::types::distributions::ParameterValueDistribution;
 use crate::types::entities::vehicle::{Properties, Property};
@@ -26,8 +26,8 @@ impl Default for ParameterAssignments {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ParameterAssignment {
-    pub parameter_ref: Value<String>,
-    pub value: Value<String>,
+    pub parameter_ref: OSString,
+    pub value: OSString,
 }
 
 impl Default for ParameterAssignment {
@@ -43,7 +43,7 @@ impl Default for ParameterAssignment {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Directory {
-    pub path: Value<String>,
+    pub path: OSString,
 }
 
 impl Default for Directory {
@@ -63,7 +63,7 @@ impl Default for Directory {
 pub struct Controller {
     /// Name of the controller
     #[serde(rename = "@name")]
-    pub name: Value<String>,
+    pub name: OSString,
 
     /// Type of controller (interactive, external, etc.)
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
@@ -141,7 +141,7 @@ impl Default for ControllerProperties {
 pub struct ActivateControllerAction {
     /// Reference to the controller to activate
     #[serde(rename = "@controllerRef")]
-    pub controller_ref: Value<String>,
+    pub controller_ref: OSString,
 
     /// Parameter assignments for controller activation
     #[serde(rename = "ParameterAssignments", skip_serializing_if = "Option::is_none")]
@@ -166,7 +166,7 @@ impl Default for ActivateControllerAction {
 pub struct OverrideControllerValueAction {
     /// Reference to the controller to override
     #[serde(rename = "@controllerRef")]
-    pub controller_ref: Value<String>,
+    pub controller_ref: OSString,
 
     /// Parameter assignments for the override
     #[serde(rename = "ParameterAssignments")]
@@ -174,7 +174,7 @@ pub struct OverrideControllerValueAction {
 
     /// Whether the override is active
     #[serde(rename = "@active")]
-    pub active: Value<bool>,
+    pub active: Boolean,
 }
 
 impl Default for OverrideControllerValueAction {
@@ -195,11 +195,11 @@ impl Default for OverrideControllerValueAction {
 pub struct ControllerAssignment {
     /// Reference to the controller
     #[serde(rename = "@controllerRef")]
-    pub controller_ref: Value<String>,
+    pub controller_ref: OSString,
 
     /// Target entity for the controller
     #[serde(rename = "@targetEntity")]
-    pub target_entity: Value<String>,
+    pub target_entity: OSString,
 }
 
 impl Default for ControllerAssignment {

@@ -1,3 +1,4 @@
+use crate::types::basic::{OSString, Double, Int, Boolean, UnsignedInt, UnsignedShort};
 //! Utility module root for common helper functions and utilities
 //!
 //! This file contains:

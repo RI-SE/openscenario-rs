@@ -14,8 +14,8 @@
 //! - Facilitating dynamic scenario adaptation based on entity states
 //! - Enabling complex multi-entity coordination and interaction patterns
 
-use crate::types::{Double};
-use crate::types::enums::{Rule};
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use crate::types::enums::Rule;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -52,3 +52,4 @@ impl Default for ByEntityCondition {
         ByEntityCondition::Speed(SpeedCondition::default())
     }
 }
+

@@ -5,6 +5,7 @@ use crate::types::basic::Value;
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
+use crate::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
 /// Wrapper for deterministic parameter distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -19,7 +20,7 @@ pub struct DeterministicSingleParameterDistribution {
     #[serde(flatten)]
     pub distribution_type: DeterministicSingleParameterDistributionType,
     #[serde(rename = "@parameterName")]
-    pub parameter_name: Value<String>,
+    pub parameter_name: OSString,
 }
 
 /// Types of single parameter distributions
@@ -56,18 +57,18 @@ pub struct DistributionSet {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DistributionSetElement {
     #[serde(rename = "@value")]
-    pub value: Value<String>,
+    pub value: OSString,
 }
 
 /// Continuous range distribution with step size
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DistributionRange {
     #[serde(rename = "@stepWidth")]
-    pub step_width: Value<String>,
+    pub step_width: OSString,
     #[serde(rename = "@lowerLimit")]
-    pub lower_limit: Value<String>,
+    pub lower_limit: OSString,
     #[serde(rename = "@upperLimit")]
-    pub upper_limit: Value<String>,
+    pub upper_limit: OSString,
 }
 
 /// Multi-parameter value set distribution
@@ -92,7 +93,7 @@ pub struct ParameterAssignment {
     #[serde(rename = "@parameterRef")]
     pub parameter_ref: String,
     #[serde(rename = "@value")]
-    pub value: Value<String>,
+    pub value: OSString,
 }
 
 impl ValidateDistribution for DeterministicParameterDistribution {
@@ -108,8 +109,12 @@ impl ValidateDistribution for DeterministicSingleParameterDistribution {
     fn validate(&self) -> Result<()> {
         match &self.distribution_type {
             DeterministicSingleParameterDistributionType::DistributionSet(dist) => dist.validate(),
-            DeterministicSingleParameterDistributionType::DistributionRange(dist) => dist.validate(),
-            DeterministicSingleParameterDistributionType::UserDefinedDistribution(dist) => dist.validate(),
+            DeterministicSingleParameterDistributionType::DistributionRange(dist) => {
+                dist.validate()
+            }
+            DeterministicSingleParameterDistributionType::UserDefinedDistribution(dist) => {
+                dist.validate()
+            }
         }
     }
 }
@@ -117,7 +122,9 @@ impl ValidateDistribution for DeterministicSingleParameterDistribution {
 impl ValidateDistribution for DeterministicMultiParameterDistribution {
     fn validate(&self) -> Result<()> {
         match &self.distribution_type {
-            DeterministicMultiParameterDistributionType::ValueSetDistribution(dist) => dist.validate(),
+            DeterministicMultiParameterDistributionType::ValueSetDistribution(dist) => {
+                dist.validate()
+            }
         }
     }
 }
@@ -125,8 +132,9 @@ impl ValidateDistribution for DeterministicMultiParameterDistribution {
 impl ValidateDistribution for DistributionSet {
     fn validate(&self) -> Result<()> {
         if self.elements.is_empty() {
-            return Err(crate::error::Error::validation_error("elements", 
-                "DistributionSet must have at least one element"
+            return Err(crate::error::Error::validation_error(
+                "elements",
+                "DistributionSet must have at least one element",
             ));
         }
         Ok(())
@@ -143,11 +151,12 @@ impl ValidateDistribution for DistributionRange {
 impl ValidateDistribution for ValueSetDistribution {
     fn validate(&self) -> Result<()> {
         if self.parameter_value_sets.is_empty() {
-            return Err(crate::error::Error::validation_error("parameter_value_sets",
-                "ValueSetDistribution must have at least one parameter value set"
+            return Err(crate::error::Error::validation_error(
+                "parameter_value_sets",
+                "ValueSetDistribution must have at least one parameter value set",
             ));
         }
-        
+
         for value_set in &self.parameter_value_sets {
             value_set.validate()?;
         }
@@ -158,17 +167,19 @@ impl ValidateDistribution for ValueSetDistribution {
 impl ValidateDistribution for ParameterValueSet {
     fn validate(&self) -> Result<()> {
         if self.parameter_assignments.is_empty() {
-            return Err(crate::error::Error::validation_error("parameter_assignments",
-                "ParameterValueSet must have at least one parameter assignment"
+            return Err(crate::error::Error::validation_error(
+                "parameter_assignments",
+                "ParameterValueSet must have at least one parameter assignment",
             ));
         }
-        
+
         // Check for duplicate parameter references
         let mut param_refs = std::collections::HashSet::new();
         for assignment in &self.parameter_assignments {
             if !param_refs.insert(&assignment.parameter_ref) {
-                return Err(crate::error::Error::validation_error("parameter_assignments",
-                    "Duplicate parameter reference found"
+                return Err(crate::error::Error::validation_error(
+                    "parameter_assignments",
+                    "Duplicate parameter reference found",
                 ));
             }
         }
@@ -178,7 +189,7 @@ impl ValidateDistribution for ParameterValueSet {
 
 impl DistributionSampler for DistributionSet {
     type Output = String;
-    
+
     fn sample(&self) -> Result<Self::Output> {
         if let Some(first_element) = self.elements.first() {
             match &first_element.value {
@@ -191,26 +202,30 @@ impl DistributionSampler for DistributionSet {
                 )),
             }
         } else {
-            Err(crate::error::Error::validation_error("sampling",
-                "Cannot sample from empty distribution set"
+            Err(crate::error::Error::validation_error(
+                "sampling",
+                "Cannot sample from empty distribution set",
             ))
         }
     }
-    
+
     fn enumerate(&self) -> Result<Vec<Self::Output>> {
-        self.elements.iter()
+        self.elements
+            .iter()
             .map(|elem| match &elem.value {
                 Value::Literal(val) => Ok(val.clone()),
-                Value::Parameter(_) => Err(crate::error::Error::validation_error("enumeration",
-                    "Cannot enumerate parameterized distribution without parameter resolution"
+                Value::Parameter(_) => Err(crate::error::Error::validation_error(
+                    "enumeration",
+                    "Cannot enumerate parameterized distribution without parameter resolution",
                 )),
-                Value::Expression(_) => Err(crate::error::Error::validation_error("enumeration",
-                    "Cannot enumerate expression-based distribution without expression evaluation"
+                Value::Expression(_) => Err(crate::error::Error::validation_error(
+                    "enumeration",
+                    "Cannot enumerate expression-based distribution without expression evaluation",
                 )),
             })
             .collect()
     }
-    
+
     fn is_deterministic(&self) -> bool {
         true
     }
@@ -218,19 +233,21 @@ impl DistributionSampler for DistributionSet {
 
 impl DistributionSampler for DistributionRange {
     type Output = String;
-    
+
     fn sample(&self) -> Result<Self::Output> {
         match &self.lower_limit {
             Value::Literal(val) => Ok(val.clone()),
-            Value::Parameter(_) => Err(crate::error::Error::validation_error("sampling",
-                "Cannot sample from parameterized distribution without parameter resolution"
+            Value::Parameter(_) => Err(crate::error::Error::validation_error(
+                "sampling",
+                "Cannot sample from parameterized distribution without parameter resolution",
             )),
-            Value::Expression(_) => Err(crate::error::Error::validation_error("sampling",
-                "Cannot sample from expression-based distribution without expression evaluation"
+            Value::Expression(_) => Err(crate::error::Error::validation_error(
+                "sampling",
+                "Cannot sample from expression-based distribution without expression evaluation",
             )),
         }
     }
-    
+
     fn is_deterministic(&self) -> bool {
         true
     }
@@ -244,12 +261,16 @@ mod tests {
     fn test_distribution_set_validation() {
         let valid_set = DistributionSet {
             elements: vec![
-                DistributionSetElement { value: Value::Literal("10.0".to_string()) },
-                DistributionSetElement { value: Value::Literal("20.0".to_string()) },
+                DistributionSetElement {
+                    value: Value::Literal("10.0".to_string()),
+                },
+                DistributionSetElement {
+                    value: Value::Literal("20.0".to_string()),
+                },
             ],
         };
         assert!(valid_set.validate().is_ok());
-        
+
         let empty_set = DistributionSet { elements: vec![] };
         assert!(empty_set.validate().is_err());
     }
@@ -258,11 +279,15 @@ mod tests {
     fn test_distribution_set_sampling() {
         let dist_set = DistributionSet {
             elements: vec![
-                DistributionSetElement { value: Value::Literal("10.0".to_string()) },
-                DistributionSetElement { value: Value::Literal("20.0".to_string()) },
+                DistributionSetElement {
+                    value: Value::Literal("10.0".to_string()),
+                },
+                DistributionSetElement {
+                    value: Value::Literal("20.0".to_string()),
+                },
             ],
         };
-        
+
         assert!(dist_set.sample().is_ok());
         let values = dist_set.enumerate().unwrap();
         assert_eq!(values.len(), 2);
@@ -286,7 +311,7 @@ mod tests {
             ],
         };
         assert!(valid_set.validate().is_ok());
-        
+
         let duplicate_set = ParameterValueSet {
             parameter_assignments: vec![
                 ParameterAssignment {
@@ -302,3 +327,4 @@ mod tests {
         assert!(duplicate_set.validate().is_err());
     }
 }
+

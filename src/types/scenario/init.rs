@@ -12,22 +12,20 @@
 //! - Providing entity-specific private actions (speed, teleport, etc.)
 //! - Facilitating integration between initialization and story phases
 
-use serde::{Deserialize, Serialize};
+use crate::types::actions::movement::{RoutingAction, SpeedAction, TeleportAction};
 use crate::types::basic::OSString;
 use crate::types::environment::Environment;
-use crate::types::actions::movement::{SpeedAction, TeleportAction, RoutingAction};
+use serde::{Deserialize, Serialize};
 
 /// Complete Init structure replacing the empty placeholder in storyboard
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Init {
     #[serde(rename = "Actions")]
     pub actions: Actions,
 }
 
 /// Actions container holding all initialization actions
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Actions {
     #[serde(rename = "GlobalAction", default)]
     pub global_actions: Vec<GlobalAction>,
@@ -44,11 +42,8 @@ pub struct GlobalAction {
     // EntityAction and InfrastructureAction can be added later as Option fields
 }
 
-
-
 /// Environment setup action containing complete environment definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EnvironmentAction {
     #[serde(rename = "Environment")]
     pub environment: Environment,
@@ -100,8 +95,6 @@ pub enum LongitudinalActionType {
     // SpeedProfileAction, SynchronizeAction, etc. can be added later
 }
 
-
-
 impl Default for GlobalAction {
     fn default() -> Self {
         Self {
@@ -109,7 +102,6 @@ impl Default for GlobalAction {
         }
     }
 }
-
 
 impl Default for Private {
     fn default() -> Self {
@@ -158,7 +150,7 @@ impl Private {
 mod tests {
     use super::*;
     use crate::types::basic::Value;
-    use crate::types::environment::{TimeOfDay, Weather, RoadCondition};
+    use crate::types::environment::{RoadCondition, TimeOfDay, Weather};
 
     #[test]
     fn test_init_creation() {
@@ -175,7 +167,13 @@ mod tests {
 
         assert_eq!(init.actions.global_actions.len(), 1);
         assert_eq!(init.actions.private_actions.len(), 1);
-        assert_eq!(init.actions.private_actions[0].entity_ref.as_literal().unwrap(), "Ego");
+        assert_eq!(
+            init.actions.private_actions[0]
+                .entity_ref
+                .as_literal()
+                .unwrap(),
+            "Ego"
+        );
     }
 
     #[test]
@@ -201,7 +199,7 @@ mod tests {
     #[test]
     fn test_init_default() {
         let init = Init::default();
-        
+
         assert!(init.actions.global_actions.is_empty());
         assert!(init.actions.private_actions.is_empty());
     }
@@ -220,8 +218,14 @@ mod tests {
             },
         };
 
-        assert_eq!(env_action.environment.name.as_literal().unwrap(), "TestEnvironment");
-        assert_eq!(env_action.environment.time_of_day.date_time, "2021-12-10T11:00:00");
+        assert_eq!(
+            env_action.environment.name.as_literal().unwrap(),
+            "TestEnvironment"
+        );
+        assert_eq!(
+            env_action.environment.time_of_day.date_time,
+            "2021-12-10T11:00:00"
+        );
     }
 
     #[test]
@@ -242,3 +246,4 @@ mod tests {
         assert!(serialized.contains("entityRef=\"Ego\""));
     }
 }
+

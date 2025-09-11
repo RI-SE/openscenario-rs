@@ -12,8 +12,8 @@
 //! - Providing weather-dependent scenario validation
 //! - Facilitating integration with weather simulation systems
 
-use serde::{Deserialize, Serialize};
 use crate::types::basic::Double;
+use serde::{Deserialize, Serialize};
 
 /// Weather conditions container
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,3 +92,4 @@ impl Default for Precipitation {
         }
     }
 }
+
