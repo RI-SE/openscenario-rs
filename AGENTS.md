@@ -33,3 +33,10 @@ This library provides a **complete**, **type-safe** Rust implementation for pars
 - Test files in `tests/data/` and `tests/fixtures/`
 - Property-based tests with `proptest` for complex validation
 
+## Git Commit Guidelines
+
+- Always use proper author information from `.gitconfig` when committing
+- If local git config overrides global config with placeholder values, remove local overrides
+- Use `git commit --amend --author="Name <email>" --no-edit` to fix author on last commit
+- Ensure commits use real developer information, not placeholder project identities
+
