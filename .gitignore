@@ -19,3 +19,7 @@ output/
 
 # XOSC scenario files
 xosc/
+/*.xosc
+
+# Temporary Rust files in root directory
+/*.rs
