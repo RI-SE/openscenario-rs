@@ -234,8 +234,8 @@ pub struct CatalogController {
     pub name: String,
     
     /// Type of controller (can be parameterized)
-    #[serde(rename = "@controllerType")]
-    pub controller_type: OSString,
+    #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
+    pub controller_type: Option<OSString>,
     
     /// Parameter declarations for this catalog controller
     #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
@@ -252,7 +252,10 @@ impl CatalogEntity for CatalogController {
     fn into_scenario_entity(self, parameters: HashMap<String, String>) -> Result<Self::ResolvedType> {
         let resolved_controller = Controller {
             name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
-            controller_type: Some(self.resolve_controller_type(&self.controller_type, &parameters)?),
+            controller_type: match &self.controller_type {
+                Some(controller_type) => Some(self.resolve_controller_type(controller_type, &parameters)?),
+                None => Some(ControllerType::Movement), // Default to Movement when not specified
+            },
             parameter_declarations: None, // TODO: Add parameter declaration resolution
             properties: self.properties,
         };
@@ -636,7 +639,7 @@ mod tests {
     fn test_catalog_controller_entity_name() {
         let catalog_controller = CatalogController {
             name: "AIDriver".to_string(),
-            controller_type: Value::Literal("movement".to_string()),
+            controller_type: Some(Value::Literal("movement".to_string())),
             parameter_declarations: None,
             properties: None,
         };
@@ -648,7 +651,7 @@ mod tests {
     fn test_catalog_controller_resolution() {
         let catalog_controller = CatalogController {
             name: "TestController".to_string(),
-            controller_type: Value::Parameter("ControllerTypeParam".to_string()),
+            controller_type: Some(Value::Parameter("ControllerTypeParam".to_string())),
             parameter_declarations: None,
             properties: None,
         };
@@ -665,7 +668,7 @@ mod tests {
     fn test_catalog_controller_type_resolution() {
         let catalog_controller = CatalogController {
             name: "FlexController".to_string(),
-            controller_type: Value::Literal("longitudinal".to_string()),
+            controller_type: Some(Value::Literal("longitudinal".to_string())),
             parameter_declarations: None,
             properties: None,
         };
