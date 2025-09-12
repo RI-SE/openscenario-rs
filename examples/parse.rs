@@ -196,25 +196,27 @@ fn resolve_catalog_references(
         }
         
         // Resolve controller catalog references
-        if let Some(controller_ref) = &entity.object_controller.catalog_reference {
-            println!("      🎮 Resolving controller reference...");
-            
-            if let Some(controller_catalog_location) = &catalog_locations.controller_catalog {
-                match resolve_controller_reference(&catalog_loader, controller_ref, controller_catalog_location, parameters, base_dir) {
-                    Ok(resolved_controller) => {
-                        println!("         ✅ Controller resolved: {} -> {}", 
-                            controller_ref.entry_name.as_literal().unwrap_or(&"<unknown>".to_string()),
-                            resolved_controller.name.as_literal().unwrap_or(&"<unknown>".to_string())
-                        );
-                        
-                        // Replace catalog reference with resolved inline entity
-                        entity.object_controller.catalog_reference = None;
-                        entity.object_controller.controller = Some(resolved_controller);
-                        resolved_controllers += 1;
-                    }
-                    Err(e) => {
-                        println!("         ❌ Failed to resolve controller: {}", e);
-                        return Err(e);
+        if let Some(object_controller) = &mut entity.object_controller {
+            if let Some(controller_ref) = &object_controller.catalog_reference {
+                println!("      🎮 Resolving controller reference...");
+                
+                if let Some(controller_catalog_location) = &catalog_locations.controller_catalog {
+                    match resolve_controller_reference(&catalog_loader, controller_ref, controller_catalog_location, parameters, base_dir) {
+                        Ok(resolved_controller) => {
+                            println!("         ✅ Controller resolved: {} -> {}", 
+                                controller_ref.entry_name.as_literal().unwrap_or(&"<unknown>".to_string()),
+                                resolved_controller.name.as_literal().unwrap_or(&"<unknown>".to_string())
+                            );
+                            
+                            // Replace catalog reference with resolved inline entity
+                            object_controller.catalog_reference = None;
+                            object_controller.controller = Some(resolved_controller);
+                            resolved_controllers += 1;
+                        }
+                        Err(e) => {
+                            println!("         ❌ Failed to resolve controller: {}", e);
+                            return Err(e);
+                        }
                     }
                 }
             }
@@ -347,10 +349,13 @@ fn print_resolution_summary(scenario: &OpenScenario) {
         if entity.vehicle.is_some() {
             inline_vehicles += 1;
         }
-        if entity.object_controller.controller.is_some() {
-            inline_controllers += 1;
+        if let Some(object_controller) = &entity.object_controller {
+            if object_controller.controller.is_some() {
+                inline_controllers += 1;
+            }
         }
-        if entity.catalog_reference.is_some() || entity.object_controller.catalog_reference.is_some() {
+        if entity.catalog_reference.is_some() || 
+           entity.object_controller.as_ref().map_or(false, |oc| oc.catalog_reference.is_some()) {
             remaining_catalog_refs += 1;
         }
     }

@@ -75,7 +75,7 @@ pub struct RelativeTargetSpeed {
     pub value: Double,
     #[serde(rename = "@entityRef")]
     pub entity_ref: String,
-    #[serde(rename = "@valueType")]
+    #[serde(rename = "@speedTargetValueType")]
     pub value_type: SpeedTargetValueType,
     #[serde(rename = "@continuous")]
     pub continuous: bool,

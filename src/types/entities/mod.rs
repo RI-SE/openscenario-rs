@@ -47,8 +47,8 @@ pub struct ScenarioObject {
     >,
 
     /// Object controller configuration (optional)
-    #[serde(rename = "ObjectController")]
-    pub object_controller: ObjectController,
+    #[serde(rename = "ObjectController", skip_serializing_if = "Option::is_none")]
+    pub object_controller: Option<ObjectController>,
 }
 
 /// Container for all entities in the scenario
@@ -67,7 +67,7 @@ impl ScenarioObject {
             vehicle: Some(vehicle),
             pedestrian: None,
             catalog_reference: None,
-            object_controller: ObjectController::default(),
+            object_controller: Some(ObjectController::default()),
         }
     }
 
@@ -78,7 +78,7 @@ impl ScenarioObject {
             vehicle: None,
             pedestrian: Some(pedestrian),
             catalog_reference: None,
-            object_controller: ObjectController::default(),
+            object_controller: Some(ObjectController::default()),
         }
     }
 
@@ -94,7 +94,7 @@ impl ScenarioObject {
             vehicle: None,
             pedestrian: None,
             catalog_reference: Some(catalog_reference),
-            object_controller: ObjectController::default(),
+            object_controller: Some(ObjectController::default()),
         }
     }
 
