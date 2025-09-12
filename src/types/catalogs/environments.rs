@@ -535,6 +535,7 @@ impl RoadNetworkReference {
 mod tests {
     use super::*;
     use crate::types::basic::ParameterDeclaration;
+    use crate::types::enums::ParameterType;
 
     #[test]
     fn test_environment_catalog_creation() {
@@ -749,4 +750,3 @@ mod tests {
         );
     }
 }
-

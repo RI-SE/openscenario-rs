@@ -388,6 +388,7 @@ impl NurbsKnot {
 mod tests {
     use super::*;
     use crate::types::basic::ParameterDeclaration;
+    use crate::types::enums::ParameterType;
     use crate::types::positions::WorldPosition;
 
     #[test]
@@ -692,4 +693,3 @@ mod tests {
         assert_eq!(nurbs.order.as_literal().unwrap(), &2);
     }
 }
-

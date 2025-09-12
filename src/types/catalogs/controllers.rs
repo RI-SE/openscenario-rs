@@ -270,6 +270,8 @@ mod tests {
     use super::*;
     use crate::types::basic::ParameterDeclaration;
 
+    use crate::types::enums::ParameterType;
+
     #[test]
     fn test_controller_catalog_creation() {
         let catalog = ControllerCatalog::new(1, 2);
@@ -427,4 +429,3 @@ mod tests {
         assert_eq!(property.name, "defaultProperty");
     }
 }
-
