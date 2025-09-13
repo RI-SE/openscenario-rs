@@ -2,12 +2,12 @@
 name = "openscenario-rs"
 version = "0.1.0"
 edition = "2021"
-authors = ["OpenSCENARIO Contributors"]
+authors = ["Ashfaq Farooqui"]
 description = "Rust library for parsing and manipulating OpenSCENARIO files"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/your-org/openscenario-rs"
+license = "GPLv3"
+repository = "https://github.com/ashfaqfarooqui/openscenario-rs"
 keywords = ["openscenario", "xml", "automotive", "simulation", "asam"]
-categories = ["parsing", "simulation"]
+categories = [""]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -15,19 +15,10 @@ quick-xml = { version = "0.30", features = ["serialize"] }
 thiserror = "1.0"
 async-trait = "0.1"
 
-# Optional dependencies for later phases
-indexmap = { version = "2.0", optional = true }
-chrono = { version = "0.4", features = ["serde"], optional = true }
-regex = { version = "1.0", optional = true }
+indexmap = { version = "2.0" }
+chrono = { version = "0.4", features = ["serde"] }
+regex = { version = "1.0" }
 
-[features]
-default = ["serde-parsing", "expressions"]
-serde-parsing = []
-validation = ["regex", "indexmap"]
-builder = []
-expressions = ["regex"]
-streaming = []
-full = ["validation", "builder", "expressions"]
 
 [dev-dependencies]
 proptest = "1.0"
