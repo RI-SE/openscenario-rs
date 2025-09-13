@@ -130,7 +130,7 @@ where
     {
         let s = String::deserialize(deserializer)?;
 
-        // Check if this is a parameter reference or expression ${content}
+        // Check if this is a parameter reference or expression
         if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
             let content = &s[2..s.len() - 1];
             // Check if it's a simple parameter (no operators)
@@ -139,6 +139,21 @@ where
             } else {
                 // Treat as expression
                 Ok(Value::Expression(content.to_string()))
+            }
+        } else if s.starts_with("$") && s.len() > 1 {
+            // Handle $param format (without curly braces)
+            let content = &s[1..];
+            if is_valid_parameter_name(content) && !content.contains(|c| "+-*/%()".contains(c)) {
+                Ok(Value::Parameter(content.to_string()))
+            } else {
+                // Not a valid parameter, treat as literal
+                match s.parse::<T>() {
+                    Ok(value) => Ok(Value::Literal(value)),
+                    Err(e) => Err(serde::de::Error::custom(format!(
+                        "Failed to parse '{}': {}",
+                        s, e
+                    ))),
+                }
             }
         } else {
             // Try to parse as literal value

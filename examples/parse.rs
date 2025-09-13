@@ -256,9 +256,8 @@ fn resolve_vehicle_reference(
     // Load all vehicle catalogs
     let catalog_vehicles = catalog_loader.load_vehicle_catalogs(&catalog_dir)?;
     
-    // Find the specific vehicle entry
-    let entry_name = vehicle_ref.entry_name.as_literal()
-        .ok_or("Cannot resolve parameterized entry names")?;
+    // Resolve the vehicle entry name (may be parameterized like $LeadVehicle_Model)
+    let entry_name = vehicle_ref.entry_name.resolve(scenario_parameters)?;
     
     let catalog_vehicle = catalog_vehicles.iter()
         .find(|v| v.entity_name() == entry_name)
@@ -308,9 +307,8 @@ fn resolve_controller_reference(
     // Load all controller catalogs
     let catalog_controllers = catalog_loader.load_controller_catalogs(&catalog_dir)?;
     
-    // Find the specific controller entry
-    let entry_name = controller_ref.entry_name.as_literal()
-        .ok_or("Cannot resolve parameterized entry names")?;
+    // Resolve the controller entry name (may be parameterized)
+    let entry_name = controller_ref.entry_name.resolve(scenario_parameters)?;
     
     let catalog_controller = catalog_controllers.iter()
         .find(|c| c.entity_name() == entry_name)
