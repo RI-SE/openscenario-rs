@@ -2,7 +2,6 @@
 //!
 //! This module provides comprehensive catalog management for OpenSCENARIO scenarios:
 //! - Loading and parsing catalog files from Directory paths
-//! - Caching catalog data for performance optimization
 //! - Resolving catalog references within scenarios
 //! - Full integration of catalog content into scenario structures
 //!
@@ -20,11 +19,9 @@ use crate::types::controllers::Controller;
 pub mod loader;
 pub mod resolver;
 pub mod parameters;
-pub mod cache;
 
 // Re-export key types for convenience
 pub use loader::CatalogLoader;
-pub use cache::CatalogCache;
 pub use resolver::{CatalogResolver, ResolvedCatalog};
 pub use parameters::ParameterSubstitutionEngine;
 
@@ -58,9 +55,8 @@ pub trait ScenarioResolver: Sized {
     async fn resolve_all_catalogs(self) -> Result<Self, crate::error::Error>;
 }
 
-/// Main catalog manager that coordinates loading, caching, and resolution
+/// Main catalog manager that coordinates loading and resolution
 pub struct CatalogManager {
-    cache: CatalogCache,
     loader: CatalogLoader,
     resolver: CatalogResolver,
     parameter_engine: ParameterSubstitutionEngine,
@@ -70,7 +66,6 @@ impl CatalogManager {
     /// Create a new catalog manager
     pub fn new() -> Self {
         Self {
-            cache: CatalogCache::new(),
             loader: CatalogLoader::new(),
             resolver: CatalogResolver::new(),
             parameter_engine: ParameterSubstitutionEngine::new(),
@@ -80,7 +75,6 @@ impl CatalogManager {
     /// Create a catalog manager with a specific base path for relative path resolution
     pub fn with_base_path<P: AsRef<std::path::Path>>(base_path: P) -> Self {
         Self {
-            cache: CatalogCache::new(),
             loader: CatalogLoader::with_base_path(base_path),
             resolver: CatalogResolver::new(),
             parameter_engine: ParameterSubstitutionEngine::new(),
@@ -258,8 +252,8 @@ impl CatalogManager {
         if let Some(vehicle_location) = &locations.vehicle_catalog {
             if let Ok(files) = self.loader.discover_catalog_files(&vehicle_location.directory) {
                 for file_path in files {
-                    let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
-                    self.cache.insert_parsed(&file_path, catalog);
+                    let _catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
+                    // Catalog loaded and validated successfully
                 }
             }
         }
@@ -268,8 +262,8 @@ impl CatalogManager {
         if let Some(controller_location) = &locations.controller_catalog {
             if let Ok(files) = self.loader.discover_catalog_files(&controller_location.directory) {
                 for file_path in files {
-                    let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
-                    self.cache.insert_parsed(&file_path, catalog);
+                    let _catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
+                    // Catalog loaded and validated successfully
                 }
             }
         }
@@ -278,8 +272,8 @@ impl CatalogManager {
         if let Some(pedestrian_location) = &locations.pedestrian_catalog {
             if let Ok(files) = self.loader.discover_catalog_files(&pedestrian_location.directory) {
                 for file_path in files {
-                    let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
-                    self.cache.insert_parsed(&file_path, catalog);
+                    let _catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
+                    // Catalog loaded and validated successfully
                 }
             }
         }
@@ -289,16 +283,7 @@ impl CatalogManager {
         Ok(())
     }
 
-    /// Clear the catalog cache
-    pub fn clear_cache(&mut self) {
-        self.cache.clear();
-    }
 
-    /// Get cache statistics
-    pub fn cache_stats(&self) -> (usize, usize) {
-        let stats = self.cache.stats();
-        (stats.entries, stats.memory_usage)
-    }
 
     /// Get access to the parameter engine for custom parameter operations
     pub fn parameter_engine(&mut self) -> &mut ParameterSubstitutionEngine {
@@ -323,26 +308,20 @@ mod tests {
     
     #[test]
     fn test_catalog_manager_creation() {
-        let manager = CatalogManager::new();
-        let (cached_items, total_size) = manager.cache_stats();
-        assert_eq!(cached_items, 0);
-        assert_eq!(total_size, 0);
+        let _manager = CatalogManager::new();
+        // Manager created successfully
     }
 
     #[test]
     fn test_catalog_manager_with_base_path() {
-        let manager = CatalogManager::with_base_path("/tmp");
-        let (cached_items, total_size) = manager.cache_stats();
-        assert_eq!(cached_items, 0);
-        assert_eq!(total_size, 0);
+        let _manager = CatalogManager::with_base_path("/tmp");
+        // Manager with base path created successfully
     }
 
     #[test]
     fn test_catalog_manager_default() {
-        let manager = CatalogManager::default();
-        let (cached_items, total_size) = manager.cache_stats();
-        assert_eq!(cached_items, 0);
-        assert_eq!(total_size, 0);
+        let _manager = CatalogManager::default();
+        // Default manager created successfully
     }
 
     #[test]

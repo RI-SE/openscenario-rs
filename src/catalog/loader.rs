@@ -385,7 +385,7 @@ impl Default for CatalogLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::catalog::cache::CatalogCache;
+
     use std::fs;
     use tempfile::TempDir;
 
@@ -398,25 +398,7 @@ mod tests {
         assert_eq!(loader_with_path.base_path.as_ref().unwrap(), Path::new("/tmp"));
     }
 
-    #[test]
-    fn test_catalog_cache() {
-        let cache = CatalogCache::new();
-        let stats = cache.stats();
-        assert_eq!(stats.entries, 0);
-        assert_eq!(stats.memory_usage, 0);
 
-        // Insert and retrieve
-        let path = PathBuf::from("/test/path.xosc");
-        let content = "test content".to_string();
-        cache.put_catalog_file(path.clone(), content.clone());
-        
-        let retrieved = cache.get_catalog_file(&path).unwrap();
-        assert_eq!(retrieved, content);
-        
-        let stats = cache.stats();
-        assert_eq!(stats.entries, 1);
-        assert_eq!(stats.memory_usage, content.len());
-    }
 
     #[test]
     fn test_discover_catalog_files() -> Result<()> {
@@ -457,23 +439,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_catalog_cache_parsed() {
-        let cache = CatalogCache::new();
-        let stats = cache.stats();
-        assert_eq!(stats.entries, 0);
 
-        // Insert and retrieve parsed catalog
-        let path = Path::new("/test/catalog.xosc");
-        let catalog = CatalogFile::default();
-        cache.insert_parsed(&path, catalog.clone());
-        
-        // For now, this just inserts a placeholder file content
-        // In a real implementation, we'd retrieve the parsed catalog
-        
-        let stats = cache.stats();
-        assert_eq!(stats.entries, 1);
-    }
 
     #[test]
     fn test_parse_catalog_from_string() {

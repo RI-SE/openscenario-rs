@@ -48,7 +48,7 @@ pub use expression::evaluate_expression;
 
 // Re-export catalog system
 pub use catalog::{
-    CatalogCache, CatalogLoader, CatalogManager, CatalogResolver, ParameterSubstitutionEngine,
+    CatalogLoader, CatalogManager, CatalogResolver, ParameterSubstitutionEngine,
     ResolvedCatalog,
 };
 
