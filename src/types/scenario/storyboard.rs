@@ -48,7 +48,7 @@ pub struct FileHeader {
 // Entities is now imported from entities module
 
 /// Storyboard structure (simplified for MVP)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Storyboard {
     #[serde(rename = "Init")]
     pub init: Init,

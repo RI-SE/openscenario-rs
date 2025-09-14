@@ -16,7 +16,7 @@ use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 
 /// Weather conditions container
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Weather {
     #[serde(rename = "@cloudState")]
     pub cloud_state: String, // "free", "cloudy", "overcast", "rainy"
@@ -29,7 +29,7 @@ pub struct Weather {
 }
 
 /// Sun lighting conditions and positioning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Sun {
     #[serde(rename = "@intensity")]
     pub intensity: Double,
@@ -40,14 +40,14 @@ pub struct Sun {
 }
 
 /// Fog visibility conditions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Fog {
     #[serde(rename = "@visualRange")]
     pub visual_range: Double,
 }
 
 /// Precipitation conditions and intensity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Precipitation {
     #[serde(rename = "@precipitationType")]
     pub precipitation_type: String, // "dry", "rain", "snow"

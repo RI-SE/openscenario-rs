@@ -41,7 +41,9 @@ pub use control::{
     OverrideControllerValueActionSteeringWheel, OverrideControllerValueActionGear,
     OverrideControllerValueActionParkingBrake, OverrideControllerValueActionClutch,
     // Supporting types
-    ManualGear, AutomaticGear, AutomaticGearType
+    ManualGear, AutomaticGear, AutomaticGearType,
+    // Phase 1 Groups: XSD group wrappers
+    Brake, BrakeInput, Gear
 };
 
 // PHASE 4C: Export all traffic actions

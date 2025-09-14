@@ -18,14 +18,14 @@ use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
 
 /// Complete Init structure replacing the empty placeholder in storyboard
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct Init {
     #[serde(rename = "Actions")]
     pub actions: Actions,
 }
 
 /// Actions container holding all initialization actions
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct Actions {
     #[serde(rename = "GlobalAction", default)]
     pub global_actions: Vec<GlobalAction>,
@@ -35,7 +35,7 @@ pub struct Actions {
 
 /// Global actions that affect the entire scenario
 /// The XML structure has explicit action type elements inside GlobalAction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GlobalAction {
     #[serde(rename = "EnvironmentAction", skip_serializing_if = "Option::is_none")]
     pub environment_action: Option<EnvironmentAction>,
@@ -43,14 +43,14 @@ pub struct GlobalAction {
 }
 
 /// Environment setup action containing complete environment definition
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct EnvironmentAction {
     #[serde(rename = "Environment")]
     pub environment: Environment,
 }
 
 /// Private actions specific to individual entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Private {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
@@ -59,7 +59,7 @@ pub struct Private {
 }
 
 /// Wrapper for individual private actions with explicit element types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivateActionWrapper {
     #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
     pub longitudinal_action: Option<LongitudinalAction>,

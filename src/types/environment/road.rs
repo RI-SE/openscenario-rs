@@ -14,7 +14,7 @@ use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 
 /// Road surface conditions affecting vehicle dynamics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoadCondition {
     #[serde(rename = "@frictionScaleFactor")]
     pub friction_scale_factor: Double,

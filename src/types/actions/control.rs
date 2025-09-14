@@ -146,6 +146,31 @@ pub enum AutomaticGearType {
     Drive,
 }
 
+/// Base brake type for brake input groups
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Brake {
+    #[serde(rename = "@value")]
+    pub value: f64,
+}
+
+/// BrakeInput group - XSD group wrapper for brake percent/force choice
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum BrakeInput {
+    #[serde(rename = "BrakePercent")]
+    BrakePercent(Brake),
+    #[serde(rename = "BrakeForce")]
+    BrakeForce(Brake),
+}
+
+/// Gear group - XSD group wrapper for manual/automatic gear choice
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Gear {
+    #[serde(rename = "ManualGear")]
+    ManualGear(ManualGear),
+    #[serde(rename = "AutomaticGear")]
+    AutomaticGear(AutomaticGear),
+}
+
 // PHASE 4B: Default implementations
 
 impl Default for AssignControllerAction {
@@ -253,6 +278,24 @@ impl Default for AutomaticGear {
 impl Default for AutomaticGearType {
     fn default() -> Self {
         AutomaticGearType::Drive
+    }
+}
+
+impl Default for Brake {
+    fn default() -> Self {
+        Self { value: 0.0 }
+    }
+}
+
+impl Default for BrakeInput {
+    fn default() -> Self {
+        Self::BrakePercent(Brake::default())
+    }
+}
+
+impl Default for Gear {
+    fn default() -> Self {
+        Self::AutomaticGear(AutomaticGear::default())
     }
 }
 
@@ -394,6 +437,100 @@ impl AutomaticGear {
         Self {
             gear: AutomaticGearType::Drive,
         }
+    }
+}
+
+impl Gear {
+    /// Create manual gear wrapper
+    pub fn manual(gear: i32) -> Self {
+        Self::ManualGear(ManualGear::new(gear))
+    }
+    
+    /// Create automatic gear wrapper
+    pub fn automatic(gear_type: AutomaticGearType) -> Self {
+        Self::AutomaticGear(AutomaticGear { gear: gear_type })
+    }
+
+    /// Create manual first gear
+    pub fn manual_first() -> Self {
+        Self::ManualGear(ManualGear::first())
+    }
+
+    /// Create manual neutral gear
+    pub fn manual_neutral() -> Self {
+        Self::ManualGear(ManualGear::neutral())
+    }
+
+    /// Create manual reverse gear
+    pub fn manual_reverse() -> Self {
+        Self::ManualGear(ManualGear::reverse())
+    }
+
+    /// Create automatic park gear
+    pub fn automatic_park() -> Self {
+        Self::AutomaticGear(AutomaticGear::park())
+    }
+
+    /// Create automatic drive gear
+    pub fn automatic_drive() -> Self {
+        Self::AutomaticGear(AutomaticGear::drive())
+    }
+
+    /// Create automatic reverse gear
+    pub fn automatic_reverse() -> Self {
+        Self::AutomaticGear(AutomaticGear::reverse())
+    }
+
+    /// Create automatic neutral gear
+    pub fn automatic_neutral() -> Self {
+        Self::AutomaticGear(AutomaticGear::neutral())
+    }
+}
+
+impl Brake {
+    /// Create brake with specific value
+    pub fn new(value: f64) -> Self {
+        Self { value }
+    }
+
+    /// Create zero brake
+    pub fn zero() -> Self {
+        Self::new(0.0)
+    }
+
+    /// Create full brake
+    pub fn full() -> Self {
+        Self::new(1.0)
+    }
+}
+
+impl BrakeInput {
+    /// Create brake percent input
+    pub fn percent(value: f64) -> Self {
+        Self::BrakePercent(Brake::new(value))
+    }
+
+    /// Create brake force input
+    pub fn force(value: f64) -> Self {
+        Self::BrakeForce(Brake::new(value))
+    }
+
+    /// Get brake value regardless of type
+    pub fn value(&self) -> f64 {
+        match self {
+            Self::BrakePercent(brake) => brake.value,
+            Self::BrakeForce(brake) => brake.value,
+        }
+    }
+
+    /// Check if this is a percent-based brake input
+    pub fn is_percent(&self) -> bool {
+        matches!(self, Self::BrakePercent(_))
+    }
+
+    /// Check if this is a force-based brake input
+    pub fn is_force(&self) -> bool {
+        matches!(self, Self::BrakeForce(_))
     }
 }
 
@@ -540,6 +677,104 @@ mod tests {
         let override_action = OverrideControllerValueAction::default();
         assert!(override_action.brake.is_none());
         assert!(override_action.throttle.is_none());
+    }
+
+    // Tests for new group types
+    #[test]
+    fn test_brake_creation_and_helpers() {
+        let brake = Brake::new(0.5);
+        assert_eq!(brake.value, 0.5);
+
+        let zero_brake = Brake::zero();
+        assert_eq!(zero_brake.value, 0.0);
+
+        let full_brake = Brake::full();
+        assert_eq!(full_brake.value, 1.0);
+
+        let default_brake = Brake::default();
+        assert_eq!(default_brake.value, 0.0);
+    }
+
+    #[test]
+    fn test_brake_input_group() {
+        let percent_brake = BrakeInput::percent(0.7);
+        assert!(percent_brake.is_percent());
+        assert!(!percent_brake.is_force());
+        assert_eq!(percent_brake.value(), 0.7);
+
+        let force_brake = BrakeInput::force(500.0);
+        assert!(!force_brake.is_percent());
+        assert!(force_brake.is_force());
+        assert_eq!(force_brake.value(), 500.0);
+
+        let default_brake_input = BrakeInput::default();
+        assert!(default_brake_input.is_percent());
+        assert_eq!(default_brake_input.value(), 0.0);
+    }
+
+    #[test]
+    fn test_gear_group_creation() {
+        let manual_gear = Gear::manual(3);
+        if let Gear::ManualGear(gear) = manual_gear {
+            assert_eq!(gear.gear, 3);
+        } else {
+            panic!("Expected ManualGear variant");
+        }
+
+        let auto_gear = Gear::automatic(AutomaticGearType::Park);
+        if let Gear::AutomaticGear(gear) = auto_gear {
+            assert_eq!(gear.gear, AutomaticGearType::Park);
+        } else {
+            panic!("Expected AutomaticGear variant");
+        }
+    }
+
+    #[test]
+    fn test_gear_group_convenience_methods() {
+        let manual_first = Gear::manual_first();
+        if let Gear::ManualGear(gear) = manual_first {
+            assert_eq!(gear.gear, 1);
+        } else {
+            panic!("Expected ManualGear variant");
+        }
+
+        let manual_neutral = Gear::manual_neutral();
+        if let Gear::ManualGear(gear) = manual_neutral {
+            assert_eq!(gear.gear, 0);
+        } else {
+            panic!("Expected ManualGear variant");
+        }
+
+        let manual_reverse = Gear::manual_reverse();
+        if let Gear::ManualGear(gear) = manual_reverse {
+            assert_eq!(gear.gear, -1);
+        } else {
+            panic!("Expected ManualGear variant");
+        }
+
+        let auto_park = Gear::automatic_park();
+        if let Gear::AutomaticGear(gear) = auto_park {
+            assert_eq!(gear.gear, AutomaticGearType::Park);
+        } else {
+            panic!("Expected AutomaticGear variant");
+        }
+
+        let auto_drive = Gear::automatic_drive();
+        if let Gear::AutomaticGear(gear) = auto_drive {
+            assert_eq!(gear.gear, AutomaticGearType::Drive);
+        } else {
+            panic!("Expected AutomaticGear variant");
+        }
+    }
+
+    #[test]
+    fn test_gear_group_default() {
+        let default_gear = Gear::default();
+        if let Gear::AutomaticGear(gear) = default_gear {
+            assert_eq!(gear.gear, AutomaticGearType::Drive);
+        } else {
+            panic!("Expected AutomaticGear variant as default");
+        }
     }
 }
 

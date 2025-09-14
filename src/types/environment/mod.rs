@@ -23,7 +23,7 @@ pub use road::*;
 pub use weather::*;
 
 /// Complete Environment container for scenario environmental setup
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Environment {
     #[serde(rename = "@name")]
     pub name: OSString,
@@ -36,7 +36,7 @@ pub struct Environment {
 }
 
 /// Time of day settings for lighting and animation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeOfDay {
     #[serde(rename = "@animation")]
     pub animation: Boolean,

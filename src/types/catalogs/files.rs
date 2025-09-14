@@ -27,7 +27,7 @@ pub struct CatalogFile {
 }
 
 /// Container for catalog entities of various types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogContent {
     /// Name of this catalog
     #[serde(rename = "@name")]
