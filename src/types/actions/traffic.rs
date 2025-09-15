@@ -14,7 +14,7 @@
 //! - Facilitating intersection and traffic signal simulation
 //! - Following complete OpenSCENARIO specification for traffic management
 
-use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -49,18 +49,22 @@ pub struct TrafficSinkAction {
 /// Traffic swarm action for swarm behavior around central object
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSwarmAction {
-    #[serde(rename = "@centralObject")]
-    pub central_object: OSString,
     #[serde(rename = "@innerRadius")]
-    pub inner_radius: f64,
-    #[serde(rename = "@outerRadius")]
-    pub outer_radius: f64,
+    pub inner_radius: Double,
     #[serde(rename = "@numberOfVehicles")]
-    pub number_of_vehicles: u32,
-    #[serde(rename = "CentralSwarmObject")]
-    pub central_swarm_object: CentralSwarmObject,
+    pub number_of_vehicles: UnsignedInt,
+    #[serde(rename = "@offset")]
+    pub offset: Double,
+    #[serde(rename = "@semiMajorAxis")]
+    pub semi_major_axis: Double,
+    #[serde(rename = "@semiMinorAxis")]
+    pub semi_minor_axis: Double,
+    #[serde(rename = "@velocity")]
+    pub velocity: Option<Double>,
+    #[serde(rename = "CentralObject")]
+    pub central_object: CentralSwarmObject,
     #[serde(rename = "TrafficDefinition")]
-    pub traffic_definition: TrafficDefinition,
+    pub traffic_definition: Option<TrafficDefinition>,
 }
 
 /// Traffic area action for area-based traffic management
@@ -270,12 +274,14 @@ impl Default for TrafficSinkAction {
 impl Default for TrafficSwarmAction {
     fn default() -> Self {
         Self {
-            central_object: OSString::literal("SwarmCenter".to_string()),
-            inner_radius: 10.0,
-            outer_radius: 50.0,
-            number_of_vehicles: 20,
-            central_swarm_object: CentralSwarmObject::default(),
-            traffic_definition: TrafficDefinition::default(),
+            inner_radius: Double::literal(10.0),
+            number_of_vehicles: UnsignedInt::literal(20),
+            offset: Double::literal(0.0),
+            semi_major_axis: Double::literal(100.0),
+            semi_minor_axis: Double::literal(50.0),
+            velocity: None,
+            central_object: CentralSwarmObject::default(),
+            traffic_definition: Some(TrafficDefinition::default()),
         }
     }
 }
@@ -501,22 +507,55 @@ impl TrafficSinkAction {
 impl TrafficSwarmAction {
     /// Create traffic swarm around central object
     pub fn new(
-        central_object: String,
-        inner_radius: f64,
-        outer_radius: f64,
+        central_object: impl Into<String>,
+        semi_major_axis: f64,
+        semi_minor_axis: f64,
         number_of_vehicles: u32,
-        traffic_definition: TrafficDefinition,
     ) -> Self {
         Self {
-            central_object: OSString::literal(central_object.clone()),
-            inner_radius,
-            outer_radius,
-            number_of_vehicles,
-            central_swarm_object: CentralSwarmObject {
-                entity_ref: OSString::literal(central_object),
+            inner_radius: Double::literal(0.0),
+            number_of_vehicles: UnsignedInt::literal(number_of_vehicles),
+            offset: Double::literal(0.0),
+            semi_major_axis: Double::literal(semi_major_axis),
+            semi_minor_axis: Double::literal(semi_minor_axis),
+            velocity: None,
+            central_object: CentralSwarmObject {
+                entity_ref: OSString::literal(central_object.into()),
             },
-            traffic_definition,
+            traffic_definition: None,
         }
+    }
+
+    /// Set inner radius for the swarm
+    pub fn with_inner_radius(mut self, radius: f64) -> Self {
+        self.inner_radius = Double::literal(radius);
+        self
+    }
+
+    /// Set offset for the swarm
+    pub fn with_offset(mut self, offset: f64) -> Self {
+        self.offset = Double::literal(offset);
+        self
+    }
+
+    /// Set velocity for the swarm (deprecated)
+    pub fn with_velocity(mut self, velocity: f64) -> Self {
+        self.velocity = Some(Double::literal(velocity));
+        self
+    }
+
+    /// Set traffic definition for the swarm
+    pub fn with_traffic_definition(mut self, traffic_definition: TrafficDefinition) -> Self {
+        self.traffic_definition = Some(traffic_definition);
+        self
+    }
+
+    /// Set central swarm object entity reference
+    pub fn with_central_swarm_object(mut self, entity_ref: impl Into<String>) -> Self {
+        self.central_object = CentralSwarmObject {
+            entity_ref: OSString::literal(entity_ref.into()),
+        };
+        self
     }
 }
 
@@ -762,6 +801,15 @@ impl ControllerDistribution {
     }
 }
 
+impl CentralSwarmObject {
+    /// Create new central swarm object
+    pub fn new(entity_ref: impl Into<String>) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref.into()),
+        }
+    }
+}
+
 impl TrafficAreaVertex {
     /// Create new traffic area vertex
     pub fn new(x: f64, y: f64, z: f64) -> Self {
@@ -870,21 +918,18 @@ mod tests {
 
     #[test]
     fn test_traffic_swarm_action_creation() {
-        let swarm = TrafficSwarmAction::new(
-            "LeadVehicle".to_string(),
-            5.0,
-            25.0,
-            15,
-            TrafficDefinition::default(),
-        );
+        let swarm = TrafficSwarmAction::new("LeadVehicle", 100.0, 50.0, 15)
+            .with_inner_radius(5.0)
+            .with_traffic_definition(TrafficDefinition::default());
 
         assert_eq!(
-            swarm.central_object.as_literal(),
+            swarm.central_object.entity_ref.as_literal(),
             Some(&"LeadVehicle".to_string())
         );
-        assert_eq!(swarm.inner_radius, 5.0);
-        assert_eq!(swarm.outer_radius, 25.0);
-        assert_eq!(swarm.number_of_vehicles, 15);
+        assert_eq!(swarm.inner_radius.as_literal(), Some(&5.0));
+        assert_eq!(swarm.semi_major_axis.as_literal(), Some(&100.0));
+        assert_eq!(swarm.semi_minor_axis.as_literal(), Some(&50.0));
+        assert_eq!(swarm.number_of_vehicles.as_literal(), Some(&15));
     }
 
     #[test]
@@ -1029,9 +1074,10 @@ mod tests {
         assert_eq!(sink.radius, 50.0);
 
         let swarm = TrafficSwarmAction::default();
-        assert_eq!(swarm.number_of_vehicles, 20);
-        assert_eq!(swarm.inner_radius, 10.0);
-        assert_eq!(swarm.outer_radius, 50.0);
+        assert_eq!(swarm.number_of_vehicles.as_literal(), Some(&20));
+        assert_eq!(swarm.inner_radius.as_literal(), Some(&10.0));
+        assert_eq!(swarm.semi_major_axis.as_literal(), Some(&100.0));
+        assert_eq!(swarm.semi_minor_axis.as_literal(), Some(&50.0));
 
         let stop = TrafficStopAction::default();
         assert_eq!(stop.enable.as_literal(), Some(&true));
@@ -1231,5 +1277,139 @@ mod tests {
         for state in &states {
             assert_eq!(state.traffic_signal_id.as_literal(), Some(&"main".to_string()));
         }
+    }
+
+    // COMPREHENSIVE TRAFFIC SWARM ACTION TESTS (Task 2.2 Requirements)
+
+    #[test]
+    fn test_traffic_swarm_action_creation_comprehensive() {
+        let swarm = TrafficSwarmAction::new("Ego", 100.0, 50.0, 10)
+            .with_inner_radius(20.0)
+            .with_central_swarm_object("CentralVehicle");
+        
+        assert_eq!(swarm.number_of_vehicles.as_literal().unwrap(), &10);
+        assert_eq!(swarm.inner_radius.as_literal().unwrap(), &20.0);
+        assert_eq!(swarm.semi_major_axis.as_literal().unwrap(), &100.0);
+        assert_eq!(swarm.semi_minor_axis.as_literal().unwrap(), &50.0);
+        assert_eq!(swarm.central_object.entity_ref.as_literal().unwrap(), "CentralVehicle");
+    }
+
+    #[test]
+    fn test_central_swarm_object_creation() {
+        let central = CentralSwarmObject::new("LeadVehicle");
+        assert_eq!(central.entity_ref.as_literal().unwrap(), "LeadVehicle");
+    }
+
+    #[test]
+    fn test_xml_serialization_traffic_swarm() {
+        let swarm = TrafficSwarmAction::new("Ego", 75.0, 30.0, 5);
+        
+        let xml = quick_xml::se::to_string(&swarm).unwrap();
+        assert!(xml.contains("TrafficSwarmAction"));
+        assert!(xml.contains("semiMajorAxis=\"75\""));
+        assert!(xml.contains("semiMinorAxis=\"30\""));
+        assert!(xml.contains("numberOfVehicles=\"5\""));
+    }
+
+    #[test]
+    fn test_xml_round_trip_traffic_swarm() {
+        let original = TrafficSwarmAction::new("TestEntity", 120.0, 60.0, 8)
+            .with_inner_radius(15.0)
+            .with_offset(5.0);
+        
+        let xml = quick_xml::se::to_string(&original).unwrap();
+        let deserialized: TrafficSwarmAction = quick_xml::de::from_str(&xml).unwrap();
+        
+        assert_eq!(original.central_object.entity_ref.as_literal(), 
+                   deserialized.central_object.entity_ref.as_literal());
+        assert_eq!(original.semi_major_axis.as_literal(),
+                   deserialized.semi_major_axis.as_literal());
+        assert_eq!(original.semi_minor_axis.as_literal(),
+                   deserialized.semi_minor_axis.as_literal());
+        assert_eq!(original.number_of_vehicles.as_literal(),
+                   deserialized.number_of_vehicles.as_literal());
+        assert_eq!(original.inner_radius.as_literal(),
+                   deserialized.inner_radius.as_literal());
+        assert_eq!(original.offset.as_literal(),
+                   deserialized.offset.as_literal());
+    }
+
+    #[test]
+    fn test_traffic_swarm_with_central_object() {
+        let swarm = TrafficSwarmAction::new("MainVehicle", 80.0, 40.0, 6)
+            .with_central_swarm_object("CentralEntity");
+        
+        assert_eq!(swarm.central_object.entity_ref.as_literal().unwrap(), "CentralEntity");
+    }
+
+    #[test]
+    fn test_traffic_swarm_defaults() {
+        let swarm = TrafficSwarmAction::default();
+        // Test that defaults are reasonable
+        assert!(swarm.central_object.entity_ref.as_literal().is_some());
+        assert!(swarm.semi_major_axis.as_literal().is_some());
+        assert!(swarm.semi_minor_axis.as_literal().is_some());
+        assert!(swarm.number_of_vehicles.as_literal().is_some());
+        assert!(swarm.inner_radius.as_literal().is_some());
+        assert!(swarm.offset.as_literal().is_some());
+    }
+
+    #[test]
+    fn test_realistic_swarm_parameters() {
+        // Test realistic highway swarm scenario
+        let highway_swarm = TrafficSwarmAction::new("EgoVehicle", 200.0, 100.0, 15)
+            .with_inner_radius(50.0)
+            .with_offset(10.0);
+        
+        assert_eq!(highway_swarm.semi_major_axis.as_literal().unwrap(), &200.0);
+        assert_eq!(highway_swarm.inner_radius.as_literal().unwrap(), &50.0);
+        assert_eq!(highway_swarm.offset.as_literal().unwrap(), &10.0);
+        
+        // Test city intersection swarm scenario
+        let city_swarm = TrafficSwarmAction::new("CityEgo", 80.0, 60.0, 8)
+            .with_central_swarm_object("IntersectionController");
+        
+        assert_eq!(city_swarm.central_object.entity_ref.as_literal().unwrap(), "IntersectionController");
+        assert_eq!(city_swarm.number_of_vehicles.as_literal().unwrap(), &8);
+    }
+
+    #[test]
+    fn test_traffic_swarm_with_velocity() {
+        let swarm = TrafficSwarmAction::new("TestVehicle", 90.0, 45.0, 12)
+            .with_velocity(60.0);
+        
+        assert!(swarm.velocity.is_some());
+        assert_eq!(swarm.velocity.unwrap().as_literal().unwrap(), &60.0);
+    }
+
+    #[test]
+    fn test_traffic_swarm_elliptical_parameters() {
+        // Test elliptical swarm with different major/minor axes
+        let elliptical_swarm = TrafficSwarmAction::new("EllipseCenter", 150.0, 75.0, 20);
+        
+        // Major axis should be larger than minor axis for proper ellipse
+        assert!(elliptical_swarm.semi_major_axis.as_literal().unwrap() > 
+                elliptical_swarm.semi_minor_axis.as_literal().unwrap());
+        
+        // Test circular swarm (equal axes)
+        let circular_swarm = TrafficSwarmAction::new("CircleCenter", 100.0, 100.0, 15);
+        assert_eq!(circular_swarm.semi_major_axis.as_literal().unwrap(),
+                   circular_swarm.semi_minor_axis.as_literal().unwrap());
+    }
+
+    #[test]
+    fn test_traffic_swarm_builder_pattern() {
+        let swarm = TrafficSwarmAction::new("BuilderTest", 120.0, 80.0, 10)
+            .with_inner_radius(25.0)
+            .with_offset(15.0)
+            .with_velocity(55.0)
+            .with_traffic_definition(TrafficDefinition::default())
+            .with_central_swarm_object("NewCentralEntity");
+        
+        assert_eq!(swarm.inner_radius.as_literal().unwrap(), &25.0);
+        assert_eq!(swarm.offset.as_literal().unwrap(), &15.0);
+        assert_eq!(swarm.velocity.unwrap().as_literal().unwrap(), &55.0);
+        assert!(swarm.traffic_definition.is_some());
+        assert_eq!(swarm.central_object.entity_ref.as_literal().unwrap(), "NewCentralEntity");
     }
 }
