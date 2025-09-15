@@ -187,6 +187,95 @@ impl ValidateDistribution for ParameterValueSet {
     }
 }
 
+// Default implementations for distribution group support
+
+impl Default for DeterministicParameterDistribution {
+    fn default() -> Self {
+        Self::Single(DeterministicSingleParameterDistribution::default())
+    }
+}
+
+impl Default for DeterministicSingleParameterDistribution {
+    fn default() -> Self {
+        Self {
+            distribution_type: DeterministicSingleParameterDistributionType::default(),
+            parameter_name: Value::Literal("parameter".to_string()),
+        }
+    }
+}
+
+impl Default for DeterministicSingleParameterDistributionType {
+    fn default() -> Self {
+        Self::DistributionSet(DistributionSet::default())
+    }
+}
+
+impl Default for DeterministicMultiParameterDistribution {
+    fn default() -> Self {
+        Self {
+            distribution_type: DeterministicMultiParameterDistributionType::default(),
+        }
+    }
+}
+
+impl Default for DeterministicMultiParameterDistributionType {
+    fn default() -> Self {
+        Self::ValueSetDistribution(ValueSetDistribution::default())
+    }
+}
+
+impl Default for DistributionSet {
+    fn default() -> Self {
+        Self {
+            elements: vec![DistributionSetElement::default()],
+        }
+    }
+}
+
+impl Default for DistributionSetElement {
+    fn default() -> Self {
+        Self {
+            value: Value::Literal("0.0".to_string()),
+        }
+    }
+}
+
+impl Default for DistributionRange {
+    fn default() -> Self {
+        Self {
+            step_width: Value::Literal("1.0".to_string()),
+            lower_limit: Value::Literal("0.0".to_string()),
+            upper_limit: Value::Literal("10.0".to_string()),
+        }
+    }
+}
+
+impl Default for ValueSetDistribution {
+    fn default() -> Self {
+        Self {
+            parameter_value_sets: vec![ParameterValueSet::default()],
+            assignment_author: None,
+        }
+    }
+}
+
+impl Default for ParameterValueSet {
+    fn default() -> Self {
+        Self {
+            parameter_assignments: vec![ParameterAssignment::default()],
+        }
+    }
+}
+
+impl Default for ParameterAssignment {
+    fn default() -> Self {
+        Self {
+            parameter_ref: "parameter".to_string(),
+            value: Value::Literal("0.0".to_string()),
+        }
+    }
+}
+
 impl DistributionSampler for DistributionSet {
     type Output = String;
 
