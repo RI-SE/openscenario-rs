@@ -14,7 +14,7 @@
 //! - Enabling entity coordination through synchronization actions
 //! - Offering flexible target specification (absolute vs. relative positioning)
 
-use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::basic::{Boolean, Double, Int, OSString};
 use crate::types::catalogs::entities::{CatalogRoute, CatalogTrajectory};
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode, SpeedTargetValueType};
@@ -196,7 +196,7 @@ impl Default for RoutingAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneChangeAction {
     #[serde(rename = "@targetLaneOffset")]
-    pub target_lane_offset: Option<f64>,
+    pub target_lane_offset: Option<Double>,
     #[serde(rename = "LaneChangeActionDynamics")]
     pub lane_change_action_dynamics: TransitionDynamics,
     #[serde(rename = "LaneChangeTarget")]
@@ -224,14 +224,14 @@ pub struct RelativeTargetLane {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "@value")]
-    pub value: i32,
+    pub value: Int,
 }
 
 /// Absolute target lane specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsoluteTargetLane {
     #[serde(rename = "@value")]
-    pub value: i32,
+    pub value: OSString,
 }
 
 /// Lane offset action for lateral positioning within a lane
@@ -677,6 +677,65 @@ impl RoutingAction {
     }
 }
 
+// PHASE 4A: Helper methods for LaneChangeAction system
+
+impl LaneChangeAction {
+    /// Create a new LaneChangeAction with the specified dynamics and target
+    pub fn new(dynamics: TransitionDynamics, target: LaneChangeTarget) -> Self {
+        Self {
+            lane_change_action_dynamics: dynamics,
+            lane_change_target: target,
+            target_lane_offset: None,
+        }
+    }
+    
+    /// Set the target lane offset for this lane change action
+    pub fn with_offset(mut self, offset: Double) -> Self {
+        self.target_lane_offset = Some(offset);
+        self
+    }
+}
+
+impl LaneChangeTarget {
+    /// Create a relative lane change target
+    pub fn relative(entity_ref: impl Into<String>, value: i32) -> Self {
+        Self {
+            target_choice: LaneChangeTargetChoice::RelativeTargetLane(RelativeTargetLane {
+                entity_ref: OSString::literal(entity_ref.into()),
+                value: Int::literal(value),
+            }),
+        }
+    }
+    
+    /// Create an absolute lane change target
+    pub fn absolute(lane_id: impl Into<String>) -> Self {
+        Self {
+            target_choice: LaneChangeTargetChoice::AbsoluteTargetLane(AbsoluteTargetLane {
+                value: OSString::literal(lane_id.into()),
+            }),
+        }
+    }
+}
+
+impl RelativeTargetLane {
+    /// Create a new relative target lane
+    pub fn new(entity_ref: impl Into<String>, value: i32) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref.into()),
+            value: Int::literal(value),
+        }
+    }
+}
+
+impl AbsoluteTargetLane {
+    /// Create a new absolute target lane
+    pub fn new(lane_id: impl Into<String>) -> Self {
+        Self {
+            value: OSString::literal(lane_id.into()),
+        }
+    }
+}
+
 // PHASE 4A: Default implementations for new movement actions
 
 impl Default for LaneChangeAction {
@@ -701,14 +760,16 @@ impl Default for RelativeTargetLane {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            value: 1,
+            value: Int::literal(1),
         }
     }
 }
 
 impl Default for AbsoluteTargetLane {
     fn default() -> Self {
-        Self { value: 1 }
+        Self { 
+            value: OSString::literal("1".to_string()) 
+        }
     }
 }
 
@@ -883,7 +944,7 @@ mod tests {
     fn test_lane_change_target_relative() {
         let relative_target = RelativeTargetLane {
             entity_ref: OSString::literal("TestEntity".to_string()),
-            value: 2,
+            value: Int::literal(2),
         };
         let target = LaneChangeTarget {
             target_choice: LaneChangeTargetChoice::RelativeTargetLane(relative_target),
@@ -891,10 +952,123 @@ mod tests {
 
         if let LaneChangeTargetChoice::RelativeTargetLane(rel) = target.target_choice {
             assert_eq!(rel.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
-            assert_eq!(rel.value, 2);
+            assert_eq!(rel.value.as_literal(), Some(&2));
         } else {
             panic!("Expected RelativeTargetLane");
         }
+    }
+
+    #[test]
+    fn test_lane_change_action_with_helper_methods() {
+        let dynamics = TransitionDynamics::default();
+        let target = LaneChangeTarget::relative("Ego", -1);
+        let action = LaneChangeAction::new(dynamics, target);
+        
+        assert!(action.target_lane_offset.is_none());
+    }
+
+    #[test]
+    fn test_lane_change_with_offset() {
+        let dynamics = TransitionDynamics::default();
+        let target = LaneChangeTarget::absolute("1");
+        let action = LaneChangeAction::new(dynamics, target)
+            .with_offset(Double::literal(0.5));
+        
+        assert_eq!(action.target_lane_offset.unwrap().as_literal().unwrap(), &0.5);
+    }
+
+    #[test]
+    fn test_lane_change_target_absolute() {
+        let target = LaneChangeTarget::absolute("lane_1");
+        
+        if let LaneChangeTargetChoice::AbsoluteTargetLane(abs) = target.target_choice {
+            assert_eq!(abs.value.as_literal(), Some(&"lane_1".to_string()));
+        } else {
+            panic!("Expected AbsoluteTargetLane");
+        }
+    }
+
+    #[test]
+    fn test_relative_target_lane_helper() {
+        let relative = RelativeTargetLane::new("TestEntity", -2);
+        assert_eq!(relative.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
+        assert_eq!(relative.value.as_literal(), Some(&-2));
+    }
+
+    #[test]
+    fn test_absolute_target_lane_helper() {
+        let absolute = AbsoluteTargetLane::new("lane_2");
+        assert_eq!(absolute.value.as_literal(), Some(&"lane_2".to_string()));
+    }
+
+    #[test]
+    fn test_xml_serialization_lane_change() {
+        let action = LaneChangeAction::new(
+            TransitionDynamics::default(),
+            LaneChangeTarget::relative("Ego", -1)
+        );
+        
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        assert!(xml.contains("LaneChangeAction"));
+        assert!(xml.contains("RelativeTargetLane"));
+        assert!(xml.contains("entityRef=\"Ego\""));
+        assert!(xml.contains("value=\"-1\""));
+    }
+
+    #[test]
+    fn test_xml_serialization_with_offset() {
+        let action = LaneChangeAction::new(
+            TransitionDynamics::default(),
+            LaneChangeTarget::absolute("1")
+        ).with_offset(Double::literal(0.5));
+        
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        assert!(xml.contains("targetLaneOffset=\"0.5\""));
+        assert!(xml.contains("AbsoluteTargetLane"));
+    }
+
+    #[test]
+    fn test_xml_deserialization() {
+        let xml = r#"
+        <LaneChangeAction targetLaneOffset="0.5">
+            <LaneChangeActionDynamics dynamicsDimension="time" dynamicsShape="linear" value="2.0" />
+            <LaneChangeTarget>
+                <RelativeTargetLane entityRef="Ego" value="-1" />
+            </LaneChangeTarget>
+        </LaneChangeAction>"#;
+        
+        let action: Result<LaneChangeAction, _> = quick_xml::de::from_str(xml);
+        assert!(action.is_ok());
+        
+        let action = action.unwrap();
+        assert_eq!(action.target_lane_offset.unwrap().as_literal().unwrap(), &0.5);
+        
+        if let LaneChangeTargetChoice::RelativeTargetLane(rel) = action.lane_change_target.target_choice {
+            assert_eq!(rel.entity_ref.as_literal(), Some(&"Ego".to_string()));
+            assert_eq!(rel.value.as_literal(), Some(&-1));
+        } else {
+            panic!("Expected RelativeTargetLane");
+        }
+    }
+
+    #[test]
+    fn test_xml_round_trip() {
+        let original = LaneChangeAction::new(
+            TransitionDynamics {
+                dynamics_dimension: DynamicsDimension::Time,
+                dynamics_shape: DynamicsShape::Linear,
+                value: Double::literal(2.0),
+            },
+            LaneChangeTarget::relative("TestEntity", 2)
+        ).with_offset(Double::literal(1.5));
+        
+        let xml = quick_xml::se::to_string(&original).unwrap();
+        let deserialized: LaneChangeAction = quick_xml::de::from_str(&xml).unwrap();
+        
+        assert_eq!(original.target_lane_offset.unwrap().as_literal(), 
+                   deserialized.target_lane_offset.unwrap().as_literal());
+        assert_eq!(original.lane_change_action_dynamics.value.as_literal(),
+                   deserialized.lane_change_action_dynamics.value.as_literal());
     }
 
     #[test]

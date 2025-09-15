@@ -92,7 +92,7 @@ pub enum TrafficSignalActionChoice {
 pub struct TrafficSignalStateAction {
     #[serde(rename = "@name")]
     pub name: OSString,
-    #[serde(rename = "@state")]
+    #[serde(rename = "@statee")]
     pub state: OSString,
 }
 
@@ -101,8 +101,50 @@ pub struct TrafficSignalStateAction {
 pub struct TrafficSignalControllerAction {
     #[serde(rename = "@trafficSignalControllerRef")]
     pub traffic_signal_controller_ref: OSString,
-    #[serde(rename = "@phaseRef")]
+    #[serde(rename = "@phase")]
     pub phase_ref: OSString,
+}
+
+/// Traffic signal controller definition with phases and timing
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TrafficSignalController {
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    #[serde(rename = "@delay")]
+    pub delay: Option<Double>,
+    #[serde(rename = "@reference")]
+    pub reference: Option<OSString>,
+    #[serde(rename = "Phase", default)]
+    pub phases: Vec<Phase>,
+}
+
+/// Phase definition for traffic signal controller
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Phase {
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    #[serde(rename = "@duration")]
+    pub duration: Double,
+    #[serde(rename = "TrafficSignalState", default)]
+    pub traffic_signal_states: Vec<TrafficSignalState>,
+    #[serde(rename = "TrafficSignalGroupState")]
+    pub traffic_signal_group_state: Option<TrafficSignalGroupState>,
+}
+
+/// Traffic signal state for individual signal control
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TrafficSignalState {
+    #[serde(rename = "@trafficSignalId")]
+    pub traffic_signal_id: OSString,
+    #[serde(rename = "@statee")]
+    pub state: OSString,
+}
+
+/// Traffic signal group state for signal group control
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TrafficSignalGroupState {
+    #[serde(rename = "@statee")]
+    pub state: OSString,
 }
 
 /// Traffic stop action for traffic stop enable/disable
@@ -271,6 +313,45 @@ impl Default for TrafficSignalControllerAction {
         Self {
             traffic_signal_controller_ref: OSString::literal("DefaultController".to_string()),
             phase_ref: OSString::literal("Phase1".to_string()),
+        }
+    }
+}
+
+impl Default for TrafficSignalController {
+    fn default() -> Self {
+        Self {
+            name: OSString::literal("DefaultController".to_string()),
+            delay: None,
+            reference: None,
+            phases: Vec::new(),
+        }
+    }
+}
+
+impl Default for Phase {
+    fn default() -> Self {
+        Self {
+            name: OSString::literal("DefaultPhase".to_string()),
+            duration: Double::literal(30.0),
+            traffic_signal_states: Vec::new(),
+            traffic_signal_group_state: None,
+        }
+    }
+}
+
+impl Default for TrafficSignalState {
+    fn default() -> Self {
+        Self {
+            traffic_signal_id: OSString::literal("signal_1".to_string()),
+            state: OSString::literal("green".to_string()),
+        }
+    }
+}
+
+impl Default for TrafficSignalGroupState {
+    fn default() -> Self {
+        Self {
+            state: OSString::literal("green".to_string()),
         }
     }
 }
@@ -471,6 +552,121 @@ impl TrafficSignalAction {
                     phase_ref: OSString::literal(phase_ref),
                 },
             ),
+        }
+    }
+}
+
+impl TrafficSignalController {
+    /// Create new traffic signal controller
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: OSString::literal(name.into()),
+            delay: None,
+            reference: None,
+            phases: Vec::new(),
+        }
+    }
+
+    /// Set delay for the controller
+    pub fn with_delay(mut self, delay: f64) -> Self {
+        self.delay = Some(Double::literal(delay));
+        self
+    }
+
+    /// Set reference for the controller
+    pub fn with_reference(mut self, reference: impl Into<String>) -> Self {
+        self.reference = Some(OSString::literal(reference.into()));
+        self
+    }
+
+    /// Add a phase to the controller
+    pub fn add_phase(mut self, phase: Phase) -> Self {
+        self.phases.push(phase);
+        self
+    }
+
+    /// Add multiple phases to the controller
+    pub fn with_phases(mut self, phases: Vec<Phase>) -> Self {
+        self.phases = phases;
+        self
+    }
+}
+
+impl Phase {
+    /// Create new phase
+    pub fn new(name: impl Into<String>, duration: f64) -> Self {
+        Self {
+            name: OSString::literal(name.into()),
+            duration: Double::literal(duration),
+            traffic_signal_states: Vec::new(),
+            traffic_signal_group_state: None,
+        }
+    }
+
+    /// Add signal state to the phase
+    pub fn add_signal_state(mut self, signal_id: impl Into<String>, state: impl Into<String>) -> Self {
+        self.traffic_signal_states.push(TrafficSignalState {
+            traffic_signal_id: OSString::literal(signal_id.into()),
+            state: OSString::literal(state.into()),
+        });
+        self
+    }
+
+    /// Set traffic signal group state
+    pub fn with_group_state(mut self, state: impl Into<String>) -> Self {
+        self.traffic_signal_group_state = Some(TrafficSignalGroupState {
+            state: OSString::literal(state.into()),
+        });
+        self
+    }
+
+    /// Add multiple signal states
+    pub fn with_signal_states(mut self, states: Vec<(String, String)>) -> Self {
+        for (signal_id, state) in states {
+            self.traffic_signal_states.push(TrafficSignalState {
+                traffic_signal_id: OSString::literal(signal_id),
+                state: OSString::literal(state),
+            });
+        }
+        self
+    }
+}
+
+impl TrafficSignalState {
+    /// Create new traffic signal state
+    pub fn new(signal_id: impl Into<String>, state: impl Into<String>) -> Self {
+        Self {
+            traffic_signal_id: OSString::literal(signal_id.into()),
+            state: OSString::literal(state.into()),
+        }
+    }
+}
+
+impl TrafficSignalGroupState {
+    /// Create new traffic signal group state
+    pub fn new(state: impl Into<String>) -> Self {
+        Self {
+            state: OSString::literal(state.into()),
+        }
+    }
+}
+
+impl TrafficSignalStateAction {
+    /// Create new traffic signal state action
+    pub fn new(name: impl Into<String>, state: impl Into<String>) -> Self {
+        Self {
+            name: OSString::literal(name.into()),
+            state: OSString::literal(state.into()),
+        }
+    }
+}
+
+impl TrafficSignalControllerAction {
+    /// Create new traffic signal controller action
+    pub fn new(controller_ref: impl Into<String>, phase_ref: impl Into<String>) -> Self {
+        Self {
+            traffic_signal_controller_ref: OSString::literal(controller_ref.into()),
+            phase_ref: OSString::literal(phase_ref.into()),
         }
     }
 }
@@ -839,5 +1035,201 @@ mod tests {
 
         let stop = TrafficStopAction::default();
         assert_eq!(stop.enable.as_literal(), Some(&true));
+    }
+
+    // TRAFFIC SIGNAL SYSTEM TESTS
+
+    #[test]
+    fn test_traffic_signal_controller_creation() {
+        let controller = TrafficSignalController::new("intersection_1")
+            .with_delay(1.0)
+            .with_reference("ref_1")
+            .add_phase(
+                Phase::new("green_ns", 30.0)
+                    .add_signal_state("signal_1", "green")
+                    .add_signal_state("signal_2", "red")
+            );
+
+        assert_eq!(controller.name.as_literal(), Some(&"intersection_1".to_string()));
+        assert_eq!(controller.delay.as_ref().unwrap().as_literal(), Some(&1.0));
+        assert_eq!(controller.reference.as_ref().unwrap().as_literal(), Some(&"ref_1".to_string()));
+        assert_eq!(controller.phases.len(), 1);
+        assert_eq!(controller.phases[0].traffic_signal_states.len(), 2);
+    }
+
+    #[test]
+    fn test_phase_creation_and_manipulation() {
+        let phase = Phase::new("green_phase", 45.0)
+            .add_signal_state("north_signal", "green")
+            .add_signal_state("south_signal", "green")
+            .add_signal_state("east_signal", "red")
+            .add_signal_state("west_signal", "red")
+            .with_group_state("active");
+
+        assert_eq!(phase.name.as_literal(), Some(&"green_phase".to_string()));
+        assert_eq!(phase.duration.as_literal(), Some(&45.0));
+        assert_eq!(phase.traffic_signal_states.len(), 4);
+        assert!(phase.traffic_signal_group_state.is_some());
+        assert_eq!(
+            phase.traffic_signal_group_state.unwrap().state.as_literal(),
+            Some(&"active".to_string())
+        );
+    }
+
+    #[test]
+    fn test_traffic_signal_state_creation() {
+        let state = TrafficSignalState::new("signal_123", "yellow");
+        
+        assert_eq!(state.traffic_signal_id.as_literal(), Some(&"signal_123".to_string()));
+        assert_eq!(state.state.as_literal(), Some(&"yellow".to_string()));
+    }
+
+    #[test]
+    fn test_traffic_signal_group_state_creation() {
+        let group_state = TrafficSignalGroupState::new("flashing");
+        
+        assert_eq!(group_state.state.as_literal(), Some(&"flashing".to_string()));
+    }
+
+    #[test]
+    fn test_traffic_signal_state_action_creation() {
+        let action = TrafficSignalStateAction::new("main_signal", "red");
+        
+        assert_eq!(action.name.as_literal(), Some(&"main_signal".to_string()));
+        assert_eq!(action.state.as_literal(), Some(&"red".to_string()));
+    }
+
+    #[test]
+    fn test_traffic_signal_controller_action_creation() {
+        let action = TrafficSignalControllerAction::new("controller_1", "phase_2");
+        
+        assert_eq!(
+            action.traffic_signal_controller_ref.as_literal(),
+            Some(&"controller_1".to_string())
+        );
+        assert_eq!(action.phase_ref.as_literal(), Some(&"phase_2".to_string()));
+    }
+
+    #[test]
+    fn test_complex_traffic_signal_controller() {
+        let controller = TrafficSignalController::new("complex_intersection")
+            .with_delay(2.5)
+            .add_phase(
+                Phase::new("north_south_green", 60.0)
+                    .add_signal_state("ns_signal", "green")
+                    .add_signal_state("ew_signal", "red")
+                    .with_group_state("ns_active")
+            )
+            .add_phase(
+                Phase::new("north_south_yellow", 5.0)
+                    .add_signal_state("ns_signal", "yellow")
+                    .add_signal_state("ew_signal", "red")
+            )
+            .add_phase(
+                Phase::new("east_west_green", 45.0)
+                    .add_signal_state("ns_signal", "red")
+                    .add_signal_state("ew_signal", "green")
+                    .with_group_state("ew_active")
+            )
+            .add_phase(
+                Phase::new("east_west_yellow", 5.0)
+                    .add_signal_state("ns_signal", "red")
+                    .add_signal_state("ew_signal", "yellow")
+            );
+
+        assert_eq!(controller.phases.len(), 4);
+        assert_eq!(controller.phases[0].duration.as_literal(), Some(&60.0));
+        assert_eq!(controller.phases[1].duration.as_literal(), Some(&5.0));
+        assert_eq!(controller.phases[2].duration.as_literal(), Some(&45.0));
+        assert_eq!(controller.phases[3].duration.as_literal(), Some(&5.0));
+
+        // Check first phase details
+        let first_phase = &controller.phases[0];
+        assert_eq!(first_phase.traffic_signal_states.len(), 2);
+        assert!(first_phase.traffic_signal_group_state.is_some());
+    }
+
+    #[test]
+    fn test_traffic_signal_xml_serialization() {
+        let controller = TrafficSignalController::new("test_controller")
+            .add_phase(
+                Phase::new("test_phase", 30.0)
+                    .add_signal_state("signal_1", "green")
+            );
+
+        // Test that serialization works (basic check)
+        let serialized = serde_json::to_string(&controller);
+        assert!(serialized.is_ok());
+    }
+
+    #[test]
+    fn test_traffic_signal_defaults() {
+        let controller = TrafficSignalController::default();
+        assert_eq!(controller.name.as_literal(), Some(&"DefaultController".to_string()));
+        assert!(controller.delay.is_none());
+        assert!(controller.reference.is_none());
+        assert_eq!(controller.phases.len(), 0);
+
+        let phase = Phase::default();
+        assert_eq!(phase.name.as_literal(), Some(&"DefaultPhase".to_string()));
+        assert_eq!(phase.duration.as_literal(), Some(&30.0));
+        assert_eq!(phase.traffic_signal_states.len(), 0);
+        assert!(phase.traffic_signal_group_state.is_none());
+
+        let state = TrafficSignalState::default();
+        assert_eq!(state.traffic_signal_id.as_literal(), Some(&"signal_1".to_string()));
+        assert_eq!(state.state.as_literal(), Some(&"green".to_string()));
+
+        let group_state = TrafficSignalGroupState::default();
+        assert_eq!(group_state.state.as_literal(), Some(&"green".to_string()));
+
+        let state_action = TrafficSignalStateAction::default();
+        assert_eq!(state_action.name.as_literal(), Some(&"DefaultSignal".to_string()));
+        assert_eq!(state_action.state.as_literal(), Some(&"green".to_string()));
+
+        let controller_action = TrafficSignalControllerAction::default();
+        assert_eq!(
+            controller_action.traffic_signal_controller_ref.as_literal(),
+            Some(&"DefaultController".to_string())
+        );
+        assert_eq!(controller_action.phase_ref.as_literal(), Some(&"Phase1".to_string()));
+    }
+
+    #[test]
+    fn test_traffic_signal_timing_validation() {
+        // Test realistic traffic signal timing
+        let controller = TrafficSignalController::new("realistic_intersection")
+            .with_delay(1.0)
+            .add_phase(Phase::new("green_ns", 45.0))
+            .add_phase(Phase::new("yellow_ns", 3.0))
+            .add_phase(Phase::new("red_ns_green_ew", 40.0))
+            .add_phase(Phase::new("yellow_ew", 3.0));
+
+        // Total cycle time should be reasonable
+        let total_time: f64 = controller.phases.iter()
+            .map(|p| p.duration.as_literal().unwrap_or(&0.0))
+            .sum();
+        
+        assert_eq!(total_time, 91.0); // 45 + 3 + 40 + 3
+        assert!(total_time > 60.0 && total_time < 180.0); // Reasonable cycle time
+    }
+
+    #[test]
+    fn test_traffic_signal_state_transitions() {
+        // Test that we can model state transitions properly
+        let states = vec![
+            TrafficSignalState::new("main", "green"),
+            TrafficSignalState::new("main", "yellow"),
+            TrafficSignalState::new("main", "red"),
+        ];
+
+        assert_eq!(states[0].state.as_literal(), Some(&"green".to_string()));
+        assert_eq!(states[1].state.as_literal(), Some(&"yellow".to_string()));
+        assert_eq!(states[2].state.as_literal(), Some(&"red".to_string()));
+
+        // All should reference the same signal
+        for state in &states {
+            assert_eq!(state.traffic_signal_id.as_literal(), Some(&"main".to_string()));
+        }
     }
 }

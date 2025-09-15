@@ -72,13 +72,18 @@ pub use control::{
 pub use traffic::{
     CentralSwarmObject,
     ControllerDistribution,
+    // Traffic signal system types
+    Phase,
     TrafficArea,
     TrafficAreaAction,
     TrafficAreaVertex,
     // Supporting types
     TrafficDefinition,
     TrafficSignalAction,
+    TrafficSignalController,
     TrafficSignalControllerAction,
+    TrafficSignalGroupState,
+    TrafficSignalState,
     TrafficSignalStateAction,
     TrafficSinkAction,
     // Core traffic actions
