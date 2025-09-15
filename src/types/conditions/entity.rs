@@ -52,4 +52,3 @@ impl Default for ByEntityCondition {
         ByEntityCondition::Speed(SpeedCondition::default())
     }
 }
-

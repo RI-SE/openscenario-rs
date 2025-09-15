@@ -1,20 +1,21 @@
 //! Scenario structure types
 
 pub mod init;
-pub mod storyboard;
+pub mod monitors;
 pub mod story;
+pub mod storyboard;
 pub mod triggers;
 pub mod variables;
-pub mod monitors;
 
 // Re-export main types for convenience
-pub use init::{Init, Actions, GlobalAction, EnvironmentAction, Private, PrivateActionWrapper, PrivateActionType, LongitudinalAction, LongitudinalActionType};
-pub use storyboard::{OpenScenario, FileHeader, Storyboard};
-pub use story::{
-    ScenarioStory, Act, ManeuverGroup, Maneuver, Event, Actors, EntityRef,
+pub use init::{
+    Actions, EnvironmentAction, GlobalAction, Init, LongitudinalAction, LongitudinalActionType,
+    Private, PrivateActionType, PrivateActionWrapper,
 };
-pub use variables::{VariableDeclarations, VariableDeclaration};
-pub use monitors::{MonitorDeclarations, MonitorDeclaration};
+pub use monitors::{MonitorDeclaration, MonitorDeclarations};
+pub use story::{Act, Actors, EntityRef, Event, Maneuver, ManeuverGroup, ScenarioStory};
+pub use storyboard::{FileHeader, OpenScenario, Storyboard};
+pub use variables::{VariableDeclaration, VariableDeclarations};
 
 // Import necessary types for ScenarioDefinition group
 use crate::types::basic::ParameterDeclarations;
@@ -26,11 +27,20 @@ use serde::{Deserialize, Serialize};
 /// ScenarioDefinition group - XSD group wrapper for scenario sequence
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ScenarioDefinition {
-    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ParameterDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parameter_declarations: Option<ParameterDeclarations>,
-    #[serde(rename = "VariableDeclarations", skip_serializing_if = "Option::is_none")]  
+    #[serde(
+        rename = "VariableDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub variable_declarations: Option<VariableDeclarations>,
-    #[serde(rename = "MonitorDeclarations", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "MonitorDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub monitor_declarations: Option<MonitorDeclarations>,
     #[serde(rename = "CatalogLocations")]
     pub catalog_locations: CatalogLocations,

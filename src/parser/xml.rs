@@ -14,14 +14,14 @@
 //! - Enabling custom deserialization for complex type relationships
 //! - Supporting XML validation against OpenSCENARIO schema
 
+use crate::error::{Error, Result};
+use crate::types::catalogs::files::CatalogFile;
+use crate::types::scenario::storyboard::OpenScenario;
 use std::fs;
 use std::path::Path;
-use crate::error::{Error, Result};
-use crate::types::scenario::storyboard::OpenScenario;
-use crate::types::catalogs::files::CatalogFile;
 
 /// Parse an OpenSCENARIO document from a string
-/// 
+///
 /// This function uses quick-xml's serde integration to deserialize
 /// the XML into our Rust type system.
 pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
@@ -31,71 +31,86 @@ pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
 }
 
 /// Parse an OpenSCENARIO document from a file
-/// 
+///
 /// Reads the file into memory and then parses it as a string.
 /// For very large files, consider using the streaming parser (when available).
 pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
-        .map_err(|e| e.with_context(&format!("Failed to read file: {}", path.as_ref().display())))?;
-    
-    parse_from_str(&xml_content)
-        .map_err(|e| e.with_context(&format!("Failed to parse file: {}", path.as_ref().display())))
+        .map_err(|e| {
+            e.with_context(&format!("Failed to read file: {}", path.as_ref().display()))
+        })?;
+
+    parse_from_str(&xml_content).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to parse file: {}",
+            path.as_ref().display()
+        ))
+    })
 }
 
 /// Serialize an OpenSCENARIO document to XML string
-/// 
+///
 /// This function uses quick-xml's serde integration to serialize
 /// our Rust types back to XML format.
 pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
     let mut xml = String::from(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     xml.push('\n');
-    
+
     let serialized = quick_xml::se::to_string(scenario)
         .map_err(Error::XmlParseError)
         .map_err(|e| e.with_context("Failed to serialize OpenSCENARIO to XML"))?;
-    
+
     xml.push_str(&serialized);
     Ok(xml)
 }
 
 /// Serialize an OpenSCENARIO document to a file
-/// 
+///
 /// Serializes the scenario to XML and writes it to the specified file.
 pub fn serialize_to_file<P: AsRef<Path>>(scenario: &OpenScenario, path: P) -> Result<()> {
     let xml = serialize_to_string(scenario)?;
-    
-    fs::write(&path, xml)
-        .map_err(Error::from)
-        .map_err(|e| e.with_context(&format!("Failed to write file: {}", path.as_ref().display())))
+
+    fs::write(&path, xml).map_err(Error::from).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to write file: {}",
+            path.as_ref().display()
+        ))
+    })
 }
 
 /// Validate XML structure before parsing
-/// 
+///
 /// This function performs basic XML structure validation to provide
 /// better error messages for malformed documents.
 pub fn validate_xml_structure(xml: &str) -> Result<()> {
     // Basic validation - check for XML declaration and root element
     let trimmed = xml.trim();
-    
+
     if trimmed.is_empty() {
         return Err(Error::validation_error("xml", "XML document is empty"));
     }
-    
+
     if !trimmed.starts_with("<?xml") && !trimmed.starts_with('<') {
-        return Err(Error::validation_error("xml", "XML document must start with XML declaration or root element"));
+        return Err(Error::validation_error(
+            "xml",
+            "XML document must start with XML declaration or root element",
+        ));
     }
-    
+
     // Check for basic OpenSCENARIO root element
     if !trimmed.contains("OpenSCENARIO") {
-        return Err(Error::validation_error("xml", "Document does not appear to contain OpenSCENARIO root element"));
+        return Err(Error::validation_error(
+            "xml",
+            "Document does not appear to contain OpenSCENARIO root element",
+        ));
     }
-    
+
     Ok(())
 }
 
 /// Parse with validation
-/// 
+///
 /// Validates the XML structure before attempting to parse it.
 pub fn parse_from_str_validated(xml: &str) -> Result<OpenScenario> {
     validate_xml_structure(xml)?;
@@ -103,15 +118,21 @@ pub fn parse_from_str_validated(xml: &str) -> Result<OpenScenario> {
 }
 
 /// Parse file with validation
-/// 
+///
 /// Validates the XML structure before attempting to parse it.
 pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
-        .map_err(|e| e.with_context(&format!("Failed to read file: {}", path.as_ref().display())))?;
-    
-    parse_from_str_validated(&xml_content)
-        .map_err(|e| e.with_context(&format!("Failed to parse file: {}", path.as_ref().display())))
+        .map_err(|e| {
+            e.with_context(&format!("Failed to read file: {}", path.as_ref().display()))
+        })?;
+
+    parse_from_str_validated(&xml_content).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to parse file: {}",
+            path.as_ref().display()
+        ))
+    })
 }
 
 // TODO: Add custom deserializers for OpenSCENARIO patterns (Week 5)
@@ -122,7 +143,7 @@ pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario
 // Catalog parsing functions
 
 /// Parse a catalog file from XML string
-/// 
+///
 /// This function uses quick-xml's serde integration to deserialize
 /// catalog XML into our catalog file structure.
 pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile> {
@@ -132,46 +153,67 @@ pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile> {
 }
 
 /// Parse a catalog file from a file path
-/// 
+///
 /// Reads the catalog file into memory and then parses it as a string.
 pub fn parse_catalog_from_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile> {
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
-        .map_err(|e| e.with_context(&format!("Failed to read catalog file: {}", path.as_ref().display())))?;
-    
-    parse_catalog_from_str(&xml_content)
-        .map_err(|e| e.with_context(&format!("Failed to parse catalog file: {}", path.as_ref().display())))
+        .map_err(|e| {
+            e.with_context(&format!(
+                "Failed to read catalog file: {}",
+                path.as_ref().display()
+            ))
+        })?;
+
+    parse_catalog_from_str(&xml_content).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to parse catalog file: {}",
+            path.as_ref().display()
+        ))
+    })
 }
 
 /// Validate catalog XML structure before parsing
-/// 
+///
 /// This function performs basic XML structure validation specific to catalog files.
 pub fn validate_catalog_xml_structure(xml: &str) -> Result<()> {
     let trimmed = xml.trim();
-    
+
     if trimmed.is_empty() {
-        return Err(Error::validation_error("xml", "Catalog XML document is empty"));
+        return Err(Error::validation_error(
+            "xml",
+            "Catalog XML document is empty",
+        ));
     }
-    
+
     if !trimmed.starts_with("<?xml") && !trimmed.starts_with('<') {
-        return Err(Error::validation_error("xml", "Catalog XML document must start with XML declaration or root element"));
+        return Err(Error::validation_error(
+            "xml",
+            "Catalog XML document must start with XML declaration or root element",
+        ));
     }
-    
+
     // Check for OpenSCENARIO root element
     if !trimmed.contains("OpenSCENARIO") {
-        return Err(Error::validation_error("xml", "Document does not appear to contain OpenSCENARIO root element"));
+        return Err(Error::validation_error(
+            "xml",
+            "Document does not appear to contain OpenSCENARIO root element",
+        ));
     }
-    
+
     // Check for Catalog element
     if !trimmed.contains("Catalog") {
-        return Err(Error::validation_error("xml", "Document does not appear to contain Catalog element"));
+        return Err(Error::validation_error(
+            "xml",
+            "Document does not appear to contain Catalog element",
+        ));
     }
-    
+
     Ok(())
 }
 
 /// Parse catalog with validation
-/// 
+///
 /// Validates the XML structure before attempting to parse it.
 pub fn parse_catalog_from_str_validated(xml: &str) -> Result<CatalogFile> {
     validate_catalog_xml_structure(xml)?;
@@ -179,42 +221,54 @@ pub fn parse_catalog_from_str_validated(xml: &str) -> Result<CatalogFile> {
 }
 
 /// Parse catalog file with validation
-/// 
+///
 /// Validates the XML structure before attempting to parse it.
 pub fn parse_catalog_from_file_validated<P: AsRef<Path>>(path: P) -> Result<CatalogFile> {
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
-        .map_err(|e| e.with_context(&format!("Failed to read catalog file: {}", path.as_ref().display())))?;
-    
-    parse_catalog_from_str_validated(&xml_content)
-        .map_err(|e| e.with_context(&format!("Failed to parse catalog file: {}", path.as_ref().display())))
+        .map_err(|e| {
+            e.with_context(&format!(
+                "Failed to read catalog file: {}",
+                path.as_ref().display()
+            ))
+        })?;
+
+    parse_catalog_from_str_validated(&xml_content).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to parse catalog file: {}",
+            path.as_ref().display()
+        ))
+    })
 }
 
 /// Serialize a catalog file to XML string
-/// 
+///
 /// This function uses quick-xml's serde integration to serialize
 /// our catalog types back to XML format.
 pub fn serialize_catalog_to_string(catalog: &CatalogFile) -> Result<String> {
     let mut xml = String::from(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     xml.push('\n');
-    
+
     let serialized = quick_xml::se::to_string(catalog)
         .map_err(Error::XmlParseError)
         .map_err(|e| e.with_context("Failed to serialize catalog to XML"))?;
-    
+
     xml.push_str(&serialized);
     Ok(xml)
 }
 
 /// Serialize a catalog file to a file path
-/// 
+///
 /// Serializes the catalog to XML and writes it to the specified file.
 pub fn serialize_catalog_to_file<P: AsRef<Path>>(catalog: &CatalogFile, path: P) -> Result<()> {
     let xml = serialize_catalog_to_string(catalog)?;
-    
-    fs::write(&path, xml)
-        .map_err(Error::from)
-        .map_err(|e| e.with_context(&format!("Failed to write catalog file: {}", path.as_ref().display())))
+
+    fs::write(&path, xml).map_err(Error::from).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to write catalog file: {}",
+            path.as_ref().display()
+        ))
+    })
 }
 
 // TODO: Add streaming parser later (Week 13+) - feature gated
@@ -227,18 +281,20 @@ mod tests {
     #[test]
     fn test_validate_xml_structure() {
         // Valid XML
-        assert!(validate_xml_structure(r#"<?xml version="1.0"?><OpenSCENARIO></OpenSCENARIO>"#).is_ok());
-        
+        assert!(
+            validate_xml_structure(r#"<?xml version="1.0"?><OpenSCENARIO></OpenSCENARIO>"#).is_ok()
+        );
+
         // Missing XML declaration is OK
         assert!(validate_xml_structure(r#"<OpenSCENARIO></OpenSCENARIO>"#).is_ok());
-        
+
         // Empty XML should fail
         assert!(validate_xml_structure("").is_err());
         assert!(validate_xml_structure("   ").is_err());
-        
+
         // Non-XML content should fail
         assert!(validate_xml_structure("This is not XML").is_err());
-        
+
         // Missing OpenSCENARIO root should fail
         assert!(validate_xml_structure(r#"<SomeOtherRoot></SomeOtherRoot>"#).is_err());
     }
@@ -252,13 +308,13 @@ mod tests {
             <Catalog name="test">
             </Catalog>
         </OpenSCENARIO>"#;
-        
+
         assert!(validate_catalog_xml_structure(valid_xml).is_ok());
-        
+
         // Invalid - no Catalog element
         let invalid_xml = r#"<?xml version="1.0"?><OpenSCENARIO><FileHeader/></OpenSCENARIO>"#;
         assert!(validate_catalog_xml_structure(invalid_xml).is_err());
-        
+
         // Invalid - empty
         assert!(validate_catalog_xml_structure("").is_err());
     }
@@ -266,7 +322,7 @@ mod tests {
     #[test]
     fn test_catalog_serialization_roundtrip() {
         let catalog = CatalogFile::default();
-        
+
         let xml = serialize_catalog_to_string(&catalog).unwrap();
         assert!(xml.contains("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
         assert!(xml.contains("OpenSCENARIO"));

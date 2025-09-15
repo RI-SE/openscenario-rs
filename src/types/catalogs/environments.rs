@@ -643,7 +643,7 @@ mod tests {
                 name: OSString::literal("visibility".to_string()),
                 parameter_type: ParameterType::Double,
                 value: OSString::literal("10000.0".to_string()),
-                constraint_group: None,
+                constraint_groups: Vec::new(),
             }],
         };
 

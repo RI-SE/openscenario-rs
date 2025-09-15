@@ -224,4 +224,3 @@ mod tests {
         assert!(xml.contains("width=\"1.8\""));
     }
 }
-

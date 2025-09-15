@@ -194,4 +194,3 @@ mod tests {
         assert!(xml.contains("name=\"TestVehicle\""));
     }
 }
-

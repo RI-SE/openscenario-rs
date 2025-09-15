@@ -7,12 +7,12 @@
 //! - File system operations for catalog discovery
 
 use crate::error::{Error, Result};
-use crate::types::basic::Directory;
-use crate::types::catalogs::files::CatalogFile;
-use crate::types::catalogs::entities::{CatalogVehicle, CatalogController, CatalogPedestrian};
 use crate::parser::xml::{parse_catalog_from_file, parse_catalog_from_str};
-use std::path::{Path, PathBuf};
+use crate::types::basic::Directory;
+use crate::types::catalogs::entities::{CatalogController, CatalogPedestrian, CatalogVehicle};
+use crate::types::catalogs::files::CatalogFile;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Catalog file loader that handles file system operations
 pub struct CatalogLoader {
@@ -41,29 +41,41 @@ impl CatalogLoader {
     /// Discover all .xosc files in a directory
     pub fn discover_catalog_files(&self, directory: &Directory) -> Result<Vec<PathBuf>> {
         // For now, assume we have a literal path. Parameter resolution will be handled later.
-        let path_str = directory.path.as_literal()
-            .ok_or_else(|| Error::catalog_error("Cannot discover files with parameterized paths"))?;
+        let path_str = directory.path.as_literal().ok_or_else(|| {
+            Error::catalog_error("Cannot discover files with parameterized paths")
+        })?;
 
         let dir_path = self.resolve_path(path_str)?;
-        
+
         if !dir_path.exists() {
-            return Err(Error::catalog_error(&format!("Directory does not exist: {}", dir_path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Directory does not exist: {}",
+                dir_path.display()
+            )));
         }
 
         if !dir_path.is_dir() {
-            return Err(Error::catalog_error(&format!("Path is not a directory: {}", dir_path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Path is not a directory: {}",
+                dir_path.display()
+            )));
         }
 
         let mut catalog_files = Vec::new();
-        
-        for entry in fs::read_dir(&dir_path)
-            .map_err(|e| Error::catalog_error(&format!("Failed to read directory {}: {}", dir_path.display(), e)))?
-        {
-            let entry = entry
-                .map_err(|e| Error::catalog_error(&format!("Failed to read directory entry: {}", e)))?;
-            
+
+        for entry in fs::read_dir(&dir_path).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read directory {}: {}",
+                dir_path.display(),
+                e
+            ))
+        })? {
+            let entry = entry.map_err(|e| {
+                Error::catalog_error(&format!("Failed to read directory entry: {}", e))
+            })?;
+
             let path = entry.path();
-            
+
             // Check if it's a .xosc file
             if path.is_file() {
                 if let Some(extension) = path.extension() {
@@ -81,25 +93,37 @@ impl CatalogLoader {
     /// Load and parse a catalog file
     pub fn load_catalog_file<P: AsRef<Path>>(&self, file_path: P) -> Result<String> {
         let path = file_path.as_ref();
-        
+
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        fs::read_to_string(path)
-            .map_err(|e| Error::catalog_error(&format!("Failed to read catalog file {}: {}", path.display(), e)))
+        fs::read_to_string(path).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     /// Load and parse a catalog file into a CatalogFile structure
     pub fn load_and_parse_catalog_file<P: AsRef<Path>>(&self, file_path: P) -> Result<CatalogFile> {
         let path = file_path.as_ref();
-        
+
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        parse_catalog_from_file(path)
-            .map_err(|e| e.with_context(&format!("Failed to parse catalog file: {}", path.display())))
+        parse_catalog_from_file(path).map_err(|e| {
+            e.with_context(&format!("Failed to parse catalog file: {}", path.display()))
+        })
     }
 
     /// Load and parse a catalog from XML string
@@ -122,7 +146,10 @@ impl CatalogLoader {
     }
 
     /// Load all controller catalogs from a directory
-    pub fn load_controller_catalogs(&self, directory: &Directory) -> Result<Vec<CatalogController>> {
+    pub fn load_controller_catalogs(
+        &self,
+        directory: &Directory,
+    ) -> Result<Vec<CatalogController>> {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut controllers = Vec::new();
 
@@ -135,7 +162,10 @@ impl CatalogLoader {
     }
 
     /// Load all pedestrian catalogs from a directory
-    pub fn load_pedestrian_catalogs(&self, directory: &Directory) -> Result<Vec<CatalogPedestrian>> {
+    pub fn load_pedestrian_catalogs(
+        &self,
+        directory: &Directory,
+    ) -> Result<Vec<CatalogPedestrian>> {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut pedestrians = Vec::new();
 
@@ -148,9 +178,13 @@ impl CatalogLoader {
     }
 
     /// Find a specific entity in a catalog file
-    pub fn find_entity_in_catalog<P: AsRef<Path>>(&self, file_path: P, entity_name: &str) -> Result<Option<String>> {
+    pub fn find_entity_in_catalog<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+        entity_name: &str,
+    ) -> Result<Option<String>> {
         let catalog = self.load_and_parse_catalog_file(file_path)?;
-        
+
         // Check if any entity with the given name exists
         let entity_names = catalog.catalog.entity_names();
         if entity_names.contains(&entity_name.to_string()) {
@@ -161,70 +195,140 @@ impl CatalogLoader {
     }
 
     /// Load a specific controller catalog from a file
-    pub fn load_controller_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
+    pub fn load_controller_catalog<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Controller catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Controller catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path)
-            .map_err(|e| Error::catalog_error(&format!("Failed to read controller catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse controller catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read controller catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse controller catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     /// Load a specific trajectory catalog from a file
-    pub fn load_trajectory_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
+    pub fn load_trajectory_catalog<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Trajectory catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Trajectory catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path)
-            .map_err(|e| Error::catalog_error(&format!("Failed to read trajectory catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse trajectory catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read trajectory catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse trajectory catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     /// Load a specific route catalog from a file
-    pub fn load_route_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::routes::RouteCatalog> {
+    pub fn load_route_catalog<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::routes::RouteCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Route catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Route catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path)
-            .map_err(|e| Error::catalog_error(&format!("Failed to read route catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse route catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read route catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse route catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     /// Load a specific environment catalog from a file
-    pub fn load_environment_catalog<P: AsRef<Path>>(&self, file_path: P) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
+    pub fn load_environment_catalog<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Environment catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Environment catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path)
-            .map_err(|e| Error::catalog_error(&format!("Failed to read environment catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse environment catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read environment catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse environment catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     /// Load all controller catalogs from a directory and return them as a hashmap
-    pub fn load_controller_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::controllers::ControllerCatalog>> {
+    pub fn load_controller_catalogs_from_directory(
+        &self,
+        directory: &Directory,
+    ) -> Result<
+        std::collections::HashMap<String, crate::types::catalogs::controllers::ControllerCatalog>,
+    > {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
             // Try to parse as controller catalog
             if let Ok(catalog) = self.load_controller_catalog(&file_path) {
-                let catalog_name = file_path.file_stem()
+                let catalog_name = file_path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -237,78 +341,148 @@ impl CatalogLoader {
 
     /// Async loading methods (feature-gated)
     #[cfg(feature = "async")]
-    pub async fn load_controller_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
+    pub async fn load_controller_catalog_async<P: AsRef<std::path::Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
         use tokio::fs;
-        
+
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Controller catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Controller catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path).await
-            .map_err(|e| Error::catalog_error(&format!("Failed to read controller catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse controller catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).await.map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read controller catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse controller catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     #[cfg(feature = "async")]
-    pub async fn load_trajectory_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
+    pub async fn load_trajectory_catalog_async<P: AsRef<std::path::Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
         use tokio::fs;
-        
+
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Trajectory catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Trajectory catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path).await
-            .map_err(|e| Error::catalog_error(&format!("Failed to read trajectory catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse trajectory catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).await.map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read trajectory catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse trajectory catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     #[cfg(feature = "async")]
-    pub async fn load_route_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::routes::RouteCatalog> {
+    pub async fn load_route_catalog_async<P: AsRef<std::path::Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::routes::RouteCatalog> {
         use tokio::fs;
-        
+
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Route catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Route catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path).await
-            .map_err(|e| Error::catalog_error(&format!("Failed to read route catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse route catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).await.map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read route catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse route catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     #[cfg(feature = "async")]
-    pub async fn load_environment_catalog_async<P: AsRef<std::path::Path>>(&self, file_path: P) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
+    pub async fn load_environment_catalog_async<P: AsRef<std::path::Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
         use tokio::fs;
-        
+
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!("Environment catalog file does not exist: {}", path.display())));
+            return Err(Error::catalog_error(&format!(
+                "Environment catalog file does not exist: {}",
+                path.display()
+            )));
         }
 
-        let xml_content = fs::read_to_string(&path).await
-            .map_err(|e| Error::catalog_error(&format!("Failed to read environment catalog file {}: {}", path.display(), e)))?;
-        
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::catalog_error(&format!("Failed to parse environment catalog file {}: {}", path.display(), e)))
+        let xml_content = fs::read_to_string(&path).await.map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to read environment catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        quick_xml::de::from_str(&xml_content).map_err(|e| {
+            Error::catalog_error(&format!(
+                "Failed to parse environment catalog file {}: {}",
+                path.display(),
+                e
+            ))
+        })
     }
 
     /// Load all trajectory catalogs from a directory and return them as a hashmap
-    pub fn load_trajectory_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::trajectories::TrajectoryCatalog>> {
+    pub fn load_trajectory_catalogs_from_directory(
+        &self,
+        directory: &Directory,
+    ) -> Result<
+        std::collections::HashMap<String, crate::types::catalogs::trajectories::TrajectoryCatalog>,
+    > {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
             // Try to parse as trajectory catalog
             if let Ok(catalog) = self.load_trajectory_catalog(&file_path) {
-                let catalog_name = file_path.file_stem()
+                let catalog_name = file_path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -320,14 +494,19 @@ impl CatalogLoader {
     }
 
     /// Load all route catalogs from a directory and return them as a hashmap
-    pub fn load_route_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::routes::RouteCatalog>> {
+    pub fn load_route_catalogs_from_directory(
+        &self,
+        directory: &Directory,
+    ) -> Result<std::collections::HashMap<String, crate::types::catalogs::routes::RouteCatalog>>
+    {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
             // Try to parse as route catalog
             if let Ok(catalog) = self.load_route_catalog(&file_path) {
-                let catalog_name = file_path.file_stem()
+                let catalog_name = file_path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -339,14 +518,20 @@ impl CatalogLoader {
     }
 
     /// Load all environment catalogs from a directory and return them as a hashmap
-    pub fn load_environment_catalogs_from_directory(&self, directory: &Directory) -> Result<std::collections::HashMap<String, crate::types::catalogs::environments::EnvironmentCatalog>> {
+    pub fn load_environment_catalogs_from_directory(
+        &self,
+        directory: &Directory,
+    ) -> Result<
+        std::collections::HashMap<String, crate::types::catalogs::environments::EnvironmentCatalog>,
+    > {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
             // Try to parse as environment catalog
             if let Ok(catalog) = self.load_environment_catalog(&file_path) {
-                let catalog_name = file_path.file_stem()
+                let catalog_name = file_path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -360,7 +545,7 @@ impl CatalogLoader {
     /// Resolve a path relative to the base path if needed
     fn resolve_path(&self, path: &str) -> Result<PathBuf> {
         let path = Path::new(path);
-        
+
         if path.is_absolute() {
             Ok(path.to_path_buf())
         } else if let Some(base) = &self.base_path {
@@ -368,7 +553,9 @@ impl CatalogLoader {
         } else {
             // Use current directory as base
             Ok(std::env::current_dir()
-                .map_err(|e| Error::catalog_error(&format!("Failed to get current directory: {}", e)))?
+                .map_err(|e| {
+                    Error::catalog_error(&format!("Failed to get current directory: {}", e))
+                })?
                 .join(path))
         }
     }
@@ -379,8 +566,6 @@ impl Default for CatalogLoader {
         Self::new()
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -395,10 +580,11 @@ mod tests {
         assert!(loader.base_path.is_none());
 
         let loader_with_path = CatalogLoader::with_base_path("/tmp");
-        assert_eq!(loader_with_path.base_path.as_ref().unwrap(), Path::new("/tmp"));
+        assert_eq!(
+            loader_with_path.base_path.as_ref().unwrap(),
+            Path::new("/tmp")
+        );
     }
-
-
 
     #[test]
     fn test_discover_catalog_files() -> Result<()> {
@@ -418,8 +604,16 @@ mod tests {
         assert_eq!(files.len(), 2);
 
         // Files should be sorted
-        assert!(files[0].file_name().unwrap().to_string_lossy().starts_with("catalog"));
-        assert!(files[1].file_name().unwrap().to_string_lossy().starts_with("catalog"));
+        assert!(files[0]
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("catalog"));
+        assert!(files[1]
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("catalog"));
 
         Ok(())
     }
@@ -429,7 +623,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test_catalog.xosc");
         let content = "<?xml version=\"1.0\"?>\n<OpenSCENARIO>test</OpenSCENARIO>";
-        
+
         fs::write(&file_path, &content).unwrap();
 
         let loader = CatalogLoader::new();
@@ -439,12 +633,10 @@ mod tests {
         Ok(())
     }
 
-
-
     #[test]
     fn test_parse_catalog_from_string() {
         let loader = CatalogLoader::new();
-        
+
         // Test with minimal valid catalog XML
         let catalog_xml = r#"<?xml version="1.0"?>
         <OpenSCENARIO>
@@ -452,7 +644,7 @@ mod tests {
             <Catalog name="TestCatalog">
             </Catalog>
         </OpenSCENARIO>"#;
-        
+
         let catalog = loader.parse_catalog_from_string(catalog_xml).unwrap();
         assert_eq!(catalog.catalog_name().as_literal().unwrap(), "TestCatalog");
         assert_eq!(catalog.file_header.author.as_literal().unwrap(), "Test");

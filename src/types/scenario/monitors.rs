@@ -7,8 +7,7 @@ use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};
 
 /// Monitor declarations container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct MonitorDeclarations {
     #[serde(rename = "MonitorDeclaration", default)]
     pub monitor_declarations: Vec<MonitorDeclaration>,
@@ -57,7 +56,13 @@ impl MonitorDeclarations {
     }
 
     /// Add a monitor declaration
-    pub fn add_monitor(&mut self, name: String, condition: String, frequency: Option<f64>, enabled: Option<bool>) {
+    pub fn add_monitor(
+        &mut self,
+        name: String,
+        condition: String,
+        frequency: Option<f64>,
+        enabled: Option<bool>,
+    ) {
         self.monitor_declarations.push(MonitorDeclaration {
             name: OSString::literal(name),
             condition: OSString::literal(condition),
@@ -119,32 +124,46 @@ mod tests {
         assert!(decls.is_empty());
         assert_eq!(decls.len(), 0);
 
-        let single_monitor = MonitorDeclarations::with_monitor(
-            "test_monitor".to_string(),
-            "speed > 50".to_string(),
-        );
+        let single_monitor =
+            MonitorDeclarations::with_monitor("test_monitor".to_string(), "speed > 50".to_string());
         assert!(!single_monitor.is_empty());
         assert_eq!(single_monitor.len(), 1);
     }
 
     #[test]
     fn test_monitor_declaration_creation() {
-        let basic_monitor = MonitorDeclaration::new("speed_monitor".to_string(), "speed > 50".to_string());
+        let basic_monitor =
+            MonitorDeclaration::new("speed_monitor".to_string(), "speed > 50".to_string());
         assert_eq!(basic_monitor.enabled, Some(true));
         assert_eq!(basic_monitor.frequency, None);
 
-        let freq_monitor = MonitorDeclaration::with_frequency("speed_monitor".to_string(), "speed > 50".to_string(), 10.0);
+        let freq_monitor = MonitorDeclaration::with_frequency(
+            "speed_monitor".to_string(),
+            "speed > 50".to_string(),
+            10.0,
+        );
         assert_eq!(freq_monitor.frequency, Some(10.0));
 
-        let disabled_monitor = MonitorDeclaration::disabled("debug_monitor".to_string(), "false".to_string());
+        let disabled_monitor =
+            MonitorDeclaration::disabled("debug_monitor".to_string(), "false".to_string());
         assert_eq!(disabled_monitor.enabled, Some(false));
     }
 
     #[test]
     fn test_add_monitor() {
         let mut decls = MonitorDeclarations::new();
-        decls.add_monitor("monitor1".to_string(), "condition1".to_string(), None, Some(true));
-        decls.add_monitor("monitor2".to_string(), "condition2".to_string(), Some(5.0), Some(false));
+        decls.add_monitor(
+            "monitor1".to_string(),
+            "condition1".to_string(),
+            None,
+            Some(true),
+        );
+        decls.add_monitor(
+            "monitor2".to_string(),
+            "condition2".to_string(),
+            Some(5.0),
+            Some(false),
+        );
 
         assert_eq!(decls.len(), 2);
         assert_eq!(decls.monitor_declarations[0].frequency, None);

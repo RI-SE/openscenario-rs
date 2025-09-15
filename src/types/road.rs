@@ -3,7 +3,6 @@
 //! This module defines types for road network definitions including
 //! logic files and road network references.
 
-
 use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};
 
@@ -138,4 +137,3 @@ mod tests {
         assert!(xml.contains("filepath=\"test.xodr\""));
     }
 }
-

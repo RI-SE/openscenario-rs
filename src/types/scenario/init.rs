@@ -246,4 +246,3 @@ mod tests {
         assert!(serialized.contains("entityRef=\"Ego\""));
     }
 }
-

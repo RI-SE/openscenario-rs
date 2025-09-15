@@ -1901,4 +1901,3 @@ mod tests {
         // If CloudState is used in real code, developers should migrate to FractionalCloudCover
     }
 }
-

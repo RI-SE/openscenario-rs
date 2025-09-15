@@ -253,4 +253,3 @@ mod tests {
         assert_eq!(content.entity_count(), 0);
     }
 }
-

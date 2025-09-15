@@ -245,7 +245,7 @@ where
         Err(_) => {
             // Fallback to parameter substitution if expression parsing fails
             let mut result = expr.to_string();
-            
+
             // Find and replace parameter references in the expression
             for (param_name, param_value) in params {
                 let param_ref = format!("${{{}}}", param_name);
@@ -253,7 +253,7 @@ where
                     result = result.replace(&param_ref, param_value);
                 }
             }
-            
+
             Ok(result)
         }
     }
@@ -346,11 +346,11 @@ mod tests {
             "Speed".to_string(),
             ParameterType::Double,
             "30.0".to_string(),
-            constraints,
+            vec![constraints],
         );
 
         assert!(param.has_constraints());
-        let constraint_group = param.constraint_group.as_ref().unwrap();
+        let constraint_group = &param.constraint_groups[0];
         assert_eq!(constraint_group.value_constraints.len(), 2);
         assert_eq!(
             constraint_group.value_constraints[0].rule,
@@ -374,7 +374,7 @@ mod tests {
         // Add second constraint
         param.add_constraint(ValueConstraint::less_than("120".to_string()));
 
-        let constraints = param.constraint_group.as_ref().unwrap();
+        let constraints = &param.constraint_groups[0];
         assert_eq!(constraints.value_constraints.len(), 2);
     }
 
@@ -460,7 +460,10 @@ mod tests {
 
         // Test parameter path resolution
         let param_dir = Directory::from_parameter("CatalogPath".to_string());
-        assert_eq!(param_dir.resolve_path(&params).unwrap(), "/catalogs/vehicles");
+        assert_eq!(
+            param_dir.resolve_path(&params).unwrap(),
+            "/catalogs/vehicles"
+        );
     }
 
     #[test]
@@ -487,7 +490,7 @@ mod tests {
     #[test]
     fn test_directory_serialization() {
         let dir = Directory::new("/path/to/catalogs".to_string());
-        
+
         // Test JSON serialization
         let json = serde_json::to_string(&dir).unwrap();
         assert!(json.contains("path"));
@@ -544,6 +547,87 @@ mod tests {
             println!();
         }
     }
+
+    #[test]
+    fn test_parameter_declaration_multiple_constraint_groups() {
+        // Test the ALKS scenario pattern with multiple constraint groups
+        let constraint_group1 =
+            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("1".to_string())]);
+
+        let constraint_group2 =
+            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("-1".to_string())]);
+
+        let param = ParameterDeclaration::with_constraints(
+            "SideVehicle_InitPosition_RelativeLaneId".to_string(),
+            ParameterType::Int,
+            "1".to_string(),
+            vec![constraint_group1, constraint_group2],
+        );
+
+        // Verify we have multiple constraint groups
+        assert!(param.has_constraints());
+        assert_eq!(param.constraint_groups.len(), 2);
+
+        // Check first constraint group
+        assert_eq!(param.constraint_groups[0].value_constraints.len(), 1);
+        assert_eq!(
+            param.constraint_groups[0].value_constraints[0].rule,
+            Rule::EqualTo
+        );
+        assert_eq!(
+            param.constraint_groups[0].value_constraints[0]
+                .value
+                .as_literal()
+                .unwrap(),
+            "1"
+        );
+
+        // Check second constraint group
+        assert_eq!(param.constraint_groups[1].value_constraints.len(), 1);
+        assert_eq!(
+            param.constraint_groups[1].value_constraints[0].rule,
+            Rule::EqualTo
+        );
+        assert_eq!(
+            param.constraint_groups[1].value_constraints[0]
+                .value
+                .as_literal()
+                .unwrap(),
+            "-1"
+        );
+    }
+
+    #[test]
+    fn test_alks_scenario_constraint_pattern() {
+        // Test the exact pattern from ALKS scenario file
+        let xml = r#"
+        <ParameterDeclaration name="SideVehicle_InitPosition_RelativeLaneId" parameterType="int" value="1">
+          <ConstraintGroup>
+            <ValueConstraint rule="equalTo" value="1"></ValueConstraint>
+          </ConstraintGroup>
+          <ConstraintGroup>
+            <ValueConstraint rule="equalTo" value="-1"></ValueConstraint>
+          </ConstraintGroup>
+        </ParameterDeclaration>
+        "#;
+
+        // This should now parse without the "duplicate field" error
+        let result = quick_xml::de::from_str::<ParameterDeclaration>(xml);
+        assert!(
+            result.is_ok(),
+            "Failed to parse ALKS constraint pattern: {:?}",
+            result.err()
+        );
+
+        let param = result.unwrap();
+        assert_eq!(
+            param.name.as_literal().unwrap(),
+            "SideVehicle_InitPosition_RelativeLaneId"
+        );
+        assert_eq!(param.parameter_type, ParameterType::Int);
+        assert_eq!(param.value.as_literal().unwrap(), "1");
+        assert_eq!(param.constraint_groups.len(), 2);
+    }
 }
 
 // Data Container Types for Scenario Structure
@@ -551,8 +635,7 @@ mod tests {
 use crate::types::enums::{ParameterType, Rule};
 
 /// Parameter declarations container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ParameterDeclarations {
     #[serde(rename = "ParameterDeclaration", default)]
     pub parameter_declarations: Vec<ParameterDeclaration>,
@@ -567,10 +650,13 @@ pub struct ParameterDeclaration {
     pub parameter_type: ParameterType,
     #[serde(rename = "@value")]
     pub value: OSString,
-    #[serde(rename = "ConstraintGroup", skip_serializing_if = "Option::is_none")]
-    pub constraint_group: Option<ValueConstraintGroup>,
+    #[serde(
+        rename = "ConstraintGroup",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub constraint_groups: Vec<ValueConstraintGroup>,
 }
-
 
 impl Default for ParameterDeclaration {
     fn default() -> Self {
@@ -578,14 +664,13 @@ impl Default for ParameterDeclaration {
             name: OSString::literal("DefaultParameter".to_string()),
             parameter_type: ParameterType::String,
             value: OSString::literal("".to_string()),
-            constraint_group: None,
+            constraint_groups: Vec::new(),
         }
     }
 }
 
 /// Parameter constraints container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ValueConstraintGroup {
     #[serde(rename = "ValueConstraint")]
     pub value_constraints: Vec<ValueConstraint>,
@@ -608,7 +693,6 @@ pub struct Range {
     #[serde(rename = "@upperLimit")]
     pub upper_limit: Double,
 }
-
 
 impl Default for ValueConstraint {
     fn default() -> Self {
@@ -636,7 +720,7 @@ impl ParameterDeclaration {
             name: OSString::literal(name),
             parameter_type,
             value: OSString::literal(value),
-            constraint_group: None,
+            constraint_groups: Vec::new(),
         }
     }
 
@@ -645,22 +729,22 @@ impl ParameterDeclaration {
         name: String,
         parameter_type: ParameterType,
         value: String,
-        constraints: ValueConstraintGroup,
+        constraints: Vec<ValueConstraintGroup>,
     ) -> Self {
         Self {
             name: OSString::literal(name),
             parameter_type,
             value: OSString::literal(value),
-            constraint_group: Some(constraints),
+            constraint_groups: constraints,
         }
     }
 
     /// Add a constraint to this parameter declaration
     pub fn add_constraint(&mut self, constraint: ValueConstraint) {
-        if let Some(ref mut group) = self.constraint_group {
+        if let Some(group) = self.constraint_groups.last_mut() {
             group.value_constraints.push(constraint);
         } else {
-            self.constraint_group = Some(ValueConstraintGroup {
+            self.constraint_groups.push(ValueConstraintGroup {
                 value_constraints: vec![constraint],
             });
         }
@@ -668,7 +752,7 @@ impl ParameterDeclaration {
 
     /// Check if the parameter has constraints
     pub fn has_constraints(&self) -> bool {
-        self.constraint_group.is_some()
+        !self.constraint_groups.is_empty()
     }
 }
 
@@ -701,7 +785,10 @@ impl Directory {
     }
 
     /// Get the resolved path string
-    pub fn resolve_path(&self, params: &HashMap<std::string::String, std::string::String>) -> Result<std::string::String> {
+    pub fn resolve_path(
+        &self,
+        params: &HashMap<std::string::String, std::string::String>,
+    ) -> Result<std::string::String> {
         self.path.resolve(params)
     }
 

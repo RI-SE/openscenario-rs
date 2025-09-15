@@ -14,24 +14,24 @@
 //! - Enabling catalog validation and dependency management
 //! - Facilitating catalog evolution and version compatibility
 
-pub mod locations;
-pub mod entities;
-pub mod references;
-pub mod files;
 pub mod controllers;
-pub mod trajectories;
-pub mod routes;
+pub mod entities;
 pub mod environments;
+pub mod files;
+pub mod locations;
+pub mod references;
+pub mod routes;
+pub mod trajectories;
 
 // Re-export catalog types
+pub use controllers::*;
 pub use entities::*;
+pub use environments::*;
+pub use files::*;
 pub use locations::*;
 pub use references::*;
-pub use files::*;
-pub use controllers::*;
-pub use trajectories::*;
 pub use routes::*;
-pub use environments::*;
+pub use trajectories::*;
 
 // Import necessary types for catalog groups
 use serde::{Deserialize, Serialize};

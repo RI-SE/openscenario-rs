@@ -14,47 +14,79 @@
 //! - Supporting action composition and complex scenario building
 //! - Facilitating action validation and constraint enforcement
 
-pub mod movement;   // Movement actions (SpeedAction, TeleportAction, etc.)
-pub mod control;    // Phase 4B: Controller actions 
-// pub mod appearance; // Appearance actions (skip for MVP)
-pub mod traffic;    // Phase 4C: Traffic actions
+pub mod control;
+pub mod movement; // Movement actions (SpeedAction, TeleportAction, etc.) // Phase 4B: Controller actions
+                                                                          // pub mod appearance; // Appearance actions (skip for MVP)
+pub mod traffic; // Phase 4C: Traffic actions
 
 // PHASE 4A: Export all movement actions
 pub use movement::{
-    // Original actions
-    SpeedAction, TeleportAction, RoutingAction, FollowTrajectoryAction, 
-    Trajectory, TrajectoryFollowingMode,
+    AcquirePositionAction,
+    DynamicConstraints,
+    FinalSpeed,
+    FollowTrajectoryAction,
     // New Phase 4A actions
-    LaneChangeAction, LaneOffsetAction, LateralAction, LateralDistanceAction,
-    LongitudinalAction, LongitudinalDistanceAction, SpeedProfileAction,
-    SynchronizeAction, AcquirePositionAction,
+    LaneChangeAction,
     // Supporting types
-    LaneChangeTarget, LaneOffsetTarget, DynamicConstraints, FinalSpeed
+    LaneChangeTarget,
+    LaneOffsetAction,
+    LaneOffsetTarget,
+    LateralAction,
+    LateralDistanceAction,
+    LongitudinalAction,
+    LongitudinalDistanceAction,
+    RoutingAction,
+    // Original actions
+    SpeedAction,
+    SpeedProfileAction,
+    SynchronizeAction,
+    TeleportAction,
+    Trajectory,
+    TrajectoryFollowingMode,
 };
 
 // PHASE 4B: Export all controller actions
 pub use control::{
+    ActivateControllerAction,
     // Core controller actions
-    AssignControllerAction, ActivateControllerAction, OverrideControllerValueAction,
-    // Individual override actions
-    OverrideControllerValueActionBrake, OverrideControllerValueActionThrottle,
-    OverrideControllerValueActionSteeringWheel, OverrideControllerValueActionGear,
-    OverrideControllerValueActionParkingBrake, OverrideControllerValueActionClutch,
-    // Supporting types
-    ManualGear, AutomaticGear, AutomaticGearType,
+    AssignControllerAction,
+    AutomaticGear,
+    AutomaticGearType,
     // Phase 1 Groups: XSD group wrappers
-    Brake, BrakeInput, Gear
+    Brake,
+    BrakeInput,
+    Gear,
+    // Supporting types
+    ManualGear,
+    OverrideControllerValueAction,
+    // Individual override actions
+    OverrideControllerValueActionBrake,
+    OverrideControllerValueActionClutch,
+    OverrideControllerValueActionGear,
+    OverrideControllerValueActionParkingBrake,
+    OverrideControllerValueActionSteeringWheel,
+    OverrideControllerValueActionThrottle,
 };
 
 // PHASE 4C: Export all traffic actions
 pub use traffic::{
-    // Core traffic actions
-    TrafficSourceAction, TrafficSinkAction, TrafficSwarmAction, TrafficAreaAction,
-    TrafficSignalAction, TrafficSignalStateAction, TrafficSignalControllerAction,
-    TrafficStopAction,
+    CentralSwarmObject,
+    ControllerDistribution,
+    TrafficArea,
+    TrafficAreaAction,
+    TrafficAreaVertex,
     // Supporting types
-    TrafficDefinition, VehicleCategoryDistribution, ControllerDistribution,
-    CentralSwarmObject, TrafficArea, TrafficAreaVertex, VehicleCategory
+    TrafficDefinition,
+    TrafficSignalAction,
+    TrafficSignalControllerAction,
+    TrafficSignalStateAction,
+    TrafficSinkAction,
+    // Core traffic actions
+    TrafficSourceAction,
+    TrafficStopAction,
+    TrafficSwarmAction,
+    VehicleCategory,
+    VehicleCategoryDistribution,
 };
 
 use serde::{Deserialize, Serialize};
@@ -62,13 +94,13 @@ use serde::{Deserialize, Serialize};
 // PHASE 4A+4B+4C: Complete Action enum with movement, controller, and traffic actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
-pub enum Action { 
+pub enum Action {
     // Original actions
-    Speed(SpeedAction), 
+    Speed(SpeedAction),
     Teleport(TeleportAction),
     FollowTrajectory(FollowTrajectoryAction),
     Routing(RoutingAction),
-    
+
     // Phase 4A: New movement actions
     LaneChange(LaneChangeAction),
     LaneOffset(LaneOffsetAction),
@@ -79,7 +111,7 @@ pub enum Action {
     SpeedProfile(SpeedProfileAction),
     Synchronize(SynchronizeAction),
     AcquirePosition(AcquirePositionAction),
-    
+
     // Phase 4B: Controller actions
     AssignController(AssignControllerAction),
     ActivateController(ActivateControllerAction),
@@ -90,7 +122,7 @@ pub enum Action {
     OverrideGear(OverrideControllerValueActionGear),
     OverrideParkingBrake(OverrideControllerValueActionParkingBrake),
     OverrideClutch(OverrideControllerValueActionClutch),
-    
+
     // Phase 4C: Traffic actions
     TrafficSource(TrafficSourceAction),
     TrafficSink(TrafficSinkAction),
@@ -110,16 +142,16 @@ impl Default for Action {
 
 // Define Action wrapper with common attributes
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionWrapper { 
-    #[serde(rename = "@name")] 
-    pub name: String, 
-    #[serde(flatten)] 
-    pub action: Action 
+pub struct ActionWrapper {
+    #[serde(rename = "@name")]
+    pub name: String,
+    #[serde(flatten)]
+    pub action: Action,
 }
 
 use crate::types::ValidationContext;
 
 // Add action validation trait (Week 6) - KEEP AS FUTURE WORK
-pub trait ValidateAction { 
-    fn validate(&self, ctx: &ValidationContext) -> crate::error::Result<()>; 
+pub trait ValidateAction {
+    fn validate(&self, ctx: &ValidationContext) -> crate::error::Result<()>;
 }

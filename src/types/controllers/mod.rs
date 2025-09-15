@@ -3,12 +3,12 @@
 //! This module provides comprehensive controller functionality for entity behavior management,
 //! including controller definitions, activation actions, and parameter management.
 
-use serde::{Deserialize, Serialize};
-use crate::types::basic::{OSString, Boolean, Value, ParameterDeclarations};
-use crate::types::enums::ControllerType;
+use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
+use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::distributions::ParameterValueDistribution;
 use crate::types::entities::vehicle::{Properties, Property};
-use crate::types::catalogs::references::ControllerCatalogReference;
+use crate::types::enums::ControllerType;
+use serde::{Deserialize, Serialize};
 
 // Placeholder types that will be implemented in future modules
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -70,7 +70,10 @@ pub struct Controller {
     pub controller_type: Option<ControllerType>,
 
     /// Parameter declarations for the controller
-    #[serde(rename = "ParameterDeclarations", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ParameterDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parameter_declarations: Option<ParameterDeclarations>,
 
     /// Additional properties for the controller
@@ -144,7 +147,10 @@ pub struct ActivateControllerAction {
     pub controller_ref: OSString,
 
     /// Parameter assignments for controller activation
-    #[serde(rename = "ParameterAssignments", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ParameterAssignments",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parameter_assignments: Option<ParameterAssignments>,
 }
 
@@ -249,22 +255,19 @@ pub struct ControllerDistribution {
 impl Default for ControllerDistribution {
     fn default() -> Self {
         use crate::types::distributions::deterministic::*;
-        
+
         // Create a simple deterministic distribution
-        let deterministic_dist = DeterministicParameterDistribution::Single(
-            DeterministicSingleParameterDistribution {
+        let deterministic_dist =
+            DeterministicParameterDistribution::Single(DeterministicSingleParameterDistribution {
                 distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(
                     DistributionSet {
-                        elements: vec![
-                            DistributionSetElement {
-                                value: Value::Literal("default".to_string()),
-                            }
-                        ],
-                    }
+                        elements: vec![DistributionSetElement {
+                            value: Value::Literal("default".to_string()),
+                        }],
+                    },
                 ),
                 parameter_name: Value::Literal("controllerParam".to_string()),
-            }
-        );
+            });
 
         Self {
             controller_type: ControllerType::Movement,
@@ -387,11 +390,8 @@ mod tests {
     #[test]
     fn test_controller_creation() {
         let controller = Controller::new("TestController".to_string(), ControllerType::Movement);
-        
-        assert_eq!(
-            controller.name.as_literal().unwrap(),
-            "TestController"
-        );
+
+        assert_eq!(controller.name.as_literal().unwrap(), "TestController");
         assert_eq!(controller.controller_type, Some(ControllerType::Movement));
     }
 
@@ -407,7 +407,7 @@ mod tests {
     #[test]
     fn test_activate_controller_action() {
         let action = ActivateControllerAction::new("MainController".to_string());
-        
+
         assert_eq!(
             action.controller_ref.as_literal().unwrap(),
             "MainController"
@@ -418,11 +418,8 @@ mod tests {
     #[test]
     fn test_override_controller_action() {
         let assignments = ParameterAssignments::default();
-        let action = OverrideControllerValueAction::new(
-            "TestController".to_string(),
-            assignments,
-            true,
-        );
+        let action =
+            OverrideControllerValueAction::new("TestController".to_string(), assignments, true);
 
         assert_eq!(
             action.controller_ref.as_literal().unwrap(),
@@ -433,25 +430,20 @@ mod tests {
 
     #[test]
     fn test_controller_assignment() {
-        let assignment = ControllerAssignment::new(
-            "AIController".to_string(),
-            "Vehicle1".to_string(),
-        );
+        let assignment =
+            ControllerAssignment::new("AIController".to_string(), "Vehicle1".to_string());
 
         assert_eq!(
             assignment.controller_ref.as_literal().unwrap(),
             "AIController"
         );
-        assert_eq!(
-            assignment.target_entity.as_literal().unwrap(),
-            "Vehicle1"
-        );
+        assert_eq!(assignment.target_entity.as_literal().unwrap(), "Vehicle1");
     }
 
     #[test]
     fn test_controller_serialization() {
         let controller = Controller::new("SerializationTest".to_string(), ControllerType::Movement);
-        
+
         // Test XML serialization
         let xml = quick_xml::se::to_string(&controller).unwrap();
         assert!(xml.contains("SerializationTest"));
@@ -465,9 +457,12 @@ mod tests {
     #[test]
     fn test_controller_distribution() {
         let distribution = ControllerDistribution::default();
-        
+
         assert_eq!(distribution.controller_type, ControllerType::Movement);
-        assert!(matches!(distribution.distribution, ParameterValueDistribution { .. }));
+        assert!(matches!(
+            distribution.distribution,
+            ParameterValueDistribution { .. }
+        ));
     }
 
     #[test]
@@ -479,7 +474,7 @@ mod tests {
             value: "testValue".to_string(),
         };
         properties.properties.push(property);
-        
+
         assert_eq!(properties.properties.len(), 1);
     }
 

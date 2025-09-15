@@ -102,4 +102,3 @@ mod tests {
         assert!(xml.contains("BoundingBox"));
     }
 }
-

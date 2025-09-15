@@ -557,7 +557,7 @@ mod tests {
                 name: OSString::literal("length".to_string()),
                 parameter_type: ParameterType::Double,
                 value: OSString::literal("100.0".to_string()),
-                constraint_group: None,
+                constraint_groups: Vec::new(),
             }],
         };
 

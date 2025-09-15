@@ -841,4 +841,3 @@ mod tests {
         assert_eq!(stop.enable.as_literal(), Some(&true));
     }
 }
-

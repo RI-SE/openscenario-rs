@@ -220,4 +220,3 @@ mod tests {
         assert!(xml.contains("offset=\"0\""));
     }
 }
-

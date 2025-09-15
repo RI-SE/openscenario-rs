@@ -24,21 +24,20 @@
 
 use openscenario_rs::{
     catalog::CatalogLoader,
-    parse_str,
-    serialize_str,
-    OpenScenario,
     expression::evaluate_expression,
+    parse_str, serialize_str,
     types::{
         basic::{Directory, Value},
         catalogs::entities::CatalogEntity,
     },
+    OpenScenario,
 };
 use std::{
+    collections::HashMap,
     env,
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
-    collections::HashMap,
 };
 
 /// Main application entry point
@@ -53,11 +52,14 @@ fn main() {
     }
 
     let input_file = &args[1];
-    
+
     // Run the catalog resolution process
     match process_scenario(input_file) {
         Ok(output_path) => {
-            println!("✅ SUCCESS: Resolved scenario written to: {}", output_path.display());
+            println!(
+                "✅ SUCCESS: Resolved scenario written to: {}",
+                output_path.display()
+            );
         }
         Err(e) => {
             eprintln!("❌ ERROR: {}", e);
@@ -70,7 +72,7 @@ fn main() {
 fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     println!("🚀 OpenSCENARIO Catalog Resolution Tool");
     println!("═══════════════════════════════════════");
-    
+
     // Step 1: Load and parse the input scenario
     println!("\n📁 Loading scenario file: {}", input_file);
     let input_path = Path::new(input_file);
@@ -80,12 +82,15 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
 
     let xml = fs::read_to_string(input_path)?;
     let mut scenario = parse_str(&xml)?;
-    
+
     println!("✅ Successfully parsed scenario file");
     println!("   📋 Description: {:?}", scenario.file_header.description);
     println!("   👤 Author: {:?}", scenario.file_header.author);
     println!("   📅 Date: {:?}", scenario.file_header.date);
-    println!("   🎭 Entities: {}", scenario.entities.scenario_objects.len());
+    println!(
+        "   🎭 Entities: {}",
+        scenario.entities.scenario_objects.len()
+    );
 
     // Step 2: Extract parameters from scenario
     let scenario_parameters = extract_scenario_parameters(&scenario);
@@ -97,12 +102,17 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
     // Step 3: Check if scenario uses catalogs
     if let Some(catalog_locations) = scenario.catalog_locations.clone() {
         println!("\n🗂️  Catalog locations found - proceeding with resolution:");
-        
+
         // Get the base directory for relative catalog paths
         let base_dir = input_path.parent().unwrap_or(Path::new("."));
-        
+
         // Resolve catalog references
-        resolve_catalog_references(&mut scenario, &catalog_locations, &scenario_parameters, base_dir)?;
+        resolve_catalog_references(
+            &mut scenario,
+            &catalog_locations,
+            &scenario_parameters,
+            base_dir,
+        )?;
     } else {
         println!("\n💡 No catalog locations found - scenario uses inline entities only");
     }
@@ -119,17 +129,19 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
     }
 
     // Step 5: Generate output filename
-    let input_stem = input_path.file_stem().unwrap_or_else(|| std::ffi::OsStr::new("scenario"));
+    let input_stem = input_path
+        .file_stem()
+        .unwrap_or_else(|| std::ffi::OsStr::new("scenario"));
     let output_filename = format!("{}_resolved.xosc", input_stem.to_string_lossy());
     let output_path = output_dir.join(output_filename);
 
     // Step 6: Serialize and write the resolved scenario
     println!("\n💾 Serializing resolved scenario...");
     let resolved_xml = serialize_str(&scenario)?;
-    
+
     let mut output_file = File::create(&output_path)?;
     output_file.write_all(resolved_xml.as_bytes())?;
-    
+
     println!("✅ Resolved scenario written to: {}", output_path.display());
     println!("   📊 Output size: {} bytes", resolved_xml.len());
 
@@ -142,7 +154,7 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
 /// Extract parameter declarations from the scenario for use in catalog resolution
 fn extract_scenario_parameters(scenario: &OpenScenario) -> HashMap<String, String> {
     let mut parameters = HashMap::new();
-    
+
     if let Some(param_declarations) = &scenario.parameter_declarations {
         for param in &param_declarations.parameter_declarations {
             if let (Some(name), Some(value)) = (param.name.as_literal(), param.value.as_literal()) {
@@ -150,7 +162,7 @@ fn extract_scenario_parameters(scenario: &OpenScenario) -> HashMap<String, Strin
             }
         }
     }
-    
+
     parameters
 }
 
@@ -164,24 +176,41 @@ fn resolve_catalog_references(
     let catalog_loader = CatalogLoader::new();
     let mut resolved_vehicles = 0;
     let mut resolved_controllers = 0;
-    
+
     // Process each entity in the scenario
     for entity in &mut scenario.entities.scenario_objects {
-        let entity_name = entity.name.as_literal().unwrap_or(&"<unknown>".to_string()).clone();
+        let entity_name = entity
+            .name
+            .as_literal()
+            .unwrap_or(&"<unknown>".to_string())
+            .clone();
         println!("   🎭 Processing entity: {}", entity_name);
-        
+
         // Resolve vehicle catalog references
         if let Some(vehicle_ref) = &entity.catalog_reference {
             println!("      🚗 Resolving vehicle reference...");
-            
+
             if let Some(vehicle_catalog_location) = &catalog_locations.vehicle_catalog {
-                match resolve_vehicle_reference(&catalog_loader, vehicle_ref, vehicle_catalog_location, parameters, base_dir) {
+                match resolve_vehicle_reference(
+                    &catalog_loader,
+                    vehicle_ref,
+                    vehicle_catalog_location,
+                    parameters,
+                    base_dir,
+                ) {
                     Ok(resolved_vehicle) => {
-                        println!("         ✅ Vehicle resolved: {} -> {}", 
-                            vehicle_ref.entry_name.as_literal().unwrap_or(&"<unknown>".to_string()),
-                            resolved_vehicle.name.as_literal().unwrap_or(&"<unknown>".to_string())
+                        println!(
+                            "         ✅ Vehicle resolved: {} -> {}",
+                            vehicle_ref
+                                .entry_name
+                                .as_literal()
+                                .unwrap_or(&"<unknown>".to_string()),
+                            resolved_vehicle
+                                .name
+                                .as_literal()
+                                .unwrap_or(&"<unknown>".to_string())
                         );
-                        
+
                         // Replace catalog reference with resolved inline entity
                         entity.catalog_reference = None;
                         entity.vehicle = Some(resolved_vehicle);
@@ -194,20 +223,33 @@ fn resolve_catalog_references(
                 }
             }
         }
-        
+
         // Resolve controller catalog references
         if let Some(object_controller) = &mut entity.object_controller {
             if let Some(controller_ref) = &object_controller.catalog_reference {
                 println!("      🎮 Resolving controller reference...");
-                
+
                 if let Some(controller_catalog_location) = &catalog_locations.controller_catalog {
-                    match resolve_controller_reference(&catalog_loader, controller_ref, controller_catalog_location, parameters, base_dir) {
+                    match resolve_controller_reference(
+                        &catalog_loader,
+                        controller_ref,
+                        controller_catalog_location,
+                        parameters,
+                        base_dir,
+                    ) {
                         Ok(resolved_controller) => {
-                            println!("         ✅ Controller resolved: {} -> {}", 
-                                controller_ref.entry_name.as_literal().unwrap_or(&"<unknown>".to_string()),
-                                resolved_controller.name.as_literal().unwrap_or(&"<unknown>".to_string())
+                            println!(
+                                "         ✅ Controller resolved: {} -> {}",
+                                controller_ref
+                                    .entry_name
+                                    .as_literal()
+                                    .unwrap_or(&"<unknown>".to_string()),
+                                resolved_controller
+                                    .name
+                                    .as_literal()
+                                    .unwrap_or(&"<unknown>".to_string())
                             );
-                            
+
                             // Replace catalog reference with resolved inline entity
                             object_controller.catalog_reference = None;
                             object_controller.controller = Some(resolved_controller);
@@ -222,12 +264,15 @@ fn resolve_catalog_references(
             }
         }
     }
-    
-    println!("   📊 Resolution complete: {} vehicles, {} controllers", resolved_vehicles, resolved_controllers);
-    
+
+    println!(
+        "   📊 Resolution complete: {} vehicles, {} controllers",
+        resolved_vehicles, resolved_controllers
+    );
+
     // Remove catalog locations from the resolved scenario since everything is now inline
     scenario.catalog_locations = None;
-    
+
     Ok(())
 }
 
@@ -240,45 +285,51 @@ fn resolve_vehicle_reference(
     base_dir: &Path,
 ) -> Result<openscenario_rs::types::entities::vehicle::Vehicle, Box<dyn std::error::Error>> {
     // Resolve the catalog directory path
-    let catalog_dir_path = vehicle_location.directory.path.as_literal()
+    let catalog_dir_path = vehicle_location
+        .directory
+        .path
+        .as_literal()
         .ok_or("Cannot resolve parameterized catalog directory paths")?;
-    
+
     let resolved_catalog_dir = if Path::new(catalog_dir_path).is_relative() {
         base_dir.join(catalog_dir_path)
     } else {
         PathBuf::from(catalog_dir_path)
     };
-    
+
     let catalog_dir = Directory {
         path: Value::literal(resolved_catalog_dir.to_string_lossy().to_string()),
     };
-    
+
     // Load all vehicle catalogs
     let catalog_vehicles = catalog_loader.load_vehicle_catalogs(&catalog_dir)?;
-    
+
     // Resolve the vehicle entry name (may be parameterized like $LeadVehicle_Model)
     let entry_name = vehicle_ref.entry_name.resolve(scenario_parameters)?;
-    
-    let catalog_vehicle = catalog_vehicles.iter()
+
+    let catalog_vehicle = catalog_vehicles
+        .iter()
         .find(|v| v.entity_name() == entry_name)
         .ok_or_else(|| format!("Vehicle '{}' not found in catalog", entry_name))?;
-    
+
     // Collect parameters for resolution (scenario params + reference params)
     let mut resolution_parameters = scenario_parameters.clone();
-    
+
     if let Some(param_assignments) = &vehicle_ref.parameter_assignments {
         for assignment in param_assignments {
             if let (Some(param_name), Some(param_value)) = (
                 assignment.parameter_ref.as_literal(),
-                assignment.value.as_literal()
+                assignment.value.as_literal(),
             ) {
                 resolution_parameters.insert(param_name.clone(), param_value.clone());
             }
         }
     }
-    
+
     // Convert catalog vehicle to scenario vehicle
-    catalog_vehicle.clone().into_scenario_entity(resolution_parameters)
+    catalog_vehicle
+        .clone()
+        .into_scenario_entity(resolution_parameters)
         .map_err(|e| e.into())
 }
 
@@ -291,45 +342,51 @@ fn resolve_controller_reference(
     base_dir: &Path,
 ) -> Result<openscenario_rs::types::controllers::Controller, Box<dyn std::error::Error>> {
     // Resolve the catalog directory path
-    let catalog_dir_path = controller_location.directory.path.as_literal()
+    let catalog_dir_path = controller_location
+        .directory
+        .path
+        .as_literal()
         .ok_or("Cannot resolve parameterized catalog directory paths")?;
-    
+
     let resolved_catalog_dir = if Path::new(catalog_dir_path).is_relative() {
         base_dir.join(catalog_dir_path)
     } else {
         PathBuf::from(catalog_dir_path)
     };
-    
+
     let catalog_dir = Directory {
         path: Value::literal(resolved_catalog_dir.to_string_lossy().to_string()),
     };
-    
+
     // Load all controller catalogs
     let catalog_controllers = catalog_loader.load_controller_catalogs(&catalog_dir)?;
-    
+
     // Resolve the controller entry name (may be parameterized)
     let entry_name = controller_ref.entry_name.resolve(scenario_parameters)?;
-    
-    let catalog_controller = catalog_controllers.iter()
+
+    let catalog_controller = catalog_controllers
+        .iter()
         .find(|c| c.entity_name() == entry_name)
         .ok_or_else(|| format!("Controller '{}' not found in catalog", entry_name))?;
-    
+
     // Collect parameters for resolution (scenario params + reference params)
     let mut resolution_parameters = scenario_parameters.clone();
-    
+
     if let Some(param_assignments) = &controller_ref.parameter_assignments {
         for assignment in param_assignments {
             if let (Some(param_name), Some(param_value)) = (
                 assignment.parameter_ref.as_literal(),
-                assignment.value.as_literal()
+                assignment.value.as_literal(),
             ) {
                 resolution_parameters.insert(param_name.clone(), param_value.clone());
             }
         }
     }
-    
+
     // Convert catalog controller to scenario controller
-    catalog_controller.clone().into_scenario_entity(resolution_parameters)
+    catalog_controller
+        .clone()
+        .into_scenario_entity(resolution_parameters)
         .map_err(|e| e.into())
 }
 
@@ -337,12 +394,12 @@ fn resolve_controller_reference(
 fn print_resolution_summary(scenario: &OpenScenario) {
     println!("\n📈 Resolution Summary");
     println!("════════════════════");
-    
+
     let entity_count = scenario.entities.scenario_objects.len();
     let mut inline_vehicles = 0;
     let mut inline_controllers = 0;
     let mut remaining_catalog_refs = 0;
-    
+
     for entity in &scenario.entities.scenario_objects {
         if entity.vehicle.is_some() {
             inline_vehicles += 1;
@@ -352,25 +409,37 @@ fn print_resolution_summary(scenario: &OpenScenario) {
                 inline_controllers += 1;
             }
         }
-        if entity.catalog_reference.is_some() || 
-           entity.object_controller.as_ref().map_or(false, |oc| oc.catalog_reference.is_some()) {
+        if entity.catalog_reference.is_some()
+            || entity
+                .object_controller
+                .as_ref()
+                .map_or(false, |oc| oc.catalog_reference.is_some())
+        {
             remaining_catalog_refs += 1;
         }
     }
-    
+
     println!("   🎭 Total entities: {}", entity_count);
     println!("   🚗 Inline vehicles: {}", inline_vehicles);
     println!("   🎮 Inline controllers: {}", inline_controllers);
-    println!("   🔗 Remaining catalog references: {}", remaining_catalog_refs);
-    
+    println!(
+        "   🔗 Remaining catalog references: {}",
+        remaining_catalog_refs
+    );
+
     if remaining_catalog_refs == 0 {
         println!("   ✅ All catalog references successfully resolved!");
     } else {
         println!("   ⚠️  Some catalog references could not be resolved");
     }
-    
-    println!("   🗂️  Catalog locations: {}", 
-        if scenario.catalog_locations.is_some() { "Present (will be removed in output)" } else { "None" }
+
+    println!(
+        "   🗂️  Catalog locations: {}",
+        if scenario.catalog_locations.is_some() {
+            "Present (will be removed in output)"
+        } else {
+            "None"
+        }
     );
 }
 
@@ -381,20 +450,28 @@ fn resolve_all_expressions(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut expressions_resolved = 0;
     let mut expressions_failed = 0;
-    
+
     // Resolve expressions in scenario entities
     for entity in &mut scenario.entities.scenario_objects {
         // Process vehicle properties if present
         if let Some(vehicle) = &mut entity.vehicle {
-            expressions_resolved += resolve_vehicle_expressions(vehicle, parameters, &mut expressions_failed)?;
+            expressions_resolved +=
+                resolve_vehicle_expressions(vehicle, parameters, &mut expressions_failed)?;
         }
     }
-    
+
     // Resolve expressions in storyboard
-    expressions_resolved += resolve_storyboard_expressions(&mut scenario.storyboard, parameters, &mut expressions_failed)?;
-    
-    println!("   ✅ Expressions resolved: {} success, {} failed", expressions_resolved, expressions_failed);
-    
+    expressions_resolved += resolve_storyboard_expressions(
+        &mut scenario.storyboard,
+        parameters,
+        &mut expressions_failed,
+    )?;
+
+    println!(
+        "   ✅ Expressions resolved: {} success, {} failed",
+        expressions_resolved, expressions_failed
+    );
+
     Ok(())
 }
 
@@ -405,12 +482,24 @@ fn resolve_vehicle_expressions(
     expressions_failed: &mut u32,
 ) -> Result<u32, Box<dyn std::error::Error>> {
     let mut resolved_count = 0;
-    
+
     // Resolve performance values
-    resolved_count += resolve_value_expression(&mut vehicle.performance.max_speed, parameters, expressions_failed)?;
-    resolved_count += resolve_value_expression(&mut vehicle.performance.max_acceleration, parameters, expressions_failed)?;
-    resolved_count += resolve_value_expression(&mut vehicle.performance.max_deceleration, parameters, expressions_failed)?;
-    
+    resolved_count += resolve_value_expression(
+        &mut vehicle.performance.max_speed,
+        parameters,
+        expressions_failed,
+    )?;
+    resolved_count += resolve_value_expression(
+        &mut vehicle.performance.max_acceleration,
+        parameters,
+        expressions_failed,
+    )?;
+    resolved_count += resolve_value_expression(
+        &mut vehicle.performance.max_deceleration,
+        parameters,
+        expressions_failed,
+    )?;
+
     Ok(resolved_count)
 }
 
@@ -421,23 +510,24 @@ fn resolve_storyboard_expressions(
     expressions_failed: &mut u32,
 ) -> Result<u32, Box<dyn std::error::Error>> {
     let mut resolved_count = 0;
-    
+
     // Resolve expressions in initial actions
     for private in &mut storyboard.init.actions.private_actions {
         for action in &mut private.private_actions {
             resolved_count += resolve_action_expressions(action, parameters, expressions_failed)?;
         }
     }
-    
+
     // Resolve expressions in stop trigger
     if let Some(stop_trigger) = &mut storyboard.stop_trigger {
         for condition_group in &mut stop_trigger.condition_groups {
             for condition in &mut condition_group.conditions {
-                resolved_count += resolve_condition_expressions(condition, parameters, expressions_failed)?;
+                resolved_count +=
+                    resolve_condition_expressions(condition, parameters, expressions_failed)?;
             }
         }
     }
-    
+
     Ok(resolved_count)
 }
 
@@ -448,16 +538,24 @@ fn resolve_action_expressions(
     expressions_failed: &mut u32,
 ) -> Result<u32, Box<dyn std::error::Error>> {
     let mut resolved_count = 0;
-    
+
     if let Some(longitudinal) = &mut action.longitudinal_action {
         if let Some(speed_action) = &mut longitudinal.speed_action {
-            resolved_count += resolve_value_expression(&mut speed_action.speed_action_dynamics.value, parameters, expressions_failed)?;
+            resolved_count += resolve_value_expression(
+                &mut speed_action.speed_action_dynamics.value,
+                parameters,
+                expressions_failed,
+            )?;
             if let Some(abs_target) = &mut speed_action.speed_action_target.absolute {
-                resolved_count += resolve_value_expression(&mut abs_target.value, parameters, expressions_failed)?;
+                resolved_count += resolve_value_expression(
+                    &mut abs_target.value,
+                    parameters,
+                    expressions_failed,
+                )?;
             }
         }
     }
-    
+
     Ok(resolved_count)
 }
 
@@ -468,13 +566,14 @@ fn resolve_condition_expressions(
     expressions_failed: &mut u32,
 ) -> Result<u32, Box<dyn std::error::Error>> {
     let mut resolved_count = 0;
-    
+
     if let Some(by_value) = &mut condition.by_value_condition {
         if let Some(sim_time) = &mut by_value.simulation_time {
-            resolved_count += resolve_value_expression(&mut sim_time.value, parameters, expressions_failed)?;
+            resolved_count +=
+                resolve_value_expression(&mut sim_time.value, parameters, expressions_failed)?;
         }
     }
-    
+
     Ok(resolved_count)
 }
 
@@ -503,7 +602,10 @@ where
                         }
                         Err(e) => {
                             *expressions_failed += 1;
-                            println!("      ❌ Parse error for {}: {} → {} ({})", expr_string, result, result_str, e);
+                            println!(
+                                "      ❌ Parse error for {}: {} → {} ({})",
+                                expr_string, result, result_str, e
+                            );
                             Ok(0)
                         }
                     }

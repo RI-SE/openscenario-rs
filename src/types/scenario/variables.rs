@@ -8,8 +8,7 @@ use crate::types::enums::ParameterType;
 use serde::{Deserialize, Serialize};
 
 /// Variable declarations container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct VariableDeclarations {
     #[serde(rename = "VariableDeclaration", default)]
     pub variable_declarations: Vec<VariableDeclaration>,
@@ -125,7 +124,8 @@ mod tests {
 
     #[test]
     fn test_variable_declaration_creation() {
-        let string_var = VariableDeclaration::string_variable("name".to_string(), "value".to_string());
+        let string_var =
+            VariableDeclaration::string_variable("name".to_string(), "value".to_string());
         assert_eq!(string_var.variable_type, ParameterType::String);
 
         let int_var = VariableDeclaration::int_variable("count".to_string(), 42);
@@ -138,11 +138,21 @@ mod tests {
     #[test]
     fn test_add_variable() {
         let mut decls = VariableDeclarations::new();
-        decls.add_variable("var1".to_string(), ParameterType::String, "value1".to_string());
+        decls.add_variable(
+            "var1".to_string(),
+            ParameterType::String,
+            "value1".to_string(),
+        );
         decls.add_variable("var2".to_string(), ParameterType::Int, "42".to_string());
 
         assert_eq!(decls.len(), 2);
-        assert_eq!(decls.variable_declarations[0].variable_type, ParameterType::String);
-        assert_eq!(decls.variable_declarations[1].variable_type, ParameterType::Int);
+        assert_eq!(
+            decls.variable_declarations[0].variable_type,
+            ParameterType::String
+        );
+        assert_eq!(
+            decls.variable_declarations[1].variable_type,
+            ParameterType::Int
+        );
     }
 }

@@ -18,4 +18,3 @@ fn main() {
     println!("Validation example placeholder");
     // TODO: Implement validation example
 }
-

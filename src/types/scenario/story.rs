@@ -449,4 +449,3 @@ mod tests {
         assert!(serialized.contains("DefaultStory"));
     }
 }
-

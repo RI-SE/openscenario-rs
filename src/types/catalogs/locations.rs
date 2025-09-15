@@ -240,14 +240,30 @@ impl CatalogLocations {
     /// Count the number of specified catalog locations
     pub fn catalog_count(&self) -> usize {
         let mut count = 0;
-        if self.vehicle_catalog.is_some() { count += 1; }
-        if self.controller_catalog.is_some() { count += 1; }
-        if self.pedestrian_catalog.is_some() { count += 1; }
-        if self.misc_object_catalog.is_some() { count += 1; }
-        if self.environment_catalog.is_some() { count += 1; }
-        if self.maneuver_catalog.is_some() { count += 1; }
-        if self.trajectory_catalog.is_some() { count += 1; }
-        if self.route_catalog.is_some() { count += 1; }
+        if self.vehicle_catalog.is_some() {
+            count += 1;
+        }
+        if self.controller_catalog.is_some() {
+            count += 1;
+        }
+        if self.pedestrian_catalog.is_some() {
+            count += 1;
+        }
+        if self.misc_object_catalog.is_some() {
+            count += 1;
+        }
+        if self.environment_catalog.is_some() {
+            count += 1;
+        }
+        if self.maneuver_catalog.is_some() {
+            count += 1;
+        }
+        if self.trajectory_catalog.is_some() {
+            count += 1;
+        }
+        if self.route_catalog.is_some() {
+            count += 1;
+        }
         count
     }
 }
@@ -265,7 +281,10 @@ mod tests {
     #[test]
     fn test_vehicle_catalog_location() {
         let location = VehicleCatalogLocation::from_path("/catalogs/vehicles".to_string());
-        assert_eq!(location.directory.path.as_literal().unwrap(), "/catalogs/vehicles");
+        assert_eq!(
+            location.directory.path.as_literal().unwrap(),
+            "/catalogs/vehicles"
+        );
 
         let directory = Directory::new("./vehicles".to_string());
         let location2 = VehicleCatalogLocation::new(directory.clone());
@@ -275,7 +294,10 @@ mod tests {
     #[test]
     fn test_controller_catalog_location() {
         let location = ControllerCatalogLocation::from_path("/catalogs/controllers".to_string());
-        assert_eq!(location.directory.path.as_literal().unwrap(), "/catalogs/controllers");
+        assert_eq!(
+            location.directory.path.as_literal().unwrap(),
+            "/catalogs/controllers"
+        );
     }
 
     #[test]
@@ -284,8 +306,11 @@ mod tests {
         assert!(!locations.has_catalogs());
         assert_eq!(locations.catalog_count(), 0);
 
-        locations.vehicle_catalog = Some(VehicleCatalogLocation::from_path("/vehicles".to_string()));
-        locations.controller_catalog = Some(ControllerCatalogLocation::from_path("/controllers".to_string()));
+        locations.vehicle_catalog =
+            Some(VehicleCatalogLocation::from_path("/vehicles".to_string()));
+        locations.controller_catalog = Some(ControllerCatalogLocation::from_path(
+            "/controllers".to_string(),
+        ));
 
         assert!(locations.has_catalogs());
         assert_eq!(locations.catalog_count(), 2);
@@ -305,12 +330,27 @@ mod tests {
 
         // Verify all are created correctly
         assert_eq!(vehicle.directory.path.as_literal().unwrap(), "/vehicles");
-        assert_eq!(controller.directory.path.as_literal().unwrap(), "/controllers");
-        assert_eq!(pedestrian.directory.path.as_literal().unwrap(), "/pedestrians");
-        assert_eq!(misc_object.directory.path.as_literal().unwrap(), "/misc_objects");
-        assert_eq!(environment.directory.path.as_literal().unwrap(), "/environments");
+        assert_eq!(
+            controller.directory.path.as_literal().unwrap(),
+            "/controllers"
+        );
+        assert_eq!(
+            pedestrian.directory.path.as_literal().unwrap(),
+            "/pedestrians"
+        );
+        assert_eq!(
+            misc_object.directory.path.as_literal().unwrap(),
+            "/misc_objects"
+        );
+        assert_eq!(
+            environment.directory.path.as_literal().unwrap(),
+            "/environments"
+        );
         assert_eq!(maneuver.directory.path.as_literal().unwrap(), "/maneuvers");
-        assert_eq!(trajectory.directory.path.as_literal().unwrap(), "/trajectories");
+        assert_eq!(
+            trajectory.directory.path.as_literal().unwrap(),
+            "/trajectories"
+        );
         assert_eq!(route.directory.path.as_literal().unwrap(), "/routes");
     }
 }

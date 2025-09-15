@@ -17,10 +17,15 @@
 use crate::{
     types::{
         entities::{Entities, ScenarioObject},
-        scenario::{storyboard::Storyboard, ScenarioStory, story::{Act, ManeuverGroup, Maneuver, Event}},
-        scenario::triggers::Condition, ValidationContext, EntityRef, ObjectType,
+        scenario::triggers::Condition,
+        scenario::{
+            story::{Act, Event, Maneuver, ManeuverGroup},
+            storyboard::Storyboard,
+            ScenarioStory,
+        },
+        EntityRef, ObjectType, ValidationContext,
     },
-    OpenScenario, FileHeader,
+    FileHeader, OpenScenario,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -198,7 +203,7 @@ impl ScenarioValidator {
     /// Build validation context from scenario
     fn build_validation_context(&self, scenario: &OpenScenario) -> ValidationContext {
         let mut context = ValidationContext::new();
-        
+
         if self.config.strict_mode {
             context = context.with_strict_mode();
         }
@@ -224,7 +229,12 @@ impl ScenarioValidator {
     /// Validate file header
     fn validate_file_header(&self, header: &FileHeader, result: &mut ValidationResult) {
         // Check required fields
-        if header.author.as_literal().unwrap_or(&String::new()).is_empty() {
+        if header
+            .author
+            .as_literal()
+            .unwrap_or(&String::new())
+            .is_empty()
+        {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::MissingRequired,
                 location: "FileHeader.author".to_string(),
@@ -233,7 +243,12 @@ impl ScenarioValidator {
             });
         }
 
-        if header.description.as_literal().unwrap_or(&String::new()).is_empty() {
+        if header
+            .description
+            .as_literal()
+            .unwrap_or(&String::new())
+            .is_empty()
+        {
             result.warnings.push(ValidationWarning {
                 category: ValidationWarningCategory::BestPractice,
                 location: "FileHeader.description".to_string(),
@@ -245,7 +260,7 @@ impl ScenarioValidator {
         // Check version compatibility
         let rev_major = *header.rev_major.as_literal().unwrap_or(&0);
         let rev_minor = *header.rev_minor.as_literal().unwrap_or(&0);
-        
+
         if rev_major < 1 {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::ConstraintViolation,
@@ -259,14 +274,20 @@ impl ScenarioValidator {
             result.warnings.push(ValidationWarning {
                 category: ValidationWarningCategory::Suspicious,
                 location: format!("FileHeader.rev{}.{}", rev_major, rev_minor),
-                message: "Using future OpenSCENARIO version - compatibility not guaranteed".to_string(),
+                message: "Using future OpenSCENARIO version - compatibility not guaranteed"
+                    .to_string(),
                 suggestion: Some("Consider using a stable OpenSCENARIO version".to_string()),
             });
         }
     }
 
     /// Validate entities section
-    fn validate_entities(&self, entities: &Entities, context: &ValidationContext, result: &mut ValidationResult) {
+    fn validate_entities(
+        &self,
+        entities: &Entities,
+        context: &ValidationContext,
+        result: &mut ValidationResult,
+    ) {
         if entities.scenario_objects.is_empty() {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::MissingRequired,
@@ -278,7 +299,12 @@ impl ScenarioValidator {
 
         // Validate each scenario object
         for (index, obj) in entities.scenario_objects.iter().enumerate() {
-            self.validate_scenario_object(obj, context, &format!("Entities.ScenarioObject[{}]", index), result);
+            self.validate_scenario_object(
+                obj,
+                context,
+                &format!("Entities.ScenarioObject[{}]", index),
+                result,
+            );
         }
 
         // Check for duplicate entity names
@@ -298,7 +324,13 @@ impl ScenarioValidator {
     }
 
     /// Validate individual scenario object
-    fn validate_scenario_object(&self, obj: &ScenarioObject, context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_scenario_object(
+        &self,
+        obj: &ScenarioObject,
+        context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         // Validate name
         let default_name = String::new();
         let name = obj.name.as_literal().unwrap_or(&default_name);
@@ -318,24 +350,41 @@ impl ScenarioValidator {
     }
 
     /// Validate storyboard section
-    fn validate_storyboard(&self, storyboard: &Storyboard, context: &ValidationContext, result: &mut ValidationResult) {
+    fn validate_storyboard(
+        &self,
+        storyboard: &Storyboard,
+        context: &ValidationContext,
+        result: &mut ValidationResult,
+    ) {
         // Validate stories
         if storyboard.stories.is_empty() {
             result.warnings.push(ValidationWarning {
                 category: ValidationWarningCategory::Suspicious,
                 location: "Storyboard.stories".to_string(),
-                message: "Storyboard has no stories - scenario may not execute anything".to_string(),
+                message: "Storyboard has no stories - scenario may not execute anything"
+                    .to_string(),
                 suggestion: Some("Add at least one story with actions".to_string()),
             });
         }
 
         for (index, story) in storyboard.stories.iter().enumerate() {
-            self.validate_story(story, context, &format!("Storyboard.Story[{}]", index), result);
+            self.validate_story(
+                story,
+                context,
+                &format!("Storyboard.Story[{}]", index),
+                result,
+            );
         }
     }
 
     /// Validate story
-    fn validate_story(&self, story: &ScenarioStory, context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_story(
+        &self,
+        story: &ScenarioStory,
+        context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         let default_name = String::new();
         let story_name = story.name.as_literal().unwrap_or(&default_name);
         if story_name.is_empty() {
@@ -358,12 +407,23 @@ impl ScenarioValidator {
         }
 
         for (index, act) in story.acts.iter().enumerate() {
-            self.validate_act(act, context, &format!("{}.Act[{}]", location, index), result);
+            self.validate_act(
+                act,
+                context,
+                &format!("{}.Act[{}]", location, index),
+                result,
+            );
         }
     }
 
     /// Validate act
-    fn validate_act(&self, act: &Act, context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_act(
+        &self,
+        act: &Act,
+        context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         let default_name = String::new();
         let act_name = act.name.as_literal().unwrap_or(&default_name);
         if act_name.is_empty() {
@@ -376,12 +436,23 @@ impl ScenarioValidator {
         }
 
         for (index, mg) in act.maneuver_groups.iter().enumerate() {
-            self.validate_maneuver_group(mg, context, &format!("{}.ManeuverGroup[{}]", location, index), result);
+            self.validate_maneuver_group(
+                mg,
+                context,
+                &format!("{}.ManeuverGroup[{}]", location, index),
+                result,
+            );
         }
     }
 
     /// Validate maneuver group
-    fn validate_maneuver_group(&self, mg: &ManeuverGroup, context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_maneuver_group(
+        &self,
+        mg: &ManeuverGroup,
+        context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         // Validate actor references
         for entity_ref in &mg.actors.entity_refs {
             let default_name = String::new();
@@ -391,37 +462,75 @@ impl ScenarioValidator {
                     category: ValidationErrorCategory::InvalidReference,
                     location: format!("{}.Actors.EntityRef", location),
                     message: format!("Referenced entity '{}' not found", entity_name),
-                    suggestion: Some("Ensure the entity is defined in the Entities section".to_string()),
+                    suggestion: Some(
+                        "Ensure the entity is defined in the Entities section".to_string(),
+                    ),
                 });
             }
         }
 
         for (index, maneuver) in mg.maneuvers.iter().enumerate() {
-            self.validate_maneuver(maneuver, context, &format!("{}.Maneuver[{}]", location, index), result);
+            self.validate_maneuver(
+                maneuver,
+                context,
+                &format!("{}.Maneuver[{}]", location, index),
+                result,
+            );
         }
     }
 
     /// Validate maneuver
-    fn validate_maneuver(&self, maneuver: &Maneuver, context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_maneuver(
+        &self,
+        maneuver: &Maneuver,
+        context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         for (index, event) in maneuver.events.iter().enumerate() {
-            self.validate_event(event, context, &format!("{}.Event[{}]", location, index), result);
+            self.validate_event(
+                event,
+                context,
+                &format!("{}.Event[{}]", location, index),
+                result,
+            );
         }
     }
 
     /// Validate event
-    fn validate_event(&self, event: &Event, context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_event(
+        &self,
+        event: &Event,
+        context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         // Validate start trigger if present
         if let Some(trigger) = &event.start_trigger {
             for (index, condition_group) in trigger.condition_groups.iter().enumerate() {
                 for (c_index, condition) in condition_group.conditions.iter().enumerate() {
-                    self.validate_condition(condition, context, &format!("{}.StartTrigger.ConditionGroup[{}].Condition[{}]", location, index, c_index), result);
+                    self.validate_condition(
+                        condition,
+                        context,
+                        &format!(
+                            "{}.StartTrigger.ConditionGroup[{}].Condition[{}]",
+                            location, index, c_index
+                        ),
+                        result,
+                    );
                 }
             }
         }
     }
 
     /// Validate condition
-    fn validate_condition(&self, condition: &Condition, _context: &ValidationContext, location: &str, result: &mut ValidationResult) {
+    fn validate_condition(
+        &self,
+        condition: &Condition,
+        _context: &ValidationContext,
+        location: &str,
+        result: &mut ValidationResult,
+    ) {
         let default_name = String::new();
         let condition_name = condition.name.as_literal().unwrap_or(&default_name);
         if condition_name.is_empty() {
@@ -508,7 +617,7 @@ mod tests {
         geometry::shapes::BoundingBox,
         scenario::storyboard::Storyboard,
     };
-    use crate::{OpenScenario, FileHeader};
+    use crate::{FileHeader, OpenScenario};
 
     #[test]
     fn test_validator_creation() {
@@ -520,7 +629,7 @@ mod tests {
     #[test]
     fn test_file_header_validation() {
         let mut validator = ScenarioValidator::new();
-        
+
         // Valid header
         let valid_header = FileHeader {
             rev_major: Value::literal(1),
@@ -529,7 +638,7 @@ mod tests {
             description: Value::literal("Test scenario".to_string()),
             author: Value::literal("Test Author".to_string()),
         };
-        
+
         let vehicle = Vehicle {
             name: Value::literal("TestVehicle".to_string()),
             vehicle_category: VehicleCategory::Car,
@@ -538,19 +647,17 @@ mod tests {
             axles: Default::default(),
             properties: None,
         };
-        
+
         let entities = Entities {
-            scenario_objects: vec![
-                ScenarioObject {
-                    name: Value::literal("TestVehicle".to_string()),
-                    vehicle: Some(vehicle),
-                    pedestrian: None,
-                    catalog_reference: None,
-                    object_controller: Default::default(),
-                }
-            ],
+            scenario_objects: vec![ScenarioObject {
+                name: Value::literal("TestVehicle".to_string()),
+                vehicle: Some(vehicle),
+                pedestrian: None,
+                catalog_reference: None,
+                object_controller: Default::default(),
+            }],
         };
-        
+
         let scenario = OpenScenario {
             file_header: valid_header,
             parameter_declarations: None,
@@ -559,7 +666,7 @@ mod tests {
             entities: entities,
             storyboard: Storyboard::default(),
         };
-        
+
         let result = validator.validate_scenario(&scenario);
         // Debug the actual errors
         if !result.is_valid() {
@@ -573,7 +680,7 @@ mod tests {
     #[test]
     fn test_empty_author_validation() {
         let mut validator = ScenarioValidator::new();
-        
+
         let invalid_header = FileHeader {
             rev_major: Value::literal(1),
             rev_minor: Value::literal(2),
@@ -581,7 +688,7 @@ mod tests {
             description: Value::literal("Test scenario".to_string()),
             author: Value::literal("".to_string()), // Empty author
         };
-        
+
         let vehicle = Vehicle {
             name: Value::literal("TestVehicle".to_string()),
             vehicle_category: VehicleCategory::Car,
@@ -590,19 +697,17 @@ mod tests {
             axles: Default::default(),
             properties: None,
         };
-        
+
         let entities = Entities {
-            scenario_objects: vec![
-                ScenarioObject {
-                    name: Value::literal("TestVehicle".to_string()),
-                    vehicle: Some(vehicle),
-                    pedestrian: None,
-                    catalog_reference: None,
-                    object_controller: Default::default(),
-                }
-            ],
+            scenario_objects: vec![ScenarioObject {
+                name: Value::literal("TestVehicle".to_string()),
+                vehicle: Some(vehicle),
+                pedestrian: None,
+                catalog_reference: None,
+                object_controller: Default::default(),
+            }],
         };
-        
+
         let scenario = OpenScenario {
             file_header: invalid_header,
             parameter_declarations: None,
@@ -611,17 +716,20 @@ mod tests {
             entities: entities,
             storyboard: Storyboard::default(),
         };
-        
+
         let result = validator.validate_scenario(&scenario);
         assert!(!result.is_valid(), "Empty author should fail validation");
         assert_eq!(result.errors.len(), 1);
-        assert!(matches!(result.errors[0].category, ValidationErrorCategory::MissingRequired));
+        assert!(matches!(
+            result.errors[0].category,
+            ValidationErrorCategory::MissingRequired
+        ));
     }
 
     #[test]
     fn test_duplicate_entity_names_validation() {
         let mut validator = ScenarioValidator::new();
-        
+
         let vehicle1 = Vehicle {
             name: Value::literal("Car1".to_string()),
             vehicle_category: VehicleCategory::Car,
@@ -630,7 +738,7 @@ mod tests {
             axles: Default::default(),
             properties: None,
         };
-        
+
         let vehicle2 = Vehicle {
             name: Value::literal("Car1".to_string()), // Duplicate name
             vehicle_category: VehicleCategory::Truck,
@@ -639,7 +747,7 @@ mod tests {
             axles: Default::default(),
             properties: None,
         };
-        
+
         let entities = Entities {
             scenario_objects: vec![
                 ScenarioObject {
@@ -658,7 +766,7 @@ mod tests {
                 },
             ],
         };
-        
+
         let scenario = OpenScenario {
             file_header: FileHeader {
                 author: Value::literal("Test Author".to_string()),
@@ -673,21 +781,27 @@ mod tests {
             entities: entities,
             storyboard: Storyboard::default(),
         };
-        
+
         let result = validator.validate_scenario(&scenario);
-        assert!(!result.is_valid(), "Duplicate entity names should fail validation");
-        
+        assert!(
+            !result.is_valid(),
+            "Duplicate entity names should fail validation"
+        );
+
         // Should have error for duplicate names
-        assert!(result.errors.iter().any(|e| matches!(e.category, ValidationErrorCategory::ConstraintViolation)));
+        assert!(result
+            .errors
+            .iter()
+            .any(|e| matches!(e.category, ValidationErrorCategory::ConstraintViolation)));
     }
 
     #[test]
     fn test_validation_metrics() {
         let mut validator = ScenarioValidator::new();
         let scenario = OpenScenario::default();
-        
+
         let result = validator.validate_scenario(&scenario);
-        
+
         // Should have some metrics
         assert!(result.metrics.duration_ms < 1000); // Should be fast
         assert_eq!(result.metrics.cache_hit_ratio, 0.0); // No cache hits for empty scenario
@@ -700,10 +814,10 @@ mod tests {
             ..Default::default()
         };
         let mut validator = ScenarioValidator::with_config(config);
-        
+
         let scenario = OpenScenario::default();
         let result = validator.validate_scenario(&scenario);
-        
+
         // In strict mode, should have validation context with strict mode enabled
         assert!(result.metrics.elements_validated >= 0);
     }

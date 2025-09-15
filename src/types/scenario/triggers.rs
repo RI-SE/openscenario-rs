@@ -389,4 +389,3 @@ mod tests {
         assert!(trigger.has_conditions());
     }
 }
-

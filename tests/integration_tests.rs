@@ -974,7 +974,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
             name: Value::literal("MaxSpeed".to_string()),
             parameter_type: ParameterType::Double,
             value: Value::literal("30.0".to_string()),
-            constraint_group: None,
+            constraint_groups: Vec::new(),
         }],
     };
 
@@ -1114,10 +1114,10 @@ fn test_parameter_declarations_with_constraints() {
         "MaxSpeed".to_string(),
         ParameterType::Double,
         "60.0".to_string(),
-        ValueConstraintGroup::new(vec![
+        vec![ValueConstraintGroup::new(vec![
             ValueConstraint::greater_than("0.0".to_string()),
             ValueConstraint::less_than("200.0".to_string()),
-        ]),
+        ])],
     );
 
     let name_param = ParameterDeclaration::new(
@@ -1139,7 +1139,7 @@ fn test_parameter_declarations_with_constraints() {
     assert!(speed_param.has_constraints());
 
     // Test constraints
-    let constraints = speed_param.constraint_group.as_ref().unwrap();
+    let constraints = &speed_param.constraint_groups[0];
     assert_eq!(constraints.value_constraints.len(), 2);
     assert_eq!(
         constraints.value_constraints[0].value.as_literal().unwrap(),
@@ -1227,4 +1227,3 @@ fn can_parse_init_system_basic() {
         panic!("Init system should parse successfully");
     }
 }
-

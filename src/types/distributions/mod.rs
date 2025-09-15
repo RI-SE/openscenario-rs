@@ -16,7 +16,10 @@ pub use stochastic::*;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParameterValueDistribution {
     pub distribution_definition: DistributionDefinition,
-    #[serde(rename = "@definitionTypeHint", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@definitionTypeHint",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub definition_type_hint: Option<String>,
     #[serde(rename = "@distributionSet", skip_serializing_if = "Option::is_none")]
     pub distribution_set: Option<String>,
@@ -42,17 +45,18 @@ pub struct UserDefinedDistribution {
 /// Base trait for parameter distribution evaluation
 pub trait DistributionSampler {
     type Output;
-    
+
     /// Sample a value from the distribution
     fn sample(&self) -> Result<Self::Output>;
-    
+
     /// Get all possible values (for deterministic distributions)
     fn enumerate(&self) -> Result<Vec<Self::Output>> {
         Err(crate::error::Error::validation_error(
-            "enumeration", "Enumeration not supported for this distribution type"
+            "enumeration",
+            "Enumeration not supported for this distribution type",
         ))
     }
-    
+
     /// Check if the distribution is deterministic
     fn is_deterministic(&self) -> bool;
 }
@@ -70,7 +74,7 @@ impl ParameterValueDistribution {
             distribution_set: None,
         }
     }
-    
+
     pub fn new_stochastic(dist: StochasticDistribution) -> Self {
         Self {
             distribution_definition: DistributionDefinition::Stochastic(dist),
@@ -78,7 +82,7 @@ impl ParameterValueDistribution {
             distribution_set: None,
         }
     }
-    
+
     pub fn new_user_defined(dist: UserDefinedDistribution) -> Self {
         Self {
             distribution_definition: DistributionDefinition::UserDefined(dist),
@@ -123,7 +127,8 @@ impl ValidateDistribution for UserDefinedDistribution {
     fn validate(&self) -> Result<()> {
         if self.distribution_type.trim().is_empty() {
             return Err(crate::error::Error::validation_error(
-                "type", "UserDefinedDistribution type cannot be empty"
+                "type",
+                "UserDefinedDistribution type cannot be empty",
             ));
         }
         Ok(())
@@ -186,7 +191,9 @@ impl Default for DistributionDefinitionGroup {
 
 impl Default for DeterministicParameterDistributionGroup {
     fn default() -> Self {
-        Self::DeterministicSingleParameterDistribution(DeterministicSingleParameterDistribution::default())
+        Self::DeterministicSingleParameterDistribution(
+            DeterministicSingleParameterDistribution::default(),
+        )
     }
 }
 
@@ -309,7 +316,9 @@ impl DeterministicSingleParameterDistributionTypeGroup {
 impl DeterministicMultiParameterDistributionTypeGroup {
     /// Create new multi parameter distribution type group
     pub fn new(value_set_distribution: ValueSetDistribution) -> Self {
-        Self { value_set_distribution }
+        Self {
+            value_set_distribution,
+        }
     }
 
     /// Get the value set distribution
@@ -321,7 +330,9 @@ impl DeterministicMultiParameterDistributionTypeGroup {
 impl ParameterValueDistributionDefinitionGroup {
     /// Create new parameter value distribution definition group
     pub fn new(parameter_value_distribution: ParameterValueDistribution) -> Self {
-        Self { parameter_value_distribution }
+        Self {
+            parameter_value_distribution,
+        }
     }
 
     /// Get the parameter value distribution
@@ -385,16 +396,17 @@ mod tests {
                 value: Value::Literal("10.0".to_string()),
             }],
         };
-        
-        let det_dist = DeterministicParameterDistribution::Single(
-            DeterministicSingleParameterDistribution {
-                distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(dist_set),
+
+        let det_dist =
+            DeterministicParameterDistribution::Single(DeterministicSingleParameterDistribution {
+                distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(
+                    dist_set,
+                ),
                 parameter_name: Value::Literal("speed".to_string()),
-            }
-        );
-        
+            });
+
         let param_dist = ParameterValueDistribution::new_deterministic(det_dist);
-        
+
         assert!(matches!(
             param_dist.distribution_definition,
             DistributionDefinition::Deterministic(_)
@@ -408,7 +420,7 @@ mod tests {
             distribution_type: "custom".to_string(),
         };
         assert!(valid_dist.validate().is_ok());
-        
+
         let invalid_dist = UserDefinedDistribution {
             content: "content".to_string(),
             distribution_type: "".to_string(),
@@ -422,12 +434,12 @@ mod tests {
     fn test_distribution_definition_group_creation() {
         let det_dist = DeterministicParameterDistribution::default();
         let group = DistributionDefinitionGroup::deterministic(det_dist);
-        
+
         assert!(group.is_deterministic());
         assert!(!group.is_stochastic());
         assert!(group.as_deterministic().is_some());
         assert!(group.as_stochastic().is_none());
-        
+
         let default_group = DistributionDefinitionGroup::default();
         assert!(default_group.is_deterministic());
     }
@@ -442,13 +454,13 @@ mod tests {
     fn test_deterministic_parameter_distribution_group_creation() {
         let single_dist = DeterministicSingleParameterDistribution::default();
         let group = DeterministicParameterDistributionGroup::single(single_dist);
-        
+
         assert!(group.is_single());
         assert!(!group.is_multi());
-        
+
         let multi_dist = DeterministicMultiParameterDistribution::default();
         let multi_group = DeterministicParameterDistributionGroup::multi(multi_dist);
-        
+
         assert!(!multi_group.is_single());
         assert!(multi_group.is_multi());
     }
@@ -463,25 +475,26 @@ mod tests {
     fn test_deterministic_single_parameter_distribution_type_group() {
         let dist_set = DistributionSet::default();
         let group = DeterministicSingleParameterDistributionTypeGroup::distribution_set(dist_set);
-        
+
         assert!(group.is_set());
         assert!(!group.is_range());
         assert!(!group.is_user_defined());
-        
+
         let dist_range = DistributionRange::default();
-        let range_group = DeterministicSingleParameterDistributionTypeGroup::distribution_range(dist_range);
-        
+        let range_group =
+            DeterministicSingleParameterDistributionTypeGroup::distribution_range(dist_range);
+
         assert!(!range_group.is_set());
         assert!(range_group.is_range());
         assert!(!range_group.is_user_defined());
-        
+
         let user_dist = UserDefinedDistribution::default();
         let user_group = DeterministicSingleParameterDistributionTypeGroup::user_defined(user_dist);
-        
+
         assert!(!user_group.is_set());
         assert!(!user_group.is_range());
         assert!(user_group.is_user_defined());
-        
+
         let default_group = DeterministicSingleParameterDistributionTypeGroup::default();
         assert!(default_group.is_set());
         assert!(default_group.validate().is_ok());
@@ -491,10 +504,13 @@ mod tests {
     fn test_deterministic_multi_parameter_distribution_type_group() {
         let value_set_dist = ValueSetDistribution::default();
         let group = DeterministicMultiParameterDistributionTypeGroup::new(value_set_dist);
-        
-        assert!(!group.value_set_distribution().parameter_value_sets.is_empty());
+
+        assert!(!group
+            .value_set_distribution()
+            .parameter_value_sets
+            .is_empty());
         assert!(group.validate().is_ok());
-        
+
         let default_group = DeterministicMultiParameterDistributionTypeGroup::default();
         assert!(default_group.validate().is_ok());
     }
@@ -503,13 +519,13 @@ mod tests {
     fn test_parameter_value_distribution_definition_group() {
         let param_value_dist = ParameterValueDistribution::default();
         let group = ParameterValueDistributionDefinitionGroup::new(param_value_dist);
-        
+
         assert!(matches!(
             group.parameter_value_distribution().distribution_definition,
             DistributionDefinition::Deterministic(_)
         ));
         assert!(group.validate().is_ok());
-        
+
         let default_group = ParameterValueDistributionDefinitionGroup::default();
         assert!(default_group.validate().is_ok());
     }
@@ -518,32 +534,46 @@ mod tests {
     fn test_all_distribution_groups_serialization_round_trip() {
         // Test DistributionDefinitionGroup
         let dist_def_group = DistributionDefinitionGroup::default();
-        let serialized = serde_json::to_string(&dist_def_group).expect("Failed to serialize DistributionDefinitionGroup");
-        let deserialized: DistributionDefinitionGroup = serde_json::from_str(&serialized).expect("Failed to deserialize DistributionDefinitionGroup");
+        let serialized = serde_json::to_string(&dist_def_group)
+            .expect("Failed to serialize DistributionDefinitionGroup");
+        let deserialized: DistributionDefinitionGroup = serde_json::from_str(&serialized)
+            .expect("Failed to deserialize DistributionDefinitionGroup");
         assert_eq!(dist_def_group, deserialized);
 
         // Test DeterministicParameterDistributionGroup
         let det_param_group = DeterministicParameterDistributionGroup::default();
-        let serialized = serde_json::to_string(&det_param_group).expect("Failed to serialize DeterministicParameterDistributionGroup");
-        let deserialized: DeterministicParameterDistributionGroup = serde_json::from_str(&serialized).expect("Failed to deserialize DeterministicParameterDistributionGroup");
+        let serialized = serde_json::to_string(&det_param_group)
+            .expect("Failed to serialize DeterministicParameterDistributionGroup");
+        let deserialized: DeterministicParameterDistributionGroup =
+            serde_json::from_str(&serialized)
+                .expect("Failed to deserialize DeterministicParameterDistributionGroup");
         assert_eq!(det_param_group, deserialized);
 
         // Test DeterministicSingleParameterDistributionTypeGroup
         let det_single_group = DeterministicSingleParameterDistributionTypeGroup::default();
-        let serialized = serde_json::to_string(&det_single_group).expect("Failed to serialize DeterministicSingleParameterDistributionTypeGroup");
-        let deserialized: DeterministicSingleParameterDistributionTypeGroup = serde_json::from_str(&serialized).expect("Failed to deserialize DeterministicSingleParameterDistributionTypeGroup");
+        let serialized = serde_json::to_string(&det_single_group)
+            .expect("Failed to serialize DeterministicSingleParameterDistributionTypeGroup");
+        let deserialized: DeterministicSingleParameterDistributionTypeGroup =
+            serde_json::from_str(&serialized)
+                .expect("Failed to deserialize DeterministicSingleParameterDistributionTypeGroup");
         assert_eq!(det_single_group, deserialized);
 
         // Test DeterministicMultiParameterDistributionTypeGroup
         let det_multi_group = DeterministicMultiParameterDistributionTypeGroup::default();
-        let serialized = serde_json::to_string(&det_multi_group).expect("Failed to serialize DeterministicMultiParameterDistributionTypeGroup");
-        let deserialized: DeterministicMultiParameterDistributionTypeGroup = serde_json::from_str(&serialized).expect("Failed to deserialize DeterministicMultiParameterDistributionTypeGroup");
+        let serialized = serde_json::to_string(&det_multi_group)
+            .expect("Failed to serialize DeterministicMultiParameterDistributionTypeGroup");
+        let deserialized: DeterministicMultiParameterDistributionTypeGroup =
+            serde_json::from_str(&serialized)
+                .expect("Failed to deserialize DeterministicMultiParameterDistributionTypeGroup");
         assert_eq!(det_multi_group, deserialized);
 
         // Test ParameterValueDistributionDefinitionGroup
         let param_value_group = ParameterValueDistributionDefinitionGroup::default();
-        let serialized = serde_json::to_string(&param_value_group).expect("Failed to serialize ParameterValueDistributionDefinitionGroup");
-        let deserialized: ParameterValueDistributionDefinitionGroup = serde_json::from_str(&serialized).expect("Failed to deserialize ParameterValueDistributionDefinitionGroup");
+        let serialized = serde_json::to_string(&param_value_group)
+            .expect("Failed to serialize ParameterValueDistributionDefinitionGroup");
+        let deserialized: ParameterValueDistributionDefinitionGroup =
+            serde_json::from_str(&serialized)
+                .expect("Failed to deserialize ParameterValueDistributionDefinitionGroup");
         assert_eq!(param_value_group, deserialized);
     }
 
@@ -552,7 +582,7 @@ mod tests {
         // Test all helper methods for DistributionDefinitionGroup
         let det_dist = DeterministicParameterDistribution::default();
         let det_group = DistributionDefinitionGroup::deterministic(det_dist.clone());
-        
+
         assert!(det_group.is_deterministic());
         assert!(!det_group.is_stochastic());
         assert_eq!(det_group.as_deterministic().unwrap(), &det_dist);
@@ -561,13 +591,13 @@ mod tests {
         // Test all helper methods for DeterministicParameterDistributionGroup
         let single_dist = DeterministicSingleParameterDistribution::default();
         let single_group = DeterministicParameterDistributionGroup::single(single_dist.clone());
-        
+
         assert!(single_group.is_single());
         assert!(!single_group.is_multi());
 
         let multi_dist = DeterministicMultiParameterDistribution::default();
         let multi_group = DeterministicParameterDistributionGroup::multi(multi_dist.clone());
-        
+
         assert!(!multi_group.is_single());
         assert!(multi_group.is_multi());
 
@@ -575,13 +605,15 @@ mod tests {
         let set = DistributionSet::default();
         let set_group = DeterministicSingleParameterDistributionTypeGroup::distribution_set(set);
         assert!(set_group.is_set());
-        
+
         let range = DistributionRange::default();
-        let range_group = DeterministicSingleParameterDistributionTypeGroup::distribution_range(range);
+        let range_group =
+            DeterministicSingleParameterDistributionTypeGroup::distribution_range(range);
         assert!(range_group.is_range());
-        
+
         let user_defined = UserDefinedDistribution::default();
-        let user_group = DeterministicSingleParameterDistributionTypeGroup::user_defined(user_defined);
+        let user_group =
+            DeterministicSingleParameterDistributionTypeGroup::user_defined(user_defined);
         assert!(user_group.is_user_defined());
     }
 }

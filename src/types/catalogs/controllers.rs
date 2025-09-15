@@ -352,7 +352,7 @@ mod tests {
                 name: OSString::literal("speed".to_string()),
                 parameter_type: ParameterType::Double,
                 value: OSString::literal("30.0".to_string()),
-                constraint_group: None,
+                constraint_groups: Vec::new(),
             }],
         };
 

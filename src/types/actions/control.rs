@@ -445,7 +445,7 @@ impl Gear {
     pub fn manual(gear: i32) -> Self {
         Self::ManualGear(ManualGear::new(gear))
     }
-    
+
     /// Create automatic gear wrapper
     pub fn automatic(gear_type: AutomaticGearType) -> Self {
         Self::AutomaticGear(AutomaticGear { gear: gear_type })
@@ -777,4 +777,3 @@ mod tests {
         }
     }
 }
-

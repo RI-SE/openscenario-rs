@@ -126,4 +126,3 @@ mod tests {
         assert!(serialized.contains("<RoadCondition"));
     }
 }
-

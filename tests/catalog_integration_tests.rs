@@ -398,4 +398,3 @@ async fn test_concurrent_catalog_operations() {
         task.await.unwrap();
     }
 }
-
