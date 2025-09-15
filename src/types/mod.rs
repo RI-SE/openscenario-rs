@@ -97,6 +97,12 @@ pub use catalogs::locations::{
     RouteCatalogLocation, TrajectoryCatalogLocation, VehicleCatalogLocation,
 };
 
+// Re-export condition types
+pub use conditions::{
+    ByEntityCondition, ByValueCondition, DistanceCondition, ReachPositionCondition,
+    RelativeDistanceCondition, SimulationTimeCondition, SpeedCondition,
+};
+
 // Re-export entity types (when implemented)
 // pub use entities::{Vehicle, Pedestrian, MiscObject, Entities, ScenarioObject};
 
