@@ -21,20 +21,27 @@ pub mod traffic; // Phase 4C: Traffic actions
 
 // PHASE 4A: Export all movement actions
 pub use movement::{
+    AbsoluteTargetLane,
+    AbsoluteTargetLaneOffset,
     AcquirePositionAction,
     DynamicConstraints,
     FinalSpeed,
     FollowTrajectoryAction,
     // New Phase 4A actions
     LaneChangeAction,
-    // Supporting types
     LaneChangeTarget,
+    LaneChangeTargetChoice,
     LaneOffsetAction,
+    LaneOffsetActionDynamics,
     LaneOffsetTarget,
+    LaneOffsetTargetChoice,
     LateralAction,
+    LateralActionChoice,
     LateralDistanceAction,
     LongitudinalAction,
     LongitudinalDistanceAction,
+    RelativeTargetLane,
+    RelativeTargetLaneOffset,
     RoutingAction,
     // Original actions
     SpeedAction,

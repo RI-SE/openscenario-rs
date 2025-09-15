@@ -240,9 +240,18 @@ pub struct LaneOffsetAction {
     #[serde(rename = "@continuous")]
     pub continuous: Boolean,
     #[serde(rename = "LaneOffsetActionDynamics")]
-    pub lane_offset_action_dynamics: TransitionDynamics,
+    pub dynamics: LaneOffsetActionDynamics,
     #[serde(rename = "LaneOffsetTarget")]
-    pub lane_offset_target: LaneOffsetTarget,
+    pub target: LaneOffsetTarget,
+}
+
+/// Lane offset action dynamics specification
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LaneOffsetActionDynamics {
+    #[serde(rename = "@dynamicsShape")]
+    pub dynamics_shape: DynamicsShape,
+    #[serde(rename = "@maxLateralAcc")]
+    pub max_lateral_acc: Option<Double>,
 }
 
 /// Lane offset target specification
@@ -266,29 +275,31 @@ pub struct RelativeTargetLaneOffset {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Absolute target lane offset specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsoluteTargetLaneOffset {
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Lateral action wrapper for all lateral movement types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LateralAction {
     #[serde(flatten)]
-    pub lateral_action_choice: LateralActionChoice,
+    pub lateral_choice: LateralActionChoice,
 }
 
 /// Lateral action choice - lane change, offset, or distance keeping
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
 pub enum LateralActionChoice {
+    #[serde(rename = "LaneChangeAction")]
     LaneChangeAction(LaneChangeAction),
+    #[serde(rename = "LaneOffsetAction")]
     LaneOffsetAction(LaneOffsetAction),
+    #[serde(rename = "LateralDistanceAction")]
     LateralDistanceAction(LateralDistanceAction),
 }
 
@@ -298,9 +309,9 @@ pub struct LateralDistanceAction {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "@distance")]
-    pub distance: f64,
+    pub distance: Option<Double>,
     #[serde(rename = "@freespace")]
-    pub freespace: Option<Boolean>,
+    pub freespace: Boolean,
     #[serde(rename = "@continuous")]
     pub continuous: Boolean,
     #[serde(rename = "DynamicConstraints")]
@@ -736,6 +747,106 @@ impl AbsoluteTargetLane {
     }
 }
 
+// PHASE 4A: Helper methods for LaneOffsetAction system
+
+impl LaneOffsetAction {
+    /// Create a new LaneOffsetAction with the specified dynamics and target
+    pub fn new(dynamics: LaneOffsetActionDynamics, target: LaneOffsetTarget, continuous: bool) -> Self {
+        Self {
+            dynamics,
+            target,
+            continuous: Boolean::literal(continuous),
+        }
+    }
+    
+    /// Set the continuous flag for this lane offset action
+    pub fn with_continuous(mut self, continuous: bool) -> Self {
+        self.continuous = Boolean::literal(continuous);
+        self
+    }
+}
+
+impl LaneOffsetActionDynamics {
+    /// Create new lane offset action dynamics
+    pub fn new(dynamics_shape: DynamicsShape) -> Self {
+        Self {
+            dynamics_shape,
+            max_lateral_acc: None,
+        }
+    }
+    
+    /// Set the maximum lateral acceleration
+    pub fn with_max_acceleration(mut self, max_acc: f64) -> Self {
+        self.max_lateral_acc = Some(Double::literal(max_acc));
+        self
+    }
+}
+
+impl LaneOffsetTarget {
+    /// Create a relative lane offset target
+    pub fn relative(entity_ref: impl Into<String>, value: f64) -> Self {
+        Self {
+            target_choice: LaneOffsetTargetChoice::RelativeTargetLaneOffset(RelativeTargetLaneOffset {
+                entity_ref: OSString::literal(entity_ref.into()),
+                value: Double::literal(value),
+            }),
+        }
+    }
+    
+    /// Create an absolute lane offset target
+    pub fn absolute(value: f64) -> Self {
+        Self {
+            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(AbsoluteTargetLaneOffset {
+                value: Double::literal(value),
+            }),
+        }
+    }
+}
+
+impl RelativeTargetLaneOffset {
+    /// Create a new relative target lane offset
+    pub fn new(entity_ref: impl Into<String>, value: f64) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref.into()),
+            value: Double::literal(value),
+        }
+    }
+}
+
+impl AbsoluteTargetLaneOffset {
+    /// Create a new absolute target lane offset
+    pub fn new(value: f64) -> Self {
+        Self {
+            value: Double::literal(value),
+        }
+    }
+}
+
+// PHASE 4A: Helper methods for LateralAction system
+
+impl LateralAction {
+    /// Create a lateral action with lane change
+    pub fn lane_change(action: LaneChangeAction) -> Self {
+        Self {
+            lateral_choice: LateralActionChoice::LaneChangeAction(action),
+        }
+    }
+    
+    /// Create a lateral action with lane offset
+    pub fn lane_offset(action: LaneOffsetAction) -> Self {
+        Self {
+            lateral_choice: LateralActionChoice::LaneOffsetAction(action),
+        }
+    }
+    
+    /// Create a lateral action with lateral distance
+    pub fn lateral_distance(action: LateralDistanceAction) -> Self {
+        Self {
+            lateral_choice: LateralActionChoice::LateralDistanceAction(action),
+        }
+    }
+}
+
 // PHASE 4A: Default implementations for new movement actions
 
 impl Default for LaneChangeAction {
@@ -777,8 +888,8 @@ impl Default for LaneOffsetAction {
     fn default() -> Self {
         Self {
             continuous: Boolean::literal(false),
-            lane_offset_action_dynamics: TransitionDynamics::default(),
-            lane_offset_target: LaneOffsetTarget::default(),
+            dynamics: LaneOffsetActionDynamics::default(),
+            target: LaneOffsetTarget::default(),
         }
     }
 }
@@ -797,23 +908,34 @@ impl Default for RelativeTargetLaneOffset {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            value: 0.0,
+            value: Double::literal(0.0),
         }
     }
 }
 
 impl Default for AbsoluteTargetLaneOffset {
     fn default() -> Self {
-        Self { value: 0.0 }
+        Self { 
+            value: Double::literal(0.0) 
+        }
     }
 }
 
 impl Default for LateralAction {
     fn default() -> Self {
         Self {
-            lateral_action_choice: LateralActionChoice::LaneChangeAction(
+            lateral_choice: LateralActionChoice::LaneChangeAction(
                 LaneChangeAction::default(),
             ),
+        }
+    }
+}
+
+impl Default for LaneOffsetActionDynamics {
+    fn default() -> Self {
+        Self {
+            dynamics_shape: DynamicsShape::Linear,
+            max_lateral_acc: None,
         }
     }
 }
@@ -822,8 +944,8 @@ impl Default for LateralDistanceAction {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            distance: 2.0,
-            freespace: Some(Boolean::literal(true)),
+            distance: Some(Double::literal(2.0)),
+            freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
             dynamic_constraints: None,
         }
@@ -1076,17 +1198,106 @@ mod tests {
         let action = LaneOffsetAction::default();
         assert_eq!(action.continuous.as_literal(), Some(&false));
         assert_eq!(
-            action.lane_offset_action_dynamics.dynamics_dimension,
-            DynamicsDimension::Time
+            action.dynamics.dynamics_shape,
+            DynamicsShape::Linear
         );
+    }
+
+    #[test]
+    fn test_lane_offset_action_with_helper_methods() {
+        let dynamics = LaneOffsetActionDynamics::new(DynamicsShape::Linear)
+            .with_max_acceleration(2.0);
+        let target = LaneOffsetTarget::relative("Ego", 1.5);
+        let action = LaneOffsetAction::new(dynamics, target, true);
+        
+        assert_eq!(action.continuous.as_literal(), Some(&true));
+        assert_eq!(action.dynamics.max_lateral_acc.unwrap().as_literal(), Some(&2.0));
+    }
+
+    #[test]
+    fn test_lane_offset_target_relative() {
+        let target = LaneOffsetTarget::relative("TestEntity", -0.5);
+        
+        if let LaneOffsetTargetChoice::RelativeTargetLaneOffset(rel) = target.target_choice {
+            assert_eq!(rel.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
+            assert_eq!(rel.value.as_literal(), Some(&-0.5));
+        } else {
+            panic!("Expected RelativeTargetLaneOffset");
+        }
+    }
+
+    #[test]
+    fn test_lane_offset_target_absolute() {
+        let target = LaneOffsetTarget::absolute(2.0);
+        
+        if let LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(abs) = target.target_choice {
+            assert_eq!(abs.value.as_literal(), Some(&2.0));
+        } else {
+            panic!("Expected AbsoluteTargetLaneOffset");
+        }
+    }
+
+    #[test]
+    fn test_lateral_action_helpers() {
+        let lane_change = LaneChangeAction::default();
+        let lateral_action = LateralAction::lane_change(lane_change);
+        
+        if let LateralActionChoice::LaneChangeAction(_) = lateral_action.lateral_choice {
+            // Expected
+        } else {
+            panic!("Expected LaneChangeAction");
+        }
+        
+        let lane_offset = LaneOffsetAction::default();
+        let lateral_action = LateralAction::lane_offset(lane_offset);
+        
+        if let LateralActionChoice::LaneOffsetAction(_) = lateral_action.lateral_choice {
+            // Expected
+        } else {
+            panic!("Expected LaneOffsetAction");
+        }
+    }
+
+    #[test]
+    fn test_xml_serialization_lane_offset() {
+        let action = LaneOffsetAction::new(
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear),
+            LaneOffsetTarget::relative("Ego", 1.0),
+            true
+        );
+        
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        assert!(xml.contains("LaneOffsetAction"));
+        assert!(xml.contains("continuous=\"true\""));
+        assert!(xml.contains("RelativeTargetLaneOffset"));
+        assert!(xml.contains("entityRef=\"Ego\""));
+        assert!(xml.contains("value=\"1\""));
+    }
+
+    #[test]
+    fn test_xml_round_trip_lane_offset() {
+        let original = LaneOffsetAction::new(
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear)
+                .with_max_acceleration(1.5),
+            LaneOffsetTarget::absolute(0.5),
+            false
+        );
+        
+        let xml = quick_xml::se::to_string(&original).unwrap();
+        let deserialized: LaneOffsetAction = quick_xml::de::from_str(&xml).unwrap();
+        
+        assert_eq!(original.continuous.as_literal(), 
+                   deserialized.continuous.as_literal());
+        assert_eq!(original.dynamics.max_lateral_acc.unwrap().as_literal(),
+                   deserialized.dynamics.max_lateral_acc.unwrap().as_literal());
     }
 
     #[test]
     fn test_lateral_distance_action_creation() {
         let action = LateralDistanceAction {
             entity_ref: OSString::literal("TargetEntity".to_string()),
-            distance: 3.5,
-            freespace: Some(Boolean::literal(true)),
+            distance: Some(Double::literal(3.5)),
+            freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
             dynamic_constraints: Some(DynamicConstraints {
                 max_lateral_acc: Some(2.0),
@@ -1098,8 +1309,8 @@ mod tests {
             action.entity_ref.as_literal(),
             Some(&"TargetEntity".to_string())
         );
-        assert_eq!(action.distance, 3.5);
-        assert_eq!(action.freespace.unwrap().as_literal(), Some(&true));
+        assert_eq!(action.distance.unwrap().as_literal(), Some(&3.5));
+        assert_eq!(action.freespace.as_literal(), Some(&true));
         assert_eq!(action.continuous.as_literal(), Some(&false));
 
         let constraints = action.dynamic_constraints.unwrap();

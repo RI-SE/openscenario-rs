@@ -63,6 +63,8 @@ pub struct Private {
 pub struct PrivateActionWrapper {
     #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
     pub longitudinal_action: Option<LongitudinalAction>,
+    #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none")]
+    pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
     #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
     pub teleport_action: Option<TeleportAction>,
     #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
@@ -74,9 +76,10 @@ pub struct PrivateActionWrapper {
 #[serde(rename_all = "PascalCase")]
 pub enum PrivateActionType {
     LongitudinalAction(LongitudinalAction),
+    LateralAction(crate::types::actions::movement::LateralAction),
     TeleportAction(TeleportAction),
     RoutingAction(RoutingAction),
-    // LateralAction, SynchronizeAction, etc. can be added later
+    // SynchronizeAction, etc. can be added later
 }
 
 /// Longitudinal movement actions (speed control, etc.)
@@ -116,6 +119,7 @@ impl Default for PrivateActionWrapper {
     fn default() -> Self {
         Self {
             longitudinal_action: Some(LongitudinalAction::default()),
+            lateral_action: None,
             teleport_action: None,
             routing_action: None,
         }
@@ -183,11 +187,13 @@ mod tests {
                 longitudinal_action: Some(LongitudinalAction {
                     speed_action: Some(SpeedAction::default()),
                 }),
+                lateral_action: None,
                 teleport_action: None,
                 routing_action: None,
             })
             .add_action(PrivateActionWrapper {
                 longitudinal_action: None,
+                lateral_action: None,
                 teleport_action: Some(TeleportAction::default()),
                 routing_action: None,
             });
