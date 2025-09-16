@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚗 OpenSCENARIO-rs Routing Demo - Week 5 Implementation");
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
 
     // Demo 1: Create a simple point-to-point route
     demo_simple_route()?;
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn demo_simple_route() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📍 Demo 1: Simple Point-to-Point Route");
-    println!("-" .repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Create a simple route from origin to destination
     let route = Route::new("SimpleRoute", false)
@@ -55,7 +55,7 @@ fn demo_simple_route() -> Result<(), Box<dyn std::error::Error>> {
 
 fn demo_complex_route() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🗺️  Demo 2: Complex Multi-Waypoint Route");
-    println!("-" .repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Create a complex route with different position types
     let route = Route::new("ComplexRoute", true)
@@ -85,7 +85,7 @@ fn demo_complex_route() -> Result<(), Box<dyn std::error::Error>> {
 
 fn demo_route_analytics() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📊 Demo 3: Route Analytics");
-    println!("-" .repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Create a route for analytics demonstration
     let route = Route::new("AnalyticsRoute", false)
@@ -118,7 +118,7 @@ fn demo_route_analytics() -> Result<(), Box<dyn std::error::Error>> {
 
 fn demo_route_references() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔗 Demo 4: Route References");
-    println!("-" .repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Create a route for reference demonstration
     let route = Route::new("ReferenceRoute", false)
@@ -153,7 +153,7 @@ fn demo_route_references() -> Result<(), Box<dyn std::error::Error>> {
 
 fn demo_route_validation() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n✅ Demo 5: Route Validation");
-    println!("-" .repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Test valid route
     let valid_route = Route::new("ValidRoute", false)
@@ -186,7 +186,7 @@ fn demo_route_validation() -> Result<(), Box<dyn std::error::Error>> {
 
 fn demo_xml_serialization() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📄 Demo 6: XML Serialization");
-    println!("-" .repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Create a route for serialization
     let route = Route::new("SerializationDemo", false)

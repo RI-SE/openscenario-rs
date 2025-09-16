@@ -26,6 +26,56 @@ pub struct WorldPosition {
     pub r: Option<Double>,
 }
 
+impl WorldPosition {
+    /// Create a new WorldPosition with required x, y coordinates
+    pub fn new(x: f64, y: f64) -> Self {
+        Self {
+            x: Double::literal(x),
+            y: Double::literal(y),
+            z: None,
+            h: None,
+            p: None,
+            r: None,
+        }
+    }
+
+    /// Create a new WorldPosition with x, y, z coordinates
+    pub fn with_z(x: f64, y: f64, z: f64) -> Self {
+        Self {
+            x: Double::literal(x),
+            y: Double::literal(y),
+            z: Some(Double::literal(z)),
+            h: None,
+            p: None,
+            r: None,
+        }
+    }
+
+    /// Create a new WorldPosition with x, y, z, h coordinates
+    pub fn with_orientation(x: f64, y: f64, z: f64, h: f64) -> Self {
+        Self {
+            x: Double::literal(x),
+            y: Double::literal(y),
+            z: Some(Double::literal(z)),
+            h: Some(Double::literal(h)),
+            p: None,
+            r: None,
+        }
+    }
+
+    /// Create a new WorldPosition with all coordinates
+    pub fn with_full_orientation(x: f64, y: f64, z: f64, h: f64, p: f64, r: f64) -> Self {
+        Self {
+            x: Double::literal(x),
+            y: Double::literal(y),
+            z: Some(Double::literal(z)),
+            h: Some(Double::literal(h)),
+            p: Some(Double::literal(p)),
+            r: Some(Double::literal(r)),
+        }
+    }
+}
+
 impl Default for WorldPosition {
     fn default() -> Self {
         Self {
