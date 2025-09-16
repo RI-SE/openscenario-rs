@@ -50,6 +50,9 @@ fn test_by_entity_condition_variants() {
             ByEntityCondition::RelativeDistance(_) => {},
             ByEntityCondition::Acceleration(_) => {},
             ByEntityCondition::StandStill(_) => {},
+            ByEntityCondition::Collision(_) => {},
+            ByEntityCondition::OffRoad(_) => {},
+            ByEntityCondition::EndOfRoad(_) => {},
         }
     };
 }

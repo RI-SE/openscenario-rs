@@ -139,6 +139,48 @@ pub struct StandStillCondition {
     pub duration: Double,
 }
 
+/// Condition for detecting collisions
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "CollisionCondition")]
+pub struct CollisionCondition {
+    /// Specific target entity (optional)
+    #[serde(rename = "@target", skip_serializing_if = "Option::is_none")]
+    pub target: Option<OSString>,
+    
+    /// Collision detection by entity type
+    #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
+    pub by_type: Option<CollisionTarget>,
+    
+    /// Position-based collision detection
+    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
+    pub position: Option<Position>,
+}
+
+/// Target specification for collision detection
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CollisionTarget {
+    #[serde(rename = "@type")]
+    pub target_type: OSString,
+}
+
+/// Condition for detecting off-road state
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "OffRoadCondition")]
+pub struct OffRoadCondition {
+    /// Duration entity must be off-road
+    #[serde(rename = "@duration")]
+    pub duration: Double,
+}
+
+/// Condition for detecting end-of-road state
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "EndOfRoadCondition")]
+pub struct EndOfRoadCondition {
+    /// Duration entity must be at end of road
+    #[serde(rename = "@duration")]
+    pub duration: Double,
+}
+
 /// Entity-based condition types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ByEntityCondition {
@@ -160,7 +202,15 @@ pub enum ByEntityCondition {
     /// Standstill detection condition
     #[serde(rename = "StandStillCondition")]
     StandStill(StandStillCondition),
-    // More entity conditions will be added later
+    /// Collision detection condition
+    #[serde(rename = "CollisionCondition")]
+    Collision(CollisionCondition),
+    /// Off-road detection condition
+    #[serde(rename = "OffRoadCondition")]
+    OffRoad(OffRoadCondition),
+    /// End-of-road detection condition
+    #[serde(rename = "EndOfRoadCondition")]
+    EndOfRoad(EndOfRoadCondition),
 }
 
 impl Default for SpeedCondition {
@@ -373,6 +423,74 @@ impl StandStillCondition {
     }
 }
 
+impl CollisionCondition {
+    /// Create a new collision condition with specific target
+    pub fn with_target(target: &str) -> Self {
+        Self {
+            target: Some(OSString::literal(target.to_string())),
+            by_type: None,
+            position: None,
+        }
+    }
+    
+    /// Create collision condition for entity type
+    pub fn with_type(entity_type: &str) -> Self {
+        Self {
+            target: None,
+            by_type: Some(CollisionTarget {
+                target_type: OSString::literal(entity_type.to_string()),
+            }),
+            position: None,
+        }
+    }
+    
+    /// Create collision condition at specific position
+    pub fn at_position(position: Position) -> Self {
+        Self {
+            target: None,
+            by_type: None,
+            position: Some(position),
+        }
+    }
+    
+    /// Create general collision condition (any collision)
+    pub fn any_collision() -> Self {
+        Self {
+            target: None,
+            by_type: None,
+            position: None,
+        }
+    }
+}
+
+impl OffRoadCondition {
+    /// Create a new off-road condition
+    pub fn new(duration: f64) -> Self {
+        Self {
+            duration: Double::literal(duration),
+        }
+    }
+    
+    /// Create condition with specific duration
+    pub fn with_duration(duration: f64) -> Self {
+        Self::new(duration)
+    }
+}
+
+impl EndOfRoadCondition {
+    /// Create a new end-of-road condition
+    pub fn new(duration: f64) -> Self {
+        Self {
+            duration: Double::literal(duration),
+        }
+    }
+    
+    /// Create condition with specific duration
+    pub fn with_duration(duration: f64) -> Self {
+        Self::new(duration)
+    }
+}
+
 // Default implementations for testing and fallback scenarios
 impl Default for ReachPositionCondition {
     fn default() -> Self {
@@ -423,6 +541,40 @@ impl Default for AccelerationCondition {
 }
 
 impl Default for StandStillCondition {
+    fn default() -> Self {
+        Self {
+            duration: Double::literal(1.0),
+        }
+    }
+}
+
+impl Default for CollisionCondition {
+    fn default() -> Self {
+        Self {
+            target: None,
+            by_type: None,
+            position: None,
+        }
+    }
+}
+
+impl Default for CollisionTarget {
+    fn default() -> Self {
+        Self {
+            target_type: OSString::literal("vehicle".to_string()),
+        }
+    }
+}
+
+impl Default for OffRoadCondition {
+    fn default() -> Self {
+        Self {
+            duration: Double::literal(1.0),
+        }
+    }
+}
+
+impl Default for EndOfRoadCondition {
     fn default() -> Self {
         Self {
             duration: Double::literal(1.0),
@@ -498,6 +650,36 @@ impl ByEntityCondition {
     /// Create a standstill condition
     pub fn standstill(duration: f64) -> Self {
         ByEntityCondition::StandStill(StandStillCondition::new(duration))
+    }
+    
+    /// Create a collision condition with specific target
+    pub fn collision_with_target(target: &str) -> Self {
+        ByEntityCondition::Collision(CollisionCondition::with_target(target))
+    }
+    
+    /// Create a collision condition for entity type
+    pub fn collision_with_type(entity_type: &str) -> Self {
+        ByEntityCondition::Collision(CollisionCondition::with_type(entity_type))
+    }
+    
+    /// Create a collision condition at position
+    pub fn collision_at_position(position: Position) -> Self {
+        ByEntityCondition::Collision(CollisionCondition::at_position(position))
+    }
+    
+    /// Create a general collision condition
+    pub fn collision() -> Self {
+        ByEntityCondition::Collision(CollisionCondition::any_collision())
+    }
+    
+    /// Create an off-road condition
+    pub fn off_road(duration: f64) -> Self {
+        ByEntityCondition::OffRoad(OffRoadCondition::new(duration))
+    }
+    
+    /// Create an end-of-road condition
+    pub fn end_of_road(duration: f64) -> Self {
+        ByEntityCondition::EndOfRoad(EndOfRoadCondition::new(duration))
     }
 }
 
@@ -668,5 +850,142 @@ mod tests {
             ByEntityCondition::StandStill(_) => (),
             _ => panic!("Expected StandStill variant"),
         }
+    }
+
+    #[test]
+    fn test_collision_condition_new_with_target() {
+        let condition = CollisionCondition::with_target("vehicle1");
+        assert_eq!(condition.target, Some(OSString::literal("vehicle1".to_string())));
+        assert_eq!(condition.by_type, None);
+        assert_eq!(condition.position, None);
+    }
+
+    #[test]
+    fn test_collision_condition_with_type() {
+        let condition = CollisionCondition::with_type("pedestrian");
+        assert_eq!(condition.target, None);
+        assert!(condition.by_type.is_some());
+        if let Some(by_type) = condition.by_type {
+            assert_eq!(by_type.target_type, OSString::literal("pedestrian".to_string()));
+        }
+        assert_eq!(condition.position, None);
+    }
+
+    #[test]
+    fn test_collision_condition_any_collision() {
+        let condition = CollisionCondition::any_collision();
+        assert_eq!(condition.target, None);
+        assert_eq!(condition.by_type, None);
+        assert_eq!(condition.position, None);
+    }
+
+    #[test]
+    fn test_collision_condition_default() {
+        let condition = CollisionCondition::default();
+        assert_eq!(condition.target, None);
+        assert_eq!(condition.by_type, None);
+        assert_eq!(condition.position, None);
+    }
+
+    #[test]
+    fn test_off_road_condition_new() {
+        let condition = OffRoadCondition::new(2.5);
+        assert_eq!(condition.duration, Double::literal(2.5));
+    }
+
+    #[test]
+    fn test_off_road_condition_with_duration() {
+        let condition = OffRoadCondition::with_duration(4.0);
+        assert_eq!(condition.duration, Double::literal(4.0));
+    }
+
+    #[test]
+    fn test_off_road_condition_default() {
+        let condition = OffRoadCondition::default();
+        assert_eq!(condition.duration, Double::literal(1.0));
+    }
+
+    #[test]
+    fn test_end_of_road_condition_new() {
+        let condition = EndOfRoadCondition::new(1.5);
+        assert_eq!(condition.duration, Double::literal(1.5));
+    }
+
+    #[test]
+    fn test_end_of_road_condition_with_duration() {
+        let condition = EndOfRoadCondition::with_duration(3.0);
+        assert_eq!(condition.duration, Double::literal(3.0));
+    }
+
+    #[test]
+    fn test_end_of_road_condition_default() {
+        let condition = EndOfRoadCondition::default();
+        assert_eq!(condition.duration, Double::literal(1.0));
+    }
+
+    #[test]
+    fn test_by_entity_condition_collision_variants() {
+        let collision_target = ByEntityCondition::collision_with_target("vehicle1");
+        let collision_type = ByEntityCondition::collision_with_type("pedestrian");
+        let collision_any = ByEntityCondition::collision();
+        
+        match collision_target {
+            ByEntityCondition::Collision(condition) => {
+                assert_eq!(condition.target, Some(OSString::literal("vehicle1".to_string())));
+            }
+            _ => panic!("Expected Collision variant"),
+        }
+        
+        match collision_type {
+            ByEntityCondition::Collision(condition) => {
+                assert!(condition.by_type.is_some());
+            }
+            _ => panic!("Expected Collision variant"),
+        }
+        
+        match collision_any {
+            ByEntityCondition::Collision(_) => (),
+            _ => panic!("Expected Collision variant"),
+        }
+    }
+
+    #[test]
+    fn test_by_entity_condition_safety_variants() {
+        let off_road = ByEntityCondition::off_road(2.0);
+        let end_of_road = ByEntityCondition::end_of_road(3.0);
+        
+        match off_road {
+            ByEntityCondition::OffRoad(condition) => {
+                assert_eq!(condition.duration, Double::literal(2.0));
+            }
+            _ => panic!("Expected OffRoad variant"),
+        }
+        
+        match end_of_road {
+            ByEntityCondition::EndOfRoad(condition) => {
+                assert_eq!(condition.duration, Double::literal(3.0));
+            }
+            _ => panic!("Expected EndOfRoad variant"),
+        }
+    }
+
+    #[test]
+    fn test_safety_conditions_serialization() {
+        let collision = CollisionCondition::with_target("vehicle1");
+        let off_road = OffRoadCondition::new(2.0);
+        let end_of_road = EndOfRoadCondition::new(3.0);
+        
+        // Test that they can be serialized and deserialized
+        let collision_serialized = serde_json::to_string(&collision).unwrap();
+        let collision_deserialized: CollisionCondition = serde_json::from_str(&collision_serialized).unwrap();
+        assert_eq!(collision, collision_deserialized);
+        
+        let off_road_serialized = serde_json::to_string(&off_road).unwrap();
+        let off_road_deserialized: OffRoadCondition = serde_json::from_str(&off_road_serialized).unwrap();
+        assert_eq!(off_road, off_road_deserialized);
+        
+        let end_of_road_serialized = serde_json::to_string(&end_of_road).unwrap();
+        let end_of_road_deserialized: EndOfRoadCondition = serde_json::from_str(&end_of_road_serialized).unwrap();
+        assert_eq!(end_of_road, end_of_road_deserialized);
     }
 }

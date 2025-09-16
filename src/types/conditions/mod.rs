@@ -18,7 +18,7 @@ use crate::types::enums::ConditionEdge;
 pub mod entity; // Entity-based conditions
 pub mod value; // Value-based conditions
 
-pub use entity::{AccelerationCondition, ByEntityCondition, DistanceCondition, ReachPositionCondition, RelativeDistanceCondition, SpeedCondition, StandStillCondition};
+pub use entity::{AccelerationCondition, ByEntityCondition, CollisionCondition, CollisionTarget, DistanceCondition, EndOfRoadCondition, OffRoadCondition, ReachPositionCondition, RelativeDistanceCondition, SpeedCondition, StandStillCondition};
 pub use value::{ByValueCondition, SimulationTimeCondition};
 
 use crate::types::basic::Double;
