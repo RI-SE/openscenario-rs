@@ -88,3 +88,76 @@ impl Default for WorldPosition {
         }
     }
 }
+
+/// Geographic position using latitude/longitude coordinates
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename = "GeographicPosition")]
+pub struct GeographicPosition {
+    /// Latitude in degrees
+    #[serde(rename = "@latitude")]
+    pub latitude: Double,
+    
+    /// Longitude in degrees
+    #[serde(rename = "@longitude")]
+    pub longitude: Double,
+    
+    /// Height above sea level in meters (optional)
+    #[serde(rename = "@height", skip_serializing_if = "Option::is_none")]
+    pub height: Option<Double>,
+    
+    /// Orientation in geographic coordinate system
+    #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
+    pub orientation: Option<crate::types::positions::road::Orientation>,
+}
+
+impl GeographicPosition {
+    /// Create a new geographic position with latitude and longitude
+    pub fn new(latitude: f64, longitude: f64) -> Self {
+        Self {
+            latitude: Double::literal(latitude),
+            longitude: Double::literal(longitude),
+            height: None,
+            orientation: None,
+        }
+    }
+    
+    /// Create geographic position with height
+    pub fn with_height(latitude: f64, longitude: f64, height: f64) -> Self {
+        Self {
+            latitude: Double::literal(latitude),
+            longitude: Double::literal(longitude),
+            height: Some(Double::literal(height)),
+            orientation: None,
+        }
+    }
+    
+    /// Add orientation to geographic position
+    pub fn with_orientation(mut self, orientation: crate::types::positions::road::Orientation) -> Self {
+        self.orientation = Some(orientation);
+        self
+    }
+    
+    /// Create position at coordinates with height and orientation
+    pub fn at_coordinates(latitude: f64, longitude: f64, height: f64, heading: f64) -> Self {
+        use crate::types::positions::road::Orientation;
+        
+        let orientation = Orientation {
+            h: Some(Double::literal(heading)),
+            p: None,
+            r: None,
+        };
+        
+        Self::with_height(latitude, longitude, height).with_orientation(orientation)
+    }
+}
+
+impl Default for GeographicPosition {
+    fn default() -> Self {
+        Self {
+            latitude: Double::literal(0.0),
+            longitude: Double::literal(0.0),
+            height: None,
+            orientation: None,
+        }
+    }
+}

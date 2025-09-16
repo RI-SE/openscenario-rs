@@ -17,13 +17,15 @@
 use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 
+pub mod relative;
 pub mod road;
 pub mod trajectory;
 pub mod world;
 
+pub use relative::RelativeObjectPosition;
 pub use road::{LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition};
-pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryRef};
-pub use world::WorldPosition;
+pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition, TrajectoryRef};
+pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -43,7 +45,12 @@ pub struct Position {
     pub lane_position: Option<LanePosition>,
     #[serde(rename = "RelativeLanePosition", skip_serializing_if = "Option::is_none")]
     pub relative_lane_position: Option<RelativeLanePosition>,
-    // Other position types will be added later as Optional fields
+    #[serde(rename = "TrajectoryPosition", skip_serializing_if = "Option::is_none")]
+    pub trajectory_position: Option<TrajectoryPosition>,
+    #[serde(rename = "GeographicPosition", skip_serializing_if = "Option::is_none")]
+    pub geographic_position: Option<GeographicPosition>,
+    #[serde(rename = "RelativeObjectPosition", skip_serializing_if = "Option::is_none")]
+    pub relative_object_position: Option<RelativeObjectPosition>,
 }
 
 /// Relative world position relative to an entity
@@ -70,6 +77,9 @@ impl Default for Position {
             relative_road_position: None,
             lane_position: None,
             relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
         }
     }
 }
@@ -87,6 +97,20 @@ impl Default for RelativeWorldPosition {
 
 // Convenience constructors for Position
 impl Position {
+    /// Create an empty Position with all fields set to None
+    pub fn empty() -> Self {
+        Self {
+            world_position: None,
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
+        }
+    }
     /// Create a Position with RelativeRoadPosition
     pub fn relative_road(relative_road_position: RelativeRoadPosition) -> Self {
         Self {
@@ -96,6 +120,9 @@ impl Position {
             relative_road_position: Some(relative_road_position),
             lane_position: None,
             relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
         }
     }
 
@@ -108,6 +135,54 @@ impl Position {
             relative_road_position: None,
             lane_position: None,
             relative_lane_position: Some(relative_lane_position),
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
+        }
+    }
+    
+    /// Create a Position with TrajectoryPosition
+    pub fn trajectory(trajectory_position: TrajectoryPosition) -> Self {
+        Self {
+            world_position: None,
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: Some(trajectory_position),
+            geographic_position: None,
+            relative_object_position: None,
+        }
+    }
+    
+    /// Create a Position with GeographicPosition
+    pub fn geographic(geographic_position: GeographicPosition) -> Self {
+        Self {
+            world_position: None,
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: Some(geographic_position),
+            relative_object_position: None,
+        }
+    }
+    
+    /// Create a Position with RelativeObjectPosition
+    pub fn relative_object(relative_object_position: RelativeObjectPosition) -> Self {
+        Self {
+            world_position: None,
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: Some(relative_object_position),
         }
     }
 }
