@@ -16,7 +16,7 @@ use openscenario_rs::types::{
 
 #[test]
 fn test_reach_position_condition_basic() {
-    let world_pos = WorldPosition::new(100.0, 200.0, 0.0, 1.57, 0.0, 0.0);
+    let world_pos = WorldPosition::with_full_orientation(100.0, 200.0, 0.0, 1.57, 0.0, 0.0);
     let mut position = Position::default();
     position.world_position = Some(world_pos);
     position.relative_world_position = None;
@@ -31,7 +31,7 @@ fn test_reach_position_condition_basic() {
     let world_pos = condition.position.world_position.unwrap();
     assert_eq!(world_pos.x, Double::literal(100.0));
     assert_eq!(world_pos.y, Double::literal(200.0));
-    assert_eq!(world_pos.h, Double::literal(1.57));
+    assert_eq!(world_pos.h, Some(Double::literal(1.57)));
 }
 
 #[test]
@@ -44,8 +44,8 @@ fn test_reach_position_condition_builder() {
     let world_pos = condition.position.world_position.unwrap();
     assert_eq!(world_pos.x, Double::literal(50.0));
     assert_eq!(world_pos.y, Double::literal(75.0));
-    assert_eq!(world_pos.z, Double::literal(1.0));
-    assert_eq!(world_pos.h, Double::literal(0.0));
+    assert_eq!(world_pos.z, Some(Double::literal(1.0)));
+    assert_eq!(world_pos.h, Some(Double::literal(0.0)));
 }
 
 #[test]
@@ -328,13 +328,15 @@ fn test_real_world_scenario_examples() {
 #[test]
 fn test_parameter_support() {
     // Test that conditions can use parameterized values
-    let condition = RelativeDistanceCondition::new(
-        OSString::parameter("target_entity".to_string()),
-        Double::parameter("safety_distance".to_string()),
-        Boolean::parameter("use_freespace".to_string()),
-        RelativeDistanceType::Cartesian,
-        Rule::GreaterThan,
-    );
+    let condition = RelativeDistanceCondition {
+        entity_ref: OSString::parameter("target_entity".to_string()),
+        value: Double::parameter("safety_distance".to_string()),
+        freespace: Boolean::parameter("use_freespace".to_string()),
+        relative_distance_type: RelativeDistanceType::Cartesian,
+        rule: Rule::GreaterThan,
+        coordinate_system: None,
+        routing_algorithm: None,
+    };
     
     // Verify parameter values are preserved
     match condition.entity_ref {

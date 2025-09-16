@@ -56,7 +56,7 @@ fn test_by_entity_condition_distance() {
 #[test]
 fn test_by_entity_condition_relative_distance() {
     let relative_condition = ByEntityCondition::relative_distance(
-        OSString::literal("target_vehicle".to_string()),
+        "target_vehicle",
         15.0,
         false,
         RelativeDistanceType::Longitudinal,
@@ -129,7 +129,7 @@ fn test_condition_equality() {
 #[test]
 fn test_condition_cloning() {
     let original = ByEntityCondition::relative_distance(
-        OSString::literal("test_vehicle".to_string()),
+        "test_vehicle",
         12.5,
         true,
         RelativeDistanceType::Cartesian,
