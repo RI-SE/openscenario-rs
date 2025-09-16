@@ -129,7 +129,7 @@ where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-
+        
         // Check if this is a parameter reference or expression
         if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
             let content = &s[2..s.len() - 1];
@@ -177,7 +177,7 @@ where
         S: Serializer,
     {
         match self {
-            Value::Literal(value) => value.serialize(serializer),
+            Value::Literal(value) => value.to_string().serialize(serializer),
             Value::Parameter(name) => format!("${{{}}}", name).serialize(serializer),
             Value::Expression(expr) => format!("${{{}}}", expr).serialize(serializer),
         }
