@@ -25,8 +25,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     println!("   Car BoundingBox:");
-    println!("   - Volume: {:.2} m³", bbox.volume(&params)?);
-    println!("   - Contains point (0,0,0): {}", bbox.contains_point(0.0, 0.0, 0.0, &params)?);
+    println!("   - Volume: {:.2} m³", bbox.volume_with_params(&params)?);
+    println!("   - Contains point (0,0,0): {}", bbox.contains_point_with_params(0.0, 0.0, 0.0, &params)?);
     println!("   - Distance to point (3,0,0): {:.2} m", bbox.distance_to_point(3.0, 0.0, 0.0, &params)?);
 
     // Test different vehicle dimension presets
@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (x, y, z) in test_points {
-        let contains = test_bbox.contains_point(x, y, z, &params)?;
+        let contains = test_bbox.contains_point_with_params(x, y, z, &params)?;
         let distance = test_bbox.distance_to_point(x, y, z, &params)?;
         println!("   Point ({:.1}, {:.1}, {:.1}): contains={}, distance={:.2}m", 
                  x, y, z, contains, distance);

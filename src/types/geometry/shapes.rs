@@ -45,6 +45,43 @@ pub struct Dimensions {
     pub height: Double,
 }
 
+impl Center {
+    /// Calculate 3D Euclidean distance to another center point
+    pub fn distance_to(&self, other: &Center) -> Result<f64> {
+        let params = HashMap::new();
+        let x1 = self.x.resolve(&params)?;
+        let y1 = self.y.resolve(&params)?;
+        let z1 = self.z.resolve(&params)?;
+        
+        let x2 = other.x.resolve(&params)?;
+        let y2 = other.y.resolve(&params)?;
+        let z2 = other.z.resolve(&params)?;
+        
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let dz = z2 - z1;
+        
+        Ok((dx * dx + dy * dy + dz * dz).sqrt())
+    }
+
+    /// Calculate 3D Euclidean distance to another center point with parameter resolution
+    pub fn distance_to_with_params(&self, other: &Center, params: &HashMap<String, String>) -> Result<f64> {
+        let x1 = self.x.resolve(params)?;
+        let y1 = self.y.resolve(params)?;
+        let z1 = self.z.resolve(params)?;
+        
+        let x2 = other.x.resolve(params)?;
+        let y2 = other.y.resolve(params)?;
+        let z2 = other.z.resolve(params)?;
+        
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let dz = z2 - z1;
+        
+        Ok((dx * dx + dy * dy + dz * dz).sqrt())
+    }
+}
+
 impl Default for Center {
     fn default() -> Self {
         Self {
@@ -67,7 +104,16 @@ impl Default for Dimensions {
 
 impl BoundingBox {
     /// Calculate the volume of the bounding box
-    pub fn volume(&self, params: &HashMap<String, String>) -> Result<f64> {
+    pub fn volume(&self) -> Result<f64> {
+        let params = HashMap::new();
+        let width = self.dimensions.width.resolve(&params)?;
+        let length = self.dimensions.length.resolve(&params)?;
+        let height = self.dimensions.height.resolve(&params)?;
+        Ok(width * length * height)
+    }
+
+    /// Calculate the volume of the bounding box with parameter resolution
+    pub fn volume_with_params(&self, params: &HashMap<String, String>) -> Result<f64> {
         let width = self.dimensions.width.resolve(params)?;
         let length = self.dimensions.length.resolve(params)?;
         let height = self.dimensions.height.resolve(params)?;
@@ -75,7 +121,27 @@ impl BoundingBox {
     }
 
     /// Check if a point is contained within this bounding box
-    pub fn contains_point(&self, x: f64, y: f64, z: f64, params: &HashMap<String, String>) -> Result<bool> {
+    pub fn contains_point(&self, x: f64, y: f64, z: f64) -> Result<bool> {
+        let params = HashMap::new();
+        let center_x = self.center.x.resolve(&params)?;
+        let center_y = self.center.y.resolve(&params)?;
+        let center_z = self.center.z.resolve(&params)?;
+        
+        let width = self.dimensions.width.resolve(&params)?;
+        let length = self.dimensions.length.resolve(&params)?;
+        let height = self.dimensions.height.resolve(&params)?;
+
+        let half_width = width / 2.0;
+        let half_length = length / 2.0;
+        let half_height = height / 2.0;
+
+        Ok(x >= center_x - half_length && x <= center_x + half_length &&
+           y >= center_y - half_width && y <= center_y + half_width &&
+           z >= center_z - half_height && z <= center_z + half_height)
+    }
+
+    /// Check if a point is contained within this bounding box with parameter resolution
+    pub fn contains_point_with_params(&self, x: f64, y: f64, z: f64, params: &HashMap<String, String>) -> Result<bool> {
         let center_x = self.center.x.resolve(params)?;
         let center_y = self.center.y.resolve(params)?;
         let center_z = self.center.z.resolve(params)?;
@@ -150,6 +216,30 @@ impl BoundingBox {
 }
 
 impl Dimensions {
+    /// Create dimensions for a standard vehicle (alias for car)
+    pub fn vehicle_default() -> Self {
+        Self::new(2.0, 4.5, 1.8)
+    }
+
+    /// Create dimensions for a pedestrian
+    pub fn pedestrian_default() -> Self {
+        Self::new(0.6, 0.6, 1.8)
+    }
+
+    /// Create dimensions for a truck
+    pub fn truck_default() -> Self {
+        Self::new(2.5, 12.0, 3.5)
+    }
+
+    /// Create new dimensions with specified values
+    pub fn new(width: f64, length: f64, height: f64) -> Self {
+        Self {
+            width: crate::types::basic::Value::literal(width),
+            length: crate::types::basic::Value::literal(length),
+            height: crate::types::basic::Value::literal(height),
+        }
+    }
+
     /// Create dimensions for a standard car
     pub fn car() -> Self {
         Self {
@@ -390,8 +480,7 @@ mod tests {
             },
         };
 
-        let params = HashMap::new();
-        let volume = bbox.volume(&params).unwrap();
+        let volume = bbox.volume().unwrap();
         assert_eq!(volume, 12.0); // 2.0 * 4.0 * 1.5
     }
 
@@ -412,16 +501,14 @@ mod tests {
             },
         };
 
-        let params = HashMap::new();
-        
         // Point inside
-        assert!(bbox.contains_point(0.0, 0.0, 0.0, &params).unwrap());
-        assert!(bbox.contains_point(1.9, 0.9, 0.7, &params).unwrap());
+        assert!(bbox.contains_point(0.0, 0.0, 0.0).unwrap());
+        assert!(bbox.contains_point(1.9, 0.9, 0.7).unwrap());
         
         // Point outside
-        assert!(!bbox.contains_point(2.1, 0.0, 0.0, &params).unwrap());
-        assert!(!bbox.contains_point(0.0, 1.1, 0.0, &params).unwrap());
-        assert!(!bbox.contains_point(0.0, 0.0, 0.8, &params).unwrap());
+        assert!(!bbox.contains_point(2.1, 0.0, 0.0).unwrap());
+        assert!(!bbox.contains_point(0.0, 1.1, 0.0).unwrap());
+        assert!(!bbox.contains_point(0.0, 0.0, 0.8).unwrap());
     }
 
     #[test]
@@ -558,7 +645,101 @@ mod tests {
         params.insert("vehicle_width".to_string(), "2.0".to_string());
         params.insert("vehicle_length".to_string(), "4.0".to_string());
 
-        let volume = bbox.volume(&params).unwrap();
+        let volume = bbox.volume_with_params(&params).unwrap();
         assert_eq!(volume, 12.0); // 2.0 * 4.0 * 1.5
+    }
+
+    #[test]
+    fn test_center_distance_to() {
+        let center1 = Center {
+            x: crate::types::basic::Value::literal(0.0),
+            y: crate::types::basic::Value::literal(0.0),
+            z: crate::types::basic::Value::literal(0.0),
+        };
+
+        let center2 = Center {
+            x: crate::types::basic::Value::literal(3.0),
+            y: crate::types::basic::Value::literal(4.0),
+            z: crate::types::basic::Value::literal(0.0),
+        };
+
+        let distance = center1.distance_to(&center2).unwrap();
+        assert_eq!(distance, 5.0); // 3-4-5 triangle
+    }
+
+    #[test]
+    fn test_center_distance_to_3d() {
+        let center1 = Center {
+            x: crate::types::basic::Value::literal(1.0),
+            y: crate::types::basic::Value::literal(2.0),
+            z: crate::types::basic::Value::literal(3.0),
+        };
+
+        let center2 = Center {
+            x: crate::types::basic::Value::literal(4.0),
+            y: crate::types::basic::Value::literal(6.0),
+            z: crate::types::basic::Value::literal(8.0),
+        };
+
+        let distance = center1.distance_to(&center2).unwrap();
+        let expected = ((3.0_f64 * 3.0) + (4.0 * 4.0) + (5.0 * 5.0)).sqrt(); // sqrt(9 + 16 + 25) = sqrt(50)
+        assert!((distance - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dimensions_new_defaults() {
+        // Test vehicle_default
+        let vehicle_dims = Dimensions::vehicle_default();
+        assert_eq!(vehicle_dims.width.as_literal().unwrap(), &2.0);
+        assert_eq!(vehicle_dims.length.as_literal().unwrap(), &4.5);
+        assert_eq!(vehicle_dims.height.as_literal().unwrap(), &1.8);
+
+        // Test pedestrian_default
+        let pedestrian_dims = Dimensions::pedestrian_default();
+        assert_eq!(pedestrian_dims.width.as_literal().unwrap(), &0.6);
+        assert_eq!(pedestrian_dims.length.as_literal().unwrap(), &0.6);
+        assert_eq!(pedestrian_dims.height.as_literal().unwrap(), &1.8);
+
+        // Test truck_default
+        let truck_dims = Dimensions::truck_default();
+        assert_eq!(truck_dims.width.as_literal().unwrap(), &2.5);
+        assert_eq!(truck_dims.length.as_literal().unwrap(), &12.0);
+        assert_eq!(truck_dims.height.as_literal().unwrap(), &3.5);
+    }
+
+    #[test]
+    fn test_dimensions_new() {
+        let dims = Dimensions::new(1.5, 3.0, 2.0);
+        assert_eq!(dims.width.as_literal().unwrap(), &1.5);
+        assert_eq!(dims.length.as_literal().unwrap(), &3.0);
+        assert_eq!(dims.height.as_literal().unwrap(), &2.0);
+    }
+
+    #[test]
+    fn test_bounding_box_volume_no_params() {
+        let bbox = BoundingBox {
+            center: Center::default(),
+            dimensions: Dimensions::new(2.0, 4.0, 1.5),
+        };
+
+        let volume = bbox.volume().unwrap();
+        assert_eq!(volume, 12.0); // 2.0 * 4.0 * 1.5
+    }
+
+    #[test]
+    fn test_bounding_box_contains_point_no_params() {
+        let bbox = BoundingBox {
+            center: Center::default(),
+            dimensions: Dimensions::new(2.0, 4.0, 1.5),
+        };
+
+        // Point inside
+        assert!(bbox.contains_point(0.0, 0.0, 0.0).unwrap());
+        assert!(bbox.contains_point(1.9, 0.9, 0.7).unwrap());
+        
+        // Point outside
+        assert!(!bbox.contains_point(2.1, 0.0, 0.0).unwrap());
+        assert!(!bbox.contains_point(0.0, 1.1, 0.0).unwrap());
+        assert!(!bbox.contains_point(0.0, 0.0, 0.8).unwrap());
     }
 }

@@ -23,12 +23,12 @@ fn test_enhanced_bounding_box_operations() {
     };
 
     // Test volume calculation
-    let volume = bbox.volume(&params).unwrap();
+    let volume = bbox.volume_with_params(&params).unwrap();
     assert_eq!(volume, 12.0);
 
     // Test point containment
-    assert!(bbox.contains_point(0.0, 0.0, 0.0, &params).unwrap());
-    assert!(!bbox.contains_point(3.0, 0.0, 0.0, &params).unwrap());
+    assert!(bbox.contains_point_with_params(0.0, 0.0, 0.0, &params).unwrap());
+    assert!(!bbox.contains_point_with_params(3.0, 0.0, 0.0, &params).unwrap());
 
     // Test distance calculation
     let distance = bbox.distance_to_point(3.0, 0.0, 0.0, &params).unwrap();
@@ -73,9 +73,9 @@ fn test_dimensions_presets() {
     // Test all preset dimensions
     let car = Dimensions::car();
     let truck = Dimensions::truck();
-    let bus = Dimensions::bus();
-    let motorcycle = Dimensions::motorcycle();
-    let pedestrian = Dimensions::pedestrian();
+    let _bus = Dimensions::bus();
+    let _motorcycle = Dimensions::motorcycle();
+    let _pedestrian = Dimensions::pedestrian();
 
     // Verify car dimensions
     assert_eq!(car.width.as_literal().unwrap(), &1.8);
@@ -237,7 +237,7 @@ fn test_vehicle_with_enhanced_components() {
     // Test that all components work together
     let wheelbase = vehicle.wheelbase(&params).unwrap();
     let footprint = vehicle.footprint_area(&params).unwrap();
-    let volume = vehicle.bounding_box.volume(&params).unwrap();
+    let volume = vehicle.bounding_box.volume_with_params(&params).unwrap();
     
     assert!(wheelbase > 0.0);
     assert!(footprint > 0.0);
@@ -248,7 +248,7 @@ fn test_vehicle_with_enhanced_components() {
     assert!(vehicle.is_steerable(&params).unwrap());
     
     // Test bounding box operations
-    assert!(vehicle.bounding_box.contains_point(0.0, 0.0, 0.0, &params).unwrap());
+    assert!(vehicle.bounding_box.contains_point_with_params(0.0, 0.0, 0.0, &params).unwrap());
     
     // Test serialization of complete vehicle
     let xml = quick_xml::se::to_string(&vehicle).unwrap();

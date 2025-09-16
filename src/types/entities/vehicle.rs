@@ -104,7 +104,7 @@ impl Vehicle {
             vehicle_category: VehicleCategory::Truck,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::default(),
-                dimensions: crate::types::geometry::Dimensions::truck(),
+                dimensions: crate::types::geometry::Dimensions::truck_default(),
             },
             performance: Performance {
                 max_speed: Double::literal(120.0),
