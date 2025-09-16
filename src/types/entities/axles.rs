@@ -5,7 +5,7 @@
 //! characteristics as defined in the OpenSCENARIO XSD specification.
 
 use crate::types::basic::Double;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

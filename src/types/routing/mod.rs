@@ -202,12 +202,12 @@ impl Default for RouteRef {
 // Implementation methods for Route
 impl Route {
     /// Create a new route with the given name and closure setting
-    pub fn new(name: impl Into<OSString>, closed: bool) -> Self {
+    pub fn new(name: impl Into<String>, closed: bool) -> Self {
         Self {
             parameter_declarations: None,
             waypoints: Vec::new(),
             closed: Boolean::literal(closed),
-            name: name.into(),
+            name: OSString::literal(name.into()),
         }
     }
 
@@ -290,9 +290,10 @@ impl Route {
     /// Validate route continuity and constraints
     pub fn validate_continuity(&self) -> crate::Result<()> {
         if self.waypoints.len() < 2 {
-            return Err(crate::Error::ValidationError(
-                "Route must have at least 2 waypoints".to_string()
-            ));
+            return Err(crate::Error::ValidationError {
+                field: "waypoints".to_string(),
+                message: "Route must have at least 2 waypoints".to_string(),
+            });
         }
 
         // Additional validation logic can be added here
@@ -320,7 +321,10 @@ impl Route {
         if let (Some(pos1), Some(pos2)) = (&wp1.position.world_position, &wp2.position.world_position) {
             let dx = pos2.x.resolve(&std::collections::HashMap::new())? - pos1.x.resolve(&std::collections::HashMap::new())?;
             let dy = pos2.y.resolve(&std::collections::HashMap::new())? - pos1.y.resolve(&std::collections::HashMap::new())?;
-            let dz = pos2.z.resolve(&std::collections::HashMap::new())? - pos1.z.resolve(&std::collections::HashMap::new())?;
+            let dz = match (&pos1.z, &pos2.z) {
+                (Some(z1), Some(z2)) => z2.resolve(&std::collections::HashMap::new())? - z1.resolve(&std::collections::HashMap::new())?,
+                _ => 0.0, // If z coordinates are missing, assume 2D distance
+            };
             Ok((dx * dx + dy * dy + dz * dz).sqrt())
         } else {
             // For other position types, return a default distance
@@ -361,7 +365,7 @@ impl Waypoint {
     }
 
     /// Create a waypoint with a lane position
-    pub fn lane_position(road_id: impl Into<OSString>, lane_id: impl Into<OSString>, s: f64, strategy: RouteStrategy) -> Self {
+    pub fn lane_position(road_id: impl Into<String>, lane_id: impl Into<String>, s: f64, strategy: RouteStrategy) -> Self {
         use crate::types::positions::{LanePosition, Orientation};
         
         let mut position = Position::default();
@@ -369,8 +373,8 @@ impl Waypoint {
         position.relative_world_position = None;
         position.road_position = None;
         position.lane_position = Some(LanePosition {
-            road_id: road_id.into(),
-            lane_id: lane_id.into(),
+            road_id: OSString::literal(road_id.into()),
+            lane_id: OSString::literal(lane_id.into()),
             s: Double::literal(s),
             offset: Double::literal(0.0),
             orientation: Some(Orientation {
@@ -384,13 +388,13 @@ impl Waypoint {
     }
 
     /// Create a waypoint with a relative world position
-    pub fn relative_world_position(entity_ref: impl Into<OSString>, dx: f64, dy: f64, dz: f64, strategy: RouteStrategy) -> Self {
+    pub fn relative_world_position(entity_ref: impl Into<String>, dx: f64, dy: f64, dz: f64, strategy: RouteStrategy) -> Self {
         use crate::types::positions::RelativeWorldPosition;
         
         let mut position = Position::default();
         position.world_position = None;
         position.relative_world_position = Some(RelativeWorldPosition {
-            entity_ref: entity_ref.into(),
+            entity_ref: OSString::literal(entity_ref.into()),
             dx: Double::literal(dx),
             dy: Double::literal(dy),
             dz: Double::literal(dz),
@@ -410,10 +414,10 @@ impl RouteRef {
     }
 
     /// Create a catalog route reference
-    pub fn catalog(catalog_name: impl Into<OSString>, entry_name: impl Into<OSString>) -> Self {
+    pub fn catalog(catalog_name: impl Into<String>, entry_name: impl Into<String>) -> Self {
         RouteRef::Catalog(CatalogReference {
-            catalog_name: catalog_name.into(),
-            entry_name: entry_name.into(),
+            catalog_name: OSString::literal(catalog_name.into()),
+            entry_name: OSString::literal(entry_name.into()),
             parameter_assignments: None,
         })
     }

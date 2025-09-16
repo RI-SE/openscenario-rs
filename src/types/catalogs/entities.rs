@@ -151,8 +151,8 @@ impl CatalogEntity for CatalogVehicle {
                     self.performance.max_deceleration.resolve(&parameters)?,
                 ),
             },
-            axles: vehicle::Axles {
-                front_axle: vehicle::FrontAxle {
+            axles: crate::types::Axles {
+                front_axle: Some(crate::types::Axle {
                     max_steering: crate::types::basic::Double::literal(
                         self.axles.front_axle.max_steering.resolve(&parameters)?,
                     ),
@@ -168,8 +168,8 @@ impl CatalogEntity for CatalogVehicle {
                     position_z: crate::types::basic::Double::literal(
                         self.axles.front_axle.position_z.resolve(&parameters)?,
                     ),
-                },
-                rear_axle: vehicle::RearAxle {
+                }),
+                rear_axle: crate::types::Axle {
                     max_steering: crate::types::basic::Double::literal(
                         self.axles.rear_axle.max_steering.resolve(&parameters)?,
                     ),
@@ -186,6 +186,7 @@ impl CatalogEntity for CatalogVehicle {
                         self.axles.rear_axle.position_z.resolve(&parameters)?,
                     ),
                 },
+                additional_axles: Vec::new(),
             },
             properties: self.properties,
         };

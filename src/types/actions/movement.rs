@@ -15,7 +15,7 @@
 //! - Offering flexible target specification (absolute vs. relative positioning)
 
 use crate::types::basic::{Boolean, Double, Int, OSString};
-use crate::types::catalogs::entities::{CatalogRoute, CatalogTrajectory};
+use crate::types::catalogs::entities::CatalogTrajectory;
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode, SpeedTargetValueType};
 use crate::types::geometry::shapes::Shape;
@@ -590,7 +590,7 @@ impl FollowRouteAction {
     }
 
     /// Create a follow route action from catalog name and entry name
-    pub fn from_catalog(catalog_name: impl Into<OSString>, entry_name: impl Into<OSString>) -> Self {
+    pub fn from_catalog(catalog_name: impl Into<String>, entry_name: impl Into<String>) -> Self {
         Self {
             route_ref: RouteRef::catalog(catalog_name, entry_name),
         }
@@ -611,7 +611,7 @@ impl AssignRouteAction {
     }
 
     /// Create an assign route action with catalog route reference
-    pub fn catalog_route(catalog_name: impl Into<OSString>, entry_name: impl Into<OSString>) -> Self {
+    pub fn catalog_route(catalog_name: impl Into<String>, entry_name: impl Into<String>) -> Self {
         Self {
             route: RouteRef::catalog(catalog_name, entry_name),
         }
