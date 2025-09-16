@@ -23,6 +23,7 @@ xosc/
 
 # Temporary Rust files in root directory
 /*.rs
+/*.md
 
 # Analysis and planning documents
 high-level-ideas.md
