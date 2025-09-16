@@ -430,3 +430,134 @@ mod tests {
         );
     }
 }
+
+/// Helper function to extract parameters from scenario ParameterDeclarations
+pub fn extract_scenario_parameters(
+    parameter_declarations: &Option<crate::types::basic::ParameterDeclarations>,
+) -> std::collections::HashMap<String, String> {
+    let mut parameters = std::collections::HashMap::new();
+    
+    if let Some(param_decls) = parameter_declarations {
+        for param in &param_decls.parameter_declarations {
+            parameters.insert(
+                param.name.to_string(),
+                param.value.to_string(),
+            );
+        }
+    }
+    
+    parameters
+}
+
+/// Simple utility function to resolve catalog references using existing infrastructure
+pub fn resolve_catalog_reference_simple(
+    catalog_name: &crate::types::basic::OSString,
+    entry_name: &crate::types::basic::OSString, 
+    catalog_locations: &crate::types::catalogs::locations::CatalogLocations,
+    scenario_parameters: &std::collections::HashMap<String, String>,
+    base_path: &std::path::Path,
+) -> crate::error::Result<bool> {
+    use crate::parser::xml::parse_catalog_from_file;
+    
+    // Step 1: Resolve parameter references in catalog name and entry name
+    let resolved_catalog_name = catalog_name.resolve(scenario_parameters)?;
+    let resolved_entry_name = entry_name.resolve(scenario_parameters)?;
+
+    println!("  Resolving: catalog='{}', entry='{}'", resolved_catalog_name, resolved_entry_name);
+
+    // Step 2: Determine catalog file path based on catalog type
+    let (catalog_dir, filename) = match resolved_catalog_name.as_str() {
+        "vehicle_catalog" => {
+            if let Some(vehicle_catalog) = &catalog_locations.vehicle_catalog {
+                (vehicle_catalog.directory.path.resolve(scenario_parameters)?, "vehicle_catalog.xosc")
+            } else {
+                return Err(crate::error::Error::catalog_error("Vehicle catalog location not specified"));
+            }
+        },
+        "pedestrian_catalog" => {
+            if let Some(pedestrian_catalog) = &catalog_locations.pedestrian_catalog {
+                (pedestrian_catalog.directory.path.resolve(scenario_parameters)?, "pedestrian_catalog.xosc")
+            } else {
+                return Err(crate::error::Error::catalog_error("Pedestrian catalog location not specified"));
+            }
+        },
+        "controller_catalog" => {
+            if let Some(controller_catalog) = &catalog_locations.controller_catalog {
+                (controller_catalog.directory.path.resolve(scenario_parameters)?, "controller_catalog.xosc")
+            } else {
+                return Err(crate::error::Error::catalog_error("Controller catalog location not specified"));
+            }
+        },
+        "misc_object_catalog" => {
+            if let Some(misc_object_catalog) = &catalog_locations.misc_object_catalog {
+                (misc_object_catalog.directory.path.resolve(scenario_parameters)?, "misc_object_catalog.xosc")
+            } else {
+                return Err(crate::error::Error::catalog_error("Misc object catalog location not specified"));
+            }
+        },
+        _ => {
+            return Err(crate::error::Error::catalog_error(&format!("Unknown catalog name: {}", resolved_catalog_name)));
+        }
+    };
+
+    let catalog_file_path = base_path.join(catalog_dir).join(filename);
+    println!("  Catalog file path: {:?}", catalog_file_path);
+
+    // Step 3: Load catalog file using existing parser
+    if !catalog_file_path.exists() {
+        return Err(crate::error::Error::catalog_error(&format!("Catalog file not found: {}", catalog_file_path.display())));
+    }
+
+    println!("  Loading catalog file: {}", catalog_file_path.display());
+    let catalog_file = parse_catalog_from_file(&catalog_file_path)?;
+
+    // Step 4: Find the requested entry in the catalog
+    println!("  Searching for entry '{}' in catalog '{}'", resolved_entry_name, catalog_file.catalog.name.to_string());
+
+    let catalog_content = &catalog_file.catalog;
+    
+    // Check vehicles
+    if !catalog_content.vehicles.is_empty() {
+        let found = catalog_content.vehicles.iter().any(|v| v.name.to_string() == resolved_entry_name);
+        if found {
+            println!("  ✓ Found vehicle entry: {}", resolved_entry_name);
+            return Ok(true);
+        }
+        println!("  Checked {} vehicles", catalog_content.vehicles.len());
+    }
+
+    // Check pedestrians
+    if !catalog_content.pedestrians.is_empty() {
+        let found = catalog_content.pedestrians.iter().any(|p| p.name.to_string() == resolved_entry_name);
+        if found {
+            println!("  ✓ Found pedestrian entry: {}", resolved_entry_name);
+            return Ok(true);
+        }
+        println!("  Checked {} pedestrians", catalog_content.pedestrians.len());
+        println!("  Available pedestrians: {:?}", 
+            catalog_content.pedestrians.iter().map(|p| p.name.to_string()).collect::<Vec<_>>());
+    }
+
+    // Check controllers
+    if !catalog_content.controllers.is_empty() {
+        let found = catalog_content.controllers.iter().any(|c| c.name.to_string() == resolved_entry_name);
+        if found {
+            println!("  ✓ Found controller entry: {}", resolved_entry_name);
+            return Ok(true);
+        }
+        println!("  Checked {} controllers", catalog_content.controllers.len());
+    }
+
+    // Check misc objects
+    if !catalog_content.misc_objects.is_empty() {
+        let found = catalog_content.misc_objects.iter().any(|m| m.name.to_string() == resolved_entry_name);
+        if found {
+            println!("  ✓ Found misc object entry: {}", resolved_entry_name);
+            return Ok(true);
+        }
+        println!("  Checked {} misc objects", catalog_content.misc_objects.len());
+    }
+
+    println!("  ✗ Entry '{}' not found in any catalog category", resolved_entry_name);
+    Ok(false)
+}

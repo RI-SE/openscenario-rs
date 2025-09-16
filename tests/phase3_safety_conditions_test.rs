@@ -185,6 +185,7 @@ fn test_by_entity_condition_enum_completeness() {
     
     for condition in conditions {
         match condition {
+            ByEntityCondition::SchemaCompliant(_) => panic!("Unexpected SchemaCompliant variant"),
             ByEntityCondition::Speed(_) => panic!("Unexpected Speed variant"),
             ByEntityCondition::ReachPosition(_) => panic!("Unexpected ReachPosition variant"), 
             ByEntityCondition::Distance(_) => panic!("Unexpected Distance variant"),

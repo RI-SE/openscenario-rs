@@ -44,6 +44,7 @@ fn test_by_entity_condition_variants() {
     // This will fail to compile if the variants don't exist
     let _test_variants = |condition: ByEntityCondition| {
         match condition {
+            ByEntityCondition::SchemaCompliant(_) => {},
             ByEntityCondition::Speed(_) => {},
             ByEntityCondition::ReachPosition(_) => {},
             ByEntityCondition::Distance(_) => {},
