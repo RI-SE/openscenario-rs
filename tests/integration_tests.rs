@@ -199,21 +199,7 @@ fn can_create_and_serialize_actions() {
 
     // Test creating a TeleportAction
     let teleport_action = TeleportAction {
-        position: Position {
-            world_position: Some(WorldPosition {
-                x: openscenario_rs::types::Double::literal(10.0),
-                y: openscenario_rs::types::Double::literal(20.0),
-                z: Some(openscenario_rs::types::Double::literal(0.0)),
-                h: Some(openscenario_rs::types::Double::literal(0.0)),
-                p: Some(openscenario_rs::types::Double::literal(0.0)),
-                r: Some(openscenario_rs::types::Double::literal(0.0)),
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        },
+        position: Position::default(),
     };
 
     // Test creating Action enum variants

@@ -53,6 +53,8 @@ fn test_by_entity_condition_variants() {
             ByEntityCondition::Collision(_) => {},
             ByEntityCondition::OffRoad(_) => {},
             ByEntityCondition::EndOfRoad(_) => {},
+            ByEntityCondition::TimeHeadway(_) => {},
+            ByEntityCondition::TimeToCollision(_) => {},
         }
     };
 }

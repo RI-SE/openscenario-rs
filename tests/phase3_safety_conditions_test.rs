@@ -194,6 +194,8 @@ fn test_by_entity_condition_enum_completeness() {
             ByEntityCondition::Collision(_) => assert!(true),
             ByEntityCondition::OffRoad(_) => assert!(true),
             ByEntityCondition::EndOfRoad(_) => assert!(true),
+            ByEntityCondition::TimeHeadway(_) => panic!("Unexpected TimeHeadway variant"),
+            ByEntityCondition::TimeToCollision(_) => panic!("Unexpected TimeToCollision variant"),
         }
     }
 }

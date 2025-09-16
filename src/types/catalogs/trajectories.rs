@@ -443,56 +443,14 @@ mod tests {
 
     #[test]
     fn test_catalog_polyline() {
-        let pos1 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(0.0),
-                y: Value::Literal(0.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
-        let pos2 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(10.0),
-                y: Value::Literal(0.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
+        let pos1 = Position::default();
+        let pos2 = Position::default();
 
         let mut polyline = CatalogPolyline::from_positions(vec![pos1, pos2]);
 
         assert_eq!(polyline.vertices.len(), 2);
 
-        let pos3 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(20.0),
-                y: Value::Literal(0.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
+        let pos3 = Position::default();
         polyline.add_vertex(pos3, Some(Value::Literal(10.0)));
 
         assert_eq!(polyline.vertices.len(), 3);
@@ -516,36 +474,8 @@ mod tests {
     fn test_catalog_nurbs() {
         let mut nurbs = CatalogNurbs::new(Value::Literal(3));
 
-        let pos1 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(0.0),
-                y: Value::Literal(0.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
-        let pos2 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(5.0),
-                y: Value::Literal(5.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
+        let pos1 = Position::default();
+        let pos2 = Position::default();
 
         nurbs.add_control_point(pos1, Some(Value::Literal(1.0)));
         nurbs.add_control_point(pos2, None);
@@ -626,42 +556,14 @@ mod tests {
     fn test_to_scenario_trajectory() {
         let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
             vertices: vec![
-                CatalogVertex {
-                    time: Some(Value::Literal(0.0)),
-                    position: Position {
-                        world_position: Some(WorldPosition {
-                            x: Value::Literal(0.0),
-                            y: Value::Literal(0.0),
-                            z: Some(Value::Literal(0.0)),
-                            h: None,
-                            p: None,
-                            r: None,
-                        }),
-                        relative_world_position: None,
-                        road_position: None,
-                        relative_road_position: None,
-                        lane_position: None,
-                        relative_lane_position: None,
-                    },
-                },
-                CatalogVertex {
-                    time: Some(Value::Literal(5.0)),
-                    position: Position {
-                        world_position: Some(WorldPosition {
-                            x: Value::Literal(10.0),
-                            y: Value::Literal(0.0),
-                            z: Some(Value::Literal(0.0)),
-                            h: None,
-                            p: None,
-                            r: None,
-                        }),
-                        relative_world_position: None,
-                        road_position: None,
-                        relative_road_position: None,
-                        lane_position: None,
-                        relative_lane_position: None,
-                    },
-                },
+                 CatalogVertex {
+                     time: Some(Value::Literal(0.0)),
+                     position: Position::default(),
+                 },
+                 CatalogVertex {
+                     time: Some(Value::Literal(5.0)),
+                     position: Position::default(),
+                 },
             ],
         });
 

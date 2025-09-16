@@ -180,7 +180,8 @@ impl BoundingBox {
 
         // If point is inside, return negative distance to nearest surface
         if dx <= 0.0 && dy <= 0.0 && dz <= 0.0 {
-            Ok(-dx.max(dy).max(dz))
+            // Return the maximum (least negative) of dx, dy, dz, which is the closest surface
+            Ok(dx.max(dy).max(dz))
         } else {
             // Point is outside, calculate Euclidean distance to nearest corner/edge/face
             let dx_pos = dx.max(0.0);
@@ -387,6 +388,9 @@ mod tests {
                 relative_road_position: None,
                 lane_position: None,
                 relative_lane_position: None,
+                trajectory_position: None,
+                geographic_position: None,
+                relative_object_position: None,
             },
         };
 
@@ -401,25 +405,11 @@ mod tests {
             vertices: vec![
                 Vertex {
                     time: crate::types::basic::Value::literal(0.0),
-                    position: Position {
-                        world_position: Some(WorldPosition::default()),
-                        relative_world_position: None,
-                        road_position: None,
-                        relative_road_position: None,
-                        lane_position: None,
-                        relative_lane_position: None,
-                    },
+                    position: Position::default(),
                 },
                 Vertex {
                     time: crate::types::basic::Value::literal(0.04),
-                    position: Position {
-                        world_position: Some(WorldPosition::default()),
-                        relative_world_position: None,
-                        road_position: None,
-                        relative_road_position: None,
-                        lane_position: None,
-                        relative_lane_position: None,
-                    },
+                    position: Position::default(),
                 },
             ],
         };
@@ -437,14 +427,7 @@ mod tests {
             polyline: Some(Polyline {
                 vertices: vec![Vertex {
                     time: crate::types::basic::Value::literal(1.0),
-                    position: Position {
-                        world_position: Some(WorldPosition::default()),
-                        relative_world_position: None,
-                        road_position: None,
-                        relative_road_position: None,
-                        lane_position: None,
-                        relative_lane_position: None,
-                    },
+                    position: Position::default(),
                 }],
             }),
         };

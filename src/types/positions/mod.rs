@@ -23,7 +23,7 @@ pub mod trajectory;
 pub mod world;
 
 pub use relative::RelativeObjectPosition;
-pub use road::{LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition};
+pub use road::{LaneCoordinate, LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadCoordinate, RoadPosition};
 pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition, TrajectoryRef};
 pub use world::{GeographicPosition, WorldPosition};
 

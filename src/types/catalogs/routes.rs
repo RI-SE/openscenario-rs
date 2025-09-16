@@ -506,36 +506,8 @@ mod tests {
     fn test_route_waypoints() {
         let mut route = CatalogRoute::new("WaypointRoute".to_string());
 
-        let pos1 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(0.0),
-                y: Value::Literal(0.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
-        let pos2 = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(10.0),
-                y: Value::Literal(0.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
+        let pos1 = Position::default();
+        let pos2 = Position::default();
 
         route.add_position_waypoint(pos1);
 
@@ -552,21 +524,7 @@ mod tests {
 
     #[test]
     fn test_waypoint_creation() {
-        let pos = Position {
-            world_position: Some(WorldPosition {
-                x: Value::Literal(5.0),
-                y: Value::Literal(10.0),
-                z: Some(Value::Literal(0.0)),
-                h: None,
-                p: None,
-                r: None,
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-        };
+        let pos = Position::default();
 
         let waypoint1 = RouteWaypoint::new(pos.clone());
         let waypoint2 = RouteWaypoint::with_strategy(pos.clone(), RouteStrategy::Shortest);

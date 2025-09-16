@@ -121,6 +121,38 @@ pub struct RelativeLanePosition {
     pub orientation: Option<Orientation>,
 }
 
+/// Road coordinate system definition
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RoadCoordinate {
+    /// S-coordinate along the reference line
+    #[serde(rename = "@s")]
+    pub s: Double,
+    
+    /// T-coordinate (lateral offset from reference line)  
+    #[serde(rename = "@t")]
+    pub t: Double,
+    
+    /// Height coordinate (optional)
+    #[serde(rename = "@h", skip_serializing_if = "Option::is_none")]
+    pub h: Option<Double>,
+}
+
+/// Lane coordinate system definition
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LaneCoordinate {
+    /// S-coordinate along the lane reference line
+    #[serde(rename = "@s")]
+    pub s: Double,
+    
+    /// Offset from lane center line
+    #[serde(rename = "@offset")]
+    pub offset: Double,
+    
+    /// Height coordinate (optional)
+    #[serde(rename = "@h", skip_serializing_if = "Option::is_none")]
+    pub h: Option<Double>,
+}
+
 impl RoadPosition {
     /// Create a new road position
     pub fn new(road_id: String, s: f64, t: f64) -> Self {
@@ -225,6 +257,66 @@ impl RelativeLanePosition {
     }
 }
 
+impl RoadCoordinate {
+    /// Create a new road coordinate
+    pub fn new(s: f64, t: f64) -> Self {
+        Self {
+            s: Double::literal(s),
+            t: Double::literal(t),
+            h: None,
+        }
+    }
+    
+    /// Create a new road coordinate with height
+    pub fn with_height(s: f64, t: f64, h: f64) -> Self {
+        Self {
+            s: Double::literal(s),
+            t: Double::literal(t),
+            h: Some(Double::literal(h)),
+        }
+    }
+    
+    /// Create coordinate along road center
+    pub fn center_line(s: f64) -> Self {
+        Self::new(s, 0.0)
+    }
+    
+    /// Create coordinate with lateral offset
+    pub fn with_offset(s: f64, t: f64) -> Self {
+        Self::new(s, t)
+    }
+}
+
+impl LaneCoordinate {
+    /// Create a new lane coordinate
+    pub fn new(s: f64, offset: f64) -> Self {
+        Self {
+            s: Double::literal(s),
+            offset: Double::literal(offset),
+            h: None,
+        }
+    }
+    
+    /// Create a new lane coordinate with height
+    pub fn with_height(s: f64, offset: f64, h: f64) -> Self {
+        Self {
+            s: Double::literal(s),
+            offset: Double::literal(offset),
+            h: Some(Double::literal(h)),
+        }
+    }
+    
+    /// Create coordinate at lane center
+    pub fn center_line(s: f64) -> Self {
+        Self::new(s, 0.0)
+    }
+    
+    /// Create coordinate with offset from center
+    pub fn with_offset(s: f64, offset: f64) -> Self {
+        Self::new(s, offset)
+    }
+}
+
 impl Orientation {
     /// Create a new orientation with heading only
     pub fn heading(h: f64) -> Self {
@@ -241,6 +333,26 @@ impl Orientation {
             h: Some(Double::literal(h)),
             p: Some(Double::literal(p)),
             r: Some(Double::literal(r)),
+        }
+    }
+}
+
+impl Default for RoadCoordinate {
+    fn default() -> Self {
+        Self {
+            s: Double::literal(0.0),
+            t: Double::literal(0.0),
+            h: None,
+        }
+    }
+}
+
+impl Default for LaneCoordinate {
+    fn default() -> Self {
+        Self {
+            s: Double::literal(0.0),
+            offset: Double::literal(0.0),
+            h: None,
         }
     }
 }
