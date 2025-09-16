@@ -77,6 +77,50 @@ pub struct LanePosition {
     pub orientation: Option<Orientation>,
 }
 
+/// Relative road position relative to an entity
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RelativeRoadPosition {
+    /// Reference entity for relative positioning
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: OSString,
+    
+    /// Delta S-coordinate along the reference line
+    #[serde(rename = "@ds")]
+    pub ds: Double,
+    
+    /// Delta T-coordinate (lateral offset from reference line)
+    #[serde(rename = "@dt")]
+    pub dt: Double,
+    
+    /// Orientation relative to reference entity
+    #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
+    pub orientation: Option<Orientation>,
+}
+
+/// Relative lane position relative to an entity
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RelativeLanePosition {
+    /// Reference entity for relative positioning
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: OSString,
+    
+    /// Delta lane ID (relative lane offset)
+    #[serde(rename = "@dLane")]
+    pub d_lane: i32,
+    
+    /// Delta S-coordinate along the reference line
+    #[serde(rename = "@ds")]
+    pub ds: Double,
+    
+    /// Offset from lane center
+    #[serde(rename = "@offset")]
+    pub offset: Double,
+    
+    /// Orientation relative to lane direction
+    #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
+    pub orientation: Option<Orientation>,
+}
+
 impl RoadPosition {
     /// Create a new road position
     pub fn new(road_id: String, s: f64, t: f64) -> Self {
@@ -129,6 +173,58 @@ impl LanePosition {
     }
 }
 
+impl RelativeRoadPosition {
+    /// Create a new relative road position
+    pub fn new(entity_ref: String, ds: f64, dt: f64) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref),
+            ds: Double::literal(ds),
+            dt: Double::literal(dt),
+            orientation: None,
+        }
+    }
+
+    /// Create a relative road position with orientation
+    pub fn with_orientation(entity_ref: String, ds: f64, dt: f64, orientation: Orientation) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref),
+            ds: Double::literal(ds),
+            dt: Double::literal(dt),
+            orientation: Some(orientation),
+        }
+    }
+}
+
+impl RelativeLanePosition {
+    /// Create a new relative lane position
+    pub fn new(entity_ref: String, d_lane: i32, ds: f64, offset: f64) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref),
+            d_lane,
+            ds: Double::literal(ds),
+            offset: Double::literal(offset),
+            orientation: None,
+        }
+    }
+
+    /// Create a relative lane position with orientation
+    pub fn with_orientation(
+        entity_ref: String,
+        d_lane: i32,
+        ds: f64,
+        offset: f64,
+        orientation: Orientation,
+    ) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref),
+            d_lane,
+            ds: Double::literal(ds),
+            offset: Double::literal(offset),
+            orientation: Some(orientation),
+        }
+    }
+}
+
 impl Orientation {
     /// Create a new orientation with heading only
     pub fn heading(h: f64) -> Self {
@@ -155,6 +251,29 @@ impl Default for Orientation {
             h: None,
             p: None,
             r: None,
+        }
+    }
+}
+
+impl Default for RelativeRoadPosition {
+    fn default() -> Self {
+        Self {
+            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            ds: Double::literal(0.0),
+            dt: Double::literal(0.0),
+            orientation: None,
+        }
+    }
+}
+
+impl Default for RelativeLanePosition {
+    fn default() -> Self {
+        Self {
+            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            d_lane: 0,
+            ds: Double::literal(0.0),
+            offset: Double::literal(0.0),
+            orientation: None,
         }
     }
 }
@@ -218,5 +337,94 @@ mod tests {
         assert!(xml.contains("laneId=\"-4\""));
         assert!(xml.contains("s=\"5\""));
         assert!(xml.contains("offset=\"0\""));
+    }
+
+    #[test]
+    fn test_relative_road_position_creation() {
+        let pos = RelativeRoadPosition::new("EgoVehicle".to_string(), 10.0, -2.0);
+
+        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
+        assert_eq!(pos.ds.as_literal().unwrap(), &10.0);
+        assert_eq!(pos.dt.as_literal().unwrap(), &-2.0);
+        assert!(pos.orientation.is_none());
+    }
+
+    #[test]
+    fn test_relative_road_position_with_orientation() {
+        let orientation = Orientation::heading(0.5);
+        let pos = RelativeRoadPosition::with_orientation("EgoVehicle".to_string(), 5.0, 1.5, orientation);
+
+        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
+        assert_eq!(pos.ds.as_literal().unwrap(), &5.0);
+        assert_eq!(pos.dt.as_literal().unwrap(), &1.5);
+        assert!(pos.orientation.is_some());
+        assert_eq!(
+            pos.orientation.unwrap().h.unwrap().as_literal().unwrap(),
+            &0.5
+        );
+    }
+
+    #[test]
+    fn test_relative_lane_position_creation() {
+        let pos = RelativeLanePosition::new("EgoVehicle".to_string(), -1, 15.0, 0.5);
+
+        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
+        assert_eq!(pos.d_lane, -1);
+        assert_eq!(pos.ds.as_literal().unwrap(), &15.0);
+        assert_eq!(pos.offset.as_literal().unwrap(), &0.5);
+        assert!(pos.orientation.is_none());
+    }
+
+    #[test]
+    fn test_relative_lane_position_with_orientation() {
+        let orientation = Orientation::new(1.57, 0.0, 0.0);
+        let pos = RelativeLanePosition::with_orientation("EgoVehicle".to_string(), 1, 20.0, -1.0, orientation);
+
+        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
+        assert_eq!(pos.d_lane, 1);
+        assert_eq!(pos.ds.as_literal().unwrap(), &20.0);
+        assert_eq!(pos.offset.as_literal().unwrap(), &-1.0);
+        assert!(pos.orientation.is_some());
+        let orient = pos.orientation.unwrap();
+        assert_eq!(orient.h.unwrap().as_literal().unwrap(), &1.57);
+        assert_eq!(orient.p.unwrap().as_literal().unwrap(), &0.0);
+        assert_eq!(orient.r.unwrap().as_literal().unwrap(), &0.0);
+    }
+
+    #[test]
+    fn test_relative_road_position_serialization() {
+        let pos = RelativeRoadPosition::new("EgoVehicle".to_string(), 10.0, -2.0);
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+
+        assert!(xml.contains("RelativeRoadPosition"));
+        assert!(xml.contains("entityRef=\"EgoVehicle\""));
+        assert!(xml.contains("ds=\"10\""));
+        assert!(xml.contains("dt=\"-2\""));
+    }
+
+    #[test]
+    fn test_relative_lane_position_serialization() {
+        let pos = RelativeLanePosition::new("EgoVehicle".to_string(), -1, 15.0, 0.5);
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+
+        assert!(xml.contains("RelativeLanePosition"));
+        assert!(xml.contains("entityRef=\"EgoVehicle\""));
+        assert!(xml.contains("dLane=\"-1\""));
+        assert!(xml.contains("ds=\"15\""));
+        assert!(xml.contains("offset=\"0.5\""));
+    }
+
+    #[test]
+    fn test_relative_position_defaults() {
+        let rel_road = RelativeRoadPosition::default();
+        assert_eq!(rel_road.entity_ref.as_literal().unwrap(), "DefaultEntity");
+        assert_eq!(rel_road.ds.as_literal().unwrap(), &0.0);
+        assert_eq!(rel_road.dt.as_literal().unwrap(), &0.0);
+
+        let rel_lane = RelativeLanePosition::default();
+        assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "DefaultEntity");
+        assert_eq!(rel_lane.d_lane, 0);
+        assert_eq!(rel_lane.ds.as_literal().unwrap(), &0.0);
+        assert_eq!(rel_lane.offset.as_literal().unwrap(), &0.0);
     }
 }

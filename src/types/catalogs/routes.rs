@@ -123,7 +123,9 @@ impl Default for RouteWaypoint {
                 }),
                 relative_world_position: None,
                 road_position: None,
+                relative_road_position: None,
                 lane_position: None,
+                relative_lane_position: None,
             },
             route_strategy: None,
             routing_algorithm: None,
@@ -512,7 +514,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
         let pos2 = Position {
             world_position: Some(WorldPosition {
@@ -525,7 +529,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
 
         route.add_position_waypoint(pos1);
@@ -554,7 +560,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
 
         let waypoint1 = RouteWaypoint::new(pos.clone());

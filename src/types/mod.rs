@@ -102,8 +102,8 @@ pub use catalogs::locations::{
 
 // Re-export condition types
 pub use conditions::{
-    ByEntityCondition, ByValueCondition, DistanceCondition, ReachPositionCondition,
-    RelativeDistanceCondition, SimulationTimeCondition, SpeedCondition,
+    AccelerationCondition, ByEntityCondition, ByValueCondition, DistanceCondition, ReachPositionCondition,
+    RelativeDistanceCondition, SimulationTimeCondition, SpeedCondition, StandStillCondition,
 };
 
 // Re-export routing types

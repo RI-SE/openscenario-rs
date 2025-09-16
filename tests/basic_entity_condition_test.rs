@@ -48,6 +48,8 @@ fn test_by_entity_condition_variants() {
             ByEntityCondition::ReachPosition(_) => {},
             ByEntityCondition::Distance(_) => {},
             ByEntityCondition::RelativeDistance(_) => {},
+            ByEntityCondition::Acceleration(_) => {},
+            ByEntityCondition::StandStill(_) => {},
         }
     };
 }

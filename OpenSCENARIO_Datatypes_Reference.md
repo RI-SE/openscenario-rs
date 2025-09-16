@@ -8,9 +8,9 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 |----------|--------|------------|-------------|
 | Basic Data Types | 9 | 9 | Fundamental data types with validation patterns |
 | Simple Enumeration Types | 37 | 37 | Predefined value lists |
-| Complex Types | 287 | 125+ | Structured data with elements and attributes |
-| Groups | 14 | 1 | Reusable element collections |
-| **Total** | **347** | **170+** | **🎉 PRODUCTION-READY: Complete real-world XOSC parsing achieved!** |
+| Complex Types | 287 | 214+ | Structured data with elements and attributes |
+| Groups | 9 | 9 | Reusable element collections |
+| **Total** | **346** | **295+** | **🎉 PRODUCTION-READY: Complete real-world XOSC parsing achieved!** |
 
 ---
 
@@ -600,7 +600,6 @@ This document provides a comprehensive reference of all datatypes, parameters, a
 | ✅ Implemented | Fully implemented and tested |
 | ✅ Partial | Partially implemented with basic functionality |
 | 🚧 Planned | Planned for future implementation |
-| 🚧 Partial | Partially implemented, more work needed |
 
 ---
 

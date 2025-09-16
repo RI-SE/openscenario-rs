@@ -21,7 +21,7 @@ pub mod road;
 pub mod trajectory;
 pub mod world;
 
-pub use road::{LanePosition, Orientation, RoadPosition};
+pub use road::{LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition};
 pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryRef};
 pub use world::WorldPosition;
 
@@ -37,8 +37,12 @@ pub struct Position {
     pub relative_world_position: Option<RelativeWorldPosition>,
     #[serde(rename = "RoadPosition", skip_serializing_if = "Option::is_none")]
     pub road_position: Option<RoadPosition>,
+    #[serde(rename = "RelativeRoadPosition", skip_serializing_if = "Option::is_none")]
+    pub relative_road_position: Option<RelativeRoadPosition>,
     #[serde(rename = "LanePosition", skip_serializing_if = "Option::is_none")]
     pub lane_position: Option<LanePosition>,
+    #[serde(rename = "RelativeLanePosition", skip_serializing_if = "Option::is_none")]
+    pub relative_lane_position: Option<RelativeLanePosition>,
     // Other position types will be added later as Optional fields
 }
 
@@ -63,7 +67,9 @@ impl Default for Position {
             world_position: Some(WorldPosition::default()),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         }
     }
 }
@@ -75,6 +81,33 @@ impl Default for RelativeWorldPosition {
             dx: Double::literal(0.0),
             dy: Double::literal(0.0),
             dz: Double::literal(0.0),
+        }
+    }
+}
+
+// Convenience constructors for Position
+impl Position {
+    /// Create a Position with RelativeRoadPosition
+    pub fn relative_road(relative_road_position: RelativeRoadPosition) -> Self {
+        Self {
+            world_position: None,
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: Some(relative_road_position),
+            lane_position: None,
+            relative_lane_position: None,
+        }
+    }
+
+    /// Create a Position with RelativeLanePosition
+    pub fn relative_lane(relative_lane_position: RelativeLanePosition) -> Self {
+        Self {
+            world_position: None,
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: Some(relative_lane_position),
         }
     }
 }

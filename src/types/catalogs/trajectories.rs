@@ -454,7 +454,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
         let pos2 = Position {
             world_position: Some(WorldPosition {
@@ -467,7 +469,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
 
         let mut polyline = CatalogPolyline::from_positions(vec![pos1, pos2]);
@@ -485,7 +489,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
         polyline.add_vertex(pos3, Some(Value::Literal(10.0)));
 
@@ -521,7 +527,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
         let pos2 = Position {
             world_position: Some(WorldPosition {
@@ -534,7 +542,9 @@ mod tests {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         };
 
         nurbs.add_control_point(pos1, Some(Value::Literal(1.0)));
@@ -629,7 +639,9 @@ mod tests {
                         }),
                         relative_world_position: None,
                         road_position: None,
+                        relative_road_position: None,
                         lane_position: None,
+                        relative_lane_position: None,
                     },
                 },
                 CatalogVertex {
@@ -645,7 +657,9 @@ mod tests {
                         }),
                         relative_world_position: None,
                         road_position: None,
+                        relative_road_position: None,
                         lane_position: None,
+                        relative_lane_position: None,
                     },
                 },
             ],

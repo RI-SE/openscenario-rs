@@ -210,7 +210,9 @@ fn can_create_and_serialize_actions() {
             }),
             relative_world_position: None,
             road_position: None,
+            relative_road_position: None,
             lane_position: None,
+            relative_lane_position: None,
         },
     };
 

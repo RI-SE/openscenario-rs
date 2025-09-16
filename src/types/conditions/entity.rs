@@ -15,7 +15,7 @@
 //! - Enabling complex multi-entity coordination and interaction patterns
 
 use crate::types::basic::{Boolean, Double, OSString};
-use crate::types::enums::{CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule};
+use crate::types::enums::{CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -113,6 +113,32 @@ pub struct RelativeDistanceCondition {
     pub routing_algorithm: Option<RoutingAlgorithm>,
 }
 
+/// Condition based on entity acceleration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "AccelerationCondition")]
+pub struct AccelerationCondition {
+    /// Acceleration value to compare against
+    #[serde(rename = "@value")]
+    pub value: Double,
+    
+    /// Comparison rule (greater than, less than, etc.)
+    #[serde(rename = "@rule")]
+    pub rule: Rule,
+    
+    /// Direction of acceleration measurement (optional)
+    #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
+    pub direction: Option<DirectionalDimension>,
+}
+
+/// Condition for detecting standstill state
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "StandStillCondition")]
+pub struct StandStillCondition {
+    /// Duration entity must be stationary
+    #[serde(rename = "@duration")]
+    pub duration: Double,
+}
+
 /// Entity-based condition types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ByEntityCondition {
@@ -128,6 +154,12 @@ pub enum ByEntityCondition {
     /// Relative distance between entities condition
     #[serde(rename = "RelativeDistanceCondition")]
     RelativeDistance(RelativeDistanceCondition),
+    /// Acceleration-based condition
+    #[serde(rename = "AccelerationCondition")]
+    Acceleration(AccelerationCondition),
+    /// Standstill detection condition
+    #[serde(rename = "StandStillCondition")]
+    StandStill(StandStillCondition),
     // More entity conditions will be added later
 }
 
@@ -285,6 +317,62 @@ impl RelativeDistanceCondition {
     }
 }
 
+impl AccelerationCondition {
+    /// Create a new acceleration condition
+    pub fn new(value: f64, rule: Rule) -> Self {
+        Self {
+            value: Double::literal(value),
+            rule,
+            direction: None,
+        }
+    }
+    
+    /// Set direction of acceleration measurement
+    pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
+        self.direction = Some(direction);
+        self
+    }
+    
+    /// Create condition for acceleration greater than threshold
+    pub fn greater_than(acceleration: f64) -> Self {
+        Self::new(acceleration, Rule::GreaterThan)
+    }
+    
+    /// Create condition for acceleration less than threshold
+    pub fn less_than(acceleration: f64) -> Self {
+        Self::new(acceleration, Rule::LessThan)
+    }
+    
+    /// Create condition for longitudinal acceleration
+    pub fn longitudinal(acceleration: f64, rule: Rule) -> Self {
+        Self::new(acceleration, rule).with_direction(DirectionalDimension::Longitudinal)
+    }
+    
+    /// Create condition for lateral acceleration
+    pub fn lateral(acceleration: f64, rule: Rule) -> Self {
+        Self::new(acceleration, rule).with_direction(DirectionalDimension::Lateral)
+    }
+    
+    /// Create condition for vertical acceleration
+    pub fn vertical(acceleration: f64, rule: Rule) -> Self {
+        Self::new(acceleration, rule).with_direction(DirectionalDimension::Vertical)
+    }
+}
+
+impl StandStillCondition {
+    /// Create a new standstill condition
+    pub fn new(duration: f64) -> Self {
+        Self {
+            duration: Double::literal(duration),
+        }
+    }
+    
+    /// Create condition with specific duration
+    pub fn with_duration(duration: f64) -> Self {
+        Self::new(duration)
+    }
+}
+
 // Default implementations for testing and fallback scenarios
 impl Default for ReachPositionCondition {
     fn default() -> Self {
@@ -320,6 +408,24 @@ impl Default for RelativeDistanceCondition {
             rule: Rule::LessThan,
             coordinate_system: None,
             routing_algorithm: None,
+        }
+    }
+}
+
+impl Default for AccelerationCondition {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(2.0),
+            rule: Rule::GreaterThan,
+            direction: None,
+        }
+    }
+}
+
+impl Default for StandStillCondition {
+    fn default() -> Self {
+        Self {
+            duration: Double::literal(1.0),
         }
     }
 }
@@ -371,5 +477,196 @@ impl ByEntityCondition {
             distance_type,
             rule,
         ))
+    }
+    
+    /// Create an acceleration condition
+    pub fn acceleration(value: f64, rule: Rule) -> Self {
+        ByEntityCondition::Acceleration(AccelerationCondition::new(value, rule))
+    }
+    
+    /// Create an acceleration condition with direction
+    pub fn acceleration_with_direction(
+        value: f64,
+        rule: Rule,
+        direction: DirectionalDimension,
+    ) -> Self {
+        ByEntityCondition::Acceleration(
+            AccelerationCondition::new(value, rule).with_direction(direction)
+        )
+    }
+    
+    /// Create a standstill condition
+    pub fn standstill(duration: f64) -> Self {
+        ByEntityCondition::StandStill(StandStillCondition::new(duration))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::enums::DirectionalDimension;
+
+    #[test]
+    fn test_acceleration_condition_new() {
+        let condition = AccelerationCondition::new(5.0, Rule::GreaterThan);
+        assert_eq!(condition.value, Double::literal(5.0));
+        assert_eq!(condition.rule, Rule::GreaterThan);
+        assert_eq!(condition.direction, None);
+    }
+
+    #[test]
+    fn test_acceleration_condition_with_direction() {
+        let condition = AccelerationCondition::new(3.0, Rule::LessThan)
+            .with_direction(DirectionalDimension::Longitudinal);
+        assert_eq!(condition.value, Double::literal(3.0));
+        assert_eq!(condition.rule, Rule::LessThan);
+        assert_eq!(condition.direction, Some(DirectionalDimension::Longitudinal));
+    }
+
+    #[test]
+    fn test_acceleration_condition_greater_than() {
+        let condition = AccelerationCondition::greater_than(2.5);
+        assert_eq!(condition.value, Double::literal(2.5));
+        assert_eq!(condition.rule, Rule::GreaterThan);
+        assert_eq!(condition.direction, None);
+    }
+
+    #[test]
+    fn test_acceleration_condition_less_than() {
+        let condition = AccelerationCondition::less_than(1.0);
+        assert_eq!(condition.value, Double::literal(1.0));
+        assert_eq!(condition.rule, Rule::LessThan);
+        assert_eq!(condition.direction, None);
+    }
+
+    #[test]
+    fn test_acceleration_condition_longitudinal() {
+        let condition = AccelerationCondition::longitudinal(4.0, Rule::EqualTo);
+        assert_eq!(condition.value, Double::literal(4.0));
+        assert_eq!(condition.rule, Rule::EqualTo);
+        assert_eq!(condition.direction, Some(DirectionalDimension::Longitudinal));
+    }
+
+    #[test]
+    fn test_acceleration_condition_lateral() {
+        let condition = AccelerationCondition::lateral(2.0, Rule::GreaterOrEqual);
+        assert_eq!(condition.value, Double::literal(2.0));
+        assert_eq!(condition.rule, Rule::GreaterOrEqual);
+        assert_eq!(condition.direction, Some(DirectionalDimension::Lateral));
+    }
+
+    #[test]
+    fn test_acceleration_condition_vertical() {
+        let condition = AccelerationCondition::vertical(1.5, Rule::LessOrEqual);
+        assert_eq!(condition.value, Double::literal(1.5));
+        assert_eq!(condition.rule, Rule::LessOrEqual);
+        assert_eq!(condition.direction, Some(DirectionalDimension::Vertical));
+    }
+
+    #[test]
+    fn test_acceleration_condition_default() {
+        let condition = AccelerationCondition::default();
+        assert_eq!(condition.value, Double::literal(2.0));
+        assert_eq!(condition.rule, Rule::GreaterThan);
+        assert_eq!(condition.direction, None);
+    }
+
+    #[test]
+    fn test_standstill_condition_new() {
+        let condition = StandStillCondition::new(3.0);
+        assert_eq!(condition.duration, Double::literal(3.0));
+    }
+
+    #[test]
+    fn test_standstill_condition_with_duration() {
+        let condition = StandStillCondition::with_duration(5.5);
+        assert_eq!(condition.duration, Double::literal(5.5));
+    }
+
+    #[test]
+    fn test_standstill_condition_default() {
+        let condition = StandStillCondition::default();
+        assert_eq!(condition.duration, Double::literal(1.0));
+    }
+
+    #[test]
+    fn test_by_entity_condition_acceleration() {
+        let condition = ByEntityCondition::acceleration(3.0, Rule::GreaterThan);
+        match condition {
+            ByEntityCondition::Acceleration(acc_condition) => {
+                assert_eq!(acc_condition.value, Double::literal(3.0));
+                assert_eq!(acc_condition.rule, Rule::GreaterThan);
+                assert_eq!(acc_condition.direction, None);
+            }
+            _ => panic!("Expected Acceleration variant"),
+        }
+    }
+
+    #[test]
+    fn test_by_entity_condition_acceleration_with_direction() {
+        let condition = ByEntityCondition::acceleration_with_direction(
+            2.5,
+            Rule::LessThan,
+            DirectionalDimension::Lateral,
+        );
+        match condition {
+            ByEntityCondition::Acceleration(acc_condition) => {
+                assert_eq!(acc_condition.value, Double::literal(2.5));
+                assert_eq!(acc_condition.rule, Rule::LessThan);
+                assert_eq!(acc_condition.direction, Some(DirectionalDimension::Lateral));
+            }
+            _ => panic!("Expected Acceleration variant"),
+        }
+    }
+
+    #[test]
+    fn test_by_entity_condition_standstill() {
+        let condition = ByEntityCondition::standstill(4.0);
+        match condition {
+            ByEntityCondition::StandStill(standstill_condition) => {
+                assert_eq!(standstill_condition.duration, Double::literal(4.0));
+            }
+            _ => panic!("Expected StandStill variant"),
+        }
+    }
+
+    #[test]
+    fn test_acceleration_condition_serialization() {
+        let condition = AccelerationCondition::new(2.5, Rule::GreaterThan)
+            .with_direction(DirectionalDimension::Longitudinal);
+        
+        // Test that it can be serialized and deserialized
+        let serialized = serde_json::to_string(&condition).unwrap();
+        let deserialized: AccelerationCondition = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(condition, deserialized);
+    }
+
+    #[test]
+    fn test_standstill_condition_serialization() {
+        let condition = StandStillCondition::new(3.5);
+        
+        // Test that it can be serialized and deserialized
+        let serialized = serde_json::to_string(&condition).unwrap();
+        let deserialized: StandStillCondition = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(condition, deserialized);
+    }
+
+    #[test]
+    fn test_by_entity_condition_enum_variants() {
+        // Test that all variants can be created and matched
+        let acceleration = ByEntityCondition::acceleration(1.0, Rule::GreaterThan);
+        let standstill = ByEntityCondition::standstill(2.0);
+        
+        match acceleration {
+            ByEntityCondition::Acceleration(_) => (),
+            _ => panic!("Expected Acceleration variant"),
+        }
+        
+        match standstill {
+            ByEntityCondition::StandStill(_) => (),
+            _ => panic!("Expected StandStill variant"),
+        }
     }
 }
