@@ -24,8 +24,10 @@ pub use movement::{
     AbsoluteTargetLane,
     AbsoluteTargetLaneOffset,
     AcquirePositionAction,
+    AssignRouteAction,
     DynamicConstraints,
     FinalSpeed,
+    FollowRouteAction,
     FollowTrajectoryAction,
     // New Phase 4A actions
     LaneChangeAction,
@@ -111,6 +113,8 @@ pub enum Action {
     Speed(SpeedAction),
     Teleport(TeleportAction),
     FollowTrajectory(FollowTrajectoryAction),
+    FollowRoute(FollowRouteAction),
+    AssignRoute(AssignRouteAction),
     Routing(RoutingAction),
 
     // Phase 4A: New movement actions

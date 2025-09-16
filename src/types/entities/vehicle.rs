@@ -3,6 +3,7 @@
 use crate::types::basic::{Double, OSString};
 use crate::types::enums::VehicleCategory;
 use crate::types::geometry::BoundingBox;
+use super::axles::Axles;
 use serde::{Deserialize, Serialize};
 
 /// Vehicle performance characteristics
@@ -16,44 +17,7 @@ pub struct Performance {
     pub max_deceleration: Double,
 }
 
-/// Axle definitions for vehicle
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-pub struct Axles {
-    #[serde(rename = "FrontAxle")]
-    pub front_axle: FrontAxle,
-    #[serde(rename = "RearAxle")]
-    pub rear_axle: RearAxle,
-}
 
-/// Front axle specification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FrontAxle {
-    #[serde(rename = "@maxSteering")]
-    pub max_steering: Double,
-    #[serde(rename = "@wheelDiameter")]
-    pub wheel_diameter: Double,
-    #[serde(rename = "@trackWidth")]
-    pub track_width: Double,
-    #[serde(rename = "@positionX")]
-    pub position_x: Double,
-    #[serde(rename = "@positionZ")]
-    pub position_z: Double,
-}
-
-/// Rear axle specification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RearAxle {
-    #[serde(rename = "@maxSteering")]
-    pub max_steering: Double,
-    #[serde(rename = "@wheelDiameter")]
-    pub wheel_diameter: Double,
-    #[serde(rename = "@trackWidth")]
-    pub track_width: Double,
-    #[serde(rename = "@positionX")]
-    pub position_x: Double,
-    #[serde(rename = "@positionZ")]
-    pub position_z: Double,
-}
 
 /// Vehicle properties container
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -118,27 +82,77 @@ impl Default for Performance {
     }
 }
 
-impl Default for FrontAxle {
-    fn default() -> Self {
+
+
+impl Vehicle {
+    /// Create a new car with default specifications
+    pub fn new_car(name: String) -> Self {
         Self {
-            max_steering: Double::literal(0.5),
-            wheel_diameter: Double::literal(0.5),
-            track_width: Double::literal(1.75),
-            position_x: Double::literal(2.8),
-            position_z: Double::literal(0.25),
+            name: crate::types::basic::Value::literal(name),
+            vehicle_category: VehicleCategory::Car,
+            bounding_box: BoundingBox::default(),
+            performance: Performance::default(),
+            axles: Axles::car(),
+            properties: None,
         }
     }
-}
 
-impl Default for RearAxle {
-    fn default() -> Self {
+    /// Create a new truck with default specifications
+    pub fn new_truck(name: String) -> Self {
         Self {
-            max_steering: Double::literal(0.0),
-            wheel_diameter: Double::literal(0.5),
-            track_width: Double::literal(1.75),
-            position_x: Double::literal(0.0),
-            position_z: Double::literal(0.25),
+            name: crate::types::basic::Value::literal(name),
+            vehicle_category: VehicleCategory::Truck,
+            bounding_box: BoundingBox {
+                center: crate::types::geometry::Center::default(),
+                dimensions: crate::types::geometry::Dimensions::truck(),
+            },
+            performance: Performance {
+                max_speed: Double::literal(120.0),
+                max_acceleration: Double::literal(3.0),
+                max_deceleration: Double::literal(8.0),
+            },
+            axles: Axles::truck(),
+            properties: None,
         }
+    }
+
+    /// Create a new motorcycle with default specifications
+    pub fn new_motorcycle(name: String) -> Self {
+        Self {
+            name: crate::types::basic::Value::literal(name),
+            vehicle_category: VehicleCategory::Motorbike,
+            bounding_box: BoundingBox {
+                center: crate::types::geometry::Center::default(),
+                dimensions: crate::types::geometry::Dimensions::motorcycle(),
+            },
+            performance: Performance {
+                max_speed: Double::literal(180.0),
+                max_acceleration: Double::literal(8.0),
+                max_deceleration: Double::literal(12.0),
+            },
+            axles: Axles::motorcycle(),
+            properties: None,
+        }
+    }
+
+    /// Get the wheelbase of this vehicle
+    pub fn wheelbase(&self, params: &std::collections::HashMap<String, String>) -> crate::error::Result<f64> {
+        self.axles.wheelbase(params)
+    }
+
+    /// Check if this vehicle is steerable
+    pub fn is_steerable(&self, params: &std::collections::HashMap<String, String>) -> crate::error::Result<bool> {
+        self.axles.is_steerable(params)
+    }
+
+    /// Get the total number of axles
+    pub fn axle_count(&self) -> usize {
+        self.axles.axle_count()
+    }
+
+    /// Calculate the vehicle's footprint area
+    pub fn footprint_area(&self, params: &std::collections::HashMap<String, String>) -> crate::error::Result<f64> {
+        self.bounding_box.dimensions.footprint_area(params)
     }
 }
 
@@ -197,5 +211,64 @@ mod tests {
         assert!(xml.contains("name=\"DefaultVehicle\""));
         assert!(xml.contains("vehicleCategory=\"car\""));
         assert!(xml.contains("BoundingBox"));
+    }
+
+    #[test]
+    fn test_vehicle_new_car() {
+        let car = Vehicle::new_car("TestCar".to_string());
+        
+        assert_eq!(car.name.as_literal().unwrap(), "TestCar");
+        assert_eq!(car.vehicle_category, VehicleCategory::Car);
+        assert_eq!(car.axle_count(), 2);
+    }
+
+    #[test]
+    fn test_vehicle_new_truck() {
+        let truck = Vehicle::new_truck("TestTruck".to_string());
+        
+        assert_eq!(truck.name.as_literal().unwrap(), "TestTruck");
+        assert_eq!(truck.vehicle_category, VehicleCategory::Truck);
+        assert_eq!(truck.axle_count(), 3); // Front + rear + additional
+    }
+
+    #[test]
+    fn test_vehicle_new_motorcycle() {
+        let motorcycle = Vehicle::new_motorcycle("TestBike".to_string());
+        
+        assert_eq!(motorcycle.name.as_literal().unwrap(), "TestBike");
+        assert_eq!(motorcycle.vehicle_category, VehicleCategory::Motorbike);
+        assert_eq!(motorcycle.axle_count(), 2);
+    }
+
+    #[test]
+    fn test_vehicle_wheelbase() {
+        use std::collections::HashMap;
+        
+        let car = Vehicle::new_car("TestCar".to_string());
+        let params = HashMap::new();
+        
+        let wheelbase = car.wheelbase(&params).unwrap();
+        assert!(wheelbase > 0.0);
+    }
+
+    #[test]
+    fn test_vehicle_is_steerable() {
+        use std::collections::HashMap;
+        
+        let car = Vehicle::new_car("TestCar".to_string());
+        let params = HashMap::new();
+        
+        assert!(car.is_steerable(&params).unwrap());
+    }
+
+    #[test]
+    fn test_vehicle_footprint_area() {
+        use std::collections::HashMap;
+        
+        let car = Vehicle::new_car("TestCar".to_string());
+        let params = HashMap::new();
+        
+        let area = car.footprint_area(&params).unwrap();
+        assert!(area > 0.0);
     }
 }

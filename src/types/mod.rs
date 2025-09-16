@@ -33,6 +33,9 @@ pub mod distributions;
 // Road network types
 pub mod road;
 
+// Routing and navigation types
+pub mod routing;
+
 // Re-export commonly used types for convenience
 pub use basic::{
     Boolean, Directory, Double, Int, OSString, ParameterDeclaration, ParameterDeclarations, Range,
@@ -103,8 +106,11 @@ pub use conditions::{
     RelativeDistanceCondition, SimulationTimeCondition, SpeedCondition,
 };
 
-// Re-export entity types (when implemented)
-// pub use entities::{Vehicle, Pedestrian, MiscObject, Entities, ScenarioObject};
+// Re-export routing types
+pub use routing::{Route, RouteRef, Waypoint};
+
+// Re-export entity types
+pub use entities::{Vehicle, Pedestrian, Entities, ScenarioObject, Axle, Axles};
 
 /// Common trait for types that support validation
 ///

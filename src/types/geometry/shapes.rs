@@ -2,7 +2,9 @@
 
 use crate::types::basic::Double;
 use crate::types::positions::Position;
+use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Three-dimensional bounding box for entity spatial extents
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -60,6 +62,157 @@ impl Default for Dimensions {
             length: crate::types::basic::Value::literal(4.5), // Default car length
             height: crate::types::basic::Value::literal(1.5), // Default car height
         }
+    }
+}
+
+impl BoundingBox {
+    /// Calculate the volume of the bounding box
+    pub fn volume(&self, params: &HashMap<String, String>) -> Result<f64> {
+        let width = self.dimensions.width.resolve(params)?;
+        let length = self.dimensions.length.resolve(params)?;
+        let height = self.dimensions.height.resolve(params)?;
+        Ok(width * length * height)
+    }
+
+    /// Check if a point is contained within this bounding box
+    pub fn contains_point(&self, x: f64, y: f64, z: f64, params: &HashMap<String, String>) -> Result<bool> {
+        let center_x = self.center.x.resolve(params)?;
+        let center_y = self.center.y.resolve(params)?;
+        let center_z = self.center.z.resolve(params)?;
+        
+        let width = self.dimensions.width.resolve(params)?;
+        let length = self.dimensions.length.resolve(params)?;
+        let height = self.dimensions.height.resolve(params)?;
+
+        let half_width = width / 2.0;
+        let half_length = length / 2.0;
+        let half_height = height / 2.0;
+
+        Ok(x >= center_x - half_length && x <= center_x + half_length &&
+           y >= center_y - half_width && y <= center_y + half_width &&
+           z >= center_z - half_height && z <= center_z + half_height)
+    }
+
+    /// Calculate the distance from a point to the nearest surface of the bounding box
+    pub fn distance_to_point(&self, x: f64, y: f64, z: f64, params: &HashMap<String, String>) -> Result<f64> {
+        let center_x = self.center.x.resolve(params)?;
+        let center_y = self.center.y.resolve(params)?;
+        let center_z = self.center.z.resolve(params)?;
+        
+        let width = self.dimensions.width.resolve(params)?;
+        let length = self.dimensions.length.resolve(params)?;
+        let height = self.dimensions.height.resolve(params)?;
+
+        let half_width = width / 2.0;
+        let half_length = length / 2.0;
+        let half_height = height / 2.0;
+
+        // Calculate distance to each face
+        let dx = (x - center_x).abs() - half_length;
+        let dy = (y - center_y).abs() - half_width;
+        let dz = (z - center_z).abs() - half_height;
+
+        // If point is inside, return negative distance to nearest surface
+        if dx <= 0.0 && dy <= 0.0 && dz <= 0.0 {
+            Ok(-dx.max(dy).max(dz))
+        } else {
+            // Point is outside, calculate Euclidean distance to nearest corner/edge/face
+            let dx_pos = dx.max(0.0);
+            let dy_pos = dy.max(0.0);
+            let dz_pos = dz.max(0.0);
+            Ok((dx_pos * dx_pos + dy_pos * dy_pos + dz_pos * dz_pos).sqrt())
+        }
+    }
+
+    /// Check if this bounding box intersects with another
+    pub fn intersects(&self, other: &BoundingBox, params: &HashMap<String, String>) -> Result<bool> {
+        let self_center_x = self.center.x.resolve(params)?;
+        let self_center_y = self.center.y.resolve(params)?;
+        let self_center_z = self.center.z.resolve(params)?;
+        let self_width = self.dimensions.width.resolve(params)?;
+        let self_length = self.dimensions.length.resolve(params)?;
+        let self_height = self.dimensions.height.resolve(params)?;
+
+        let other_center_x = other.center.x.resolve(params)?;
+        let other_center_y = other.center.y.resolve(params)?;
+        let other_center_z = other.center.z.resolve(params)?;
+        let other_width = other.dimensions.width.resolve(params)?;
+        let other_length = other.dimensions.length.resolve(params)?;
+        let other_height = other.dimensions.height.resolve(params)?;
+
+        // Check for separation along each axis
+        let x_overlap = (self_center_x - other_center_x).abs() <= (self_length + other_length) / 2.0;
+        let y_overlap = (self_center_y - other_center_y).abs() <= (self_width + other_width) / 2.0;
+        let z_overlap = (self_center_z - other_center_z).abs() <= (self_height + other_height) / 2.0;
+
+        Ok(x_overlap && y_overlap && z_overlap)
+    }
+}
+
+impl Dimensions {
+    /// Create dimensions for a standard car
+    pub fn car() -> Self {
+        Self {
+            width: crate::types::basic::Value::literal(1.8),
+            length: crate::types::basic::Value::literal(4.5),
+            height: crate::types::basic::Value::literal(1.5),
+        }
+    }
+
+    /// Create dimensions for a truck
+    pub fn truck() -> Self {
+        Self {
+            width: crate::types::basic::Value::literal(2.5),
+            length: crate::types::basic::Value::literal(12.0),
+            height: crate::types::basic::Value::literal(3.8),
+        }
+    }
+
+    /// Create dimensions for a bus
+    pub fn bus() -> Self {
+        Self {
+            width: crate::types::basic::Value::literal(2.5),
+            length: crate::types::basic::Value::literal(12.0),
+            height: crate::types::basic::Value::literal(3.2),
+        }
+    }
+
+    /// Create dimensions for a motorcycle
+    pub fn motorcycle() -> Self {
+        Self {
+            width: crate::types::basic::Value::literal(0.8),
+            length: crate::types::basic::Value::literal(2.2),
+            height: crate::types::basic::Value::literal(1.3),
+        }
+    }
+
+    /// Create dimensions for a pedestrian
+    pub fn pedestrian() -> Self {
+        Self {
+            width: crate::types::basic::Value::literal(0.6),
+            length: crate::types::basic::Value::literal(0.6),
+            height: crate::types::basic::Value::literal(1.8),
+        }
+    }
+
+    /// Calculate the footprint area (width * length)
+    pub fn footprint_area(&self, params: &HashMap<String, String>) -> Result<f64> {
+        let width = self.width.resolve(params)?;
+        let length = self.length.resolve(params)?;
+        Ok(width * length)
+    }
+
+    /// Scale dimensions by a factor
+    pub fn scale(&self, factor: f64, params: &HashMap<String, String>) -> Result<Self> {
+        let width = self.width.resolve(params)? * factor;
+        let length = self.length.resolve(params)? * factor;
+        let height = self.height.resolve(params)? * factor;
+        
+        Ok(Self {
+            width: crate::types::basic::Value::literal(width),
+            length: crate::types::basic::Value::literal(length),
+            height: crate::types::basic::Value::literal(height),
+        })
     }
 }
 
@@ -222,5 +375,190 @@ mod tests {
         let xml = quick_xml::se::to_string(&bbox).unwrap();
         assert!(xml.contains("x=\"1\""));
         assert!(xml.contains("width=\"1.8\""));
+    }
+
+    #[test]
+    fn test_bounding_box_volume() {
+        use std::collections::HashMap;
+        
+        let bbox = BoundingBox {
+            center: Center::default(),
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::literal(2.0),
+                length: crate::types::basic::Value::literal(4.0),
+                height: crate::types::basic::Value::literal(1.5),
+            },
+        };
+
+        let params = HashMap::new();
+        let volume = bbox.volume(&params).unwrap();
+        assert_eq!(volume, 12.0); // 2.0 * 4.0 * 1.5
+    }
+
+    #[test]
+    fn test_bounding_box_contains_point() {
+        use std::collections::HashMap;
+        
+        let bbox = BoundingBox {
+            center: Center {
+                x: crate::types::basic::Value::literal(0.0),
+                y: crate::types::basic::Value::literal(0.0),
+                z: crate::types::basic::Value::literal(0.0),
+            },
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::literal(2.0),
+                length: crate::types::basic::Value::literal(4.0),
+                height: crate::types::basic::Value::literal(1.5),
+            },
+        };
+
+        let params = HashMap::new();
+        
+        // Point inside
+        assert!(bbox.contains_point(0.0, 0.0, 0.0, &params).unwrap());
+        assert!(bbox.contains_point(1.9, 0.9, 0.7, &params).unwrap());
+        
+        // Point outside
+        assert!(!bbox.contains_point(2.1, 0.0, 0.0, &params).unwrap());
+        assert!(!bbox.contains_point(0.0, 1.1, 0.0, &params).unwrap());
+        assert!(!bbox.contains_point(0.0, 0.0, 0.8, &params).unwrap());
+    }
+
+    #[test]
+    fn test_bounding_box_distance_to_point() {
+        use std::collections::HashMap;
+        
+        let bbox = BoundingBox {
+            center: Center::default(),
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::literal(2.0),
+                length: crate::types::basic::Value::literal(4.0),
+                height: crate::types::basic::Value::literal(2.0),
+            },
+        };
+
+        let params = HashMap::new();
+        
+        // Point inside should have negative distance
+        let distance = bbox.distance_to_point(0.0, 0.0, 0.0, &params).unwrap();
+        assert!(distance < 0.0);
+        
+        // Point outside
+        let distance = bbox.distance_to_point(3.0, 0.0, 0.0, &params).unwrap();
+        assert!(distance > 0.0);
+        assert!((distance - 1.0).abs() < 0.001); // Should be 1.0 unit away
+    }
+
+    #[test]
+    fn test_bounding_box_intersection() {
+        use std::collections::HashMap;
+        
+        let bbox1 = BoundingBox {
+            center: Center::default(),
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::literal(2.0),
+                length: crate::types::basic::Value::literal(2.0),
+                height: crate::types::basic::Value::literal(2.0),
+            },
+        };
+
+        let bbox2 = BoundingBox {
+            center: Center {
+                x: crate::types::basic::Value::literal(1.0),
+                y: crate::types::basic::Value::literal(0.0),
+                z: crate::types::basic::Value::literal(0.0),
+            },
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::literal(2.0),
+                length: crate::types::basic::Value::literal(2.0),
+                height: crate::types::basic::Value::literal(2.0),
+            },
+        };
+
+        let bbox3 = BoundingBox {
+            center: Center {
+                x: crate::types::basic::Value::literal(3.0),
+                y: crate::types::basic::Value::literal(0.0),
+                z: crate::types::basic::Value::literal(0.0),
+            },
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::literal(2.0),
+                length: crate::types::basic::Value::literal(2.0),
+                height: crate::types::basic::Value::literal(2.0),
+            },
+        };
+
+        let params = HashMap::new();
+        
+        // bbox1 and bbox2 should intersect
+        assert!(bbox1.intersects(&bbox2, &params).unwrap());
+        
+        // bbox1 and bbox3 should not intersect
+        assert!(!bbox1.intersects(&bbox3, &params).unwrap());
+    }
+
+    #[test]
+    fn test_dimensions_presets() {
+        // Test car dimensions
+        let car = Dimensions::car();
+        assert_eq!(car.width.as_literal().unwrap(), &1.8);
+        assert_eq!(car.length.as_literal().unwrap(), &4.5);
+        assert_eq!(car.height.as_literal().unwrap(), &1.5);
+
+        // Test truck dimensions
+        let truck = Dimensions::truck();
+        assert_eq!(truck.width.as_literal().unwrap(), &2.5);
+        assert_eq!(truck.length.as_literal().unwrap(), &12.0);
+        assert_eq!(truck.height.as_literal().unwrap(), &3.8);
+
+        // Test pedestrian dimensions
+        let pedestrian = Dimensions::pedestrian();
+        assert_eq!(pedestrian.width.as_literal().unwrap(), &0.6);
+        assert_eq!(pedestrian.length.as_literal().unwrap(), &0.6);
+        assert_eq!(pedestrian.height.as_literal().unwrap(), &1.8);
+    }
+
+    #[test]
+    fn test_dimensions_footprint_area() {
+        use std::collections::HashMap;
+        
+        let dims = Dimensions::car();
+        let params = HashMap::new();
+        let area = dims.footprint_area(&params).unwrap();
+        assert_eq!(area, 8.1); // 1.8 * 4.5
+    }
+
+    #[test]
+    fn test_dimensions_scale() {
+        use std::collections::HashMap;
+        
+        let dims = Dimensions::car();
+        let params = HashMap::new();
+        let scaled = dims.scale(2.0, &params).unwrap();
+        
+        assert_eq!(scaled.width.as_literal().unwrap(), &3.6); // 1.8 * 2.0
+        assert_eq!(scaled.length.as_literal().unwrap(), &9.0); // 4.5 * 2.0
+        assert_eq!(scaled.height.as_literal().unwrap(), &3.0); // 1.5 * 2.0
+    }
+
+    #[test]
+    fn test_bounding_box_with_parameters() {
+        use std::collections::HashMap;
+        
+        let bbox = BoundingBox {
+            center: Center::default(),
+            dimensions: Dimensions {
+                width: crate::types::basic::Value::parameter("vehicle_width".to_string()),
+                length: crate::types::basic::Value::parameter("vehicle_length".to_string()),
+                height: crate::types::basic::Value::literal(1.5),
+            },
+        };
+
+        let mut params = HashMap::new();
+        params.insert("vehicle_width".to_string(), "2.0".to_string());
+        params.insert("vehicle_length".to_string(), "4.0".to_string());
+
+        let volume = bbox.volume(&params).unwrap();
+        assert_eq!(volume, 12.0); // 2.0 * 4.0 * 1.5
     }
 }
