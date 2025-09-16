@@ -184,6 +184,20 @@ where
     }
 }
 
+// Implement Display trait for Value<T> to enable use in println! and format! macros
+impl<T> fmt::Display for Value<T>
+where
+    T: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Literal(value) => write!(f, "{}", value),
+            Value::Parameter(name) => write!(f, "${{{}}}", name),
+            Value::Expression(expr) => write!(f, "${{{}}}", expr),
+        }
+    }
+}
+
 // OpenSCENARIO basic type aliases
 pub type OSString = Value<std::string::String>;
 pub type Double = Value<f64>;
@@ -627,6 +641,36 @@ mod tests {
         assert_eq!(param.parameter_type, ParameterType::Int);
         assert_eq!(param.value.as_literal().unwrap(), "1");
         assert_eq!(param.constraint_groups.len(), 2);
+    }
+
+    #[test]
+    fn test_value_display_trait() {
+        // Test Display implementation for Value<T>
+        let literal_value = Value::<f64>::literal(42.5);
+        assert_eq!(format!("{}", literal_value), "42.5");
+
+        let parameter_value = Value::<String>::parameter("speed".to_string());
+        assert_eq!(format!("{}", parameter_value), "${speed}");
+
+        let expression_value = Value::<String>::expression("speed * 2".to_string());
+        assert_eq!(format!("{}", expression_value), "${speed * 2}");
+
+        // Test with different types
+        let bool_literal = Value::<bool>::literal(true);
+        assert_eq!(format!("{}", bool_literal), "true");
+
+        let string_literal = Value::<String>::literal("hello".to_string());
+        assert_eq!(format!("{}", string_literal), "hello");
+
+        // Test with our type aliases
+        let double_value = Double::literal(3.14);
+        assert_eq!(format!("{}", double_value), "3.14");
+
+        let os_string_param = OSString::parameter("vehicle_name".to_string());
+        assert_eq!(format!("{}", os_string_param), "${vehicle_name}");
+
+        let boolean_expr = Boolean::expression("speed > 30".to_string());
+        assert_eq!(format!("{}", boolean_expr), "${speed > 30}");
     }
 }
 

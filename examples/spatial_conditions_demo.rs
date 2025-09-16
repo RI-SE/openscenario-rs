@@ -31,10 +31,11 @@ fn main() {
     );
     
     println!("✓ Vehicle must reach waypoint (1250, 850) within 2m tolerance");
+    let wp = waypoint_condition.position.world_position.as_ref().unwrap();
     println!("  Target position: x={}, y={}, heading={} rad", 
-             waypoint_condition.position.world_position.as_ref().unwrap().x,
-             waypoint_condition.position.world_position.as_ref().unwrap().y,
-             waypoint_condition.position.world_position.as_ref().unwrap().h);
+             wp.x,
+             wp.y,
+             wp.h.as_ref().map(|h| h.to_string()).unwrap_or("0".to_string()));
     println!("  Tolerance: {} meters\n", waypoint_condition.tolerance);
 
     // Example 2: Distance Condition for Intersection Approach
