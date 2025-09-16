@@ -17,6 +17,7 @@
 use crate::types::basic::{Boolean, Double, OSString};
 use crate::types::enums::{CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule};
 use crate::types::positions::Position;
+use crate::types::scenario::triggers::{TriggeringEntities};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -181,9 +182,115 @@ pub struct EndOfRoadCondition {
     pub duration: Double,
 }
 
+/// Time headway condition for following distance measurement
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TimeHeadwayCondition {
+    /// Target entity reference for headway measurement
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: OSString,
+    
+    /// Headway time value
+    #[serde(rename = "@value")]
+    pub value: Double,
+    
+    /// Comparison rule
+    #[serde(rename = "@rule")]
+    pub rule: Rule,
+    
+    /// Whether to measure in freespace or bounding box
+    #[serde(rename = "@freespace")]
+    pub freespace: Boolean,
+    
+    /// Optional coordinate system for measurement
+    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
+    pub coordinate_system: Option<CoordinateSystem>,
+    
+    /// Optional relative distance type
+    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    pub relative_distance_type: Option<RelativeDistanceType>,
+    
+    /// Optional routing algorithm for route-based measurement
+    #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
+    pub routing_algorithm: Option<RoutingAlgorithm>,
+}
+
+/// Time to collision condition for collision prediction
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TimeToCollisionCondition {
+    /// Time to collision value
+    #[serde(rename = "@value")]
+    pub value: Double,
+    
+    /// Comparison rule
+    #[serde(rename = "@rule")]
+    pub rule: Rule,
+    
+    /// Whether to measure in freespace or bounding box
+    #[serde(rename = "@freespace")]
+    pub freespace: Boolean,
+    
+    /// Optional coordinate system for measurement
+    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
+    pub coordinate_system: Option<CoordinateSystem>,
+    
+    /// Optional relative distance type
+    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    pub relative_distance_type: Option<RelativeDistanceType>,
+    
+    /// Optional routing algorithm for route-based measurement
+    #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
+    pub routing_algorithm: Option<RoutingAlgorithm>,
+    
+    /// Target specification for collision detection
+    #[serde(rename = "Target")]
+    pub target: TimeToCollisionTarget,
+}
+
+/// Target for time to collision condition
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TimeToCollisionTarget {
+    /// Target entity reference
+    #[serde(rename = "@entityRef", skip_serializing_if = "Option::is_none")]
+    pub entity_ref: Option<OSString>,
+    
+    /// Target position
+    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
+    pub position: Option<Position>,
+}
+
 /// Entity-based condition types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
 pub enum ByEntityCondition {
+    /// Schema-compliant structure with TriggeringEntities and EntityCondition
+    SchemaCompliant(ByEntityConditionSchema),
+    /// Legacy speed-based condition
+    Speed(SpeedCondition),
+    /// Legacy position reach condition (deprecated but supported)
+    ReachPosition(ReachPositionCondition),
+    /// Legacy distance to position condition
+    Distance(DistanceCondition),
+    /// Legacy relative distance between entities condition
+    RelativeDistance(RelativeDistanceCondition),
+    /// Legacy acceleration-based condition
+    Acceleration(AccelerationCondition),
+    /// Legacy standstill detection condition
+    StandStill(StandStillCondition),
+    /// Legacy collision detection condition
+    Collision(CollisionCondition),
+    /// Legacy off-road detection condition
+    OffRoad(OffRoadCondition),
+    /// Legacy end-of-road detection condition
+    EndOfRoad(EndOfRoadCondition),
+    /// Legacy time headway condition
+    TimeHeadway(TimeHeadwayCondition),
+    /// Legacy time to collision condition
+    TimeToCollision(TimeToCollisionCondition),
+}
+
+/// EntityCondition enum for the actual condition types inside ByEntityConditionSchema
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum EntityCondition {
     /// Speed-based condition
     #[serde(rename = "SpeedCondition")]
     Speed(SpeedCondition),
@@ -211,6 +318,24 @@ pub enum ByEntityCondition {
     /// End-of-road detection condition
     #[serde(rename = "EndOfRoadCondition")]
     EndOfRoad(EndOfRoadCondition),
+    /// Time headway condition
+    #[serde(rename = "TimeHeadwayCondition")]
+    TimeHeadway(TimeHeadwayCondition),
+    /// Time to collision condition
+    #[serde(rename = "TimeToCollisionCondition")]
+    TimeToCollision(TimeToCollisionCondition),
+}
+
+/// Schema-compliant ByEntityCondition structure matching OpenSCENARIO XSD
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ByEntityConditionSchema {
+    /// Entities that can trigger this condition
+    #[serde(rename = "TriggeringEntities")]
+    pub triggering_entities: TriggeringEntities,
+    
+    /// The actual entity condition
+    #[serde(rename = "EntityCondition")]
+    pub entity_condition: EntityCondition,
 }
 
 impl Default for SpeedCondition {
@@ -491,6 +616,143 @@ impl EndOfRoadCondition {
     }
 }
 
+impl TimeHeadwayCondition {
+    /// Create a new time headway condition
+    pub fn new(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref.to_string()),
+            value: Double::literal(value),
+            rule,
+            freespace: Boolean::literal(freespace),
+            coordinate_system: None,
+            relative_distance_type: None,
+            routing_algorithm: None,
+        }
+    }
+    
+    /// Create condition for headway less than threshold
+    pub fn less_than(entity_ref: &str, headway: f64, freespace: bool) -> Self {
+        Self::new(entity_ref, headway, Rule::LessThan, freespace)
+    }
+    
+    /// Create condition for headway greater than threshold
+    pub fn greater_than(entity_ref: &str, headway: f64, freespace: bool) -> Self {
+        Self::new(entity_ref, headway, Rule::GreaterThan, freespace)
+    }
+    
+    /// Set coordinate system for measurement
+    pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
+        self.coordinate_system = Some(system);
+        self
+    }
+    
+    /// Set relative distance type for measurement
+    pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
+        self.relative_distance_type = Some(distance_type);
+        self
+    }
+    
+    /// Set routing algorithm for route-based measurement
+    pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
+        self.routing_algorithm = Some(algorithm);
+        self
+    }
+}
+
+impl TimeToCollisionCondition {
+    /// Create a new time to collision condition with entity target
+    pub fn with_entity_target(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
+        let target = TimeToCollisionTarget {
+            entity_ref: Some(OSString::literal(entity_ref.to_string())),
+            position: None,
+        };
+        
+        Self {
+            value: Double::literal(value),
+            rule,
+            freespace: Boolean::literal(freespace),
+            coordinate_system: None,
+            relative_distance_type: None,
+            routing_algorithm: None,
+            target,
+        }
+    }
+    
+    /// Create a new time to collision condition with position target
+    pub fn with_position_target(position: Position, value: f64, rule: Rule, freespace: bool) -> Self {
+        let target = TimeToCollisionTarget {
+            entity_ref: None,
+            position: Some(position),
+        };
+        
+        Self {
+            value: Double::literal(value),
+            rule,
+            freespace: Boolean::literal(freespace),
+            coordinate_system: None,
+            relative_distance_type: None,
+            routing_algorithm: None,
+            target,
+        }
+    }
+    
+    /// Create condition for collision time less than threshold (entity target)
+    pub fn entity_less_than(entity_ref: &str, time: f64, freespace: bool) -> Self {
+        Self::with_entity_target(entity_ref, time, Rule::LessThan, freespace)
+    }
+    
+    /// Create condition for collision time greater than threshold (entity target)
+    pub fn entity_greater_than(entity_ref: &str, time: f64, freespace: bool) -> Self {
+        Self::with_entity_target(entity_ref, time, Rule::GreaterThan, freespace)
+    }
+    
+    /// Create condition for collision time less than threshold (position target)
+    pub fn position_less_than(position: Position, time: f64, freespace: bool) -> Self {
+        Self::with_position_target(position, time, Rule::LessThan, freespace)
+    }
+    
+    /// Create condition for collision time greater than threshold (position target)
+    pub fn position_greater_than(position: Position, time: f64, freespace: bool) -> Self {
+        Self::with_position_target(position, time, Rule::GreaterThan, freespace)
+    }
+    
+    /// Set coordinate system for measurement
+    pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
+        self.coordinate_system = Some(system);
+        self
+    }
+    
+    /// Set relative distance type for measurement
+    pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
+        self.relative_distance_type = Some(distance_type);
+        self
+    }
+    
+    /// Set routing algorithm for route-based measurement
+    pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
+        self.routing_algorithm = Some(algorithm);
+        self
+    }
+}
+
+impl TimeToCollisionTarget {
+    /// Create target with entity reference
+    pub fn entity(entity_ref: &str) -> Self {
+        Self {
+            entity_ref: Some(OSString::literal(entity_ref.to_string())),
+            position: None,
+        }
+    }
+    
+    /// Create target with position
+    pub fn position(position: Position) -> Self {
+        Self {
+            entity_ref: None,
+            position: Some(position),
+        }
+    }
+}
+
 // Default implementations for testing and fallback scenarios
 impl Default for ReachPositionCondition {
     fn default() -> Self {
@@ -578,6 +840,58 @@ impl Default for EndOfRoadCondition {
     fn default() -> Self {
         Self {
             duration: Double::literal(1.0),
+        }
+    }
+}
+
+impl Default for TimeHeadwayCondition {
+    fn default() -> Self {
+        Self {
+            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            value: Double::literal(2.0),
+            rule: Rule::LessThan,
+            freespace: Boolean::literal(true),
+            coordinate_system: None,
+            relative_distance_type: None,
+            routing_algorithm: None,
+        }
+    }
+}
+
+impl Default for TimeToCollisionCondition {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(5.0),
+            rule: Rule::LessThan,
+            freespace: Boolean::literal(true),
+            coordinate_system: None,
+            relative_distance_type: None,
+            routing_algorithm: None,
+            target: TimeToCollisionTarget::default(),
+        }
+    }
+}
+
+impl Default for TimeToCollisionTarget {
+    fn default() -> Self {
+        Self {
+            entity_ref: Some(OSString::literal("DefaultEntity".to_string())),
+            position: None,
+        }
+    }
+}
+
+impl Default for EntityCondition {
+    fn default() -> Self {
+        EntityCondition::Speed(SpeedCondition::default())
+    }
+}
+
+impl Default for ByEntityConditionSchema {
+    fn default() -> Self {
+        ByEntityConditionSchema {
+            triggering_entities: TriggeringEntities::default(),
+            entity_condition: EntityCondition::default(),
         }
     }
 }
@@ -680,6 +994,21 @@ impl ByEntityCondition {
     /// Create an end-of-road condition
     pub fn end_of_road(duration: f64) -> Self {
         ByEntityCondition::EndOfRoad(EndOfRoadCondition::new(duration))
+    }
+    
+    /// Create a time headway condition
+    pub fn time_headway(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
+        ByEntityCondition::TimeHeadway(TimeHeadwayCondition::new(entity_ref, value, rule, freespace))
+    }
+    
+    /// Create a time to collision condition with entity target
+    pub fn time_to_collision_entity(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
+        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_entity_target(entity_ref, value, rule, freespace))
+    }
+    
+    /// Create a time to collision condition with position target
+    pub fn time_to_collision_position(position: Position, value: f64, rule: Rule, freespace: bool) -> Self {
+        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_position_target(position, value, rule, freespace))
     }
 }
 
