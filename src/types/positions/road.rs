@@ -14,7 +14,7 @@
 //! - Facilitating road-following and path planning algorithms
 //! - Supporting both absolute and relative road-based positioning
 
-use crate::types::basic::{Double, OSString};
+use crate::types::basic::{Double, Int, OSString};
 use serde::{Deserialize, Serialize};
 
 /// Orientation definition for positions
@@ -106,7 +106,7 @@ pub struct RelativeLanePosition {
     
     /// Delta lane ID (relative lane offset)
     #[serde(rename = "@dLane")]
-    pub d_lane: i32,
+    pub d_lane: Int,
     
     /// Delta S-coordinate along the reference line
     #[serde(rename = "@ds")]
@@ -232,7 +232,7 @@ impl RelativeLanePosition {
     pub fn new(entity_ref: String, d_lane: i32, ds: f64, offset: f64) -> Self {
         Self {
             entity_ref: OSString::literal(entity_ref),
-            d_lane,
+            d_lane: Int::literal(d_lane),
             ds: Double::literal(ds),
             offset: Double::literal(offset),
             orientation: None,
@@ -249,7 +249,7 @@ impl RelativeLanePosition {
     ) -> Self {
         Self {
             entity_ref: OSString::literal(entity_ref),
-            d_lane,
+            d_lane: Int::literal(d_lane),
             ds: Double::literal(ds),
             offset: Double::literal(offset),
             orientation: Some(orientation),
@@ -382,7 +382,7 @@ impl Default for RelativeLanePosition {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            d_lane: 0,
+            d_lane: Int::literal(0),
             ds: Double::literal(0.0),
             offset: Double::literal(0.0),
             orientation: None,
