@@ -3,6 +3,10 @@
 pub mod validation;
 pub mod xml;
 
-// TODO: Add streaming parser later (Week 13+)
+// # Streaming Parser Module (Week 13+)
+// 
+// Future streaming parser implementation for large scenario files:
+// ```rust,ignore
 // #[cfg(feature = "streaming")]
 // pub mod streaming;
+// ```

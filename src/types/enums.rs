@@ -1469,15 +1469,33 @@ impl FromStr for CloudState {
     }
 }
 
-// TODO: Add remaining enums incrementally (Week 5+)
-// TODO: All geometry and positioning enums (DirectionalDimension, etc.)
-// TODO: All vehicle and pedestrian behavior enums
-// TODO: All environment and weather enums (CloudState, WeatherValue, etc.)
-// TODO: All dynamics and control enums
-
-// TODO: Add deprecation markers for legacy values
-// TODO: #[deprecated] on CloudState enum values when implemented
-// TODO: #[deprecated] on ParameterType::integer variant when implemented
+/// # Enum Expansion Roadmap
+/// 
+/// The following enums are planned for future implementation:
+/// 
+/// ## Phase 1 (Week 5+): Core Geometry and Positioning
+/// - DirectionalDimension and related positioning enums
+/// - Coordinate system and reference frame enums
+/// - Spatial relationship and orientation enums
+/// 
+/// ## Phase 2: Vehicle and Pedestrian Behavior
+/// - Vehicle behavior and dynamics enums
+/// - Pedestrian movement and interaction enums
+/// - Entity state and status enums
+/// 
+/// ## Phase 3: Environment and Weather
+/// - CloudState, WeatherValue, and atmospheric condition enums
+/// - Road surface and environmental state enums
+/// - Time and lighting condition enums
+/// 
+/// ## Phase 4: Dynamics and Control
+/// - Vehicle dynamics and control system enums
+/// - Action and maneuver type enums
+/// - Trigger and condition type enums
+/// 
+/// ## Deprecation Strategy
+/// Legacy enum values will be marked with `#[deprecated]` when newer
+/// alternatives are implemented, following OpenSCENARIO specification updates.
 
 #[cfg(test)]
 mod tests {
