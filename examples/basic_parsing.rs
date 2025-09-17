@@ -64,9 +64,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// TODO: Add error handling demonstration
-// TODO: Show how to handle different error types
-// TODO: Demonstrate graceful error recovery
 
-// TODO: Add example OpenSCENARIO file
-// TODO: Create examples/simple_scenario.xosc with minimal valid content

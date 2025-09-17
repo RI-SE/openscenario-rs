@@ -19,9 +19,6 @@ pub struct Pedestrian {
     /// Bounding box defining the pedestrian's spatial extents
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
-    // TODO: Add these complex fields in later phases:
-    // #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
-    // pub properties: Option<Properties>,
 }
 
 impl Default for Pedestrian {
