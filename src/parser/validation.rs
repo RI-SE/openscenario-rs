@@ -21,7 +21,7 @@ use crate::{
         scenario::{
             story::{Act, Event, Maneuver, ManeuverGroup},
             storyboard::Storyboard,
-            ScenarioStory,
+            ScenarioStory, ScenarioDefinition,
         },
         EntityRef, ObjectType, ValidationContext,
     },
@@ -187,18 +187,30 @@ impl ScenarioValidator {
         self.validate_file_header(&scenario.file_header, &mut result);
 
         // Validate scenario content based on document type
-        match &scenario.category {
-            crate::types::scenario::storyboard::OpenScenarioCategory::Scenario(def) => {
+        match scenario.document_type() {
+            crate::types::scenario::storyboard::OpenScenarioDocumentType::Scenario => {
                 // Validate entities
-                self.validate_entities(&def.entities, &context, &mut result);
+                if let Some(entities) = &scenario.entities {
+                    self.validate_entities(entities, &context, &mut result);
+                }
                 // Validate storyboard
-                self.validate_storyboard(&def.storyboard, &context, &mut result);
+                if let Some(storyboard) = &scenario.storyboard {
+                    self.validate_storyboard(storyboard, &context, &mut result);
+                }
             }
-            crate::types::scenario::storyboard::OpenScenarioCategory::ParameterValueDistribution(_) => {
+            crate::types::scenario::storyboard::OpenScenarioDocumentType::ParameterVariation => {
                 // Parameter variation files don't have entities or storyboards to validate
             }
-            crate::types::scenario::storyboard::OpenScenarioCategory::Catalog(_) => {
+            crate::types::scenario::storyboard::OpenScenarioDocumentType::Catalog => {
                 // Catalog files have their own validation rules
+            }
+            crate::types::scenario::storyboard::OpenScenarioDocumentType::Unknown => {
+                result.errors.push(ValidationError {
+                    category: ValidationErrorCategory::SemanticError,
+                    location: "root".to_string(),
+                    message: "Unknown document type - no valid scenario, parameter variation, or catalog structure found".to_string(),
+                    suggestion: None,
+                });
             }
         }
 
@@ -219,8 +231,8 @@ impl ScenarioValidator {
         }
 
         // Register entities (only for scenario definitions)
-        if let crate::types::scenario::storyboard::OpenScenarioCategory::Scenario(def) = &scenario.category {
-            for obj in &def.entities.scenario_objects {
+        if let Some(entities) = &scenario.entities {
+            for obj in &entities.scenario_objects {
             let entity_ref = EntityRef {
                 name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
                 object_type: if obj.vehicle.is_some() {
@@ -670,13 +682,27 @@ mod tests {
             }],
         };
 
+        let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
+            parameter_declarations: None,
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
+            road_network: crate::types::road::RoadNetwork::default(),
+            entities: entities,
+            storyboard: Storyboard::default(),
+        };
+
         let scenario = OpenScenario {
             file_header: valid_header,
             parameter_declarations: None,
-            catalog_locations: None,
-            road_network: None,
-            entities: entities,
-            storyboard: Storyboard::default(),
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
+            road_network: Some(crate::types::road::RoadNetwork::default()),
+            entities: Some(scenario_def.entities),
+            storyboard: Some(scenario_def.storyboard),
+            parameter_value_distribution: None,
+            catalog: None,
         };
 
         let result = validator.validate_scenario(&scenario);
@@ -720,13 +746,27 @@ mod tests {
             }],
         };
 
+        let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
+            parameter_declarations: None,
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
+            road_network: crate::types::road::RoadNetwork::default(),
+            entities: entities,
+            storyboard: Storyboard::default(),
+        };
+
         let scenario = OpenScenario {
             file_header: invalid_header,
             parameter_declarations: None,
-            catalog_locations: None,
-            road_network: None,
-            entities: entities,
-            storyboard: Storyboard::default(),
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
+            road_network: Some(crate::types::road::RoadNetwork::default()),
+            entities: Some(scenario_def.entities),
+            storyboard: Some(scenario_def.storyboard),
+            parameter_value_distribution: None,
+            catalog: None,
         };
 
         let result = validator.validate_scenario(&scenario);
@@ -779,6 +819,16 @@ mod tests {
             ],
         };
 
+        let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
+            parameter_declarations: None,
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
+            road_network: crate::types::road::RoadNetwork::default(),
+            entities: entities,
+            storyboard: Storyboard::default(),
+        };
+
         let scenario = OpenScenario {
             file_header: FileHeader {
                 author: Value::literal("Test Author".to_string()),
@@ -788,10 +838,14 @@ mod tests {
                 rev_minor: Value::literal(2),
             },
             parameter_declarations: None,
-            catalog_locations: None,
-            road_network: None,
-            entities: entities,
-            storyboard: Storyboard::default(),
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
+            road_network: Some(crate::types::road::RoadNetwork::default()),
+            entities: Some(scenario_def.entities),
+            storyboard: Some(scenario_def.storyboard),
+            parameter_value_distribution: None,
+            catalog: None,
         };
 
         let result = validator.validate_scenario(&scenario);

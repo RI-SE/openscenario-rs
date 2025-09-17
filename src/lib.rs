@@ -46,7 +46,7 @@ pub mod types;
 pub mod builder;
 // Re-export core types for convenience
 pub use error::{Error, Result};
-pub use types::scenario::storyboard::{FileHeader, OpenScenario, OpenScenarioCategory, ScenarioDefinition};
+pub use types::scenario::storyboard::{FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition};
 
 // Re-export parser functions
 pub use parser::xml::{

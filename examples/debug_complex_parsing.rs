@@ -1,4 +1,5 @@
 use std::fs;
+use openscenario_rs::types::OpenScenarioDocumentType;
 
 fn main() {
     let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
@@ -8,11 +9,28 @@ fn main() {
     match quick_xml::de::from_str::<openscenario_rs::types::scenario::storyboard::OpenScenario>(
         &xml,
     ) {
-        Ok(scenario) => {
-            println!(
-                "✅ Success: parsed OpenSCENARIO with {} entities",
-                scenario.entities.scenario_objects.len()
-            );
+        Ok(document) => {
+            match document.document_type() {
+                OpenScenarioDocumentType::Scenario => {
+                    if let Some(entities) = &document.entities {
+                        println!(
+                            "✅ Success: parsed OpenSCENARIO with {} entities",
+                            entities.scenario_objects.len()
+                        );
+                    } else {
+                        println!("✅ Success: parsed OpenSCENARIO scenario (no entities)");
+                    }
+                }
+                OpenScenarioDocumentType::ParameterVariation => {
+                    println!("✅ Success: parsed parameter variation file");
+                }
+                OpenScenarioDocumentType::Catalog => {
+                    println!("✅ Success: parsed catalog file");
+                }
+                OpenScenarioDocumentType::Unknown => {
+                    println!("✅ Success: parsed unknown document type");
+                }
+            }
         }
         Err(e) => {
             println!("❌ Error parsing OpenSCENARIO: {:?}", e);

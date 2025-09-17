@@ -344,6 +344,7 @@ mod cut_in_scenario_tests {
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
         {
             let entities = scenario.entities.as_ref().expect("Scenario should have entities");
+            let entities = entities;
 
             // Should have 3 entities: Ego, A1, A2
             assert_eq!(entities.scenario_objects.len(), 3);
@@ -394,6 +395,7 @@ mod cut_in_scenario_tests {
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
         {
+            let entities = scenario.entities.as_ref().expect("Scenario should have entities");
             let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
 
             // Verify init section exists and contains actions
@@ -467,16 +469,16 @@ mod cut_in_scenario_tests {
             roundtrip_scenario.file_header.author.as_literal().unwrap()
         );
 
-        let scenario_entities = scenario.entities.as_ref().expect("Scenario should have entities");
+        let entities = scenario.entities.as_ref().expect("Scenario should have entities");
         let roundtrip_entities = roundtrip_scenario.entities.as_ref().expect("Roundtrip scenario should have entities");
         
         assert_eq!(
-            scenario_entities.scenario_objects.len(),
+            entities.scenario_objects.len(),
             roundtrip_entities.scenario_objects.len()
         );
 
         // Verify entity names are preserved
-        let original_names: std::collections::HashSet<_> = scenario_entities
+        let original_names: std::collections::HashSet<_> = entities
             .scenario_objects
             .iter()
             .filter_map(|obj| obj.get_name())
@@ -732,7 +734,7 @@ fn tdd_can_parse_story_level_start_triggers() {
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
 
     // When implemented, this should access story-level triggers
-        let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+    let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
     let story = &storyboard.stories[0];
     let act = &story.acts[0];
     let group = &act.maneuver_groups[0];

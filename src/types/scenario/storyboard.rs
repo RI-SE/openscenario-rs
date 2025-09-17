@@ -8,24 +8,114 @@ use crate::types::scenario::variables::VariableDeclarations;
 use crate::types::scenario::monitors::MonitorDeclarations;
 use serde::{Deserialize, Serialize};
 
-/// Root OpenSCENARIO document structure
+/// Root OpenSCENARIO document structure supporting all document types
+/// This represents the flattened XSD group structure where OpenScenarioCategory 
+/// is a choice between ScenarioDefinition, CatalogDefinition, and ParameterValueDistributionDefinition groups
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename = "OpenSCENARIO")]
 pub struct OpenScenario {
     #[serde(rename = "FileHeader")]
     pub file_header: FileHeader,
+    
+    // ScenarioDefinition group elements (optional - present for scenario documents)
+    #[serde(
+        rename = "ParameterDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_declarations: Option<ParameterDeclarations>,
 
-    #[serde(flatten)]
-    pub category: OpenScenarioCategory,
+    #[serde(
+        rename = "VariableDeclarations", 
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub variable_declarations: Option<VariableDeclarations>,
+
+    #[serde(
+        rename = "MonitorDeclarations",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub monitor_declarations: Option<MonitorDeclarations>,
+
+    #[serde(
+        rename = "CatalogLocations",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub catalog_locations: Option<crate::types::catalogs::locations::CatalogLocations>,
+
+    #[serde(
+        rename = "RoadNetwork",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub road_network: Option<crate::types::road::RoadNetwork>,
+
+    #[serde(
+        rename = "Entities",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub entities: Option<Entities>,
+
+    #[serde(
+        rename = "Storyboard",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub storyboard: Option<Storyboard>,
+
+    // ParameterValueDistributionDefinition group elements (optional - present for parameter variation documents)
+    #[serde(
+        rename = "ParameterValueDistribution",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_value_distribution: Option<ParameterValueDistribution>,
+
+    // CatalogDefinition group elements (optional - present for catalog documents)
+    #[serde(
+        rename = "Catalog",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub catalog: Option<CatalogDefinition>,
 }
 
-/// OpenSCENARIO category choice group matching XSD specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum OpenScenarioCategory {
-    Scenario(ScenarioDefinition),
-    Catalog(CatalogDefinition),
-    ParameterValueDistribution(ParameterValueDistribution),
+impl OpenScenario {
+    /// Determine the document type based on which elements are present
+    pub fn document_type(&self) -> OpenScenarioDocumentType {
+        if self.entities.is_some() && self.storyboard.is_some() {
+            OpenScenarioDocumentType::Scenario
+        } else if self.parameter_value_distribution.is_some() {
+            OpenScenarioDocumentType::ParameterVariation
+        } else if self.catalog.is_some() {
+            OpenScenarioDocumentType::Catalog
+        } else {
+            OpenScenarioDocumentType::Unknown
+        }
+    }
+
+    /// Check if this is a scenario document
+    pub fn is_scenario(&self) -> bool {
+        matches!(self.document_type(), OpenScenarioDocumentType::Scenario)
+    }
+
+    /// Check if this is a parameter variation document
+    pub fn is_parameter_variation(&self) -> bool {
+        matches!(self.document_type(), OpenScenarioDocumentType::ParameterVariation)
+    }
+
+    /// Check if this is a catalog document
+    pub fn is_catalog(&self) -> bool {
+        matches!(self.document_type(), OpenScenarioDocumentType::Catalog)
+    }
+}
+
+/// OpenSCENARIO document types
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OpenScenarioDocumentType {
+    /// Concrete scenario with entities and storyboard
+    Scenario,
+    /// Parameter variation document
+    ParameterVariation,
+    /// Catalog document
+    Catalog,
+    /// Unknown or invalid document type
+    Unknown,
 }
 
 /// Scenario definition containing concrete scenario elements
@@ -113,6 +203,7 @@ impl Default for Storyboard {
 }
 
 impl Default for OpenScenario {
+    /// Default creates a concrete scenario document
     fn default() -> Self {
         Self {
             file_header: FileHeader {
@@ -122,7 +213,18 @@ impl Default for OpenScenario {
                 rev_major: crate::types::basic::Value::literal(1),
                 rev_minor: crate::types::basic::Value::literal(0),
             },
-            category: OpenScenarioCategory::Scenario(ScenarioDefinition::default()),
+            // Scenario elements
+            parameter_declarations: Some(ParameterDeclarations::default()),
+            variable_declarations: None,
+            monitor_declarations: None,
+            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
+            road_network: Some(crate::types::road::RoadNetwork::default()),
+            entities: Some(Entities::default()),
+            storyboard: Some(Storyboard::default()),
+            // Parameter variation elements
+            parameter_value_distribution: None,
+            // Catalog elements
+            catalog: None,
         }
     }
 }
@@ -149,24 +251,4 @@ impl Default for CatalogDefinition {
     }
 }
 
-impl OpenScenario {
-    /// Check if this document is a scenario definition
-    pub fn is_scenario(&self) -> bool {
-        matches!(self.category, OpenScenarioCategory::Scenario(_))
-    }
-    
-    /// Check if this document is a parameter value distribution
-    pub fn is_parameter_value_distribution(&self) -> bool {
-        matches!(self.category, OpenScenarioCategory::ParameterValueDistribution(_))
-    }
-    
-    /// Check if this document is a catalog
-    pub fn is_catalog(&self) -> bool {
-        matches!(self.category, OpenScenarioCategory::Catalog(_))
-    }
-    
-    /// Get the category of this document
-    pub fn category(&self) -> &OpenScenarioCategory {
-        &self.category
-    }
-}
+

@@ -25,6 +25,7 @@
 use openscenario_rs::{
     catalog::{extract_scenario_parameters, resolve_catalog_reference_simple},
     parser::xml::{parse_from_file, serialize_to_string},
+    types::OpenScenarioDocumentType,
 };
 use std::{
     collections::HashMap,
@@ -74,40 +75,65 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
         return Err(format!("Input file does not exist: {}", input_file).into());
     }
 
-    let mut scenario = parse_from_file(input_path)?;
+    let mut document = parse_from_file(input_path)?;
 
     println!("✅ Successfully parsed scenario file");
-    println!("   📋 Description: {:?}", scenario.file_header.description);
-    println!("   👤 Author: {:?}", scenario.file_header.author);
-    println!("   📅 Date: {:?}", scenario.file_header.date);
-    println!(
-        "   🎭 Entities: {}",
-        scenario.entities.scenario_objects.len()
-    );
+    println!("   📋 Description: {:?}", document.file_header.description);
+    println!("   👤 Author: {:?}", document.file_header.author);
+    println!("   📅 Date: {:?}", document.file_header.date);
 
-    // Step 2: Extract parameters from scenario
-    let scenario_parameters = extract_scenario_parameters(&scenario.parameter_declarations);
-    println!("   ⚙️  Parameters: {}", scenario_parameters.len());
-    for (name, value) in &scenario_parameters {
-        println!("      - {} = {}", name, value);
-    }
+    match document.document_type() {
+        OpenScenarioDocumentType::Scenario => {
+            if let Some(entities) = &document.entities {
+                println!(
+                    "   🎭 Entities: {}",
+                    entities.scenario_objects.len()
+                );
+            } else {
+                println!("   🎭 Entities: 0");
+            }
 
-    // Step 3: Check if scenario uses catalogs
-    if let Some(catalog_locations) = scenario.catalog_locations.clone() {
-        println!("\n🗂️  Catalog locations found - proceeding with resolution:");
+            // Step 2: Extract parameters from scenario
+            let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
+            println!("   ⚙️  Parameters: {}", scenario_parameters.len());
+            for (name, value) in &scenario_parameters {
+                println!("      - {} = {}", name, value);
+            }
 
-        // Get the base directory for relative catalog paths
-        let base_dir = input_path.parent().unwrap_or(Path::new("."));
+            // Step 3: Check if scenario uses catalogs
+            if let Some(catalog_locations) = document.catalog_locations.clone() {
+                if catalog_locations.vehicle_catalog.is_some() || 
+                   catalog_locations.pedestrian_catalog.is_some() ||
+                   catalog_locations.misc_object_catalog.is_some() ||
+                   catalog_locations.controller_catalog.is_some() {
+                    println!("\n🗂️  Catalog locations found - proceeding with resolution:");
 
-        // Resolve catalog references using the new simple resolver
-        resolve_catalog_references_simple(
-            &mut scenario,
-            &catalog_locations,
-            &scenario_parameters,
-            base_dir,
-        )?;
-    } else {
-        println!("\n💡 No catalog locations found - scenario uses inline entities only");
+                    // Get the base directory for relative catalog paths
+                    let base_dir = input_path.parent().unwrap_or(Path::new("."));
+
+                    // Resolve catalog references using the new simple resolver
+                    resolve_catalog_references_simple(
+                        &mut document,
+                        &catalog_locations,
+                        &scenario_parameters,
+                        base_dir,
+                    )?;
+                } else {
+                    println!("\n💡 No catalog locations found - scenario uses inline entities only");
+                }
+            } else {
+                println!("\n💡 No catalog locations found - scenario uses inline entities only");
+            }
+        }
+        OpenScenarioDocumentType::ParameterVariation => {
+            println!("   📊 Parameter variation file - no entities");
+        }
+        OpenScenarioDocumentType::Catalog => {
+            println!("   📚 Catalog file - no entities");
+        }
+        OpenScenarioDocumentType::Unknown => {
+            println!("   ❓ Unknown document type");
+        }
     }
 
     // Step 4: Note about expression resolution (simplified for this example)
@@ -129,7 +155,7 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
 
     // Step 6: Serialize and write the resolved scenario
     println!("\n💾 Serializing resolved scenario...");
-    let resolved_xml = serialize_to_string(&scenario)?;
+    let resolved_xml = serialize_to_string(&document)?;
 
     let mut output_file = File::create(&output_path)?;
     output_file.write_all(resolved_xml.as_bytes())?;
@@ -138,7 +164,7 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
     println!("   📊 Output size: {} bytes", resolved_xml.len());
 
     // Step 7: Report resolution statistics
-    print_resolution_summary(&scenario);
+    print_resolution_summary(&document);
 
     Ok(output_path)
 }
@@ -147,7 +173,7 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
 
 /// Simplified catalog resolution function using the new infrastructure
 fn resolve_catalog_references_simple(
-    scenario: &mut openscenario_rs::types::scenario::storyboard::OpenScenario,
+    document: &mut openscenario_rs::types::scenario::storyboard::OpenScenario,
     catalog_locations: &openscenario_rs::types::catalogs::locations::CatalogLocations,
     parameters: &HashMap<String, String>,
     base_dir: &Path,
@@ -156,66 +182,70 @@ fn resolve_catalog_references_simple(
     let mut failed_references = 0;
 
     // Process each entity in the scenario
-    for entity in &mut scenario.entities.scenario_objects {
-        let entity_name = entity.name.to_string();
-        println!("   🎭 Processing entity: {}", entity_name);
+    if document.is_scenario() {
+        if let Some(entities) = &mut document.entities {
+            for entity in &mut entities.scenario_objects {
+                let entity_name = entity.name.to_string();
+                println!("   🎭 Processing entity: {}", entity_name);
 
-        // Check if entity has a catalog reference
-        if let Some(catalog_ref) = &entity.catalog_reference {
-            println!("      🔗 Resolving catalog reference...");
-            println!("         Catalog: {:?}", catalog_ref.catalog_name);
-            println!("         Entry: {:?}", catalog_ref.entry_name);
+                // Check if entity has a catalog reference
+                if let Some(catalog_ref) = &entity.catalog_reference {
+                    println!("      🔗 Resolving catalog reference...");
+                    println!("         Catalog: {:?}", catalog_ref.catalog_name);
+                    println!("         Entry: {:?}", catalog_ref.entry_name);
 
-            // Use the new catalog resolution function
-            match resolve_catalog_reference_simple(
-                &catalog_ref.catalog_name,
-                &catalog_ref.entry_name,
-                catalog_locations,
-                parameters,
-                base_dir,
-            ) {
-                Ok(found) => {
-                    if found {
-                        println!("         ✅ Catalog entry found and validated");
-                        resolved_references += 1;
-                        // In a full implementation, we would load and replace the entity here
-                        // For this example, we just validate that the reference can be resolved
-                    } else {
-                        println!("         ❌ Catalog entry not found");
-                        failed_references += 1;
-                    }
-                }
-                Err(e) => {
-                    println!("         ❌ Failed to resolve catalog reference: {}", e);
-                    failed_references += 1;
-                }
-            }
-        }
-
-        // Check controller references
-        if let Some(object_controller) = &entity.object_controller {
-            if let Some(controller_ref) = &object_controller.catalog_reference {
-                println!("      🎮 Resolving controller reference...");
-
-                match resolve_catalog_reference_simple(
-                    &controller_ref.catalog_name,
-                    &controller_ref.entry_name,
-                    catalog_locations,
-                    parameters,
-                    base_dir,
-                ) {
-                    Ok(found) => {
-                        if found {
-                            println!("         ✅ Controller entry found and validated");
-                            resolved_references += 1;
-                        } else {
-                            println!("         ❌ Controller entry not found");
+                    // Use the new catalog resolution function
+                    match resolve_catalog_reference_simple(
+                        &catalog_ref.catalog_name,
+                        &catalog_ref.entry_name,
+                        catalog_locations,
+                        parameters,
+                        base_dir,
+                    ) {
+                        Ok(found) => {
+                            if found {
+                                println!("         ✅ Catalog entry found and validated");
+                                resolved_references += 1;
+                                // In a full implementation, we would load and replace the entity here
+                                // For this example, we just validate that the reference can be resolved
+                            } else {
+                                println!("         ❌ Catalog entry not found");
+                                failed_references += 1;
+                            }
+                        }
+                        Err(e) => {
+                            println!("         ❌ Failed to resolve catalog reference: {}", e);
                             failed_references += 1;
                         }
                     }
-                    Err(e) => {
-                        println!("         ❌ Failed to resolve controller reference: {}", e);
-                        failed_references += 1;
+                }
+
+                // Check controller references
+                if let Some(object_controller) = &entity.object_controller {
+                    if let Some(controller_ref) = &object_controller.catalog_reference {
+                        println!("      🎮 Resolving controller reference...");
+
+                        match resolve_catalog_reference_simple(
+                            &controller_ref.catalog_name,
+                            &controller_ref.entry_name,
+                            catalog_locations,
+                            parameters,
+                            base_dir,
+                        ) {
+                            Ok(found) => {
+                                if found {
+                                    println!("         ✅ Controller entry found and validated");
+                                    resolved_references += 1;
+                                } else {
+                                    println!("         ❌ Controller entry not found");
+                                    failed_references += 1;
+                                }
+                            }
+                            Err(e) => {
+                                println!("         ❌ Failed to resolve controller reference: {}", e);
+                                failed_references += 1;
+                            }
+                        }
                     }
                 }
             }
@@ -237,39 +267,63 @@ fn resolve_catalog_references_simple(
 // Vehicle and controller resolution functions removed - using simplified approach
 
 /// Print a comprehensive summary of the resolution process
-fn print_resolution_summary(scenario: &openscenario_rs::types::scenario::storyboard::OpenScenario) {
+fn print_resolution_summary(document: &openscenario_rs::types::scenario::storyboard::OpenScenario) {
     println!("\n📈 Resolution Summary");
     println!("════════════════════");
 
-    let entity_count = scenario.entities.scenario_objects.len();
-    let mut catalog_refs = 0;
-    let mut controller_refs = 0;
+    match document.document_type() {
+        OpenScenarioDocumentType::Scenario => {
+            if let Some(entities) = &document.entities {
+                let entity_count = entities.scenario_objects.len();
+                let mut catalog_refs = 0;
+                let mut controller_refs = 0;
 
-    for entity in &scenario.entities.scenario_objects {
-        if entity.catalog_reference.is_some() {
-            catalog_refs += 1;
-        }
-        if let Some(object_controller) = &entity.object_controller {
-            if object_controller.catalog_reference.is_some() {
-                controller_refs += 1;
+                for entity in &entities.scenario_objects {
+                    if entity.catalog_reference.is_some() {
+                        catalog_refs += 1;
+                    }
+                    if let Some(object_controller) = &entity.object_controller {
+                        if object_controller.catalog_reference.is_some() {
+                            controller_refs += 1;
+                        }
+                    }
+                }
+
+                println!("   🎭 Total entities: {}", entity_count);
+                println!("   🔗 Entity catalog references: {}", catalog_refs);
+                println!("   🎮 Controller catalog references: {}", controller_refs);
+            } else {
+                println!("   🎭 Total entities: 0");
+                println!("   🔗 Entity catalog references: 0");
+                println!("   🎮 Controller catalog references: 0");
             }
+
+            let has_catalogs = if let Some(catalog_locations) = &document.catalog_locations {
+                catalog_locations.vehicle_catalog.is_some() ||
+                catalog_locations.pedestrian_catalog.is_some() ||
+                catalog_locations.misc_object_catalog.is_some() ||
+                catalog_locations.controller_catalog.is_some()
+            } else {
+                false
+            };
+
+            println!(
+                "   🗂️  Catalog locations: {}",
+                if has_catalogs { "Present" } else { "None" }
+            );
+
+            println!("   ✅ Catalog reference validation completed!");
+        }
+        OpenScenarioDocumentType::ParameterVariation => {
+            println!("   📊 Parameter variation file - no entities");
+        }
+        OpenScenarioDocumentType::Catalog => {
+            println!("   📚 Catalog file - no entities");
+        }
+        OpenScenarioDocumentType::Unknown => {
+            println!("   ❓ Unknown document type");
         }
     }
-
-    println!("   🎭 Total entities: {}", entity_count);
-    println!("   🔗 Entity catalog references: {}", catalog_refs);
-    println!("   🎮 Controller catalog references: {}", controller_refs);
-
-    println!(
-        "   🗂️  Catalog locations: {}",
-        if scenario.catalog_locations.is_some() {
-            "Present"
-        } else {
-            "None"
-        }
-    );
-
-    println!("   ✅ Catalog reference validation completed!");
 }
 
 // Expression resolution functions removed - simplified for this example

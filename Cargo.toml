@@ -35,3 +35,7 @@ path = "test_param_variation.rs"
 [[bin]]
 name = "debug_parse_variation"
 path = "debug_parse_variation.rs"
+
+[[bin]]
+name = "simple_test"
+path = "simple_test.rs"

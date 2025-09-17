@@ -83,10 +83,8 @@ pub struct DistributionSetElement {
 pub struct DistributionRange {
     #[serde(rename = "@stepWidth")]
     pub step_width: OSString,
-    #[serde(rename = "@lowerLimit")]
-    pub lower_limit: OSString,
-    #[serde(rename = "@upperLimit")]
-    pub upper_limit: OSString,
+    #[serde(rename = "Range")]
+    pub range: crate::types::basic::Range,
 }
 
 /// Multi-parameter value set distribution
@@ -283,8 +281,7 @@ impl Default for DistributionRange {
     fn default() -> Self {
         Self {
             step_width: Value::Literal("1.0".to_string()),
-            lower_limit: Value::Literal("0.0".to_string()),
-            upper_limit: Value::Literal("10.0".to_string()),
+            range: crate::types::basic::Range::default(),
         }
     }
 }
@@ -363,13 +360,13 @@ impl DistributionSampler for DistributionRange {
     type Output = String;
 
     fn sample(&self) -> Result<Self::Output> {
-        match &self.lower_limit {
-            Value::Literal(val) => Ok(val.clone()),
-            Value::Parameter(_) => Err(crate::error::Error::validation_error(
+        match &self.range.lower_limit {
+            crate::types::basic::Value::Literal(val) => Ok(val.to_string()),
+            crate::types::basic::Value::Parameter(_) => Err(crate::error::Error::validation_error(
                 "sampling",
                 "Cannot sample from parameterized distribution without parameter resolution",
             )),
-            Value::Expression(_) => Err(crate::error::Error::validation_error(
+            crate::types::basic::Value::Expression(_) => Err(crate::error::Error::validation_error(
                 "sampling",
                 "Cannot sample from expression-based distribution without expression evaluation",
             )),

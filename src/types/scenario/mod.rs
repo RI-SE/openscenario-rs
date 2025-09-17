@@ -105,15 +105,15 @@ impl ScenarioDefinition {
 
     /// Convert from existing OpenScenario structure (only works for scenario definitions)
     pub fn from_open_scenario(scenario: &OpenScenario) -> Option<Self> {
-        if let storyboard::OpenScenarioCategory::Scenario(def) = &scenario.category {
+        if scenario.is_scenario() {
             Some(Self {
-                parameter_declarations: def.parameter_declarations.clone(),
-                variable_declarations: def.variable_declarations.clone(),
-                monitor_declarations: def.monitor_declarations.clone(),
-                catalog_locations: def.catalog_locations.clone(),
-                road_network: def.road_network.clone(),
-                entities: def.entities.clone(),
-                storyboard: def.storyboard.clone(),
+                parameter_declarations: scenario.parameter_declarations.clone(),
+                variable_declarations: scenario.variable_declarations.clone(),
+                monitor_declarations: scenario.monitor_declarations.clone(),
+                catalog_locations: scenario.catalog_locations.clone().unwrap_or_default(),
+                road_network: scenario.road_network.clone().unwrap_or_default(),
+                entities: scenario.entities.clone().unwrap_or_default(),
+                storyboard: scenario.storyboard.clone().unwrap_or_default(),
             })
         } else {
             None
