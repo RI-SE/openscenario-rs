@@ -186,11 +186,21 @@ impl ScenarioValidator {
         // Validate file header
         self.validate_file_header(&scenario.file_header, &mut result);
 
-        // Validate entities
-        self.validate_entities(&scenario.entities, &context, &mut result);
-
-        // Validate storyboard
-        self.validate_storyboard(&scenario.storyboard, &context, &mut result);
+        // Validate scenario content based on document type
+        match &scenario.category {
+            crate::types::scenario::storyboard::OpenScenarioCategory::Scenario(def) => {
+                // Validate entities
+                self.validate_entities(&def.entities, &context, &mut result);
+                // Validate storyboard
+                self.validate_storyboard(&def.storyboard, &context, &mut result);
+            }
+            crate::types::scenario::storyboard::OpenScenarioCategory::ParameterValueDistribution(_) => {
+                // Parameter variation files don't have entities or storyboards to validate
+            }
+            crate::types::scenario::storyboard::OpenScenarioCategory::Catalog(_) => {
+                // Catalog files have their own validation rules
+            }
+        }
 
         // Update metrics
         let duration = start_time.elapsed();
@@ -208,8 +218,9 @@ impl ScenarioValidator {
             context = context.with_strict_mode();
         }
 
-        // Register entities
-        for obj in &scenario.entities.scenario_objects {
+        // Register entities (only for scenario definitions)
+        if let crate::types::scenario::storyboard::OpenScenarioCategory::Scenario(def) = &scenario.category {
+            for obj in &def.entities.scenario_objects {
             let entity_ref = EntityRef {
                 name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
                 object_type: if obj.vehicle.is_some() {
@@ -221,6 +232,7 @@ impl ScenarioValidator {
                 },
             };
             context.add_entity(entity_ref.name.clone(), entity_ref);
+            }
         }
 
         context

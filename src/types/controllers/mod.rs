@@ -6,7 +6,7 @@
 use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::distributions::ParameterValueDistribution;
-use crate::types::entities::vehicle::{Properties, Property};
+use crate::types::entities::vehicle::{File, Properties, Property};
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
 
@@ -269,9 +269,17 @@ impl Default for ControllerDistribution {
                 parameter_name: Value::Literal("controllerParam".to_string()),
             });
 
+        let deterministic = crate::types::distributions::Deterministic {
+            single_distributions: vec![],
+            multi_distributions: vec![],
+        };
+        
         Self {
             controller_type: ControllerType::Movement,
-            distribution: ParameterValueDistribution::new_deterministic(deterministic_dist),
+            distribution: ParameterValueDistribution::new_deterministic(
+                File { filepath: "default.xosc".to_string() }, 
+                deterministic
+            ),
         }
     }
 }

@@ -6,6 +6,24 @@ use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
 use crate::types::basic::OSString;
+
+/// Container for deterministic parameter distributions (matches XSD Deterministic type)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Deterministic {
+    #[serde(
+        rename = "DeterministicSingleParameterDistribution",
+        skip_serializing_if = "Vec::is_empty",
+        default
+    )]
+    pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
+    #[serde(
+        rename = "DeterministicMultiParameterDistribution", 
+        skip_serializing_if = "Vec::is_empty",
+        default
+    )]
+    pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
+}
+
 /// Wrapper for deterministic parameter distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -116,6 +134,27 @@ impl ValidateDistribution for DeterministicSingleParameterDistribution {
                 dist.validate()
             }
         }
+    }
+}
+
+impl Default for Deterministic {
+    fn default() -> Self {
+        Self {
+            single_distributions: Vec::new(),
+            multi_distributions: Vec::new(),
+        }
+    }
+}
+
+impl ValidateDistribution for Deterministic {
+    fn validate(&self) -> Result<()> {
+        for dist in &self.single_distributions {
+            dist.validate()?;
+        }
+        for dist in &self.multi_distributions {
+            dist.validate()?;
+        }
+        Ok(())
     }
 }
 

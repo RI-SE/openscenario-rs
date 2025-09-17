@@ -1,9 +1,20 @@
 //! Stochastic distribution types for probabilistic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::{OSString, Value};
+use crate::types::basic::{OSString, UnsignedInt, Value};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
+
+/// Container for stochastic distributions (matches XSD Stochastic type)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Stochastic {
+    #[serde(rename = "StochasticDistribution")]
+    pub distributions: Vec<StochasticDistribution>,
+    #[serde(rename = "@numberOfTestRuns")]
+    pub number_of_test_runs: UnsignedInt,
+    #[serde(rename = "@randomSeed", skip_serializing_if = "Option::is_none")]
+    pub random_seed: Option<Value<f64>>,
+}
 
 /// Wrapper for stochastic distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -106,6 +117,25 @@ pub struct Range {
     pub lower_limit: OSString,
     #[serde(rename = "@upperLimit")]
     pub upper_limit: OSString,
+}
+
+impl Default for Stochastic {
+    fn default() -> Self {
+        Self {
+            distributions: Vec::new(),
+            number_of_test_runs: Value::Literal(1),
+            random_seed: None,
+        }
+    }
+}
+
+impl ValidateDistribution for Stochastic {
+    fn validate(&self) -> Result<()> {
+        for dist in &self.distributions {
+            dist.validate()?;
+        }
+        Ok(())
+    }
 }
 
 impl ValidateDistribution for StochasticDistribution {

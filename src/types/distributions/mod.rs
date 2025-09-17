@@ -4,7 +4,12 @@
 //! It supports both deterministic (systematic) and stochastic (probabilistic) parameter distributions.
 
 use crate::error::Result;
+use crate::types::entities::vehicle::File;
 use serde::{Deserialize, Serialize};
+
+// Import distribution types
+pub use deterministic::{DeterministicParameterDistribution, Deterministic};
+pub use stochastic::{StochasticDistribution, Stochastic};
 
 pub mod deterministic;
 pub mod stochastic;
@@ -15,14 +20,12 @@ pub use stochastic::*;
 /// Core parameter value distribution wrapper
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParameterValueDistribution {
-    pub distribution_definition: DistributionDefinition,
-    #[serde(
-        rename = "@definitionTypeHint",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub definition_type_hint: Option<String>,
-    #[serde(rename = "@distributionSet", skip_serializing_if = "Option::is_none")]
-    pub distribution_set: Option<String>,
+    #[serde(rename = "ScenarioFile")]
+    pub scenario_file: File,
+    #[serde(rename = "Deterministic", skip_serializing_if = "Option::is_none")]
+    pub deterministic: Option<Deterministic>,
+    #[serde(rename = "Stochastic", skip_serializing_if = "Option::is_none")]
+    pub stochastic: Option<Stochastic>,
 }
 
 /// Union of all distribution types
@@ -67,34 +70,30 @@ pub trait ValidateDistribution {
 }
 
 impl ParameterValueDistribution {
-    pub fn new_deterministic(dist: DeterministicParameterDistribution) -> Self {
+    pub fn new_deterministic(scenario_file: File, deterministic: Deterministic) -> Self {
         Self {
-            distribution_definition: DistributionDefinition::Deterministic(dist),
-            definition_type_hint: None,
-            distribution_set: None,
+            scenario_file,
+            deterministic: Some(deterministic),
+            stochastic: None,
         }
     }
 
-    pub fn new_stochastic(dist: StochasticDistribution) -> Self {
+    pub fn new_stochastic(scenario_file: File, stochastic: Stochastic) -> Self {
         Self {
-            distribution_definition: DistributionDefinition::Stochastic(dist),
-            definition_type_hint: None,
-            distribution_set: None,
-        }
-    }
-
-    pub fn new_user_defined(dist: UserDefinedDistribution) -> Self {
-        Self {
-            distribution_definition: DistributionDefinition::UserDefined(dist),
-            definition_type_hint: None,
-            distribution_set: None,
+            scenario_file,
+            deterministic: None,
+            stochastic: Some(stochastic),
         }
     }
 }
 
 impl Default for ParameterValueDistribution {
     fn default() -> Self {
-        Self::new_deterministic(DeterministicParameterDistribution::default())
+        Self {
+            scenario_file: File { filepath: "default.xosc".to_string() },
+            deterministic: Some(Deterministic::default()),
+            stochastic: None,
+        }
     }
 }
 
@@ -115,10 +114,15 @@ impl Default for UserDefinedDistribution {
 
 impl ValidateDistribution for ParameterValueDistribution {
     fn validate(&self) -> Result<()> {
-        match &self.distribution_definition {
-            DistributionDefinition::Deterministic(dist) => dist.validate(),
-            DistributionDefinition::Stochastic(dist) => dist.validate(),
-            DistributionDefinition::UserDefined(dist) => dist.validate(),
+        if let Some(det) = &self.deterministic {
+            det.validate()
+        } else if let Some(stoc) = &self.stochastic {
+            stoc.validate()
+        } else {
+            Err(crate::error::Error::validation_error(
+                "ParameterValueDistribution",
+                "Must have either deterministic or stochastic distribution"
+            ))
         }
     }
 }
@@ -397,20 +401,23 @@ mod tests {
             }],
         };
 
-        let det_dist =
-            DeterministicParameterDistribution::Single(DeterministicSingleParameterDistribution {
-                distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(
-                    dist_set,
-                ),
-                parameter_name: Value::Literal("speed".to_string()),
-            });
+        let single_param_dist = DeterministicSingleParameterDistribution {
+            distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(
+                dist_set,
+            ),
+            parameter_name: Value::Literal("speed".to_string()),
+        };
 
-        let param_dist = ParameterValueDistribution::new_deterministic(det_dist);
+        let det_dist = Deterministic {
+            single_distributions: vec![single_param_dist],
+            multi_distributions: vec![],
+        };
 
-        assert!(matches!(
-            param_dist.distribution_definition,
-            DistributionDefinition::Deterministic(_)
-        ));
+        let scenario_file = File { filepath: "test.xosc".to_string() };
+        let param_dist = ParameterValueDistribution::new_deterministic(scenario_file, det_dist);
+
+        assert!(param_dist.deterministic.is_some());
+        assert!(param_dist.stochastic.is_none());
     }
 
     #[test]
@@ -520,10 +527,7 @@ mod tests {
         let param_value_dist = ParameterValueDistribution::default();
         let group = ParameterValueDistributionDefinitionGroup::new(param_value_dist);
 
-        assert!(matches!(
-            group.parameter_value_distribution().distribution_definition,
-            DistributionDefinition::Deterministic(_)
-        ));
+        assert!(group.parameter_value_distribution().deterministic.is_some());
         assert!(group.validate().is_ok());
 
         let default_group = ParameterValueDistributionDefinitionGroup::default();

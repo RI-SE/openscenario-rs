@@ -14,12 +14,23 @@
 //! # Quick Start
 //!
 //! ```rust,no_run
-//! use openscenario_rs::{parse_file, Result};
+//! use openscenario_rs::{parse_file, Result, OpenScenarioCategory};
 //!
 //! fn main() -> Result<()> {
-//!     let scenario = parse_file("scenario.xosc")?;
-//!     println!("Author: {}", scenario.file_header.author.as_literal().unwrap());
-//!     println!("Entities: {}", scenario.entities.scenario_objects.len());
+//!     let document = parse_file("scenario.xosc")?;
+//!     println!("Author: {}", document.file_header.author.as_literal().unwrap());
+//!     
+//!     match &document.category {
+//!         OpenScenarioCategory::Scenario(scenario) => {
+//!             println!("Entities: {}", scenario.entities.scenario_objects.len());
+//!         }
+//!         OpenScenarioCategory::ParameterValueDistribution(_) => {
+//!             println!("Parameter variation file");
+//!         }
+//!         OpenScenarioCategory::Catalog(_) => {
+//!             println!("Catalog file");
+//!         }
+//!     }
 //!     Ok(())
 //! }
 //! ```
@@ -35,7 +46,7 @@ pub mod types;
 pub mod builder;
 // Re-export core types for convenience
 pub use error::{Error, Result};
-pub use types::scenario::storyboard::{FileHeader, OpenScenario};
+pub use types::scenario::storyboard::{FileHeader, OpenScenario, OpenScenarioCategory, ScenarioDefinition};
 
 // Re-export parser functions
 pub use parser::xml::{
