@@ -987,6 +987,6 @@ mod tests {
         assert!(vehicle_schema.len() >= 1);
         assert!(controller_schema.len() >= 1);
         assert!(pedestrian_schema.len() >= 1);
-        assert_eq!(misc_object_schema.len(), 0); // Placeholder has empty schema
+        assert!(misc_object_schema.len() >= 3); // Now has proper schema with name, mass, boundingBox
     }
 }
