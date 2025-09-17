@@ -41,7 +41,14 @@ pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
             e.with_context(&format!("Failed to read file: {}", path.as_ref().display()))
         })?;
 
-    parse_from_str(&xml_content).map_err(|e| {
+    // Remove UTF-8 BOM if present
+    let cleaned_content = if xml_content.starts_with('\u{FEFF}') {
+        &xml_content[3..]
+    } else {
+        &xml_content
+    };
+
+    parse_from_str(cleaned_content).map_err(|e| {
         e.with_context(&format!(
             "Failed to parse file: {}",
             path.as_ref().display()
