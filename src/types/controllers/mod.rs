@@ -258,14 +258,14 @@ impl Default for ControllerDistribution {
 
         // Create a simple deterministic distribution
         let single_param_dist = DeterministicSingleParameterDistribution {
-            distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(
-                DistributionSet {
-                    elements: vec![DistributionSetElement {
-                        value: Value::Literal("default".to_string()),
-                    }],
-                },
-            ),
             parameter_name: Value::Literal("controllerParam".to_string()),
+            distribution_set: Some(DistributionSet {
+                elements: vec![DistributionSetElement {
+                    value: Value::Literal("default".to_string()),
+                }],
+            }),
+            distribution_range: None,
+            user_defined_distribution: None,
         };
 
         let deterministic = crate::types::distributions::Deterministic {

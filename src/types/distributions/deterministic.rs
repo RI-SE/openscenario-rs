@@ -1,18 +1,15 @@
 //! Deterministic distribution types for systematic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::Value;
+use crate::types::basic::{Value, OSString};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
-
-use crate::types::basic::OSString;
 
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Deterministic {
     #[serde(
         rename = "DeterministicSingleParameterDistribution",
-        skip_serializing_if = "Vec::is_empty",
         default
     )]
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
@@ -35,19 +32,53 @@ pub enum DeterministicParameterDistribution {
 /// Single parameter deterministic distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeterministicSingleParameterDistribution {
-    #[serde(flatten)]
-    pub distribution_type: DeterministicSingleParameterDistributionType,
     #[serde(rename = "@parameterName")]
     pub parameter_name: OSString,
+    #[serde(rename = "DistributionSet", skip_serializing_if = "Option::is_none")]
+    pub distribution_set: Option<DistributionSet>,
+    #[serde(rename = "DistributionRange", skip_serializing_if = "Option::is_none")]
+    pub distribution_range: Option<DistributionRange>,
+    #[serde(rename = "UserDefinedDistribution", skip_serializing_if = "Option::is_none")]
+    pub user_defined_distribution: Option<crate::types::distributions::UserDefinedDistribution>,
 }
 
-/// Types of single parameter distributions
+/// Types of single parameter distributions (legacy enum - kept for backward compatibility)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum DeterministicSingleParameterDistributionType {
     DistributionSet(DistributionSet),
     DistributionRange(DistributionRange),
     UserDefinedDistribution(crate::types::distributions::UserDefinedDistribution),
+}
+
+impl DeterministicSingleParameterDistribution {
+    /// Get the distribution type as an enum (for backward compatibility)
+    pub fn distribution_type(&self) -> Option<DeterministicSingleParameterDistributionType> {
+        if let Some(set) = &self.distribution_set {
+            Some(DeterministicSingleParameterDistributionType::DistributionSet(set.clone()))
+        } else if let Some(range) = &self.distribution_range {
+            Some(DeterministicSingleParameterDistributionType::DistributionRange(range.clone()))
+        } else if let Some(user_defined) = &self.user_defined_distribution {
+            Some(DeterministicSingleParameterDistributionType::UserDefinedDistribution(user_defined.clone()))
+        } else {
+            None
+        }
+    }
+
+    /// Check if this has a distribution set
+    pub fn has_distribution_set(&self) -> bool {
+        self.distribution_set.is_some()
+    }
+
+    /// Check if this has a distribution range
+    pub fn has_distribution_range(&self) -> bool {
+        self.distribution_range.is_some()
+    }
+
+    /// Check if this has a user defined distribution
+    pub fn has_user_defined_distribution(&self) -> bool {
+        self.user_defined_distribution.is_some()
+    }
 }
 
 /// Multi-parameter deterministic distribution
@@ -123,15 +154,33 @@ impl ValidateDistribution for DeterministicParameterDistribution {
 
 impl ValidateDistribution for DeterministicSingleParameterDistribution {
     fn validate(&self) -> Result<()> {
-        match &self.distribution_type {
-            DeterministicSingleParameterDistributionType::DistributionSet(dist) => dist.validate(),
-            DeterministicSingleParameterDistributionType::DistributionRange(dist) => {
-                dist.validate()
-            }
-            DeterministicSingleParameterDistributionType::UserDefinedDistribution(dist) => {
-                dist.validate()
-            }
+        // Ensure exactly one distribution type is present
+        let count = [
+            self.distribution_set.is_some(),
+            self.distribution_range.is_some(),
+            self.user_defined_distribution.is_some(),
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+        if count != 1 {
+            return Err(crate::error::Error::validation_error(
+                "DeterministicSingleParameterDistribution",
+                "Must have exactly one distribution type (set, range, or user-defined)",
+            ));
         }
+
+        // Validate the present distribution
+        if let Some(dist) = &self.distribution_set {
+            dist.validate()?;
+        } else if let Some(dist) = &self.distribution_range {
+            dist.validate()?;
+        } else if let Some(dist) = &self.user_defined_distribution {
+            dist.validate()?;
+        }
+
+        Ok(())
     }
 }
 
@@ -235,8 +284,10 @@ impl Default for DeterministicParameterDistribution {
 impl Default for DeterministicSingleParameterDistribution {
     fn default() -> Self {
         Self {
-            distribution_type: DeterministicSingleParameterDistributionType::default(),
             parameter_name: Value::Literal("parameter".to_string()),
+            distribution_set: Some(DistributionSet::default()),
+            distribution_range: None,
+            user_defined_distribution: None,
         }
     }
 }
