@@ -6,7 +6,7 @@
 //! - RoadCoordinate: Road-based coordinate system positioning
 //! - LaneCoordinate: Lane-based coordinate system positioning
 
-use openscenario_rs::types::basic::{Boolean, Double, OSString};
+use openscenario_rs::types::basic::{Boolean, Double};
 use openscenario_rs::types::conditions::entity::{
     ByEntityCondition, TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget
 };

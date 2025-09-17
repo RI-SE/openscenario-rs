@@ -462,7 +462,7 @@ mod tests {
     use super::*;
     use crate::types::basic::ParameterDeclaration;
     use crate::types::enums::ParameterType;
-    use crate::types::positions::WorldPosition;
+    
 
     #[test]
     fn test_route_catalog_creation() {

@@ -5,8 +5,7 @@ use openscenario_rs::types::{
         Position, 
         trajectory::TrajectoryPosition,
         world::GeographicPosition,
-        relative::RelativeObjectPosition,
-        road::Orientation
+        relative::RelativeObjectPosition
     },
     basic::{Double, OSString},
 };

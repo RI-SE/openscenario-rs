@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn test_polyline_structure() {
-        use crate::types::positions::{Position, WorldPosition};
+        use crate::types::positions::Position;
 
         let polyline = Polyline {
             vertices: vec![
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_shape_serialization() {
-        use crate::types::positions::{Position, WorldPosition};
+        use crate::types::positions::Position;
 
         let shape = Shape {
             polyline: Some(Polyline {
@@ -476,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_bounding_box_volume() {
-        use std::collections::HashMap;
+        
         
         let bbox = BoundingBox {
             center: Center::default(),
@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn test_bounding_box_contains_point() {
-        use std::collections::HashMap;
+        
         
         let bbox = BoundingBox {
             center: Center {

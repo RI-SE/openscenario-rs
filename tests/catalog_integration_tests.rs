@@ -11,7 +11,7 @@
 use openscenario_rs::catalog::{CatalogLoader, CatalogManager, ParameterSubstitutionEngine};
 
 use openscenario_rs::parser::xml::{parse_catalog_from_str, serialize_catalog_to_string};
-use openscenario_rs::types::basic::{Boolean, Double, Int, OSString, UnsignedInt, UnsignedShort};
+use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::basic::{Directory, Value};
 use openscenario_rs::types::catalogs::{
     entities::ParameterDefinition,

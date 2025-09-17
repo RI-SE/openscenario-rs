@@ -237,7 +237,7 @@ impl Default for ParameterSubstitutionEngine {
 mod tests {
     use super::*;
     use crate::types::basic::*;
-    use crate::types::catalogs::entities::{CatalogController, CatalogVehicle};
+    use crate::types::catalogs::entities::CatalogVehicle;
     #[test]
     fn test_parameter_substitution_engine_creation() {
         let engine = ParameterSubstitutionEngine::new();

@@ -21,7 +21,7 @@ use crate::{
         scenario::{
             story::{Act, Event, Maneuver, ManeuverGroup},
             storyboard::Storyboard,
-            ScenarioStory, ScenarioDefinition,
+            ScenarioStory,
         },
         EntityRef, ObjectType, ValidationContext,
     },
