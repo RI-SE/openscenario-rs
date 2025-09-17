@@ -40,10 +40,4 @@ path = "debug_parse_variation.rs"
 name = "simple_test"
 path = "simple_test.rs"
 
-[[bin]]
-name = "test_simple_deterministic"
-path = "test_simple_deterministic.rs"
 
-[[bin]]
-name = "test_debug_xml"
-path = "test_debug_xml.rs"

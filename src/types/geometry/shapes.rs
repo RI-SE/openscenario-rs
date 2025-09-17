@@ -214,6 +214,22 @@ impl BoundingBox {
 
         Ok(x_overlap && y_overlap && z_overlap)
     }
+
+    /// Resolve all parameters in this bounding box and return a new resolved bounding box
+    pub fn resolve_parameters(&self, params: &HashMap<String, String>) -> Result<Self> {
+        Ok(BoundingBox {
+            center: Center {
+                x: crate::types::basic::Double::literal(self.center.x.resolve(params)?),
+                y: crate::types::basic::Double::literal(self.center.y.resolve(params)?),
+                z: crate::types::basic::Double::literal(self.center.z.resolve(params)?),
+            },
+            dimensions: Dimensions {
+                width: crate::types::basic::Double::literal(self.dimensions.width.resolve(params)?),
+                length: crate::types::basic::Double::literal(self.dimensions.length.resolve(params)?),
+                height: crate::types::basic::Double::literal(self.dimensions.height.resolve(params)?),
+            },
+        })
+    }
 }
 
 impl Dimensions {
