@@ -28,16 +28,6 @@ tempfile = "3.0"
 serde_json = "1.0.143"
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync"] }
 
-[[bin]]
-name = "test_param_variation"
-path = "test_param_variation.rs"
 
-[[bin]]
-name = "debug_parse_variation"
-path = "debug_parse_variation.rs"
-
-[[bin]]
-name = "simple_test"
-path = "simple_test.rs"
 
 
