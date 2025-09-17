@@ -8,8 +8,8 @@ use crate::types::entities::vehicle::File;
 use serde::{Deserialize, Serialize};
 
 // Import distribution types
-pub use deterministic::{DeterministicParameterDistribution, Deterministic};
-pub use stochastic::{StochasticDistribution, Stochastic};
+pub use deterministic::{Deterministic, DeterministicParameterDistribution};
+pub use stochastic::{Stochastic, StochasticDistribution};
 
 pub mod deterministic;
 pub mod stochastic;
@@ -90,7 +90,9 @@ impl ParameterValueDistribution {
 impl Default for ParameterValueDistribution {
     fn default() -> Self {
         Self {
-            scenario_file: File { filepath: "default.xosc".to_string() },
+            scenario_file: File {
+                filepath: "default.xosc".to_string(),
+            },
             deterministic: Some(Deterministic::default()),
             stochastic: None,
         }
@@ -121,7 +123,7 @@ impl ValidateDistribution for ParameterValueDistribution {
         } else {
             Err(crate::error::Error::validation_error(
                 "ParameterValueDistribution",
-                "Must have either deterministic or stochastic distribution"
+                "Must have either deterministic or stochastic distribution",
             ))
         }
     }
@@ -402,10 +404,10 @@ mod tests {
         };
 
         let single_param_dist = DeterministicSingleParameterDistribution {
-            distribution_type: DeterministicSingleParameterDistributionType::DistributionSet(
-                dist_set,
-            ),
             parameter_name: Value::Literal("speed".to_string()),
+            distribution_set: Some(dist_set),
+            distribution_range: None,
+            user_defined_distribution: None,
         };
 
         let det_dist = Deterministic {
@@ -413,7 +415,9 @@ mod tests {
             multi_distributions: vec![],
         };
 
-        let scenario_file = File { filepath: "test.xosc".to_string() };
+        let scenario_file = File {
+            filepath: "test.xosc".to_string(),
+        };
         let param_dist = ParameterValueDistribution::new_deterministic(scenario_file, det_dist);
 
         assert!(param_dist.deterministic.is_some());

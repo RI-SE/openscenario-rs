@@ -1,20 +1,17 @@
 //! Deterministic distribution types for systematic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::{Value, OSString};
+use crate::types::basic::{OSString, Value};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Deterministic {
-    #[serde(
-        rename = "DeterministicSingleParameterDistribution",
-        default
-    )]
+    #[serde(rename = "DeterministicSingleParameterDistribution", default)]
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
     #[serde(
-        rename = "DeterministicMultiParameterDistribution", 
+        rename = "DeterministicMultiParameterDistribution",
         skip_serializing_if = "Vec::is_empty",
         default
     )]
@@ -38,7 +35,10 @@ pub struct DeterministicSingleParameterDistribution {
     pub distribution_set: Option<DistributionSet>,
     #[serde(rename = "DistributionRange", skip_serializing_if = "Option::is_none")]
     pub distribution_range: Option<DistributionRange>,
-    #[serde(rename = "UserDefinedDistribution", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "UserDefinedDistribution",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub user_defined_distribution: Option<crate::types::distributions::UserDefinedDistribution>,
 }
 
@@ -59,7 +59,11 @@ impl DeterministicSingleParameterDistribution {
         } else if let Some(range) = &self.distribution_range {
             Some(DeterministicSingleParameterDistributionType::DistributionRange(range.clone()))
         } else if let Some(user_defined) = &self.user_defined_distribution {
-            Some(DeterministicSingleParameterDistributionType::UserDefinedDistribution(user_defined.clone()))
+            Some(
+                DeterministicSingleParameterDistributionType::UserDefinedDistribution(
+                    user_defined.clone(),
+                ),
+            )
         } else {
             None
         }
