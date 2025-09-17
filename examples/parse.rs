@@ -1,25 +1,27 @@
-//! OpenSCENARIO Catalog Resolution Tool
+//! OpenSCENARIO Universal Parser Tool
 //!
-//! This command-line tool parses OpenSCENARIO files and resolves all catalog references
-//! into a fully resolved scenario file. It demonstrates the complete catalog system
-//! integration for production use cases.
+//! This command-line tool parses any OpenSCENARIO file type and demonstrates the complete
+//! parsing system for production use cases.
 //!
 //! ## Features
 //! - Command-line interface for scenario file processing
+//! - Support for scenarios, parameter variations, and catalogs
+//! - Parameter variation analysis with scenario file import
 //! - Complete catalog reference resolution with parameter substitution
 //! - Automatic catalog discovery and loading
-//! - Circular dependency detection and error handling
 //! - Clean output generation with resolved entities
 //! - Comprehensive logging and progress reporting
 //!
 //! ## Usage
 //! ```bash
 //! cargo run --example parse -- path/to/scenario.xosc
+//! cargo run --example parse -- path/to/variation.xosc
 //! ```
 //!
 //! ## Output
 //! - Creates an 'output' directory if it doesn't exist
 //! - Generates a resolved scenario file: `output/resolved_scenario.xosc`
+//! - For parameter variations: also parses and displays the referenced scenario
 //! - Logs all resolution activities and statistics
 
 use openscenario_rs::{
@@ -63,10 +65,10 @@ fn main() {
     }
 }
 
-/// Main processing function that handles the entire catalog resolution pipeline
+/// Main processing function that handles the entire parsing and resolution pipeline
 fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    println!("🚀 OpenSCENARIO Catalog Resolution Tool");
-    println!("═══════════════════════════════════════");
+    println!("🚀 OpenSCENARIO Universal Parser Tool");
+    println!("═════════════════════════════════════");
 
     // Step 1: Load and parse the input scenario
     println!("\n📁 Loading scenario file: {}", input_file);
@@ -126,7 +128,43 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
             }
         }
         OpenScenarioDocumentType::ParameterVariation => {
-            println!("   📊 Parameter variation file - no entities");
+            println!("   📊 Parameter variation file - analyzing distributions");
+            
+            // Analyze parameter variation file
+            if let Some(param_dist) = &document.parameter_value_distribution {
+                println!("   📁 Referenced scenario: {}", param_dist.scenario_file.filepath);
+                
+                // Parse the referenced scenario file to show its structure
+                let scenario_path = resolve_scenario_path(input_path, &param_dist.scenario_file.filepath)?;
+                if let Ok(scenario_doc) = parse_from_file(&scenario_path) {
+                    println!("   ✅ Successfully loaded referenced scenario");
+                    println!("      📋 Description: {:?}", scenario_doc.file_header.description);
+                    println!("      👤 Author: {:?}", scenario_doc.file_header.author);
+                    
+                    if let Some(entities) = &scenario_doc.entities {
+                        println!("      🎭 Entities: {}", entities.scenario_objects.len());
+                    }
+                    
+                    if let Some(params) = &scenario_doc.parameter_declarations {
+                        println!("      ⚙️  Template parameters: {}", params.parameter_declarations.len());
+                        for param in &params.parameter_declarations {
+                            println!("         - {} = {:?}", param.name, param.value);
+                        }
+                    }
+                } else {
+                    println!("   ❌ Could not load referenced scenario file");
+                }
+                
+                // Analyze distributions
+                if let Some(deterministic) = &param_dist.deterministic {
+                    analyze_deterministic_distributions(deterministic);
+                }
+                
+                if let Some(stochastic) = &param_dist.stochastic {
+                    println!("   🎲 Stochastic distributions: {} parameters", 
+                        stochastic.distributions.len());
+                }
+            }
         }
         OpenScenarioDocumentType::Catalog => {
             println!("   📚 Catalog file - no entities");
@@ -315,7 +353,41 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
             println!("   ✅ Catalog reference validation completed!");
         }
         OpenScenarioDocumentType::ParameterVariation => {
-            println!("   📊 Parameter variation file - no entities");
+            if let Some(param_dist) = &document.parameter_value_distribution {
+                println!("   📊 Parameter variation file");
+                println!("   📁 Referenced scenario: {}", param_dist.scenario_file.filepath);
+                
+                let mut total_params = 0;
+                let mut total_combinations = 1;
+                
+                if let Some(deterministic) = &param_dist.deterministic {
+                    total_params += deterministic.single_distributions.len();
+                    for dist in &deterministic.single_distributions {
+                        if let Some(set) = &dist.distribution_set {
+                            total_combinations *= set.elements.len();
+                        } else if let Some(range) = &dist.distribution_range {
+                            if let Some(step_val) = range.step_width.as_literal() {
+                                if let (Some(lower), Some(upper)) = (range.range.lower_limit.as_literal(), range.range.upper_limit.as_literal()) {
+                                    if let Ok(step_f64) = step_val.parse::<f64>() {
+                                        let count = ((upper - lower) / step_f64 + 1.0) as usize;
+                                        total_combinations *= count;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    total_params += deterministic.multi_distributions.len();
+                }
+                
+                if let Some(stochastic) = &param_dist.stochastic {
+                    total_params += stochastic.distributions.len();
+                }
+                
+                println!("   🎯 Total varied parameters: {}", total_params);
+                println!("   🔢 Estimated combinations: {}", total_combinations);
+            } else {
+                println!("   📊 Parameter variation file - no distributions found");
+            }
         }
         OpenScenarioDocumentType::Catalog => {
             println!("   📚 Catalog file - no entities");
@@ -326,4 +398,56 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
     }
 }
 
-// Expression resolution functions removed - simplified for this example
+/// Resolve the absolute path to a scenario file referenced from a parameter variation
+fn resolve_scenario_path(variation_path: &Path, scenario_filepath: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let base_dir = variation_path.parent().unwrap_or(Path::new("."));
+    let scenario_path = if scenario_filepath.starts_with("./") {
+        base_dir.join(&scenario_filepath[2..])
+    } else if scenario_filepath.starts_with('/') {
+        PathBuf::from(scenario_filepath)
+    } else {
+        base_dir.join(scenario_filepath)
+    };
+    
+    if !scenario_path.exists() {
+        return Err(format!("Referenced scenario file does not exist: {}", scenario_path.display()).into());
+    }
+    
+    Ok(scenario_path)
+}
+
+/// Analyze deterministic distributions and display their contents
+fn analyze_deterministic_distributions(deterministic: &openscenario_rs::types::distributions::Deterministic) {
+    println!("   🎯 Deterministic distributions: {} parameters", 
+        deterministic.single_distributions.len());
+    
+    for dist in &deterministic.single_distributions {
+        println!("      📊 Parameter: {}", dist.parameter_name);
+        
+        if let Some(set) = &dist.distribution_set {
+            println!("         📋 Distribution Set: {} values", set.elements.len());
+            for (i, element) in set.elements.iter().enumerate().take(5) {
+                println!("            {}. {}", i + 1, element.value);
+            }
+            if set.elements.len() > 5 {
+                println!("            ... and {} more", set.elements.len() - 5);
+            }
+        }
+        
+        if let Some(range) = &dist.distribution_range {
+            println!("         📏 Distribution Range:");
+            println!("            Range: {} to {}", range.range.lower_limit, range.range.upper_limit);
+            println!("            Step: {}", range.step_width);
+        }
+        
+        if let Some(user_def) = &dist.user_defined_distribution {
+            println!("         🔧 User Defined: {} (type: {})", 
+                user_def.content, user_def.distribution_type);
+        }
+    }
+    
+    if !deterministic.multi_distributions.is_empty() {
+        println!("   🎯 Multi-parameter distributions: {} groups", 
+            deterministic.multi_distributions.len());
+    }
+}
