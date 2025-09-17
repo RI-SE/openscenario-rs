@@ -139,7 +139,7 @@ impl CatalogEntity for CatalogVehicle {
         let resolved_vehicle = vehicle::Vehicle {
             name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
             vehicle_category: self.resolve_vehicle_category(&self.vehicle_category, &parameters)?,
-            bounding_box: self.bounding_box, // TODO: Add parameter resolution for bounding box
+            bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
             performance: vehicle::Performance {
                 max_speed: crate::types::basic::Double::literal(
                     self.performance.max_speed.resolve(&parameters)?,
@@ -416,7 +416,7 @@ impl CatalogEntity for CatalogPedestrian {
             name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
             pedestrian_category: self
                 .resolve_pedestrian_category(&self.pedestrian_category, &parameters)?,
-            bounding_box: self.bounding_box, // TODO: Add parameter resolution for bounding box
+            bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
         };
 
         Ok(resolved_pedestrian)
@@ -564,7 +564,26 @@ impl CatalogEntity for CatalogMiscObject {
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![] // TODO: Add schema when MiscObject is fully implemented
+        vec![
+            ParameterDefinition {
+                name: "Width".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("1.0".to_string()),
+                description: Some("Width of the miscellaneous object in meters".to_string()),
+            },
+            ParameterDefinition {
+                name: "Length".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("1.0".to_string()),
+                description: Some("Length of the miscellaneous object in meters".to_string()),
+            },
+            ParameterDefinition {
+                name: "Height".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("1.0".to_string()),
+                description: Some("Height of the miscellaneous object in meters".to_string()),
+            },
+        ]
     }
 
     fn entity_name(&self) -> &str {
@@ -583,7 +602,26 @@ impl CatalogEntity for CatalogEnvironment {
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![] // TODO: Add schema when Environment is fully implemented
+        vec![
+            ParameterDefinition {
+                name: "TimeOfDay".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("12:00:00".to_string()),
+                description: Some("Time of day in HH:MM:SS format".to_string()),
+            },
+            ParameterDefinition {
+                name: "WeatherCondition".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("dry".to_string()),
+                description: Some("Weather condition (dry, wet, snow, fog)".to_string()),
+            },
+            ParameterDefinition {
+                name: "RoadCondition".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("dry".to_string()),
+                description: Some("Road surface condition (dry, wet, snow, ice)".to_string()),
+            },
+        ]
     }
 
     fn entity_name(&self) -> &str {
@@ -602,7 +640,26 @@ impl CatalogEntity for CatalogManeuver {
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![] // TODO: Add schema when Maneuver is fully implemented
+        vec![
+            ParameterDefinition {
+                name: "Duration".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("10.0".to_string()),
+                description: Some("Duration of the maneuver in seconds".to_string()),
+            },
+            ParameterDefinition {
+                name: "TargetSpeed".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("30.0".to_string()),
+                description: Some("Target speed for the maneuver in m/s".to_string()),
+            },
+            ParameterDefinition {
+                name: "ManeuverType".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("lane_change".to_string()),
+                description: Some("Type of maneuver (lane_change, overtake, merge, etc.)".to_string()),
+            },
+        ]
     }
 
     fn entity_name(&self) -> &str {
@@ -621,7 +678,26 @@ impl CatalogEntity for CatalogTrajectory {
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![] // TODO: Add schema when Trajectory is fully implemented
+        vec![
+            ParameterDefinition {
+                name: "StartTime".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("0.0".to_string()),
+                description: Some("Start time of the trajectory in seconds".to_string()),
+            },
+            ParameterDefinition {
+                name: "Duration".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("60.0".to_string()),
+                description: Some("Duration of the trajectory in seconds".to_string()),
+            },
+            ParameterDefinition {
+                name: "Closed".to_string(),
+                parameter_type: "Boolean".to_string(),
+                default_value: Some("false".to_string()),
+                description: Some("Whether the trajectory is closed (loops back to start)".to_string()),
+            },
+        ]
     }
 
     fn entity_name(&self) -> &str {
@@ -640,7 +716,26 @@ impl CatalogEntity for CatalogRoute {
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![] // TODO: Add schema when Route is fully implemented
+        vec![
+            ParameterDefinition {
+                name: "StartRoadId".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("road_1".to_string()),
+                description: Some("ID of the starting road".to_string()),
+            },
+            ParameterDefinition {
+                name: "EndRoadId".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("road_2".to_string()),
+                description: Some("ID of the ending road".to_string()),
+            },
+            ParameterDefinition {
+                name: "Closed".to_string(),
+                parameter_type: "Boolean".to_string(),
+                default_value: Some("false".to_string()),
+                description: Some("Whether the route is closed (loops back to start)".to_string()),
+            },
+        ]
     }
 
     fn entity_name(&self) -> &str {

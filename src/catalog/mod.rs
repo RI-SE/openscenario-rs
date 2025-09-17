@@ -119,23 +119,36 @@ impl CatalogManager {
         );
         self.resolver.begin_resolution(&reference_key)?;
 
-        // Load catalog files from the location
-        let catalog_vehicles = self.loader.load_vehicle_catalogs(&location.directory)?;
+        // Load catalog files from the location and track file paths
+        let catalog_files = self.loader.discover_catalog_files(&location.directory)?;
+        let mut catalog_vehicle = None;
+        let mut catalog_file_path = String::new();
 
-        // Find the specific vehicle
+        // Find the specific vehicle across all catalog files
         let entry_name = reference.entry_name.as_literal().ok_or_else(|| {
             crate::error::Error::catalog_error("Cannot resolve parameterized entry names yet")
         })?;
 
-        let catalog_vehicle = catalog_vehicles
-            .iter()
-            .find(|v| v.entity_name() == entry_name)
-            .ok_or_else(|| {
-                crate::error::Error::catalog_error(&format!(
-                    "Vehicle '{}' not found in catalog",
-                    entry_name
-                ))
-            })?;
+        for file_path in catalog_files {
+            let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
+            for vehicle in catalog.vehicles() {
+                if vehicle.entity_name() == entry_name {
+                    catalog_vehicle = Some(vehicle.clone());
+                    catalog_file_path = file_path.to_string_lossy().to_string();
+                    break;
+                }
+            }
+            if catalog_vehicle.is_some() {
+                break;
+            }
+        }
+
+        let catalog_vehicle = catalog_vehicle.ok_or_else(|| {
+            crate::error::Error::catalog_error(&format!(
+                "Vehicle '{}' not found in catalog",
+                entry_name
+            ))
+        })?;
 
         // Resolve parameters if any
         let mut parameters = std::collections::HashMap::new();
@@ -165,7 +178,7 @@ impl CatalogManager {
 
         Ok(ResolvedCatalog::with_parameters(
             resolved_vehicle,
-            "catalog_path".to_string(), // TODO: Get actual path
+            catalog_file_path,
             entry_name.clone(),
             parameters,
         ))
@@ -193,23 +206,36 @@ impl CatalogManager {
         );
         self.resolver.begin_resolution(&reference_key)?;
 
-        // Load catalog files from the location
-        let catalog_controllers = self.loader.load_controller_catalogs(&location.directory)?;
+        // Load catalog files from the location and track file paths
+        let catalog_files = self.loader.discover_catalog_files(&location.directory)?;
+        let mut catalog_controller = None;
+        let mut catalog_file_path = String::new();
 
-        // Find the specific controller
+        // Find the specific controller across all catalog files
         let entry_name = reference.entry_name.as_literal().ok_or_else(|| {
             crate::error::Error::catalog_error("Cannot resolve parameterized entry names yet")
         })?;
 
-        let catalog_controller = catalog_controllers
-            .iter()
-            .find(|c| c.entity_name() == entry_name)
-            .ok_or_else(|| {
-                crate::error::Error::catalog_error(&format!(
-                    "Controller '{}' not found in catalog",
-                    entry_name
-                ))
-            })?;
+        for file_path in catalog_files {
+            let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
+            for controller in catalog.controllers() {
+                if controller.entity_name() == entry_name {
+                    catalog_controller = Some(controller.clone());
+                    catalog_file_path = file_path.to_string_lossy().to_string();
+                    break;
+                }
+            }
+            if catalog_controller.is_some() {
+                break;
+            }
+        }
+
+        let catalog_controller = catalog_controller.ok_or_else(|| {
+            crate::error::Error::catalog_error(&format!(
+                "Controller '{}' not found in catalog",
+                entry_name
+            ))
+        })?;
 
         // Resolve parameters
         let mut parameters = std::collections::HashMap::new();
@@ -239,7 +265,7 @@ impl CatalogManager {
 
         Ok(ResolvedCatalog::with_parameters(
             resolved_controller,
-            "catalog_path".to_string(), // TODO: Get actual path
+            catalog_file_path,
             entry_name.clone(),
             parameters,
         ))
@@ -268,23 +294,36 @@ impl CatalogManager {
         );
         self.resolver.begin_resolution(&reference_key)?;
 
-        // Load catalog files from the location
-        let catalog_pedestrians = self.loader.load_pedestrian_catalogs(&location.directory)?;
+        // Load catalog files from the location and track file paths
+        let catalog_files = self.loader.discover_catalog_files(&location.directory)?;
+        let mut catalog_pedestrian = None;
+        let mut catalog_file_path = String::new();
 
-        // Find the specific pedestrian
+        // Find the specific pedestrian across all catalog files
         let entry_name = reference.entry_name.as_literal().ok_or_else(|| {
             crate::error::Error::catalog_error("Cannot resolve parameterized entry names yet")
         })?;
 
-        let catalog_pedestrian = catalog_pedestrians
-            .iter()
-            .find(|p| p.entity_name() == entry_name)
-            .ok_or_else(|| {
-                crate::error::Error::catalog_error(&format!(
-                    "Pedestrian '{}' not found in catalog",
-                    entry_name
-                ))
-            })?;
+        for file_path in catalog_files {
+            let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
+            for pedestrian in catalog.pedestrians() {
+                if pedestrian.entity_name() == entry_name {
+                    catalog_pedestrian = Some(pedestrian.clone());
+                    catalog_file_path = file_path.to_string_lossy().to_string();
+                    break;
+                }
+            }
+            if catalog_pedestrian.is_some() {
+                break;
+            }
+        }
+
+        let catalog_pedestrian = catalog_pedestrian.ok_or_else(|| {
+            crate::error::Error::catalog_error(&format!(
+                "Pedestrian '{}' not found in catalog",
+                entry_name
+            ))
+        })?;
 
         // Resolve parameters
         let mut parameters = std::collections::HashMap::new();
@@ -314,7 +353,7 @@ impl CatalogManager {
 
         Ok(ResolvedCatalog::with_parameters(
             resolved_pedestrian,
-            "catalog_path".to_string(), // TODO: Get actual path
+            catalog_file_path,
             entry_name.clone(),
             parameters,
         ))
