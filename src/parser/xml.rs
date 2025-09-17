@@ -135,13 +135,7 @@ pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario
     })
 }
 
-/// # Parser Enhancement Roadmap (Week 5+)
-/// 
-/// ## Custom Deserializers for OpenSCENARIO Patterns
-/// - Value<T> parameter syntax (${param}) - ✅ Already implemented in basic.rs
-/// - Choice-based elements for actions and conditions
-/// - OpenSCENARIO-specific date/time format parsing
-/// - Conditional element parsing based on schema version
+
 
 // Catalog parsing functions
 
@@ -274,16 +268,7 @@ pub fn serialize_catalog_to_file<P: AsRef<Path>>(catalog: &CatalogFile, path: P)
     })
 }
 
-/// # Streaming Parser Roadmap (Week 13+)
-/// 
-/// Future implementation will include a streaming parser for large scenario files:
-/// ```rust,ignore
-/// #[cfg(feature = "streaming")]
-/// pub mod streaming;
-/// ```
-/// 
-/// This will enable processing of very large OpenSCENARIO files without loading
-/// the entire document into memory, useful for scenarios with extensive trajectory data.
+
 
 #[cfg(test)]
 mod tests {

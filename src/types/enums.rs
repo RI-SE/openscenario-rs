@@ -1469,33 +1469,7 @@ impl FromStr for CloudState {
     }
 }
 
-/// # Enum Expansion Roadmap
-/// 
-/// The following enums are planned for future implementation:
-/// 
-/// ## Phase 1 (Week 5+): Core Geometry and Positioning
-/// - DirectionalDimension and related positioning enums
-/// - Coordinate system and reference frame enums
-/// - Spatial relationship and orientation enums
-/// 
-/// ## Phase 2: Vehicle and Pedestrian Behavior
-/// - Vehicle behavior and dynamics enums
-/// - Pedestrian movement and interaction enums
-/// - Entity state and status enums
-/// 
-/// ## Phase 3: Environment and Weather
-/// - CloudState, WeatherValue, and atmospheric condition enums
-/// - Road surface and environmental state enums
-/// - Time and lighting condition enums
-/// 
-/// ## Phase 4: Dynamics and Control
-/// - Vehicle dynamics and control system enums
-/// - Action and maneuver type enums
-/// - Trigger and condition type enums
-/// 
-/// ## Deprecation Strategy
-/// Legacy enum values will be marked with `#[deprecated]` when newer
-/// alternatives are implemented, following OpenSCENARIO specification updates.
+
 
 #[cfg(test)]
 mod tests {
