@@ -12,7 +12,7 @@
 //! - Providing fine-grained control over vehicle dynamics and responses
 //! - Following complete OpenSCENARIO action specification for controller management
 
-use crate::types::basic::Boolean;
+use crate::types::basic::{Boolean, Double, Int};
 use crate::types::catalogs::entities::CatalogController;
 use crate::types::catalogs::references::CatalogReference;
 use crate::types::controllers::Controller;
@@ -67,7 +67,7 @@ pub struct OverrideControllerValueActionBrake {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Override throttle action
@@ -76,7 +76,7 @@ pub struct OverrideControllerValueActionThrottle {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Override steering wheel action
@@ -85,7 +85,7 @@ pub struct OverrideControllerValueActionSteeringWheel {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Override gear action
@@ -114,7 +114,7 @@ pub struct OverrideControllerValueActionClutch {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 // PHASE 4B: Supporting Types for Gear Control
@@ -123,7 +123,7 @@ pub struct OverrideControllerValueActionClutch {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ManualGear {
     #[serde(rename = "@gear")]
-    pub gear: i32,
+    pub gear: Int,
 }
 
 /// Automatic gear specification
@@ -150,7 +150,7 @@ pub enum AutomaticGearType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Brake {
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// BrakeInput group - XSD group wrapper for brake percent/force choice
@@ -210,7 +210,7 @@ impl Default for OverrideControllerValueActionBrake {
     fn default() -> Self {
         Self {
             active: Boolean::literal(true),
-            value: 0.0,
+            value: Double::literal(0.0),
         }
     }
 }
@@ -219,7 +219,7 @@ impl Default for OverrideControllerValueActionThrottle {
     fn default() -> Self {
         Self {
             active: Boolean::literal(true),
-            value: 0.0,
+            value: Double::literal(0.0),
         }
     }
 }
@@ -228,7 +228,7 @@ impl Default for OverrideControllerValueActionSteeringWheel {
     fn default() -> Self {
         Self {
             active: Boolean::literal(true),
-            value: 0.0,
+            value: Double::literal(0.0),
         }
     }
 }
@@ -256,14 +256,14 @@ impl Default for OverrideControllerValueActionClutch {
     fn default() -> Self {
         Self {
             active: Boolean::literal(true),
-            value: 0.0,
+            value: Double::literal(0.0),
         }
     }
 }
 
 impl Default for ManualGear {
     fn default() -> Self {
-        Self { gear: 1 }
+        Self { gear: Int::literal(1) }
     }
 }
 
@@ -283,7 +283,7 @@ impl Default for AutomaticGearType {
 
 impl Default for Brake {
     fn default() -> Self {
-        Self { value: 0.0 }
+        Self { value: Double::literal(0.0) }
     }
 }
 
@@ -347,7 +347,7 @@ impl OverrideControllerValueAction {
         Self {
             brake: Some(OverrideControllerValueActionBrake {
                 active: Boolean::literal(active),
-                value,
+                value: Double::literal(value),
             }),
             throttle: None,
             clutch: None,
@@ -362,7 +362,7 @@ impl OverrideControllerValueAction {
         Self {
             throttle: Some(OverrideControllerValueActionThrottle {
                 active: Boolean::literal(active),
-                value,
+                value: Double::literal(value),
             }),
             brake: None,
             clutch: None,
@@ -377,7 +377,7 @@ impl OverrideControllerValueAction {
         Self {
             steering_wheel: Some(OverrideControllerValueActionSteeringWheel {
                 active: Boolean::literal(active),
-                value,
+                value: Double::literal(value),
             }),
             brake: None,
             throttle: None,
@@ -391,7 +391,7 @@ impl OverrideControllerValueAction {
 impl ManualGear {
     /// Create manual gear for specific gear number
     pub fn new(gear: i32) -> Self {
-        Self { gear }
+        Self { gear: Int::literal(gear) }
     }
 
     /// Neutral gear
@@ -490,7 +490,7 @@ impl Gear {
 impl Brake {
     /// Create brake with specific value
     pub fn new(value: f64) -> Self {
-        Self { value }
+        Self { value: Double::literal(value) }
     }
 
     /// Create zero brake
@@ -516,10 +516,10 @@ impl BrakeInput {
     }
 
     /// Get brake value regardless of type
-    pub fn value(&self) -> f64 {
+    pub fn value(&self) -> &Double {
         match self {
-            Self::BrakePercent(brake) => brake.value,
-            Self::BrakeForce(brake) => brake.value,
+            Self::BrakePercent(brake) => &brake.value,
+            Self::BrakeForce(brake) => &brake.value,
         }
     }
 

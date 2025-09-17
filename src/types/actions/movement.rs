@@ -336,7 +336,7 @@ pub struct LongitudinalDistanceAction {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "@distance")]
-    pub distance: f64,
+    pub distance: Double,
     #[serde(rename = "@freespace")]
     pub freespace: Option<Boolean>,
     #[serde(rename = "@continuous")]
@@ -360,18 +360,18 @@ pub struct SpeedProfileAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedProfileEntry {
     #[serde(rename = "@time")]
-    pub time: f64,
+    pub time: Double,
     #[serde(rename = "@speed")]
-    pub speed: f64,
+    pub speed: Double,
 }
 
 /// Dynamic constraints for movement actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DynamicConstraints {
     #[serde(rename = "@maxLateralAcc")]
-    pub max_lateral_acc: Option<f64>,
+    pub max_lateral_acc: Option<Double>,
     #[serde(rename = "@maxSpeed")]
-    pub max_speed: Option<f64>,
+    pub max_speed: Option<Double>,
 }
 
 /// Synchronize action for coordinated entity movement
@@ -942,7 +942,7 @@ impl Default for LongitudinalDistanceAction {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            distance: 10.0,
+            distance: Double::literal(10.0),
             freespace: Some(Boolean::literal(true)),
             continuous: Boolean::literal(false),
             dynamic_constraints: None,
@@ -963,8 +963,8 @@ impl Default for SpeedProfileAction {
 impl Default for SpeedProfileEntry {
     fn default() -> Self {
         Self {
-            time: 0.0,
-            speed: 10.0,
+            time: Double::literal(0.0),
+            speed: Double::literal(10.0),
         }
     }
 }

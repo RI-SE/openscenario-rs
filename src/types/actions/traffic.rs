@@ -24,9 +24,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSourceAction {
     #[serde(rename = "@rate")]
-    pub rate: f64,
+    pub rate: Double,
     #[serde(rename = "@velocity")]
-    pub velocity: Option<f64>,
+    pub velocity: Option<Double>,
     #[serde(rename = "Position")]
     pub position: Position,
     #[serde(rename = "TrafficDefinition")]
@@ -37,9 +37,9 @@ pub struct TrafficSourceAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSinkAction {
     #[serde(rename = "@rate")]
-    pub rate: f64,
+    pub rate: Double,
     #[serde(rename = "@radius")]
-    pub radius: f64,
+    pub radius: Double,
     #[serde(rename = "Position")]
     pub position: Position,
     #[serde(rename = "TrafficDefinition")]
@@ -182,7 +182,7 @@ pub struct VehicleCategoryDistributionEntry {
     #[serde(rename = "@category")]
     pub category: VehicleCategory,
     #[serde(rename = "@weight")]
-    pub weight: f64,
+    pub weight: Double,
 }
 
 /// Vehicle category enumeration
@@ -217,7 +217,7 @@ pub struct ControllerDistribution {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerDistributionEntry {
     #[serde(rename = "@weight")]
-    pub weight: f64,
+    pub weight: Double,
     #[serde(rename = "Controller")]
     pub controller: OSString,
 }
@@ -252,8 +252,8 @@ pub struct TrafficAreaVertex {
 impl Default for TrafficSourceAction {
     fn default() -> Self {
         Self {
-            rate: 10.0,           // 10 vehicles per minute
-            velocity: Some(50.0), // 50 km/h default velocity
+            rate: Double::literal(10.0),           // 10 vehicles per minute
+            velocity: Some(Double::literal(50.0)), // 50 km/h default velocity
             position: Position::default(),
             traffic_definition: TrafficDefinition::default(),
         }
@@ -263,8 +263,8 @@ impl Default for TrafficSourceAction {
 impl Default for TrafficSinkAction {
     fn default() -> Self {
         Self {
-            rate: 10.0,   // 10 vehicles per minute
-            radius: 50.0, // 50 meter radius
+            rate: Double::literal(10.0),   // 10 vehicles per minute
+            radius: Double::literal(50.0), // 50 meter radius
             position: Position::default(),
             traffic_definition: None,
         }
@@ -385,15 +385,15 @@ impl Default for VehicleCategoryDistribution {
             entries: vec![
                 VehicleCategoryDistributionEntry {
                     category: VehicleCategory::Car,
-                    weight: 0.7, // 70% cars
+                    weight: Double::literal(0.7), // 70% cars
                 },
                 VehicleCategoryDistributionEntry {
                     category: VehicleCategory::Truck,
-                    weight: 0.2, // 20% trucks
+                    weight: Double::literal(0.2), // 20% trucks
                 },
                 VehicleCategoryDistributionEntry {
                     category: VehicleCategory::Van,
-                    weight: 0.1, // 10% vans
+                    weight: Double::literal(0.1), // 10% vans
                 },
             ],
         }
@@ -404,7 +404,7 @@ impl Default for ControllerDistribution {
     fn default() -> Self {
         Self {
             entries: vec![ControllerDistributionEntry {
-                weight: 1.0,
+                weight: Double::literal(1.0),
                 controller: OSString::literal("DefaultTrafficController".to_string()),
             }],
         }
@@ -454,7 +454,7 @@ impl TrafficSourceAction {
     /// Create traffic source with rate and position
     pub fn new(rate: f64, position: Position, traffic_definition: TrafficDefinition) -> Self {
         Self {
-            rate,
+            rate: Double::literal(rate),
             velocity: None,
             position,
             traffic_definition,
@@ -469,8 +469,8 @@ impl TrafficSourceAction {
         traffic_definition: TrafficDefinition,
     ) -> Self {
         Self {
-            rate,
-            velocity: Some(velocity),
+            rate: Double::literal(rate),
+            velocity: Some(Double::literal(velocity)),
             position,
             traffic_definition,
         }
@@ -481,8 +481,8 @@ impl TrafficSinkAction {
     /// Create traffic sink with rate, radius and position
     pub fn new(rate: f64, radius: f64, position: Position) -> Self {
         Self {
-            rate,
-            radius,
+            rate: Double::literal(rate),
+            radius: Double::literal(radius),
             position,
             traffic_definition: None,
         }
@@ -496,8 +496,8 @@ impl TrafficSinkAction {
         traffic_definition: TrafficDefinition,
     ) -> Self {
         Self {
-            rate,
-            radius,
+            rate: Double::literal(rate),
+            radius: Double::literal(radius),
             position,
             traffic_definition: Some(traffic_definition),
         }
@@ -759,7 +759,7 @@ impl VehicleCategoryDistribution {
     /// Create distribution with single category
     pub fn single_category(category: VehicleCategory, weight: f64) -> Self {
         Self {
-            entries: vec![VehicleCategoryDistributionEntry { category, weight }],
+            entries: vec![VehicleCategoryDistributionEntry { category, weight: Double::literal(weight) }],
         }
     }
 
@@ -774,15 +774,15 @@ impl VehicleCategoryDistribution {
             entries: vec![
                 VehicleCategoryDistributionEntry {
                     category: VehicleCategory::Car,
-                    weight: 0.85,
+                    weight: Double::literal(0.85),
                 },
                 VehicleCategoryDistributionEntry {
                     category: VehicleCategory::Bus,
-                    weight: 0.1,
+                    weight: Double::literal(0.1),
                 },
                 VehicleCategoryDistributionEntry {
                     category: VehicleCategory::Van,
-                    weight: 0.05,
+                    weight: Double::literal(0.05),
                 },
             ],
         }
@@ -794,7 +794,7 @@ impl ControllerDistribution {
     pub fn single_controller(controller: String, weight: f64) -> Self {
         Self {
             entries: vec![ControllerDistributionEntry {
-                weight,
+                weight: Double::literal(weight),
                 controller: OSString::literal(controller),
             }],
         }
@@ -1007,7 +1007,7 @@ mod tests {
 
         let urban = VehicleCategoryDistribution::urban_traffic();
         assert_eq!(urban.entries.len(), 3);
-        assert_eq!(urban.entries[0].weight, 0.85); // Mostly cars
+        assert_eq!(urban.entries[0].weight.as_literal().unwrap(), &0.85); // Mostly cars
     }
 
     #[test]
@@ -1047,20 +1047,20 @@ mod tests {
         // Test that enum variants exist and can be used
         let entry1 = VehicleCategoryDistributionEntry {
             category: car,
-            weight: 0.6,
+            weight: Double::literal(0.6),
         };
         let entry2 = VehicleCategoryDistributionEntry {
             category: truck,
-            weight: 0.3,
+            weight: Double::literal(0.3),
         };
         let entry3 = VehicleCategoryDistributionEntry {
             category: bike,
-            weight: 0.1,
+            weight: Double::literal(0.1),
         };
 
-        assert_eq!(entry1.weight, 0.6);
-        assert_eq!(entry2.weight, 0.3);
-        assert_eq!(entry3.weight, 0.1);
+        assert_eq!(entry1.weight.as_literal().unwrap(), &0.6);
+        assert_eq!(entry2.weight.as_literal().unwrap(), &0.3);
+        assert_eq!(entry3.weight.as_literal().unwrap(), &0.1);
     }
 
     #[test]
