@@ -14,21 +14,26 @@
 //! # Quick Start
 //!
 //! ```rust,no_run
-//! use openscenario_rs::{parse_file, Result, OpenScenarioCategory};
+//! use openscenario_rs::{parse_file, Result, OpenScenarioDocumentType};
 //!
 //! fn main() -> Result<()> {
 //!     let document = parse_file("scenario.xosc")?;
 //!     println!("Author: {}", document.file_header.author.as_literal().unwrap());
 //!     
-//!     match &document.category {
-//!         OpenScenarioCategory::Scenario(scenario) => {
-//!             println!("Entities: {}", scenario.entities.scenario_objects.len());
+//!     match document.document_type() {
+//!         OpenScenarioDocumentType::Scenario => {
+//!             if let Some(entities) = &document.entities {
+//!                 println!("Entities: {}", entities.scenario_objects.len());
+//!             }
 //!         }
-//!         OpenScenarioCategory::ParameterValueDistribution(_) => {
+//!         OpenScenarioDocumentType::ParameterVariation => {
 //!             println!("Parameter variation file");
 //!         }
-//!         OpenScenarioCategory::Catalog(_) => {
+//!         OpenScenarioDocumentType::Catalog => {
 //!             println!("Catalog file");
+//!         }
+//!         OpenScenarioDocumentType::Unknown => {
+//!             println!("Unknown document type");
 //!         }
 //!     }
 //!     Ok(())
