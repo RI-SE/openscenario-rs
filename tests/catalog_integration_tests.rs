@@ -21,18 +21,18 @@ use openscenario_rs::types::catalogs::{
 };
 use std::collections::HashMap;
 use std::fs;
-use std::sync::Arc;
+
 use tempfile::TempDir;
 
-#[tokio::test]
-async fn test_catalog_manager_basic_functionality() {
+#[test]
+fn test_catalog_manager_basic_functionality() {
     let manager = CatalogManager::new();
 
     // Test initial state - manager created successfully
 }
 
-#[tokio::test]
-async fn test_catalog_file_parsing() {
+#[test]
+fn test_catalog_file_parsing() {
     // Test parsing a minimal catalog file
     let catalog_xml = r#"<?xml version="1.0"?>
     <OpenSCENARIO>
@@ -68,8 +68,8 @@ async fn test_catalog_file_parsing() {
     assert_eq!(vehicle.vehicle_category.as_literal().unwrap(), "car");
 }
 
-#[tokio::test]
-async fn test_catalog_serialization_roundtrip() {
+#[test]
+fn test_catalog_serialization_roundtrip() {
     // Create a catalog programmatically
     let catalog = CatalogFile::new(
         "TestCatalog".to_string(),
@@ -98,8 +98,8 @@ async fn test_catalog_serialization_roundtrip() {
     );
 }
 
-#[tokio::test]
-async fn test_parameter_substitution_engine() {
+#[test]
+fn test_parameter_substitution_engine() {
     let mut engine = ParameterSubstitutionEngine::new();
 
     // Add parameters
@@ -139,8 +139,8 @@ async fn test_parameter_substitution_engine() {
     assert_eq!(resolved_expr, "SportsCar (Red)");
 }
 
-#[tokio::test]
-async fn test_catalog_loader_with_temporary_files() {
+#[test]
+fn test_catalog_loader_with_temporary_files() {
     // Create a temporary directory with a test catalog file
     let temp_dir = TempDir::new().unwrap();
     let catalog_path = temp_dir.path().join("test_catalog.xosc");
@@ -178,8 +178,8 @@ async fn test_catalog_loader_with_temporary_files() {
     assert_eq!(catalog.vehicles()[0].name, "TempVehicle");
 }
 
-#[tokio::test]
-async fn test_catalog_reference_creation() {
+#[test]
+fn test_catalog_reference_creation() {
     // Test creating vehicle catalog references
     let vehicle_ref =
         VehicleCatalogReference::new("VehicleCatalog".to_string(), "SportsCar".to_string());
@@ -234,8 +234,8 @@ fn test_catalog_error_handling() {
     assert!(result.is_err());
 }
 
-#[tokio::test]
-async fn test_catalog_location_directory_access() {
+#[test]
+fn test_catalog_location_directory_access() {
     // Test catalog location creation and directory access
     let vehicle_location = VehicleCatalogLocation::from_path("./test_vehicles".to_string());
     assert_eq!(
@@ -259,8 +259,8 @@ async fn test_catalog_location_directory_access() {
     );
 }
 
-#[tokio::test]
-async fn test_real_catalog_file_structure() {
+#[test]
+fn test_real_catalog_file_structure() {
     // This test attempts to load a real catalog file if available
     let vehicle_catalog_path = "xosc/concrete_scenarios/catalogs/vehicles/vehicle_catalog.xosc";
 
@@ -320,8 +320,8 @@ fn test_directory_creation_and_access() {
 }
 
 // Performance and stress tests
-#[tokio::test]
-async fn test_catalog_system_performance() {
+#[test]
+fn test_catalog_system_performance() {
     let start = std::time::Instant::now();
 
     // Create multiple catalog managers
@@ -370,31 +370,20 @@ fn test_catalog_reference_with_many_parameters() {
     );
 }
 
-#[tokio::test]
-async fn test_concurrent_catalog_operations() {
-    use tokio::sync::Mutex;
+#[test]
+fn test_catalog_manager_parameter_operations() {
+    let mut manager = CatalogManager::new();
 
-    let manager = Arc::new(Mutex::new(CatalogManager::new()));
+    // Test setting and managing parameters
+    for i in 0..5 {
+        let mut params = HashMap::new();
+        params.insert(format!("Param{}", i), format!("Value{}", i));
+        manager.set_global_parameters(params).unwrap();
 
-    // Spawn multiple tasks that interact with the catalog manager concurrently
-    let tasks: Vec<_> = (0..5)
-        .map(|i| {
-            let manager_clone = Arc::clone(&manager);
-            tokio::spawn(async move {
-                let mut manager = manager_clone.lock().await;
-
-                // Set some parameters
-                let mut params = HashMap::new();
-                params.insert(format!("Param{}", i), format!("Value{}", i));
-                manager.set_global_parameters(params).unwrap();
-
-                // Manager operations completed successfully
-            })
-        })
-        .collect();
-
-    // Wait for all tasks to complete
-    for task in tasks {
-        task.await.unwrap();
+        // Verify parameter was set
+        assert_eq!(
+            *manager.parameter_engine().get_parameter(&format!("Param{}", i)).unwrap(),
+            format!("Value{}", i)
+        );
     }
 }

@@ -35,7 +35,7 @@ pub trait CatalogLocation {
     type CatalogType;
 
     /// Load the catalog from the directory path
-    async fn load_catalog(&self) -> Result<Self::CatalogType, crate::error::Error>;
+    fn load_catalog(&self) -> Result<Self::CatalogType, crate::error::Error>;
 
     /// Get the directory path for this catalog location
     fn directory(&self) -> &Directory;
@@ -59,7 +59,7 @@ pub trait ResolvableCatalog {
 /// Trait for scenario types that can have their catalog references resolved
 pub trait ScenarioResolver: Sized {
     /// Resolve all catalog references in this scenario
-    async fn resolve_all_catalogs(self) -> Result<Self, crate::error::Error>;
+    fn resolve_all_catalogs(self) -> Result<Self, crate::error::Error>;
 }
 
 /// Main catalog manager that coordinates loading and resolution
@@ -89,16 +89,16 @@ impl CatalogManager {
     }
 
     /// Load a catalog from a directory, using cache if available
-    pub async fn load_catalog<T: CatalogLocation>(
+    pub fn load_catalog<T: CatalogLocation>(
         &mut self,
         location: &T,
     ) -> Result<T::CatalogType, crate::error::Error> {
         // Implementation will be added in loader module
-        location.load_catalog().await
+        location.load_catalog()
     }
 
     /// Resolve a vehicle catalog reference to an actual vehicle
-    pub async fn resolve_vehicle_reference(
+    pub fn resolve_vehicle_reference(
         &mut self,
         reference: &VehicleCatalogReference,
         location: &VehicleCatalogLocation,
@@ -185,7 +185,7 @@ impl CatalogManager {
     }
 
     /// Resolve a controller catalog reference to an actual controller
-    pub async fn resolve_controller_reference(
+    pub fn resolve_controller_reference(
         &mut self,
         reference: &ControllerCatalogReference,
         location: &ControllerCatalogLocation,
@@ -272,7 +272,7 @@ impl CatalogManager {
     }
 
     /// Resolve a pedestrian catalog reference to an actual pedestrian
-    pub async fn resolve_pedestrian_reference(
+    pub fn resolve_pedestrian_reference(
         &mut self,
         reference: &PedestrianCatalogReference,
         location: &PedestrianCatalogLocation,
@@ -360,7 +360,7 @@ impl CatalogManager {
     }
 
     /// Discover and load all catalogs from catalog locations
-    pub async fn discover_and_load_catalogs(
+    pub fn discover_and_load_catalogs(
         &mut self,
         locations: &CatalogLocations,
     ) -> Result<(), crate::error::Error> {

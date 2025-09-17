@@ -49,10 +49,9 @@ pub struct ParameterAssignment {
 }
 
 /// Trait for types that can resolve catalog references
-#[async_trait::async_trait]
 pub trait CatalogResolvable<T: CatalogEntity> {
     /// Resolve this catalog reference to the actual entity
-    async fn resolve(&self, manager: &CatalogManager) -> Result<ResolvedCatalog<T::ResolvedType>>;
+    fn resolve(&self, manager: &CatalogManager) -> Result<ResolvedCatalog<T::ResolvedType>>;
 }
 
 impl<T: CatalogEntity> CatalogReference<T> {
@@ -120,9 +119,8 @@ impl<T: CatalogEntity> Default for CatalogReference<T> {
     }
 }
 
-#[async_trait::async_trait]
-impl<T: CatalogEntity + Send + Sync> CatalogResolvable<T> for CatalogReference<T> {
-    async fn resolve(&self, _manager: &CatalogManager) -> Result<ResolvedCatalog<T::ResolvedType>> {
+impl<T: CatalogEntity> CatalogResolvable<T> for CatalogReference<T> {
+    fn resolve(&self, _manager: &CatalogManager) -> Result<ResolvedCatalog<T::ResolvedType>> {
         let context_params = HashMap::new();
         let catalog_name = self.get_catalog_name(&context_params)?;
         let entry_name = self.get_entry_name(&context_params)?;
