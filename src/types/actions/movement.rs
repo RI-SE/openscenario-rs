@@ -377,14 +377,32 @@ pub struct DynamicConstraints {
 /// Synchronize action for coordinated entity movement
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SynchronizeAction {
-    #[serde(rename = "@targetEntityRef")]
-    pub target_entity_ref: OSString,
+    /// Reference to the master entity to synchronize with
+    #[serde(rename = "@masterEntityRef")]
+    pub master_entity_ref: OSString,
+
+    /// Position of the master entity to synchronize with
     #[serde(rename = "TargetPositionMaster")]
     pub target_position_master: Position,
+
+    /// Target position for this entity
     #[serde(rename = "TargetPosition")]
     pub target_position: Position,
-    #[serde(rename = "FinalSpeed")]
+
+    /// Optional final speed after synchronization
+    #[serde(rename = "FinalSpeed", skip_serializing_if = "Option::is_none")]
     pub final_speed: Option<FinalSpeed>,
+
+    /// Optional tolerance for master position matching
+    #[serde(
+        rename = "@targetToleranceMaster",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub target_tolerance_master: Option<Double>,
+
+    /// Optional tolerance for target position matching  
+    #[serde(rename = "@targetTolerance", skip_serializing_if = "Option::is_none")]
+    pub target_tolerance: Option<Double>,
 }
 
 /// Final speed specification for synchronize action
@@ -406,14 +424,14 @@ pub enum FinalSpeedChoice {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsoluteSpeed {
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Relative speed to master specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeSpeedToMaster {
     #[serde(rename = "@value")]
-    pub value: f64,
+    pub value: Double,
 }
 
 /// Acquire position action for moving to a specific position
@@ -544,8 +562,6 @@ impl TrajectoryRef {
     }
 }
 
-
-
 impl FollowTrajectoryAction {
     /// Create a follow trajectory action with direct trajectory
     pub fn with_trajectory(trajectory: Trajectory, following_mode: FollowingMode) -> Self {
@@ -675,7 +691,7 @@ impl LaneChangeAction {
             target_lane_offset: None,
         }
     }
-    
+
     /// Set the target lane offset for this lane change action
     pub fn with_offset(mut self, offset: Double) -> Self {
         self.target_lane_offset = Some(offset);
@@ -693,7 +709,7 @@ impl LaneChangeTarget {
             }),
         }
     }
-    
+
     /// Create an absolute lane change target
     pub fn absolute(lane_id: impl Into<String>) -> Self {
         Self {
@@ -727,14 +743,18 @@ impl AbsoluteTargetLane {
 
 impl LaneOffsetAction {
     /// Create a new LaneOffsetAction with the specified dynamics and target
-    pub fn new(dynamics: LaneOffsetActionDynamics, target: LaneOffsetTarget, continuous: bool) -> Self {
+    pub fn new(
+        dynamics: LaneOffsetActionDynamics,
+        target: LaneOffsetTarget,
+        continuous: bool,
+    ) -> Self {
         Self {
             dynamics,
             target,
             continuous: Boolean::literal(continuous),
         }
     }
-    
+
     /// Set the continuous flag for this lane offset action
     pub fn with_continuous(mut self, continuous: bool) -> Self {
         self.continuous = Boolean::literal(continuous);
@@ -750,7 +770,7 @@ impl LaneOffsetActionDynamics {
             max_lateral_acc: None,
         }
     }
-    
+
     /// Set the maximum lateral acceleration
     pub fn with_max_acceleration(mut self, max_acc: f64) -> Self {
         self.max_lateral_acc = Some(Double::literal(max_acc));
@@ -762,19 +782,23 @@ impl LaneOffsetTarget {
     /// Create a relative lane offset target
     pub fn relative(entity_ref: impl Into<String>, value: f64) -> Self {
         Self {
-            target_choice: LaneOffsetTargetChoice::RelativeTargetLaneOffset(RelativeTargetLaneOffset {
-                entity_ref: OSString::literal(entity_ref.into()),
-                value: Double::literal(value),
-            }),
+            target_choice: LaneOffsetTargetChoice::RelativeTargetLaneOffset(
+                RelativeTargetLaneOffset {
+                    entity_ref: OSString::literal(entity_ref.into()),
+                    value: Double::literal(value),
+                },
+            ),
         }
     }
-    
+
     /// Create an absolute lane offset target
     pub fn absolute(value: f64) -> Self {
         Self {
-            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(AbsoluteTargetLaneOffset {
-                value: Double::literal(value),
-            }),
+            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(
+                AbsoluteTargetLaneOffset {
+                    value: Double::literal(value),
+                },
+            ),
         }
     }
 }
@@ -807,14 +831,14 @@ impl LateralAction {
             lateral_choice: LateralActionChoice::LaneChangeAction(action),
         }
     }
-    
+
     /// Create a lateral action with lane offset
     pub fn lane_offset(action: LaneOffsetAction) -> Self {
         Self {
             lateral_choice: LateralActionChoice::LaneOffsetAction(action),
         }
     }
-    
+
     /// Create a lateral action with lateral distance
     pub fn lateral_distance(action: LateralDistanceAction) -> Self {
         Self {
@@ -854,8 +878,8 @@ impl Default for RelativeTargetLane {
 
 impl Default for AbsoluteTargetLane {
     fn default() -> Self {
-        Self { 
-            value: OSString::literal("1".to_string()) 
+        Self {
+            value: OSString::literal("1".to_string()),
         }
     }
 }
@@ -891,8 +915,8 @@ impl Default for RelativeTargetLaneOffset {
 
 impl Default for AbsoluteTargetLaneOffset {
     fn default() -> Self {
-        Self { 
-            value: Double::literal(0.0) 
+        Self {
+            value: Double::literal(0.0),
         }
     }
 }
@@ -900,9 +924,7 @@ impl Default for AbsoluteTargetLaneOffset {
 impl Default for LateralAction {
     fn default() -> Self {
         Self {
-            lateral_choice: LateralActionChoice::LaneChangeAction(
-                LaneChangeAction::default(),
-            ),
+            lateral_choice: LateralActionChoice::LaneChangeAction(LaneChangeAction::default()),
         }
     }
 }
@@ -981,10 +1003,12 @@ impl Default for DynamicConstraints {
 impl Default for SynchronizeAction {
     fn default() -> Self {
         Self {
-            target_entity_ref: OSString::literal("DefaultEntity".to_string()),
+            master_entity_ref: OSString::literal("DefaultEntity".to_string()),
             target_position_master: Position::default(),
             target_position: Position::default(),
             final_speed: None,
+            target_tolerance_master: None,
+            target_tolerance: None,
         }
     }
 }
@@ -999,13 +1023,17 @@ impl Default for FinalSpeed {
 
 impl Default for AbsoluteSpeed {
     fn default() -> Self {
-        Self { value: 10.0 }
+        Self {
+            value: Double::literal(10.0),
+        }
     }
 }
 
 impl Default for RelativeSpeedToMaster {
     fn default() -> Self {
-        Self { value: 0.0 }
+        Self {
+            value: Double::literal(0.0),
+        }
     }
 }
 
@@ -1061,7 +1089,7 @@ mod tests {
         let dynamics = TransitionDynamics::default();
         let target = LaneChangeTarget::relative("Ego", -1);
         let action = LaneChangeAction::new(dynamics, target);
-        
+
         assert!(action.target_lane_offset.is_none());
     }
 
@@ -1069,16 +1097,18 @@ mod tests {
     fn test_lane_change_with_offset() {
         let dynamics = TransitionDynamics::default();
         let target = LaneChangeTarget::absolute("1");
-        let action = LaneChangeAction::new(dynamics, target)
-            .with_offset(Double::literal(0.5));
-        
-        assert_eq!(action.target_lane_offset.unwrap().as_literal().unwrap(), &0.5);
+        let action = LaneChangeAction::new(dynamics, target).with_offset(Double::literal(0.5));
+
+        assert_eq!(
+            action.target_lane_offset.unwrap().as_literal().unwrap(),
+            &0.5
+        );
     }
 
     #[test]
     fn test_lane_change_target_absolute() {
         let target = LaneChangeTarget::absolute("lane_1");
-        
+
         if let LaneChangeTargetChoice::AbsoluteTargetLane(abs) = target.target_choice {
             assert_eq!(abs.value.as_literal(), Some(&"lane_1".to_string()));
         } else {
@@ -1089,7 +1119,10 @@ mod tests {
     #[test]
     fn test_relative_target_lane_helper() {
         let relative = RelativeTargetLane::new("TestEntity", -2);
-        assert_eq!(relative.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
+        assert_eq!(
+            relative.entity_ref.as_literal(),
+            Some(&"TestEntity".to_string())
+        );
         assert_eq!(relative.value.as_literal(), Some(&-2));
     }
 
@@ -1103,9 +1136,9 @@ mod tests {
     fn test_xml_serialization_lane_change() {
         let action = LaneChangeAction::new(
             TransitionDynamics::default(),
-            LaneChangeTarget::relative("Ego", -1)
+            LaneChangeTarget::relative("Ego", -1),
         );
-        
+
         let xml = quick_xml::se::to_string(&action).unwrap();
         assert!(xml.contains("LaneChangeAction"));
         assert!(xml.contains("RelativeTargetLane"));
@@ -1117,9 +1150,10 @@ mod tests {
     fn test_xml_serialization_with_offset() {
         let action = LaneChangeAction::new(
             TransitionDynamics::default(),
-            LaneChangeTarget::absolute("1")
-        ).with_offset(Double::literal(0.5));
-        
+            LaneChangeTarget::absolute("1"),
+        )
+        .with_offset(Double::literal(0.5));
+
         let xml = quick_xml::se::to_string(&action).unwrap();
         assert!(xml.contains("targetLaneOffset=\"0.5\""));
         assert!(xml.contains("AbsoluteTargetLane"));
@@ -1134,14 +1168,19 @@ mod tests {
                 <RelativeTargetLane entityRef="Ego" value="-1" />
             </LaneChangeTarget>
         </LaneChangeAction>"#;
-        
+
         let action: Result<LaneChangeAction, _> = quick_xml::de::from_str(xml);
         assert!(action.is_ok());
-        
+
         let action = action.unwrap();
-        assert_eq!(action.target_lane_offset.unwrap().as_literal().unwrap(), &0.5);
-        
-        if let LaneChangeTargetChoice::RelativeTargetLane(rel) = action.lane_change_target.target_choice {
+        assert_eq!(
+            action.target_lane_offset.unwrap().as_literal().unwrap(),
+            &0.5
+        );
+
+        if let LaneChangeTargetChoice::RelativeTargetLane(rel) =
+            action.lane_change_target.target_choice
+        {
             assert_eq!(rel.entity_ref.as_literal(), Some(&"Ego".to_string()));
             assert_eq!(rel.value.as_literal(), Some(&-1));
         } else {
@@ -1157,43 +1196,48 @@ mod tests {
                 dynamics_shape: DynamicsShape::Linear,
                 value: Double::literal(2.0),
             },
-            LaneChangeTarget::relative("TestEntity", 2)
-        ).with_offset(Double::literal(1.5));
-        
+            LaneChangeTarget::relative("TestEntity", 2),
+        )
+        .with_offset(Double::literal(1.5));
+
         let xml = quick_xml::se::to_string(&original).unwrap();
         let deserialized: LaneChangeAction = quick_xml::de::from_str(&xml).unwrap();
-        
-        assert_eq!(original.target_lane_offset.unwrap().as_literal(), 
-                   deserialized.target_lane_offset.unwrap().as_literal());
-        assert_eq!(original.lane_change_action_dynamics.value.as_literal(),
-                   deserialized.lane_change_action_dynamics.value.as_literal());
+
+        assert_eq!(
+            original.target_lane_offset.unwrap().as_literal(),
+            deserialized.target_lane_offset.unwrap().as_literal()
+        );
+        assert_eq!(
+            original.lane_change_action_dynamics.value.as_literal(),
+            deserialized.lane_change_action_dynamics.value.as_literal()
+        );
     }
 
     #[test]
     fn test_lane_offset_action_creation() {
         let action = LaneOffsetAction::default();
         assert_eq!(action.continuous.as_literal(), Some(&false));
-        assert_eq!(
-            action.dynamics.dynamics_shape,
-            DynamicsShape::Linear
-        );
+        assert_eq!(action.dynamics.dynamics_shape, DynamicsShape::Linear);
     }
 
     #[test]
     fn test_lane_offset_action_with_helper_methods() {
-        let dynamics = LaneOffsetActionDynamics::new(DynamicsShape::Linear)
-            .with_max_acceleration(2.0);
+        let dynamics =
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear).with_max_acceleration(2.0);
         let target = LaneOffsetTarget::relative("Ego", 1.5);
         let action = LaneOffsetAction::new(dynamics, target, true);
-        
+
         assert_eq!(action.continuous.as_literal(), Some(&true));
-        assert_eq!(action.dynamics.max_lateral_acc.unwrap().as_literal(), Some(&2.0));
+        assert_eq!(
+            action.dynamics.max_lateral_acc.unwrap().as_literal(),
+            Some(&2.0)
+        );
     }
 
     #[test]
     fn test_lane_offset_target_relative() {
         let target = LaneOffsetTarget::relative("TestEntity", -0.5);
-        
+
         if let LaneOffsetTargetChoice::RelativeTargetLaneOffset(rel) = target.target_choice {
             assert_eq!(rel.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
             assert_eq!(rel.value.as_literal(), Some(&-0.5));
@@ -1205,7 +1249,7 @@ mod tests {
     #[test]
     fn test_lane_offset_target_absolute() {
         let target = LaneOffsetTarget::absolute(2.0);
-        
+
         if let LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(abs) = target.target_choice {
             assert_eq!(abs.value.as_literal(), Some(&2.0));
         } else {
@@ -1217,16 +1261,16 @@ mod tests {
     fn test_lateral_action_helpers() {
         let lane_change = LaneChangeAction::default();
         let lateral_action = LateralAction::lane_change(lane_change);
-        
+
         if let LateralActionChoice::LaneChangeAction(_) = lateral_action.lateral_choice {
             // Expected
         } else {
             panic!("Expected LaneChangeAction");
         }
-        
+
         let lane_offset = LaneOffsetAction::default();
         let lateral_action = LateralAction::lane_offset(lane_offset);
-        
+
         if let LateralActionChoice::LaneOffsetAction(_) = lateral_action.lateral_choice {
             // Expected
         } else {
@@ -1239,9 +1283,9 @@ mod tests {
         let action = LaneOffsetAction::new(
             LaneOffsetActionDynamics::new(DynamicsShape::Linear),
             LaneOffsetTarget::relative("Ego", 1.0),
-            true
+            true,
         );
-        
+
         let xml = quick_xml::se::to_string(&action).unwrap();
         assert!(xml.contains("LaneOffsetAction"));
         assert!(xml.contains("continuous=\"true\""));
@@ -1253,19 +1297,22 @@ mod tests {
     #[test]
     fn test_xml_round_trip_lane_offset() {
         let original = LaneOffsetAction::new(
-            LaneOffsetActionDynamics::new(DynamicsShape::Linear)
-                .with_max_acceleration(1.5),
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear).with_max_acceleration(1.5),
             LaneOffsetTarget::absolute(0.5),
-            false
+            false,
         );
-        
+
         let xml = quick_xml::se::to_string(&original).unwrap();
         let deserialized: LaneOffsetAction = quick_xml::de::from_str(&xml).unwrap();
-        
-        assert_eq!(original.continuous.as_literal(), 
-                   deserialized.continuous.as_literal());
-        assert_eq!(original.dynamics.max_lateral_acc.unwrap().as_literal(),
-                   deserialized.dynamics.max_lateral_acc.unwrap().as_literal());
+
+        assert_eq!(
+            original.continuous.as_literal(),
+            deserialized.continuous.as_literal()
+        );
+        assert_eq!(
+            original.dynamics.max_lateral_acc.unwrap().as_literal(),
+            deserialized.dynamics.max_lateral_acc.unwrap().as_literal()
+        );
     }
 
     #[test]
@@ -1276,8 +1323,8 @@ mod tests {
             freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
             dynamic_constraints: Some(DynamicConstraints {
-                max_lateral_acc: Some(2.0),
-                max_speed: Some(50.0),
+                max_lateral_acc: Some(Double::literal(2.0)),
+                max_speed: Some(Double::literal(50.0)),
             }),
         };
 
@@ -1328,12 +1375,12 @@ mod tests {
     #[test]
     fn test_speed_profile_action_creation() {
         let entry1 = SpeedProfileEntry {
-            time: 0.0,
-            speed: 10.0,
+            time: Double::literal(0.0),
+            speed: Double::literal(10.0),
         };
         let entry2 = SpeedProfileEntry {
-            time: 5.0,
-            speed: 20.0,
+            time: Double::literal(5.0),
+            speed: Double::literal(20.0),
         };
 
         let action = SpeedProfileAction {
@@ -1359,16 +1406,20 @@ mod tests {
     #[test]
     fn test_synchronize_action_creation() {
         let action = SynchronizeAction {
-            target_entity_ref: OSString::literal("SyncTarget".to_string()),
+            master_entity_ref: OSString::literal("SyncTarget".to_string()),
             target_position_master: Position::default(),
             target_position: Position::default(),
             final_speed: Some(FinalSpeed {
-                speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed { value: 15.0 }),
+                speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
+                    value: Double::literal(15.0),
+                }),
             }),
+            target_tolerance_master: Some(Double::literal(1.0)),
+            target_tolerance: Some(Double::literal(2.0)),
         };
 
         assert_eq!(
-            action.target_entity_ref.as_literal(),
+            action.master_entity_ref.as_literal(),
             Some(&"SyncTarget".to_string())
         );
 
@@ -1413,11 +1464,13 @@ mod tests {
     fn test_final_speed_choices() {
         // Test absolute speed
         let abs_final = FinalSpeed {
-            speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed { value: 25.0 }),
+            speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
+                value: Double::literal(25.0),
+            }),
         };
 
         if let FinalSpeedChoice::AbsoluteSpeed(abs) = abs_final.speed_choice {
-            assert_eq!(abs.value, 25.0);
+            assert_eq!(abs.value.as_literal(), Some(&25.0));
         }
 
         // Test relative speed to master

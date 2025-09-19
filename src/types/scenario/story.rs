@@ -55,10 +55,22 @@ pub enum StoryActionType {
 pub struct StoryPrivateAction {
     #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
     pub longitudinal_action: Option<crate::types::scenario::init::LongitudinalAction>,
+    #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none")]
+    pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
+    #[serde(rename = "VisibilityAction", skip_serializing_if = "Option::is_none")]
+    pub visibility_action: Option<crate::types::actions::VisibilityAction>,
+    #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none")]
+    pub synchronize_action: Option<crate::types::actions::SynchronizeAction>,
+    #[serde(rename = "ControllerAction", skip_serializing_if = "Option::is_none")]
+    pub controller_action: Option<crate::types::actions::ControllerAction>,
     #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
     pub teleport_action: Option<crate::types::actions::movement::TeleportAction>,
     #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
     pub routing_action: Option<crate::types::actions::movement::RoutingAction>,
+    #[serde(rename = "AppearanceAction", skip_serializing_if = "Option::is_none")]
+    pub appearance_action: Option<crate::types::actions::AppearanceAction>,
+    #[serde(rename = "TrailerAction", skip_serializing_if = "Option::is_none")]
+    pub trailer_action: Option<crate::types::actions::TrailerAction>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -237,8 +249,14 @@ impl Default for StoryPrivateAction {
     fn default() -> Self {
         Self {
             longitudinal_action: Some(crate::types::scenario::init::LongitudinalAction::default()),
+            lateral_action: None,
+            visibility_action: None,
+            synchronize_action: None,
+            controller_action: None,
             teleport_action: None,
             routing_action: None,
+            appearance_action: None,
+            trailer_action: None,
         }
     }
 }

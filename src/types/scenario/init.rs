@@ -65,10 +65,20 @@ pub struct PrivateActionWrapper {
     pub longitudinal_action: Option<LongitudinalAction>,
     #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none")]
     pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
+    #[serde(rename = "VisibilityAction", skip_serializing_if = "Option::is_none")]
+    pub visibility_action: Option<crate::types::actions::VisibilityAction>,
+    #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none")]
+    pub synchronize_action: Option<crate::types::actions::SynchronizeAction>,
+    #[serde(rename = "ControllerAction", skip_serializing_if = "Option::is_none")]
+    pub controller_action: Option<crate::types::actions::ControllerAction>,
     #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
     pub teleport_action: Option<TeleportAction>,
     #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
     pub routing_action: Option<RoutingAction>,
+    #[serde(rename = "AppearanceAction", skip_serializing_if = "Option::is_none")]
+    pub appearance_action: Option<crate::types::actions::AppearanceAction>,
+    #[serde(rename = "TrailerAction", skip_serializing_if = "Option::is_none")]
+    pub trailer_action: Option<crate::types::actions::TrailerAction>,
 }
 
 /// Types of private actions available for entity initialization
@@ -77,9 +87,13 @@ pub struct PrivateActionWrapper {
 pub enum PrivateActionType {
     LongitudinalAction(LongitudinalAction),
     LateralAction(crate::types::actions::movement::LateralAction),
+    VisibilityAction(crate::types::actions::VisibilityAction),
+    SynchronizeAction(crate::types::actions::SynchronizeAction),
+    ControllerAction(crate::types::actions::ControllerAction),
     TeleportAction(TeleportAction),
     RoutingAction(RoutingAction),
-    // SynchronizeAction, etc. can be added later
+    AppearanceAction(crate::types::actions::AppearanceAction),
+    TrailerAction(crate::types::actions::TrailerAction),
 }
 
 /// Longitudinal movement actions (speed control, etc.)
@@ -120,8 +134,13 @@ impl Default for PrivateActionWrapper {
         Self {
             longitudinal_action: Some(LongitudinalAction::default()),
             lateral_action: None,
+            visibility_action: None,
+            synchronize_action: None,
+            controller_action: None,
             teleport_action: None,
             routing_action: None,
+            appearance_action: None,
+            trailer_action: None,
         }
     }
 }
@@ -188,18 +207,61 @@ mod tests {
                     speed_action: Some(SpeedAction::default()),
                 }),
                 lateral_action: None,
+                visibility_action: None,
+                synchronize_action: None,
+                controller_action: None,
                 teleport_action: None,
                 routing_action: None,
+                appearance_action: None,
+                trailer_action: None,
             })
             .add_action(PrivateActionWrapper {
                 longitudinal_action: None,
                 lateral_action: None,
+                visibility_action: None,
+                synchronize_action: None,
+                controller_action: None,
                 teleport_action: Some(TeleportAction::default()),
                 routing_action: None,
+                appearance_action: None,
+                trailer_action: None,
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
         assert_eq!(private.private_actions.len(), 2);
+    }
+
+    #[test]
+    fn test_new_action_types() {
+        // Test VisibilityAction
+        let visibility_action = PrivateActionWrapper {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: Some(crate::types::actions::VisibilityAction::default()),
+            synchronize_action: None,
+            controller_action: None,
+            teleport_action: None,
+            routing_action: None,
+            appearance_action: None,
+            trailer_action: None,
+        };
+
+        assert!(visibility_action.visibility_action.is_some());
+
+        // Test TrailerAction
+        let trailer_action = PrivateActionWrapper {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: None,
+            synchronize_action: None,
+            controller_action: None,
+            teleport_action: None,
+            routing_action: None,
+            appearance_action: None,
+            trailer_action: Some(crate::types::actions::TrailerAction::default()),
+        };
+
+        assert!(trailer_action.trailer_action.is_some());
     }
 
     #[test]

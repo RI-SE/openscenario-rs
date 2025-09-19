@@ -14,10 +14,11 @@
 //! - Supporting action composition and complex scenario building
 //! - Facilitating action validation and constraint enforcement
 
-pub mod control;
-pub mod movement; // Movement actions (SpeedAction, TeleportAction, etc.) // Phase 4B: Controller actions
-                                                                          // pub mod appearance; // Appearance actions (skip for MVP)
-pub mod traffic; // Phase 4C: Traffic actions
+pub mod appearance; // Appearance and visibility actions
+pub mod control; // Controller actions
+pub mod movement; // Movement actions (SpeedAction, TeleportAction, etc.)
+pub mod traffic; // Traffic actions
+pub mod trailer; // Trailer actions
 
 // PHASE 4A: Export all movement actions
 pub use movement::{
@@ -54,28 +55,7 @@ pub use movement::{
     TrajectoryFollowingMode,
 };
 
-// PHASE 4B: Export all controller actions
-pub use control::{
-    ActivateControllerAction,
-    // Core controller actions
-    AssignControllerAction,
-    AutomaticGear,
-    AutomaticGearType,
-    // Phase 1 Groups: XSD group wrappers
-    Brake,
-    BrakeInput,
-    Gear,
-    // Supporting types
-    ManualGear,
-    OverrideControllerValueAction,
-    // Individual override actions
-    OverrideControllerValueActionBrake,
-    OverrideControllerValueActionClutch,
-    OverrideControllerValueActionGear,
-    OverrideControllerValueActionParkingBrake,
-    OverrideControllerValueActionSteeringWheel,
-    OverrideControllerValueActionThrottle,
-};
+
 
 // PHASE 4C: Export all traffic actions
 pub use traffic::{
@@ -101,6 +81,48 @@ pub use traffic::{
     TrafficSwarmAction,
     VehicleCategory,
     VehicleCategoryDistribution,
+};
+
+// Export appearance actions
+pub use appearance::{
+    AppearanceAction,
+    VisibilityAction,
+    SensorReference,
+    SensorReferenceSet,
+    LightStateAction,
+    AnimationAction,
+};
+
+// Export trailer actions
+pub use trailer::{
+    TrailerAction,
+    ConnectTrailerAction,
+    DisconnectTrailerAction,
+};
+
+// Export updated controller action
+pub use control::{
+    ControllerAction,
+    // Keep existing exports too
+    ActivateControllerAction,
+    // Core controller actions
+    AssignControllerAction,
+    AutomaticGear,
+    AutomaticGearType,
+    // Phase 1 Groups: XSD group wrappers
+    Brake,
+    BrakeInput,
+    Gear,
+    // Supporting types
+    ManualGear,
+    OverrideControllerValueAction,
+    // Individual override actions
+    OverrideControllerValueActionBrake,
+    OverrideControllerValueActionClutch,
+    OverrideControllerValueActionGear,
+    OverrideControllerValueActionParkingBrake,
+    OverrideControllerValueActionSteeringWheel,
+    OverrideControllerValueActionThrottle,
 };
 
 use serde::{Deserialize, Serialize};

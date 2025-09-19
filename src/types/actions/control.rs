@@ -20,6 +20,22 @@ use serde::{Deserialize, Serialize};
 
 // PHASE 4B: Core Controller Actions Implementation
 
+/// Main controller action wrapper containing all controller action types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ControllerAction {
+    /// Assign controller action
+    #[serde(rename = "AssignControllerAction", skip_serializing_if = "Option::is_none")]
+    pub assign_controller_action: Option<AssignControllerAction>,
+    
+    /// Override controller values
+    #[serde(rename = "OverrideControllerValueAction", skip_serializing_if = "Option::is_none")]
+    pub override_controller_value_action: Option<OverrideControllerValueAction>,
+    
+    /// Activate controller (deprecated but still supported)
+    #[serde(rename = "ActivateControllerAction", skip_serializing_if = "Option::is_none")]
+    pub activate_controller_action: Option<ActivateControllerAction>,
+}
+
 /// Assign controller action for controller assignment with catalog support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AssignControllerAction {
@@ -32,13 +48,13 @@ pub struct AssignControllerAction {
 /// Activate controller action for controller activation control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ActivateControllerAction {
-    #[serde(rename = "@longitudinal")]
+    #[serde(rename = "@longitudinal", skip_serializing_if = "Option::is_none")]
     pub longitudinal: Option<Boolean>,
-    #[serde(rename = "@lateral")]
+    #[serde(rename = "@lateral", skip_serializing_if = "Option::is_none")]
     pub lateral: Option<Boolean>,
-    #[serde(rename = "@lighting")]
+    #[serde(rename = "@lighting", skip_serializing_if = "Option::is_none")]
     pub lighting: Option<Boolean>,
-    #[serde(rename = "@animation")]
+    #[serde(rename = "@animation", skip_serializing_if = "Option::is_none")]
     pub animation: Option<Boolean>,
 }
 
@@ -182,13 +198,23 @@ impl Default for AssignControllerAction {
     }
 }
 
+impl Default for ControllerAction {
+    fn default() -> Self {
+        Self {
+            assign_controller_action: None,
+            override_controller_value_action: None,
+            activate_controller_action: None,
+        }
+    }
+}
+
 impl Default for ActivateControllerAction {
     fn default() -> Self {
         Self {
             longitudinal: Some(Boolean::literal(true)),
             lateral: Some(Boolean::literal(true)),
-            lighting: None,
-            animation: None,
+            lighting: Some(Boolean::literal(false)),
+            animation: Some(Boolean::literal(false)),
         }
     }
 }
@@ -557,6 +583,18 @@ mod tests {
         assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
         assert_eq!(action.lighting.unwrap().as_literal(), Some(&false));
         assert_eq!(action.animation.unwrap().as_literal(), Some(&false));
+    }
+
+    #[test]
+    fn test_activate_controller_default_serialization() {
+        let action = ActivateControllerAction::default();
+        let xml = quick_xml::se::to_string(&action).expect("Serialization should succeed");
+        
+        // Should contain explicit boolean values, not empty strings
+        assert!(xml.contains("longitudinal=\"true\""));
+        assert!(xml.contains("lateral=\"true\""));
+        assert!(xml.contains("lighting=\"false\""));
+        assert!(xml.contains("animation=\"false\""));
     }
 
     #[test]
