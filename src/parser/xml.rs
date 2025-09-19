@@ -17,9 +17,9 @@
 use crate::error::{Error, Result};
 use crate::types::catalogs::files::CatalogFile;
 use crate::types::scenario::storyboard::OpenScenario;
+use markup_fmt::{config::FormatOptions, format_text, Language};
 use std::fs;
 use std::path::Path;
-
 /// Parse an OpenSCENARIO document from a string
 ///
 /// This function uses quick-xml's serde integration to deserialize
@@ -67,8 +67,14 @@ pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
     let serialized = quick_xml::se::to_string(scenario)
         .map_err(Error::XmlParseError)
         .map_err(|e| e.with_context("Failed to serialize OpenSCENARIO to XML"))?;
-
-    xml.push_str(&serialized);
+    let s = format_text(
+        &serialized,
+        Language::Xml,
+        &FormatOptions::default(),
+        |serialized, _| Ok::<_, std::convert::Infallible>(serialized.into()),
+    )
+    .unwrap();
+    xml.push_str(&s);
     Ok(xml)
 }
 
@@ -141,8 +147,6 @@ pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario
         ))
     })
 }
-
-
 
 // Catalog parsing functions
 
@@ -274,8 +278,6 @@ pub fn serialize_catalog_to_file<P: AsRef<Path>>(catalog: &CatalogFile, path: P)
         ))
     })
 }
-
-
 
 #[cfg(test)]
 mod tests {
