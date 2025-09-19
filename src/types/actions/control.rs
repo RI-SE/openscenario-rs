@@ -614,7 +614,7 @@ mod tests {
         assert!(action.brake.is_some());
         let brake = action.brake.unwrap();
         assert_eq!(brake.active.as_literal(), Some(&true));
-        assert_eq!(brake.value, 0.7);
+        assert_eq!(brake.value.as_literal().unwrap(), &0.7);
 
         assert!(action.throttle.is_none());
         assert!(action.steering_wheel.is_none());
@@ -627,7 +627,7 @@ mod tests {
         assert!(action.throttle.is_some());
         let throttle = action.throttle.unwrap();
         assert_eq!(throttle.active.as_literal(), Some(&true));
-        assert_eq!(throttle.value, 0.5);
+        assert_eq!(throttle.value.as_literal().unwrap(), &0.5);
     }
 
     #[test]
@@ -637,19 +637,19 @@ mod tests {
         assert!(action.steering_wheel.is_some());
         let steering = action.steering_wheel.unwrap();
         assert_eq!(steering.active.as_literal(), Some(&true));
-        assert_eq!(steering.value, 0.2);
+        assert_eq!(steering.value.as_literal().unwrap(), &0.2);
     }
 
     #[test]
     fn test_manual_gear_creation() {
         let first_gear = ManualGear::first();
-        assert_eq!(first_gear.gear, 1);
+        assert_eq!(first_gear.gear.as_literal().unwrap(), &1);
 
         let neutral = ManualGear::neutral();
-        assert_eq!(neutral.gear, 0);
+        assert_eq!(neutral.gear.as_literal().unwrap(), &0);
 
         let reverse = ManualGear::reverse();
-        assert_eq!(reverse.gear, -1);
+        assert_eq!(reverse.gear.as_literal().unwrap(), &(-1));
     }
 
     #[test]
@@ -678,7 +678,7 @@ mod tests {
         assert_eq!(gear_action.active.as_literal(), Some(&true));
         assert!(gear_action.manual_gear.is_some());
         assert!(gear_action.automatic_gear.is_none());
-        assert_eq!(gear_action.manual_gear.unwrap().gear, 1);
+        assert_eq!(gear_action.manual_gear.unwrap().gear.as_literal().unwrap(), &1);
     }
 
     #[test]
@@ -696,11 +696,11 @@ mod tests {
     fn test_clutch_action() {
         let clutch = OverrideControllerValueActionClutch {
             active: Boolean::literal(true),
-            value: 0.5,
+            value: Double::literal(0.5),
         };
 
         assert_eq!(clutch.active.as_literal(), Some(&true));
-        assert_eq!(clutch.value, 0.5);
+        assert_eq!(clutch.value.as_literal().unwrap(), &0.5);
     }
 
     #[test]
@@ -721,16 +721,16 @@ mod tests {
     #[test]
     fn test_brake_creation_and_helpers() {
         let brake = Brake::new(0.5);
-        assert_eq!(brake.value, 0.5);
+        assert_eq!(brake.value.as_literal().unwrap(), &0.5);
 
         let zero_brake = Brake::zero();
-        assert_eq!(zero_brake.value, 0.0);
+        assert_eq!(zero_brake.value.as_literal().unwrap(), &0.0);
 
         let full_brake = Brake::full();
-        assert_eq!(full_brake.value, 1.0);
+        assert_eq!(full_brake.value.as_literal().unwrap(), &1.0);
 
         let default_brake = Brake::default();
-        assert_eq!(default_brake.value, 0.0);
+        assert_eq!(default_brake.value.as_literal().unwrap(), &0.0);
     }
 
     #[test]
@@ -738,23 +738,23 @@ mod tests {
         let percent_brake = BrakeInput::percent(0.7);
         assert!(percent_brake.is_percent());
         assert!(!percent_brake.is_force());
-        assert_eq!(percent_brake.value(), 0.7);
+        assert_eq!(percent_brake.value().as_literal(), Some(&0.7));
 
         let force_brake = BrakeInput::force(500.0);
         assert!(!force_brake.is_percent());
         assert!(force_brake.is_force());
-        assert_eq!(force_brake.value(), 500.0);
+        assert_eq!(force_brake.value().as_literal(), Some(&500.0));
 
         let default_brake_input = BrakeInput::default();
         assert!(default_brake_input.is_percent());
-        assert_eq!(default_brake_input.value(), 0.0);
+        assert_eq!(default_brake_input.value().as_literal(), Some(&0.0));
     }
 
     #[test]
     fn test_gear_group_creation() {
         let manual_gear = Gear::manual(3);
         if let Gear::ManualGear(gear) = manual_gear {
-            assert_eq!(gear.gear, 3);
+            assert_eq!(gear.gear.as_literal(), Some(&3));
         } else {
             panic!("Expected ManualGear variant");
         }
@@ -771,21 +771,21 @@ mod tests {
     fn test_gear_group_convenience_methods() {
         let manual_first = Gear::manual_first();
         if let Gear::ManualGear(gear) = manual_first {
-            assert_eq!(gear.gear, 1);
+            assert_eq!(gear.gear.as_literal(), Some(&1));
         } else {
             panic!("Expected ManualGear variant");
         }
 
         let manual_neutral = Gear::manual_neutral();
         if let Gear::ManualGear(gear) = manual_neutral {
-            assert_eq!(gear.gear, 0);
+            assert_eq!(gear.gear.as_literal(), Some(&0));
         } else {
             panic!("Expected ManualGear variant");
         }
 
         let manual_reverse = Gear::manual_reverse();
         if let Gear::ManualGear(gear) = manual_reverse {
-            assert_eq!(gear.gear, -1);
+            assert_eq!(gear.gear.as_literal(), Some(&(-1)));
         } else {
             panic!("Expected ManualGear variant");
         }

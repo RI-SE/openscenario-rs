@@ -59,11 +59,11 @@ pub struct TrafficSwarmAction {
     pub semi_major_axis: Double,
     #[serde(rename = "@semiMinorAxis")]
     pub semi_minor_axis: Double,
-    #[serde(rename = "@velocity")]
+    #[serde(rename = "@velocity", skip_serializing_if = "Option::is_none")]
     pub velocity: Option<Double>,
     #[serde(rename = "CentralObject")]
     pub central_object: CentralSwarmObject,
-    #[serde(rename = "TrafficDefinition")]
+    #[serde(rename = "TrafficDefinition", skip_serializing_if = "Option::is_none")]
     pub traffic_definition: Option<TrafficDefinition>,
 }
 
@@ -876,7 +876,7 @@ mod tests {
         let source =
             TrafficSourceAction::new(15.0, Position::default(), TrafficDefinition::default());
 
-        assert_eq!(source.rate, 15.0);
+        assert_eq!(source.rate.as_literal(), Some(&15.0));
         assert!(source.velocity.is_none());
     }
 
@@ -889,16 +889,16 @@ mod tests {
             TrafficDefinition::default(),
         );
 
-        assert_eq!(source.rate, 20.0);
-        assert_eq!(source.velocity, Some(60.0));
+        assert_eq!(source.rate.as_literal(), Some(&20.0));
+        assert_eq!(source.velocity.as_ref().and_then(|v| v.as_literal()), Some(&60.0));
     }
 
     #[test]
     fn test_traffic_sink_action_creation() {
         let sink = TrafficSinkAction::new(10.0, 30.0, Position::default());
 
-        assert_eq!(sink.rate, 10.0);
-        assert_eq!(sink.radius, 30.0);
+        assert_eq!(sink.rate.as_literal(), Some(&10.0));
+        assert_eq!(sink.radius.as_literal(), Some(&30.0));
         assert!(sink.traffic_definition.is_none());
     }
 
@@ -911,8 +911,8 @@ mod tests {
             TrafficDefinition::default(),
         );
 
-        assert_eq!(sink.rate, 12.0);
-        assert_eq!(sink.radius, 40.0);
+        assert_eq!(sink.rate.as_literal(), Some(&12.0));
+        assert_eq!(sink.radius.as_literal(), Some(&40.0));
         assert!(sink.traffic_definition.is_some());
     }
 
@@ -1066,12 +1066,12 @@ mod tests {
     #[test]
     fn test_traffic_action_defaults() {
         let source = TrafficSourceAction::default();
-        assert_eq!(source.rate, 10.0);
-        assert_eq!(source.velocity, Some(50.0));
+        assert_eq!(source.rate.as_literal(), Some(&10.0));
+        assert_eq!(source.velocity.as_ref().and_then(|v| v.as_literal()), Some(&50.0));
 
         let sink = TrafficSinkAction::default();
-        assert_eq!(sink.rate, 10.0);
-        assert_eq!(sink.radius, 50.0);
+        assert_eq!(sink.rate.as_literal(), Some(&10.0));
+        assert_eq!(sink.radius.as_literal(), Some(&50.0));
 
         let swarm = TrafficSwarmAction::default();
         assert_eq!(swarm.number_of_vehicles.as_literal(), Some(&20));
@@ -1318,7 +1318,15 @@ mod tests {
             .with_offset(5.0);
         
         let xml = quick_xml::se::to_string(&original).unwrap();
-        let deserialized: TrafficSwarmAction = quick_xml::de::from_str(&xml).unwrap();
+        
+        // Try to parse, but handle the error gracefully
+        let deserialized = match quick_xml::de::from_str::<TrafficSwarmAction>(&xml) {
+            Ok(result) => result,
+            Err(e) => {
+                println!("Deserialization error: {}", e);
+                panic!("Failed to deserialize: {}", e);
+            }
+        };
         
         assert_eq!(original.central_object.entity_ref.as_literal(), 
                    deserialized.central_object.entity_ref.as_literal());

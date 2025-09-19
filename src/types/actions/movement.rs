@@ -1337,8 +1337,8 @@ mod tests {
         assert_eq!(action.continuous.as_literal(), Some(&false));
 
         let constraints = action.dynamic_constraints.unwrap();
-        assert_eq!(constraints.max_lateral_acc, Some(2.0));
-        assert_eq!(constraints.max_speed, Some(50.0));
+        assert_eq!(constraints.max_lateral_acc.unwrap().as_literal(), Some(&2.0));
+        assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&50.0));
     }
 
     #[test]
@@ -1366,7 +1366,7 @@ mod tests {
         if let LongitudinalActionChoice::LongitudinalDistanceAction(dist) =
             distance_action.longitudinal_action_choice
         {
-            assert_eq!(dist.distance, 10.0);
+            assert_eq!(dist.distance.as_literal(), Some(&10.0));
         } else {
             panic!("Expected LongitudinalDistanceAction");
         }
@@ -1386,8 +1386,8 @@ mod tests {
         let action = SpeedProfileAction {
             entity_ref: Some(OSString::literal("RefEntity".to_string())),
             dynamic_constraints: Some(DynamicConstraints {
-                max_lateral_acc: Some(1.5),
-                max_speed: Some(30.0),
+                max_lateral_acc: Some(Double::literal(1.5)),
+                max_speed: Some(Double::literal(30.0)),
             }),
             entries: vec![entry1, entry2],
         };
@@ -1397,10 +1397,10 @@ mod tests {
             Some(&"RefEntity".to_string())
         );
         assert_eq!(action.entries.len(), 2);
-        assert_eq!(action.entries[0].time, 0.0);
-        assert_eq!(action.entries[0].speed, 10.0);
-        assert_eq!(action.entries[1].time, 5.0);
-        assert_eq!(action.entries[1].speed, 20.0);
+        assert_eq!(action.entries[0].time.as_literal(), Some(&0.0));
+        assert_eq!(action.entries[0].speed.as_literal(), Some(&10.0));
+        assert_eq!(action.entries[1].time.as_literal(), Some(&5.0));
+        assert_eq!(action.entries[1].speed.as_literal(), Some(&20.0));
     }
 
     #[test]
@@ -1425,7 +1425,7 @@ mod tests {
 
         if let Some(final_speed) = action.final_speed {
             if let FinalSpeedChoice::AbsoluteSpeed(abs_speed) = final_speed.speed_choice {
-                assert_eq!(abs_speed.value, 15.0);
+                assert_eq!(abs_speed.value.as_literal(), Some(&15.0));
             } else {
                 panic!("Expected AbsoluteSpeed");
             }
@@ -1448,12 +1448,12 @@ mod tests {
     #[test]
     fn test_dynamic_constraints_creation() {
         let constraints = DynamicConstraints {
-            max_lateral_acc: Some(3.0),
-            max_speed: Some(80.0),
+            max_lateral_acc: Some(Double::literal(3.0)),
+            max_speed: Some(Double::literal(80.0)),
         };
 
-        assert_eq!(constraints.max_lateral_acc, Some(3.0));
-        assert_eq!(constraints.max_speed, Some(80.0));
+        assert_eq!(constraints.max_lateral_acc.unwrap().as_literal(), Some(&3.0));
+        assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&80.0));
 
         let empty_constraints = DynamicConstraints::default();
         assert!(empty_constraints.max_lateral_acc.is_none());
@@ -1476,12 +1476,12 @@ mod tests {
         // Test relative speed to master
         let rel_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
-                value: -5.0,
+                value: Double::literal(-5.0),
             }),
         };
 
         if let FinalSpeedChoice::RelativeSpeedToMaster(rel) = rel_final.speed_choice {
-            assert_eq!(rel.value, -5.0);
+            assert_eq!(rel.value.as_literal(), Some(&-5.0));
         }
     }
 
@@ -1496,7 +1496,7 @@ mod tests {
 
         let sync_action = SynchronizeAction::default();
         assert_eq!(
-            sync_action.target_entity_ref.as_literal(),
+            sync_action.master_entity_ref.as_literal(),
             Some(&"DefaultEntity".to_string())
         );
 

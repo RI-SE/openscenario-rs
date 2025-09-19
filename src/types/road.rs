@@ -91,9 +91,8 @@ mod tests {
                 .logic_file
                 .unwrap()
                 .filepath
-                .as_literal()
-                .unwrap(),
-            "./road_networks/test.xodr"
+                .as_literal(),
+            Some(&"./road_networks/test.xodr".to_string())
         );
     }
 
@@ -109,22 +108,21 @@ mod tests {
                 .logic_file
                 .unwrap()
                 .filepath
-                .as_literal()
-                .unwrap(),
-            "./road_networks/alks_road_different_curvatures.xodr"
+                .as_literal(),
+            Some(&"./road_networks/alks_road_different_curvatures.xodr".to_string())
         );
     }
 
     #[test]
     fn test_logic_file_creation() {
         let logic_file = LogicFile::new("test.xodr".to_string());
-        assert_eq!(logic_file.filepath.as_literal().unwrap(), "test.xodr");
+        assert_eq!(logic_file.filepath.as_literal(), Some(&"test.xodr".to_string()));
     }
 
     #[test]
     fn test_scene_graph_file_creation() {
         let scene_file = SceneGraphFile::new("test.osgb".to_string());
-        assert_eq!(scene_file.filepath.as_literal().unwrap(), "test.osgb");
+        assert_eq!(scene_file.filepath.as_literal(), Some(&"test.osgb".to_string()));
     }
 
     #[test]
