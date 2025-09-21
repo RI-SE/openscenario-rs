@@ -1,0 +1,69 @@
+# rustfmt configuration file for stable Rust
+# Place this file in the root of your Rust project
+
+# Basic formatting options
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# Import formatting
+reorder_imports = true
+
+# Function and type formatting
+fn_params_layout = "Tall"
+brace_style = "SameLineWhere"
+control_brace_style = "AlwaysSameLine"
+
+# Struct and enum formatting
+struct_field_align_threshold = 0
+enum_discrim_align_threshold = 0
+
+# Array and chain formatting
+array_width = 60
+chain_width = 60
+
+# Trailing elements
+trailing_comma = "Vertical"
+trailing_semicolon = true
+
+# Whitespace
+blank_lines_upper_bound = 1
+blank_lines_lower_bound = 0
+use_small_heuristics = "Default"
+
+# Advanced options
+newline_style = "Auto"       # Uses system default (Unix or Windows)
+remove_nested_parens = true
+space_before_colon = false
+space_after_colon = true
+spaces_around_ranges = false
+
+# ============================================================================
+# NIGHTLY-ONLY OPTIONS
+# Uncomment these if you're using nightly rustfmt (rustup default nightly)
+# ============================================================================
+
+# Import grouping (nightly only)
+# imports_granularity = "Crate"
+# group_imports = "StdExternalCrate"
+
+# Comment formatting (nightly only)
+# wrap_comments = true
+# comment_width = 80
+# normalize_comments = true
+# normalize_doc_attributes = true
+
+# String and macro formatting (nightly only)
+# format_strings = true
+# format_macro_matchers = true
+
+# Layout options (nightly only)
+# indent_style = "Block"
+# empty_item_single_line = true
+# type_punctuation_density = "Wide"
+
+# Other experimental options (nightly only)
+# format_code_in_doc_comments = true
+# condense_wildcard_suffixes = true
+# hex_literal_case = "Preserve"
