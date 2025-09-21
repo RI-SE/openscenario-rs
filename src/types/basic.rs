@@ -129,7 +129,7 @@ where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        
+
         // Check if this is a parameter reference or expression
         if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
             let content = &s[2..s.len() - 1];
@@ -197,8 +197,6 @@ where
         }
     }
 }
-
-
 
 // OpenSCENARIO basic type aliases
 pub type OSString = Value<std::string::String>;

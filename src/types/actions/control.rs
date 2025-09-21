@@ -24,15 +24,24 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerAction {
     /// Assign controller action
-    #[serde(rename = "AssignControllerAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "AssignControllerAction",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub assign_controller_action: Option<AssignControllerAction>,
-    
+
     /// Override controller values
-    #[serde(rename = "OverrideControllerValueAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "OverrideControllerValueAction",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub override_controller_value_action: Option<OverrideControllerValueAction>,
-    
+
     /// Activate controller (deprecated but still supported)
-    #[serde(rename = "ActivateControllerAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ActivateControllerAction",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub activate_controller_action: Option<ActivateControllerAction>,
 }
 
@@ -289,7 +298,9 @@ impl Default for OverrideControllerValueActionClutch {
 
 impl Default for ManualGear {
     fn default() -> Self {
-        Self { gear: Int::literal(1) }
+        Self {
+            gear: Int::literal(1),
+        }
     }
 }
 
@@ -309,7 +320,9 @@ impl Default for AutomaticGearType {
 
 impl Default for Brake {
     fn default() -> Self {
-        Self { value: Double::literal(0.0) }
+        Self {
+            value: Double::literal(0.0),
+        }
     }
 }
 
@@ -417,7 +430,9 @@ impl OverrideControllerValueAction {
 impl ManualGear {
     /// Create manual gear for specific gear number
     pub fn new(gear: i32) -> Self {
-        Self { gear: Int::literal(gear) }
+        Self {
+            gear: Int::literal(gear),
+        }
     }
 
     /// Neutral gear
@@ -516,7 +531,9 @@ impl Gear {
 impl Brake {
     /// Create brake with specific value
     pub fn new(value: f64) -> Self {
-        Self { value: Double::literal(value) }
+        Self {
+            value: Double::literal(value),
+        }
     }
 
     /// Create zero brake
@@ -589,7 +606,7 @@ mod tests {
     fn test_activate_controller_default_serialization() {
         let action = ActivateControllerAction::default();
         let xml = quick_xml::se::to_string(&action).expect("Serialization should succeed");
-        
+
         // Should contain explicit boolean values, not empty strings
         assert!(xml.contains("longitudinal=\"true\""));
         assert!(xml.contains("lateral=\"true\""));
@@ -678,7 +695,10 @@ mod tests {
         assert_eq!(gear_action.active.as_literal(), Some(&true));
         assert!(gear_action.manual_gear.is_some());
         assert!(gear_action.automatic_gear.is_none());
-        assert_eq!(gear_action.manual_gear.unwrap().gear.as_literal().unwrap(), &1);
+        assert_eq!(
+            gear_action.manual_gear.unwrap().gear.as_literal().unwrap(),
+            &1
+        );
     }
 
     #[test]

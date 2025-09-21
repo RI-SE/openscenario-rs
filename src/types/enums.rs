@@ -1469,8 +1469,6 @@ impl FromStr for CloudState {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;

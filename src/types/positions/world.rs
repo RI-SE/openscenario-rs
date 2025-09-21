@@ -96,15 +96,15 @@ pub struct GeographicPosition {
     /// Latitude in degrees
     #[serde(rename = "@latitude")]
     pub latitude: Double,
-    
+
     /// Longitude in degrees
     #[serde(rename = "@longitude")]
     pub longitude: Double,
-    
+
     /// Height above sea level in meters (optional)
     #[serde(rename = "@height", skip_serializing_if = "Option::is_none")]
     pub height: Option<Double>,
-    
+
     /// Orientation in geographic coordinate system
     #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
     pub orientation: Option<crate::types::positions::road::Orientation>,
@@ -120,7 +120,7 @@ impl GeographicPosition {
             orientation: None,
         }
     }
-    
+
     /// Create geographic position with height
     pub fn with_height(latitude: f64, longitude: f64, height: f64) -> Self {
         Self {
@@ -130,23 +130,26 @@ impl GeographicPosition {
             orientation: None,
         }
     }
-    
+
     /// Add orientation to geographic position
-    pub fn with_orientation(mut self, orientation: crate::types::positions::road::Orientation) -> Self {
+    pub fn with_orientation(
+        mut self,
+        orientation: crate::types::positions::road::Orientation,
+    ) -> Self {
         self.orientation = Some(orientation);
         self
     }
-    
+
     /// Create position at coordinates with height and orientation
     pub fn at_coordinates(latitude: f64, longitude: f64, height: f64, heading: f64) -> Self {
         use crate::types::positions::road::Orientation;
-        
+
         let orientation = Orientation {
             h: Some(Double::literal(heading)),
             p: None,
             r: None,
         };
-        
+
         Self::with_height(latitude, longitude, height).with_orientation(orientation)
     }
 }

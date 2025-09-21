@@ -389,7 +389,6 @@ mod tests {
     use super::*;
     use crate::types::basic::ParameterDeclaration;
     use crate::types::enums::ParameterType;
-    
 
     #[test]
     fn test_trajectory_catalog_creation() {
@@ -556,14 +555,14 @@ mod tests {
     fn test_to_scenario_trajectory() {
         let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
             vertices: vec![
-                 CatalogVertex {
-                     time: Some(Value::Literal(0.0)),
-                     position: Position::default(),
-                 },
-                 CatalogVertex {
-                     time: Some(Value::Literal(5.0)),
-                     position: Position::default(),
-                 },
+                CatalogVertex {
+                    time: Some(Value::Literal(0.0)),
+                    position: Position::default(),
+                },
+                CatalogVertex {
+                    time: Some(Value::Literal(5.0)),
+                    position: Position::default(),
+                },
             ],
         });
 

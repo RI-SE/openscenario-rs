@@ -233,17 +233,17 @@ impl ScenarioValidator {
         // Register entities (only for scenario definitions)
         if let Some(entities) = &scenario.entities {
             for obj in &entities.scenario_objects {
-            let entity_ref = EntityRef {
-                name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
-                object_type: if obj.vehicle.is_some() {
-                    ObjectType::Vehicle
-                } else if obj.pedestrian.is_some() {
-                    ObjectType::Pedestrian
-                } else {
-                    ObjectType::MiscellaneousObject
-                },
-            };
-            context.add_entity(entity_ref.name.clone(), entity_ref);
+                let entity_ref = EntityRef {
+                    name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
+                    object_type: if obj.vehicle.is_some() {
+                        ObjectType::Vehicle
+                    } else if obj.pedestrian.is_some() {
+                        ObjectType::Pedestrian
+                    } else {
+                        ObjectType::MiscellaneousObject
+                    },
+                };
+                context.add_entity(entity_ref.name.clone(), entity_ref);
             }
         }
 

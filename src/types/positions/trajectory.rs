@@ -82,11 +82,11 @@ pub struct TrajectoryPosition {
     /// S-coordinate along trajectory
     #[serde(rename = "@s")]
     pub s: Double,
-    
+
     /// T-coordinate (lateral offset from trajectory)
     #[serde(rename = "@t", skip_serializing_if = "Option::is_none")]
     pub t: Option<Double>,
-    
+
     /// Orientation relative to trajectory direction
     #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
     pub orientation: Option<crate::types::positions::road::Orientation>,
@@ -101,7 +101,7 @@ impl TrajectoryPosition {
             orientation: None,
         }
     }
-    
+
     /// Create trajectory position with lateral offset
     pub fn with_offset(s: f64, t: f64) -> Self {
         Self {
@@ -110,13 +110,16 @@ impl TrajectoryPosition {
             orientation: None,
         }
     }
-    
+
     /// Add orientation to trajectory position
-    pub fn with_orientation(mut self, orientation: crate::types::positions::road::Orientation) -> Self {
+    pub fn with_orientation(
+        mut self,
+        orientation: crate::types::positions::road::Orientation,
+    ) -> Self {
         self.orientation = Some(orientation);
         self
     }
-    
+
     /// Create trajectory position at distance with offset
     pub fn at_distance(s: f64, t: f64) -> Self {
         Self::with_offset(s, t)

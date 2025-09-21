@@ -643,7 +643,11 @@ impl Phase {
     }
 
     /// Add signal state to the phase
-    pub fn add_signal_state(mut self, signal_id: impl Into<String>, state: impl Into<String>) -> Self {
+    pub fn add_signal_state(
+        mut self,
+        signal_id: impl Into<String>,
+        state: impl Into<String>,
+    ) -> Self {
         self.traffic_signal_states.push(TrafficSignalState {
             traffic_signal_id: OSString::literal(signal_id.into()),
             state: OSString::literal(state.into()),
@@ -759,7 +763,10 @@ impl VehicleCategoryDistribution {
     /// Create distribution with single category
     pub fn single_category(category: VehicleCategory, weight: f64) -> Self {
         Self {
-            entries: vec![VehicleCategoryDistributionEntry { category, weight: Double::literal(weight) }],
+            entries: vec![VehicleCategoryDistributionEntry {
+                category,
+                weight: Double::literal(weight),
+            }],
         }
     }
 
@@ -890,7 +897,10 @@ mod tests {
         );
 
         assert_eq!(source.rate.as_literal(), Some(&20.0));
-        assert_eq!(source.velocity.as_ref().and_then(|v| v.as_literal()), Some(&60.0));
+        assert_eq!(
+            source.velocity.as_ref().and_then(|v| v.as_literal()),
+            Some(&60.0)
+        );
     }
 
     #[test]
@@ -1067,7 +1077,10 @@ mod tests {
     fn test_traffic_action_defaults() {
         let source = TrafficSourceAction::default();
         assert_eq!(source.rate.as_literal(), Some(&10.0));
-        assert_eq!(source.velocity.as_ref().and_then(|v| v.as_literal()), Some(&50.0));
+        assert_eq!(
+            source.velocity.as_ref().and_then(|v| v.as_literal()),
+            Some(&50.0)
+        );
 
         let sink = TrafficSinkAction::default();
         assert_eq!(sink.rate.as_literal(), Some(&10.0));
@@ -1093,12 +1106,18 @@ mod tests {
             .add_phase(
                 Phase::new("green_ns", 30.0)
                     .add_signal_state("signal_1", "green")
-                    .add_signal_state("signal_2", "red")
+                    .add_signal_state("signal_2", "red"),
             );
 
-        assert_eq!(controller.name.as_literal(), Some(&"intersection_1".to_string()));
+        assert_eq!(
+            controller.name.as_literal(),
+            Some(&"intersection_1".to_string())
+        );
         assert_eq!(controller.delay.as_ref().unwrap().as_literal(), Some(&1.0));
-        assert_eq!(controller.reference.as_ref().unwrap().as_literal(), Some(&"ref_1".to_string()));
+        assert_eq!(
+            controller.reference.as_ref().unwrap().as_literal(),
+            Some(&"ref_1".to_string())
+        );
         assert_eq!(controller.phases.len(), 1);
         assert_eq!(controller.phases[0].traffic_signal_states.len(), 2);
     }
@@ -1125,22 +1144,28 @@ mod tests {
     #[test]
     fn test_traffic_signal_state_creation() {
         let state = TrafficSignalState::new("signal_123", "yellow");
-        
-        assert_eq!(state.traffic_signal_id.as_literal(), Some(&"signal_123".to_string()));
+
+        assert_eq!(
+            state.traffic_signal_id.as_literal(),
+            Some(&"signal_123".to_string())
+        );
         assert_eq!(state.state.as_literal(), Some(&"yellow".to_string()));
     }
 
     #[test]
     fn test_traffic_signal_group_state_creation() {
         let group_state = TrafficSignalGroupState::new("flashing");
-        
-        assert_eq!(group_state.state.as_literal(), Some(&"flashing".to_string()));
+
+        assert_eq!(
+            group_state.state.as_literal(),
+            Some(&"flashing".to_string())
+        );
     }
 
     #[test]
     fn test_traffic_signal_state_action_creation() {
         let action = TrafficSignalStateAction::new("main_signal", "red");
-        
+
         assert_eq!(action.name.as_literal(), Some(&"main_signal".to_string()));
         assert_eq!(action.state.as_literal(), Some(&"red".to_string()));
     }
@@ -1148,7 +1173,7 @@ mod tests {
     #[test]
     fn test_traffic_signal_controller_action_creation() {
         let action = TrafficSignalControllerAction::new("controller_1", "phase_2");
-        
+
         assert_eq!(
             action.traffic_signal_controller_ref.as_literal(),
             Some(&"controller_1".to_string())
@@ -1164,23 +1189,23 @@ mod tests {
                 Phase::new("north_south_green", 60.0)
                     .add_signal_state("ns_signal", "green")
                     .add_signal_state("ew_signal", "red")
-                    .with_group_state("ns_active")
+                    .with_group_state("ns_active"),
             )
             .add_phase(
                 Phase::new("north_south_yellow", 5.0)
                     .add_signal_state("ns_signal", "yellow")
-                    .add_signal_state("ew_signal", "red")
+                    .add_signal_state("ew_signal", "red"),
             )
             .add_phase(
                 Phase::new("east_west_green", 45.0)
                     .add_signal_state("ns_signal", "red")
                     .add_signal_state("ew_signal", "green")
-                    .with_group_state("ew_active")
+                    .with_group_state("ew_active"),
             )
             .add_phase(
                 Phase::new("east_west_yellow", 5.0)
                     .add_signal_state("ns_signal", "red")
-                    .add_signal_state("ew_signal", "yellow")
+                    .add_signal_state("ew_signal", "yellow"),
             );
 
         assert_eq!(controller.phases.len(), 4);
@@ -1198,10 +1223,7 @@ mod tests {
     #[test]
     fn test_traffic_signal_xml_serialization() {
         let controller = TrafficSignalController::new("test_controller")
-            .add_phase(
-                Phase::new("test_phase", 30.0)
-                    .add_signal_state("signal_1", "green")
-            );
+            .add_phase(Phase::new("test_phase", 30.0).add_signal_state("signal_1", "green"));
 
         // Test that serialization works (basic check)
         let serialized = serde_json::to_string(&controller);
@@ -1211,7 +1233,10 @@ mod tests {
     #[test]
     fn test_traffic_signal_defaults() {
         let controller = TrafficSignalController::default();
-        assert_eq!(controller.name.as_literal(), Some(&"DefaultController".to_string()));
+        assert_eq!(
+            controller.name.as_literal(),
+            Some(&"DefaultController".to_string())
+        );
         assert!(controller.delay.is_none());
         assert!(controller.reference.is_none());
         assert_eq!(controller.phases.len(), 0);
@@ -1223,14 +1248,20 @@ mod tests {
         assert!(phase.traffic_signal_group_state.is_none());
 
         let state = TrafficSignalState::default();
-        assert_eq!(state.traffic_signal_id.as_literal(), Some(&"signal_1".to_string()));
+        assert_eq!(
+            state.traffic_signal_id.as_literal(),
+            Some(&"signal_1".to_string())
+        );
         assert_eq!(state.state.as_literal(), Some(&"green".to_string()));
 
         let group_state = TrafficSignalGroupState::default();
         assert_eq!(group_state.state.as_literal(), Some(&"green".to_string()));
 
         let state_action = TrafficSignalStateAction::default();
-        assert_eq!(state_action.name.as_literal(), Some(&"DefaultSignal".to_string()));
+        assert_eq!(
+            state_action.name.as_literal(),
+            Some(&"DefaultSignal".to_string())
+        );
         assert_eq!(state_action.state.as_literal(), Some(&"green".to_string()));
 
         let controller_action = TrafficSignalControllerAction::default();
@@ -1238,7 +1269,10 @@ mod tests {
             controller_action.traffic_signal_controller_ref.as_literal(),
             Some(&"DefaultController".to_string())
         );
-        assert_eq!(controller_action.phase_ref.as_literal(), Some(&"Phase1".to_string()));
+        assert_eq!(
+            controller_action.phase_ref.as_literal(),
+            Some(&"Phase1".to_string())
+        );
     }
 
     #[test]
@@ -1252,10 +1286,12 @@ mod tests {
             .add_phase(Phase::new("yellow_ew", 3.0));
 
         // Total cycle time should be reasonable
-        let total_time: f64 = controller.phases.iter()
+        let total_time: f64 = controller
+            .phases
+            .iter()
             .map(|p| p.duration.as_literal().unwrap_or(&0.0))
             .sum();
-        
+
         assert_eq!(total_time, 91.0); // 45 + 3 + 40 + 3
         assert!(total_time > 60.0 && total_time < 180.0); // Reasonable cycle time
     }
@@ -1275,7 +1311,10 @@ mod tests {
 
         // All should reference the same signal
         for state in &states {
-            assert_eq!(state.traffic_signal_id.as_literal(), Some(&"main".to_string()));
+            assert_eq!(
+                state.traffic_signal_id.as_literal(),
+                Some(&"main".to_string())
+            );
         }
     }
 
@@ -1286,12 +1325,15 @@ mod tests {
         let swarm = TrafficSwarmAction::new("Ego", 100.0, 50.0, 10)
             .with_inner_radius(20.0)
             .with_central_swarm_object("CentralVehicle");
-        
+
         assert_eq!(swarm.number_of_vehicles.as_literal().unwrap(), &10);
         assert_eq!(swarm.inner_radius.as_literal().unwrap(), &20.0);
         assert_eq!(swarm.semi_major_axis.as_literal().unwrap(), &100.0);
         assert_eq!(swarm.semi_minor_axis.as_literal().unwrap(), &50.0);
-        assert_eq!(swarm.central_object.entity_ref.as_literal().unwrap(), "CentralVehicle");
+        assert_eq!(
+            swarm.central_object.entity_ref.as_literal().unwrap(),
+            "CentralVehicle"
+        );
     }
 
     #[test]
@@ -1303,7 +1345,7 @@ mod tests {
     #[test]
     fn test_xml_serialization_traffic_swarm() {
         let swarm = TrafficSwarmAction::new("Ego", 75.0, 30.0, 5);
-        
+
         let xml = quick_xml::se::to_string(&swarm).unwrap();
         assert!(xml.contains("TrafficSwarmAction"));
         assert!(xml.contains("semiMajorAxis=\"75\""));
@@ -1316,9 +1358,9 @@ mod tests {
         let original = TrafficSwarmAction::new("TestEntity", 120.0, 60.0, 8)
             .with_inner_radius(15.0)
             .with_offset(5.0);
-        
+
         let xml = quick_xml::se::to_string(&original).unwrap();
-        
+
         // Try to parse, but handle the error gracefully
         let deserialized = match quick_xml::de::from_str::<TrafficSwarmAction>(&xml) {
             Ok(result) => result,
@@ -1327,27 +1369,42 @@ mod tests {
                 panic!("Failed to deserialize: {}", e);
             }
         };
-        
-        assert_eq!(original.central_object.entity_ref.as_literal(), 
-                   deserialized.central_object.entity_ref.as_literal());
-        assert_eq!(original.semi_major_axis.as_literal(),
-                   deserialized.semi_major_axis.as_literal());
-        assert_eq!(original.semi_minor_axis.as_literal(),
-                   deserialized.semi_minor_axis.as_literal());
-        assert_eq!(original.number_of_vehicles.as_literal(),
-                   deserialized.number_of_vehicles.as_literal());
-        assert_eq!(original.inner_radius.as_literal(),
-                   deserialized.inner_radius.as_literal());
-        assert_eq!(original.offset.as_literal(),
-                   deserialized.offset.as_literal());
+
+        assert_eq!(
+            original.central_object.entity_ref.as_literal(),
+            deserialized.central_object.entity_ref.as_literal()
+        );
+        assert_eq!(
+            original.semi_major_axis.as_literal(),
+            deserialized.semi_major_axis.as_literal()
+        );
+        assert_eq!(
+            original.semi_minor_axis.as_literal(),
+            deserialized.semi_minor_axis.as_literal()
+        );
+        assert_eq!(
+            original.number_of_vehicles.as_literal(),
+            deserialized.number_of_vehicles.as_literal()
+        );
+        assert_eq!(
+            original.inner_radius.as_literal(),
+            deserialized.inner_radius.as_literal()
+        );
+        assert_eq!(
+            original.offset.as_literal(),
+            deserialized.offset.as_literal()
+        );
     }
 
     #[test]
     fn test_traffic_swarm_with_central_object() {
         let swarm = TrafficSwarmAction::new("MainVehicle", 80.0, 40.0, 6)
             .with_central_swarm_object("CentralEntity");
-        
-        assert_eq!(swarm.central_object.entity_ref.as_literal().unwrap(), "CentralEntity");
+
+        assert_eq!(
+            swarm.central_object.entity_ref.as_literal().unwrap(),
+            "CentralEntity"
+        );
     }
 
     #[test]
@@ -1368,24 +1425,26 @@ mod tests {
         let highway_swarm = TrafficSwarmAction::new("EgoVehicle", 200.0, 100.0, 15)
             .with_inner_radius(50.0)
             .with_offset(10.0);
-        
+
         assert_eq!(highway_swarm.semi_major_axis.as_literal().unwrap(), &200.0);
         assert_eq!(highway_swarm.inner_radius.as_literal().unwrap(), &50.0);
         assert_eq!(highway_swarm.offset.as_literal().unwrap(), &10.0);
-        
+
         // Test city intersection swarm scenario
         let city_swarm = TrafficSwarmAction::new("CityEgo", 80.0, 60.0, 8)
             .with_central_swarm_object("IntersectionController");
-        
-        assert_eq!(city_swarm.central_object.entity_ref.as_literal().unwrap(), "IntersectionController");
+
+        assert_eq!(
+            city_swarm.central_object.entity_ref.as_literal().unwrap(),
+            "IntersectionController"
+        );
         assert_eq!(city_swarm.number_of_vehicles.as_literal().unwrap(), &8);
     }
 
     #[test]
     fn test_traffic_swarm_with_velocity() {
-        let swarm = TrafficSwarmAction::new("TestVehicle", 90.0, 45.0, 12)
-            .with_velocity(60.0);
-        
+        let swarm = TrafficSwarmAction::new("TestVehicle", 90.0, 45.0, 12).with_velocity(60.0);
+
         assert!(swarm.velocity.is_some());
         assert_eq!(swarm.velocity.unwrap().as_literal().unwrap(), &60.0);
     }
@@ -1394,15 +1453,19 @@ mod tests {
     fn test_traffic_swarm_elliptical_parameters() {
         // Test elliptical swarm with different major/minor axes
         let elliptical_swarm = TrafficSwarmAction::new("EllipseCenter", 150.0, 75.0, 20);
-        
+
         // Major axis should be larger than minor axis for proper ellipse
-        assert!(elliptical_swarm.semi_major_axis.as_literal().unwrap() > 
-                elliptical_swarm.semi_minor_axis.as_literal().unwrap());
-        
+        assert!(
+            elliptical_swarm.semi_major_axis.as_literal().unwrap()
+                > elliptical_swarm.semi_minor_axis.as_literal().unwrap()
+        );
+
         // Test circular swarm (equal axes)
         let circular_swarm = TrafficSwarmAction::new("CircleCenter", 100.0, 100.0, 15);
-        assert_eq!(circular_swarm.semi_major_axis.as_literal().unwrap(),
-                   circular_swarm.semi_minor_axis.as_literal().unwrap());
+        assert_eq!(
+            circular_swarm.semi_major_axis.as_literal().unwrap(),
+            circular_swarm.semi_minor_axis.as_literal().unwrap()
+        );
     }
 
     #[test]
@@ -1413,11 +1476,14 @@ mod tests {
             .with_velocity(55.0)
             .with_traffic_definition(TrafficDefinition::default())
             .with_central_swarm_object("NewCentralEntity");
-        
+
         assert_eq!(swarm.inner_radius.as_literal().unwrap(), &25.0);
         assert_eq!(swarm.offset.as_literal().unwrap(), &15.0);
         assert_eq!(swarm.velocity.unwrap().as_literal().unwrap(), &55.0);
         assert!(swarm.traffic_definition.is_some());
-        assert_eq!(swarm.central_object.entity_ref.as_literal().unwrap(), "NewCentralEntity");
+        assert_eq!(
+            swarm.central_object.entity_ref.as_literal().unwrap(),
+            "NewCentralEntity"
+        );
     }
 }

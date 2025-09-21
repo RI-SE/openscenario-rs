@@ -657,7 +657,9 @@ impl CatalogEntity for CatalogManeuver {
                 name: "ManeuverType".to_string(),
                 parameter_type: "String".to_string(),
                 default_value: Some("lane_change".to_string()),
-                description: Some("Type of maneuver (lane_change, overtake, merge, etc.)".to_string()),
+                description: Some(
+                    "Type of maneuver (lane_change, overtake, merge, etc.)".to_string(),
+                ),
             },
         ]
     }
@@ -695,7 +697,9 @@ impl CatalogEntity for CatalogTrajectory {
                 name: "Closed".to_string(),
                 parameter_type: "Boolean".to_string(),
                 default_value: Some("false".to_string()),
-                description: Some("Whether the trajectory is closed (loops back to start)".to_string()),
+                description: Some(
+                    "Whether the trajectory is closed (loops back to start)".to_string(),
+                ),
             },
         ]
     }

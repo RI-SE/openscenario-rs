@@ -339,8 +339,6 @@ impl CatalogLoader {
         Ok(catalogs)
     }
 
-
-
     /// Load all trajectory catalogs from a directory and return them as a hashmap
     pub fn load_trajectory_catalogs_from_directory(
         &self,

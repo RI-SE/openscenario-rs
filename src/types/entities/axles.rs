@@ -4,8 +4,8 @@
 //! supporting front, rear, and additional axles with full geometric and steering
 //! characteristics as defined in the OpenSCENARIO XSD specification.
 
-use crate::types::basic::Double;
 use crate::error::Result;
+use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -16,11 +16,11 @@ pub struct Axles {
     /// Front axle (optional for some vehicle types)
     #[serde(rename = "FrontAxle", skip_serializing_if = "Option::is_none")]
     pub front_axle: Option<Axle>,
-    
+
     /// Rear axle (required)
     #[serde(rename = "RearAxle")]
     pub rear_axle: Axle,
-    
+
     /// Additional axles for multi-axle vehicles (trucks, trailers)
     #[serde(rename = "AdditionalAxle", default)]
     pub additional_axles: Vec<Axle>,
@@ -33,19 +33,19 @@ pub struct Axle {
     /// Maximum steering angle in radians
     #[serde(rename = "@maxSteering")]
     pub max_steering: Double,
-    
+
     /// Wheel diameter in meters
     #[serde(rename = "@wheelDiameter")]
     pub wheel_diameter: Double,
-    
+
     /// Track width (distance between wheels) in meters
     #[serde(rename = "@trackWidth")]
     pub track_width: Double,
-    
+
     /// X position relative to vehicle center in meters
     #[serde(rename = "@positionX")]
     pub position_x: Double,
-    
+
     /// Z position (height) relative to vehicle center in meters
     #[serde(rename = "@positionZ")]
     pub position_z: Double,
@@ -237,7 +237,7 @@ impl Axle {
     pub fn wheel_positions(&self, params: &HashMap<String, String>) -> Result<Vec<(f64, f64)>> {
         let track_width = self.track_width.resolve(params)?;
         let position_x = self.position_x.resolve(params)?;
-        
+
         if track_width > 0.0 {
             // Dual wheels
             let half_track = track_width / 2.0;
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_axles_car_configuration() {
         let axles = Axles::car();
-        
+
         assert!(axles.front_axle.is_some());
         assert_eq!(axles.additional_axles.len(), 0);
         assert_eq!(axles.axle_count(), 2);
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn test_axles_truck_configuration() {
         let axles = Axles::truck();
-        
+
         assert!(axles.front_axle.is_some());
         assert_eq!(axles.additional_axles.len(), 1);
         assert_eq!(axles.axle_count(), 3);
@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn test_axles_trailer_configuration() {
         let axles = Axles::trailer();
-        
+
         assert!(axles.front_axle.is_none());
         assert_eq!(axles.additional_axles.len(), 0);
         assert_eq!(axles.axle_count(), 1);
@@ -300,7 +300,7 @@ mod tests {
     fn test_axles_wheelbase() {
         let axles = Axles::car();
         let params = HashMap::new();
-        
+
         let wheelbase = axles.wheelbase(&params).unwrap();
         assert_eq!(wheelbase, 2.8); // 1.4 - (-1.4)
     }
@@ -309,9 +309,9 @@ mod tests {
     fn test_axles_is_steerable() {
         let axles = Axles::car();
         let params = HashMap::new();
-        
+
         assert!(axles.is_steerable(&params).unwrap());
-        
+
         let trailer = Axles::trailer();
         assert!(!trailer.is_steerable(&params).unwrap());
     }
@@ -320,7 +320,7 @@ mod tests {
     fn test_axle_wheel_circumference() {
         let axle = Axle::front_car();
         let params = HashMap::new();
-        
+
         let circumference = axle.wheel_circumference(&params).unwrap();
         let expected = std::f64::consts::PI * 0.65;
         assert!((circumference - expected).abs() < 0.001);
@@ -330,7 +330,7 @@ mod tests {
     fn test_axle_max_steering_degrees() {
         let axle = Axle::front_car();
         let params = HashMap::new();
-        
+
         let degrees = axle.max_steering_degrees(&params).unwrap();
         assert!((degrees - 30.0).abs() < 0.1); // Should be approximately 30 degrees
     }
@@ -340,10 +340,10 @@ mod tests {
         let axle = Axle::front_car();
         let params = HashMap::new();
         let wheelbase = 2.8;
-        
+
         let radius = axle.turning_radius(wheelbase, &params).unwrap();
         assert!(radius > 0.0 && radius < f64::INFINITY);
-        
+
         // Test non-steerable axle
         let rear_axle = Axle::rear_car();
         let rear_radius = rear_axle.turning_radius(wheelbase, &params).unwrap();
@@ -355,7 +355,7 @@ mod tests {
         let car_axle = Axle::front_car();
         let motorcycle_axle = Axle::front_motorcycle();
         let params = HashMap::new();
-        
+
         assert!(car_axle.has_dual_wheels(&params).unwrap());
         assert!(!motorcycle_axle.has_dual_wheels(&params).unwrap());
     }
@@ -365,12 +365,12 @@ mod tests {
         let car_axle = Axle::front_car();
         let motorcycle_axle = Axle::front_motorcycle();
         let params = HashMap::new();
-        
+
         let car_positions = car_axle.wheel_positions(&params).unwrap();
         assert_eq!(car_positions.len(), 2); // Two wheels
         assert_eq!(car_positions[0], (1.4, -0.8)); // Left wheel
-        assert_eq!(car_positions[1], (1.4, 0.8));  // Right wheel
-        
+        assert_eq!(car_positions[1], (1.4, 0.8)); // Right wheel
+
         let motorcycle_positions = motorcycle_axle.wheel_positions(&params).unwrap();
         assert_eq!(motorcycle_positions.len(), 1); // Single wheel
         assert_eq!(motorcycle_positions[0], (0.8, 0.0));
@@ -380,14 +380,14 @@ mod tests {
     fn test_axles_all_axles() {
         let truck = Axles::truck();
         let all_axles = truck.all_axles();
-        
+
         assert_eq!(all_axles.len(), 3); // Front + rear + additional
     }
 
     #[test]
     fn test_axle_serialization() {
         let axle = Axle::front_car();
-        
+
         let xml = quick_xml::se::to_string(&axle).unwrap();
         assert!(xml.contains("maxSteering"));
         assert!(xml.contains("wheelDiameter"));
@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn test_axles_serialization() {
         let axles = Axles::car();
-        
+
         let xml = quick_xml::se::to_string(&axles).unwrap();
         assert!(xml.contains("FrontAxle"));
         assert!(xml.contains("RearAxle"));

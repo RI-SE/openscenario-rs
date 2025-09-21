@@ -25,15 +25,15 @@ pub struct VisibilityAction {
     /// Whether entity is visible to graphics/rendering systems
     #[serde(rename = "@graphics")]
     pub graphics: Boolean,
-    
+
     /// Whether entity is detectable by sensor systems
     #[serde(rename = "@sensors")]
     pub sensors: Boolean,
-    
+
     /// Whether entity participates in traffic interactions
     #[serde(rename = "@traffic")]
     pub traffic: Boolean,
-    
+
     /// Optional sensor reference set for selective sensor visibility
     #[serde(rename = "SensorReferenceSet", skip_serializing_if = "Option::is_none")]
     pub sensor_reference_set: Option<SensorReferenceSet>,
@@ -61,7 +61,7 @@ pub struct AppearanceAction {
     /// Light state action for lighting control
     #[serde(rename = "LightStateAction", skip_serializing_if = "Option::is_none")]
     pub light_state_action: Option<LightStateAction>,
-    
+
     /// Animation action for entity animations
     #[serde(rename = "AnimationAction", skip_serializing_if = "Option::is_none")]
     pub animation_action: Option<AnimationAction>,

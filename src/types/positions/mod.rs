@@ -23,7 +23,10 @@ pub mod trajectory;
 pub mod world;
 
 pub use relative::RelativeObjectPosition;
-pub use road::{LaneCoordinate, LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadCoordinate, RoadPosition};
+pub use road::{
+    LaneCoordinate, LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition,
+    RoadCoordinate, RoadPosition,
+};
 pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition, TrajectoryRef};
 pub use world::{GeographicPosition, WorldPosition};
 
@@ -39,17 +42,26 @@ pub struct Position {
     pub relative_world_position: Option<RelativeWorldPosition>,
     #[serde(rename = "RoadPosition", skip_serializing_if = "Option::is_none")]
     pub road_position: Option<RoadPosition>,
-    #[serde(rename = "RelativeRoadPosition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "RelativeRoadPosition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_road_position: Option<RelativeRoadPosition>,
     #[serde(rename = "LanePosition", skip_serializing_if = "Option::is_none")]
     pub lane_position: Option<LanePosition>,
-    #[serde(rename = "RelativeLanePosition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "RelativeLanePosition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_lane_position: Option<RelativeLanePosition>,
     #[serde(rename = "TrajectoryPosition", skip_serializing_if = "Option::is_none")]
     pub trajectory_position: Option<TrajectoryPosition>,
     #[serde(rename = "GeographicPosition", skip_serializing_if = "Option::is_none")]
     pub geographic_position: Option<GeographicPosition>,
-    #[serde(rename = "RelativeObjectPosition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "RelativeObjectPosition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_object_position: Option<RelativeObjectPosition>,
 }
 
@@ -140,7 +152,7 @@ impl Position {
             relative_object_position: None,
         }
     }
-    
+
     /// Create a Position with TrajectoryPosition
     pub fn trajectory(trajectory_position: TrajectoryPosition) -> Self {
         Self {
@@ -155,7 +167,7 @@ impl Position {
             relative_object_position: None,
         }
     }
-    
+
     /// Create a Position with GeographicPosition
     pub fn geographic(geographic_position: GeographicPosition) -> Self {
         Self {
@@ -170,7 +182,7 @@ impl Position {
             relative_object_position: None,
         }
     }
-    
+
     /// Create a Position with RelativeObjectPosition
     pub fn relative_object(relative_object_position: RelativeObjectPosition) -> Self {
         Self {

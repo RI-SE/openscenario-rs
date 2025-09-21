@@ -1,22 +1,22 @@
 //! Storyboard and main scenario structure types
 
-use crate::types::basic::{OSString, UnsignedShort, ParameterDeclarations};
-use crate::types::entities::Entities;
+use crate::types::basic::{OSString, ParameterDeclarations, UnsignedShort};
 use crate::types::catalogs::files::CatalogContent;
 use crate::types::distributions::ParameterValueDistribution;
-use crate::types::scenario::variables::VariableDeclarations;
+use crate::types::entities::Entities;
 use crate::types::scenario::monitors::MonitorDeclarations;
+use crate::types::scenario::variables::VariableDeclarations;
 use serde::{Deserialize, Serialize};
 
 /// Root OpenSCENARIO document structure supporting all document types
-/// This represents the flattened XSD group structure where OpenScenarioCategory 
+/// This represents the flattened XSD group structure where OpenScenarioCategory
 /// is a choice between ScenarioDefinition, CatalogDefinition, and ParameterValueDistributionDefinition groups
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename = "OpenSCENARIO")]
 pub struct OpenScenario {
     #[serde(rename = "FileHeader")]
     pub file_header: FileHeader,
-    
+
     // ScenarioDefinition group elements (optional - present for scenario documents)
     #[serde(
         rename = "ParameterDeclarations",
@@ -25,7 +25,7 @@ pub struct OpenScenario {
     pub parameter_declarations: Option<ParameterDeclarations>,
 
     #[serde(
-        rename = "VariableDeclarations", 
+        rename = "VariableDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
     pub variable_declarations: Option<VariableDeclarations>,
@@ -36,28 +36,16 @@ pub struct OpenScenario {
     )]
     pub monitor_declarations: Option<MonitorDeclarations>,
 
-    #[serde(
-        rename = "CatalogLocations",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "CatalogLocations", skip_serializing_if = "Option::is_none")]
     pub catalog_locations: Option<crate::types::catalogs::locations::CatalogLocations>,
 
-    #[serde(
-        rename = "RoadNetwork",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "RoadNetwork", skip_serializing_if = "Option::is_none")]
     pub road_network: Option<crate::types::road::RoadNetwork>,
 
-    #[serde(
-        rename = "Entities",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "Entities", skip_serializing_if = "Option::is_none")]
     pub entities: Option<Entities>,
 
-    #[serde(
-        rename = "Storyboard",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "Storyboard", skip_serializing_if = "Option::is_none")]
     pub storyboard: Option<Storyboard>,
 
     // ParameterValueDistributionDefinition group elements (optional - present for parameter variation documents)
@@ -68,10 +56,7 @@ pub struct OpenScenario {
     pub parameter_value_distribution: Option<ParameterValueDistribution>,
 
     // CatalogDefinition group elements (optional - present for catalog documents)
-    #[serde(
-        rename = "Catalog",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "Catalog", skip_serializing_if = "Option::is_none")]
     pub catalog: Option<CatalogDefinition>,
 }
 
@@ -96,7 +81,10 @@ impl OpenScenario {
 
     /// Check if this is a parameter variation document
     pub fn is_parameter_variation(&self) -> bool {
-        matches!(self.document_type(), OpenScenarioDocumentType::ParameterVariation)
+        matches!(
+            self.document_type(),
+            OpenScenarioDocumentType::ParameterVariation
+        )
     }
 
     /// Check if this is a catalog document
@@ -128,7 +116,7 @@ pub struct ScenarioDefinition {
     pub parameter_declarations: Option<ParameterDeclarations>,
 
     #[serde(
-        rename = "VariableDeclarations", 
+        rename = "VariableDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
     pub variable_declarations: Option<VariableDeclarations>,
@@ -250,5 +238,3 @@ impl Default for CatalogDefinition {
         }
     }
 }
-
-

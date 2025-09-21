@@ -16,11 +16,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrailerAction {
     /// Connect trailer action
-    #[serde(rename = "ConnectTrailerAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ConnectTrailerAction",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub connect_trailer_action: Option<ConnectTrailerAction>,
-    
+
     /// Disconnect trailer action
-    #[serde(rename = "DisconnectTrailerAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "DisconnectTrailerAction",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub disconnect_trailer_action: Option<DisconnectTrailerAction>,
 }
 

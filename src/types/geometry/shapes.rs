@@ -1,8 +1,8 @@
 //! Basic geometric shapes for OpenSCENARIO
 
+use crate::error::Result;
 use crate::types::basic::Double;
 use crate::types::positions::Position;
-use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -52,32 +52,36 @@ impl Center {
         let x1 = self.x.resolve(&params)?;
         let y1 = self.y.resolve(&params)?;
         let z1 = self.z.resolve(&params)?;
-        
+
         let x2 = other.x.resolve(&params)?;
         let y2 = other.y.resolve(&params)?;
         let z2 = other.z.resolve(&params)?;
-        
+
         let dx = x2 - x1;
         let dy = y2 - y1;
         let dz = z2 - z1;
-        
+
         Ok((dx * dx + dy * dy + dz * dz).sqrt())
     }
 
     /// Calculate 3D Euclidean distance to another center point with parameter resolution
-    pub fn distance_to_with_params(&self, other: &Center, params: &HashMap<String, String>) -> Result<f64> {
+    pub fn distance_to_with_params(
+        &self,
+        other: &Center,
+        params: &HashMap<String, String>,
+    ) -> Result<f64> {
         let x1 = self.x.resolve(params)?;
         let y1 = self.y.resolve(params)?;
         let z1 = self.z.resolve(params)?;
-        
+
         let x2 = other.x.resolve(params)?;
         let y2 = other.y.resolve(params)?;
         let z2 = other.z.resolve(params)?;
-        
+
         let dx = x2 - x1;
         let dy = y2 - y1;
         let dz = z2 - z1;
-        
+
         Ok((dx * dx + dy * dy + dz * dz).sqrt())
     }
 }
@@ -126,7 +130,7 @@ impl BoundingBox {
         let center_x = self.center.x.resolve(&params)?;
         let center_y = self.center.y.resolve(&params)?;
         let center_z = self.center.z.resolve(&params)?;
-        
+
         let width = self.dimensions.width.resolve(&params)?;
         let length = self.dimensions.length.resolve(&params)?;
         let height = self.dimensions.height.resolve(&params)?;
@@ -135,17 +139,26 @@ impl BoundingBox {
         let half_length = length / 2.0;
         let half_height = height / 2.0;
 
-        Ok(x >= center_x - half_length && x <= center_x + half_length &&
-           y >= center_y - half_width && y <= center_y + half_width &&
-           z >= center_z - half_height && z <= center_z + half_height)
+        Ok(x >= center_x - half_length
+            && x <= center_x + half_length
+            && y >= center_y - half_width
+            && y <= center_y + half_width
+            && z >= center_z - half_height
+            && z <= center_z + half_height)
     }
 
     /// Check if a point is contained within this bounding box with parameter resolution
-    pub fn contains_point_with_params(&self, x: f64, y: f64, z: f64, params: &HashMap<String, String>) -> Result<bool> {
+    pub fn contains_point_with_params(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        params: &HashMap<String, String>,
+    ) -> Result<bool> {
         let center_x = self.center.x.resolve(params)?;
         let center_y = self.center.y.resolve(params)?;
         let center_z = self.center.z.resolve(params)?;
-        
+
         let width = self.dimensions.width.resolve(params)?;
         let length = self.dimensions.length.resolve(params)?;
         let height = self.dimensions.height.resolve(params)?;
@@ -154,17 +167,26 @@ impl BoundingBox {
         let half_length = length / 2.0;
         let half_height = height / 2.0;
 
-        Ok(x >= center_x - half_length && x <= center_x + half_length &&
-           y >= center_y - half_width && y <= center_y + half_width &&
-           z >= center_z - half_height && z <= center_z + half_height)
+        Ok(x >= center_x - half_length
+            && x <= center_x + half_length
+            && y >= center_y - half_width
+            && y <= center_y + half_width
+            && z >= center_z - half_height
+            && z <= center_z + half_height)
     }
 
     /// Calculate the distance from a point to the nearest surface of the bounding box
-    pub fn distance_to_point(&self, x: f64, y: f64, z: f64, params: &HashMap<String, String>) -> Result<f64> {
+    pub fn distance_to_point(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        params: &HashMap<String, String>,
+    ) -> Result<f64> {
         let center_x = self.center.x.resolve(params)?;
         let center_y = self.center.y.resolve(params)?;
         let center_z = self.center.z.resolve(params)?;
-        
+
         let width = self.dimensions.width.resolve(params)?;
         let length = self.dimensions.length.resolve(params)?;
         let height = self.dimensions.height.resolve(params)?;
@@ -192,7 +214,11 @@ impl BoundingBox {
     }
 
     /// Check if this bounding box intersects with another
-    pub fn intersects(&self, other: &BoundingBox, params: &HashMap<String, String>) -> Result<bool> {
+    pub fn intersects(
+        &self,
+        other: &BoundingBox,
+        params: &HashMap<String, String>,
+    ) -> Result<bool> {
         let self_center_x = self.center.x.resolve(params)?;
         let self_center_y = self.center.y.resolve(params)?;
         let self_center_z = self.center.z.resolve(params)?;
@@ -208,9 +234,11 @@ impl BoundingBox {
         let other_height = other.dimensions.height.resolve(params)?;
 
         // Check for separation along each axis
-        let x_overlap = (self_center_x - other_center_x).abs() <= (self_length + other_length) / 2.0;
+        let x_overlap =
+            (self_center_x - other_center_x).abs() <= (self_length + other_length) / 2.0;
         let y_overlap = (self_center_y - other_center_y).abs() <= (self_width + other_width) / 2.0;
-        let z_overlap = (self_center_z - other_center_z).abs() <= (self_height + other_height) / 2.0;
+        let z_overlap =
+            (self_center_z - other_center_z).abs() <= (self_height + other_height) / 2.0;
 
         Ok(x_overlap && y_overlap && z_overlap)
     }
@@ -225,8 +253,12 @@ impl BoundingBox {
             },
             dimensions: Dimensions {
                 width: crate::types::basic::Double::literal(self.dimensions.width.resolve(params)?),
-                length: crate::types::basic::Double::literal(self.dimensions.length.resolve(params)?),
-                height: crate::types::basic::Double::literal(self.dimensions.height.resolve(params)?),
+                length: crate::types::basic::Double::literal(
+                    self.dimensions.length.resolve(params)?,
+                ),
+                height: crate::types::basic::Double::literal(
+                    self.dimensions.height.resolve(params)?,
+                ),
             },
         })
     }
@@ -314,7 +346,7 @@ impl Dimensions {
         let width = self.width.resolve(params)? * factor;
         let length = self.length.resolve(params)? * factor;
         let height = self.height.resolve(params)? * factor;
-        
+
         Ok(Self {
             width: crate::types::basic::Value::literal(width),
             length: crate::types::basic::Value::literal(length),
@@ -476,8 +508,6 @@ mod tests {
 
     #[test]
     fn test_bounding_box_volume() {
-        
-        
         let bbox = BoundingBox {
             center: Center::default(),
             dimensions: Dimensions {
@@ -493,8 +523,6 @@ mod tests {
 
     #[test]
     fn test_bounding_box_contains_point() {
-        
-        
         let bbox = BoundingBox {
             center: Center {
                 x: crate::types::basic::Value::literal(0.0),
@@ -511,7 +539,7 @@ mod tests {
         // Point inside
         assert!(bbox.contains_point(0.0, 0.0, 0.0).unwrap());
         assert!(bbox.contains_point(1.9, 0.9, 0.7).unwrap());
-        
+
         // Point outside
         assert!(!bbox.contains_point(2.1, 0.0, 0.0).unwrap());
         assert!(!bbox.contains_point(0.0, 1.1, 0.0).unwrap());
@@ -521,7 +549,7 @@ mod tests {
     #[test]
     fn test_bounding_box_distance_to_point() {
         use std::collections::HashMap;
-        
+
         let bbox = BoundingBox {
             center: Center::default(),
             dimensions: Dimensions {
@@ -532,11 +560,11 @@ mod tests {
         };
 
         let params = HashMap::new();
-        
+
         // Point inside should have negative distance
         let distance = bbox.distance_to_point(0.0, 0.0, 0.0, &params).unwrap();
         assert!(distance < 0.0);
-        
+
         // Point outside
         let distance = bbox.distance_to_point(3.0, 0.0, 0.0, &params).unwrap();
         assert!(distance > 0.0);
@@ -546,7 +574,7 @@ mod tests {
     #[test]
     fn test_bounding_box_intersection() {
         use std::collections::HashMap;
-        
+
         let bbox1 = BoundingBox {
             center: Center::default(),
             dimensions: Dimensions {
@@ -583,10 +611,10 @@ mod tests {
         };
 
         let params = HashMap::new();
-        
+
         // bbox1 and bbox2 should intersect
         assert!(bbox1.intersects(&bbox2, &params).unwrap());
-        
+
         // bbox1 and bbox3 should not intersect
         assert!(!bbox1.intersects(&bbox3, &params).unwrap());
     }
@@ -615,7 +643,7 @@ mod tests {
     #[test]
     fn test_dimensions_footprint_area() {
         use std::collections::HashMap;
-        
+
         let dims = Dimensions::car();
         let params = HashMap::new();
         let area = dims.footprint_area(&params).unwrap();
@@ -625,11 +653,11 @@ mod tests {
     #[test]
     fn test_dimensions_scale() {
         use std::collections::HashMap;
-        
+
         let dims = Dimensions::car();
         let params = HashMap::new();
         let scaled = dims.scale(2.0, &params).unwrap();
-        
+
         assert_eq!(scaled.width.as_literal().unwrap(), &3.6); // 1.8 * 2.0
         assert_eq!(scaled.length.as_literal().unwrap(), &9.0); // 4.5 * 2.0
         assert_eq!(scaled.height.as_literal().unwrap(), &3.0); // 1.5 * 2.0
@@ -638,7 +666,7 @@ mod tests {
     #[test]
     fn test_bounding_box_with_parameters() {
         use std::collections::HashMap;
-        
+
         let bbox = BoundingBox {
             center: Center::default(),
             dimensions: Dimensions {
@@ -743,7 +771,7 @@ mod tests {
         // Point inside
         assert!(bbox.contains_point(0.0, 0.0, 0.0).unwrap());
         assert!(bbox.contains_point(1.9, 0.9, 0.7).unwrap());
-        
+
         // Point outside
         assert!(!bbox.contains_point(2.1, 0.0, 0.0).unwrap());
         assert!(!bbox.contains_point(0.0, 1.1, 0.0).unwrap());

@@ -1,9 +1,9 @@
 //! Vehicle entity definition
 
+use super::axles::Axles;
 use crate::types::basic::{Double, OSString};
 use crate::types::enums::VehicleCategory;
 use crate::types::geometry::BoundingBox;
-use super::axles::Axles;
 use serde::{Deserialize, Serialize};
 
 /// Vehicle performance characteristics
@@ -16,8 +16,6 @@ pub struct Performance {
     #[serde(rename = "@maxDeceleration")]
     pub max_deceleration: Double,
 }
-
-
 
 /// Vehicle properties container
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -82,8 +80,6 @@ impl Default for Performance {
     }
 }
 
-
-
 impl Vehicle {
     /// Create a new car with default specifications
     pub fn new_car(name: String) -> Self {
@@ -136,12 +132,18 @@ impl Vehicle {
     }
 
     /// Get the wheelbase of this vehicle
-    pub fn wheelbase(&self, params: &std::collections::HashMap<String, String>) -> crate::error::Result<f64> {
+    pub fn wheelbase(
+        &self,
+        params: &std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<f64> {
         self.axles.wheelbase(params)
     }
 
     /// Check if this vehicle is steerable
-    pub fn is_steerable(&self, params: &std::collections::HashMap<String, String>) -> crate::error::Result<bool> {
+    pub fn is_steerable(
+        &self,
+        params: &std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<bool> {
         self.axles.is_steerable(params)
     }
 
@@ -151,7 +153,10 @@ impl Vehicle {
     }
 
     /// Calculate the vehicle's footprint area
-    pub fn footprint_area(&self, params: &std::collections::HashMap<String, String>) -> crate::error::Result<f64> {
+    pub fn footprint_area(
+        &self,
+        params: &std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<f64> {
         self.bounding_box.dimensions.footprint_area(params)
     }
 }
@@ -216,7 +221,7 @@ mod tests {
     #[test]
     fn test_vehicle_new_car() {
         let car = Vehicle::new_car("TestCar".to_string());
-        
+
         assert_eq!(car.name.as_literal().unwrap(), "TestCar");
         assert_eq!(car.vehicle_category, VehicleCategory::Car);
         assert_eq!(car.axle_count(), 2);
@@ -225,7 +230,7 @@ mod tests {
     #[test]
     fn test_vehicle_new_truck() {
         let truck = Vehicle::new_truck("TestTruck".to_string());
-        
+
         assert_eq!(truck.name.as_literal().unwrap(), "TestTruck");
         assert_eq!(truck.vehicle_category, VehicleCategory::Truck);
         assert_eq!(truck.axle_count(), 3); // Front + rear + additional
@@ -234,7 +239,7 @@ mod tests {
     #[test]
     fn test_vehicle_new_motorcycle() {
         let motorcycle = Vehicle::new_motorcycle("TestBike".to_string());
-        
+
         assert_eq!(motorcycle.name.as_literal().unwrap(), "TestBike");
         assert_eq!(motorcycle.vehicle_category, VehicleCategory::Motorbike);
         assert_eq!(motorcycle.axle_count(), 2);
@@ -243,10 +248,10 @@ mod tests {
     #[test]
     fn test_vehicle_wheelbase() {
         use std::collections::HashMap;
-        
+
         let car = Vehicle::new_car("TestCar".to_string());
         let params = HashMap::new();
-        
+
         let wheelbase = car.wheelbase(&params).unwrap();
         assert!(wheelbase > 0.0);
     }
@@ -254,20 +259,20 @@ mod tests {
     #[test]
     fn test_vehicle_is_steerable() {
         use std::collections::HashMap;
-        
+
         let car = Vehicle::new_car("TestCar".to_string());
         let params = HashMap::new();
-        
+
         assert!(car.is_steerable(&params).unwrap());
     }
 
     #[test]
     fn test_vehicle_footprint_area() {
         use std::collections::HashMap;
-        
+
         let car = Vehicle::new_car("TestCar".to_string());
         let params = HashMap::new();
-        
+
         let area = car.footprint_area(&params).unwrap();
         assert!(area > 0.0);
     }

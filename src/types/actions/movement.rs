@@ -1337,7 +1337,10 @@ mod tests {
         assert_eq!(action.continuous.as_literal(), Some(&false));
 
         let constraints = action.dynamic_constraints.unwrap();
-        assert_eq!(constraints.max_lateral_acc.unwrap().as_literal(), Some(&2.0));
+        assert_eq!(
+            constraints.max_lateral_acc.unwrap().as_literal(),
+            Some(&2.0)
+        );
         assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&50.0));
     }
 
@@ -1452,7 +1455,10 @@ mod tests {
             max_speed: Some(Double::literal(80.0)),
         };
 
-        assert_eq!(constraints.max_lateral_acc.unwrap().as_literal(), Some(&3.0));
+        assert_eq!(
+            constraints.max_lateral_acc.unwrap().as_literal(),
+            Some(&3.0)
+        );
         assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&80.0));
 
         let empty_constraints = DynamicConstraints::default();

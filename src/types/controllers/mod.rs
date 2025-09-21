@@ -272,12 +272,14 @@ impl Default for ControllerDistribution {
             single_distributions: vec![single_param_dist],
             multi_distributions: vec![],
         };
-        
+
         Self {
             controller_type: ControllerType::Movement,
             distribution: ParameterValueDistribution::new_deterministic(
-                File { filepath: "default.xosc".to_string() }, 
-                deterministic
+                File {
+                    filepath: "default.xosc".to_string(),
+                },
+                deterministic,
             ),
         }
     }

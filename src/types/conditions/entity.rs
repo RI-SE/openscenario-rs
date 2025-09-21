@@ -15,9 +15,11 @@
 //! - Enabling complex multi-entity coordination and interaction patterns
 
 use crate::types::basic::{Boolean, Double, OSString};
-use crate::types::enums::{CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule};
+use crate::types::enums::{
+    CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule,
+};
 use crate::types::positions::Position;
-use crate::types::scenario::triggers::{TriggeringEntities};
+use crate::types::scenario::triggers::TriggeringEntities;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -38,7 +40,7 @@ pub struct ReachPositionCondition {
     /// Target position to reach
     #[serde(rename = "Position")]
     pub position: Position,
-    
+
     /// Distance tolerance for considering position reached
     #[serde(rename = "@tolerance")]
     pub tolerance: Double,
@@ -51,31 +53,34 @@ pub struct DistanceCondition {
     /// Reference position for distance measurement
     #[serde(rename = "Position")]
     pub position: Position,
-    
+
     /// Distance value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Whether to use freespace (true) or reference point (false) distance
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
-    
+
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Whether to measure distance along route (deprecated)
     #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
     pub along_route: Option<Boolean>,
-    
+
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    
+
     /// Type of relative distance measurement
-    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@relativeDistanceType",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_distance_type: Option<RelativeDistanceType>,
-    
+
     /// Algorithm for route-based distance calculation
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
@@ -88,27 +93,27 @@ pub struct RelativeDistanceCondition {
     /// Reference entity for distance measurement
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    
+
     /// Distance value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Whether to use freespace (true) or reference point (false) distance
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
-    
+
     /// Type of relative distance measurement
     #[serde(rename = "@relativeDistanceType")]
     pub relative_distance_type: RelativeDistanceType,
-    
+
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    
+
     /// Algorithm for route-based distance calculation
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
@@ -121,11 +126,11 @@ pub struct AccelerationCondition {
     /// Acceleration value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Direction of acceleration measurement (optional)
     #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
     pub direction: Option<DirectionalDimension>,
@@ -147,11 +152,11 @@ pub struct CollisionCondition {
     /// Specific target entity (optional)
     #[serde(rename = "@target", skip_serializing_if = "Option::is_none")]
     pub target: Option<OSString>,
-    
+
     /// Collision detection by entity type
     #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<CollisionTarget>,
-    
+
     /// Position-based collision detection
     #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
@@ -188,27 +193,30 @@ pub struct TimeHeadwayCondition {
     /// Target entity reference for headway measurement
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    
+
     /// Headway time value
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Comparison rule
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Whether to measure in freespace or bounding box
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
-    
+
     /// Optional coordinate system for measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    
+
     /// Optional relative distance type
-    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@relativeDistanceType",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_distance_type: Option<RelativeDistanceType>,
-    
+
     /// Optional routing algorithm for route-based measurement
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
@@ -220,27 +228,30 @@ pub struct TimeToCollisionCondition {
     /// Time to collision value
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Comparison rule
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Whether to measure in freespace or bounding box
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
-    
+
     /// Optional coordinate system for measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    
+
     /// Optional relative distance type
-    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@relativeDistanceType",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_distance_type: Option<RelativeDistanceType>,
-    
+
     /// Optional routing algorithm for route-based measurement
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
-    
+
     /// Target specification for collision detection
     #[serde(rename = "Target")]
     pub target: TimeToCollisionTarget,
@@ -252,7 +263,7 @@ pub struct TimeToCollisionTarget {
     /// Target entity reference
     #[serde(rename = "@entityRef", skip_serializing_if = "Option::is_none")]
     pub entity_ref: Option<OSString>,
-    
+
     /// Target position
     #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
@@ -332,7 +343,7 @@ pub struct ByEntityConditionSchema {
     /// Entities that can trigger this condition
     #[serde(rename = "TriggeringEntities")]
     pub triggering_entities: TriggeringEntities,
-    
+
     /// The actual entity condition
     #[serde(rename = "EntityCondition")]
     pub entity_condition: EntityCondition,
@@ -357,11 +368,11 @@ impl ReachPositionCondition {
             tolerance: Double::literal(tolerance),
         }
     }
-    
+
     /// Create with world position
     pub fn at_world_position(x: f64, y: f64, z: f64, h: f64, tolerance: f64) -> Self {
         use crate::types::positions::WorldPosition;
-        
+
         let world_pos = WorldPosition {
             x: Double::literal(x),
             y: Double::literal(y),
@@ -375,19 +386,14 @@ impl ReachPositionCondition {
         position.relative_world_position = None;
         position.road_position = None;
         position.lane_position = None;
-        
+
         Self::new(position, tolerance)
     }
 }
 
 impl DistanceCondition {
     /// Create a new distance condition
-    pub fn new(
-        position: Position,
-        value: f64,
-        freespace: bool,
-        rule: Rule,
-    ) -> Self {
+    pub fn new(position: Position, value: f64, freespace: bool, rule: Rule) -> Self {
         Self {
             position,
             value: Double::literal(value),
@@ -399,30 +405,30 @@ impl DistanceCondition {
             routing_algorithm: None,
         }
     }
-    
+
     /// Set coordinate system for distance measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
         self.coordinate_system = Some(system);
         self
     }
-    
+
     /// Set distance measurement type
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
         self.relative_distance_type = Some(distance_type);
         self
     }
-    
+
     /// Set routing algorithm for route-based distance
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
         self.routing_algorithm = Some(algorithm);
         self
     }
-    
+
     /// Create condition for distance less than threshold
     pub fn less_than(position: Position, distance: f64, freespace: bool) -> Self {
         Self::new(position, distance, freespace, Rule::LessThan)
     }
-    
+
     /// Create condition for distance greater than threshold
     pub fn greater_than(position: Position, distance: f64, freespace: bool) -> Self {
         Self::new(position, distance, freespace, Rule::GreaterThan)
@@ -448,47 +454,50 @@ impl RelativeDistanceCondition {
             routing_algorithm: None,
         }
     }
-    
+
     /// Set coordinate system for distance measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
         self.coordinate_system = Some(system);
         self
     }
-    
+
     /// Set routing algorithm for route-based distance
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
         self.routing_algorithm = Some(algorithm);
         self
     }
-    
+
     /// Create longitudinal distance condition
-    pub fn longitudinal(
-        entity_ref: &str,
-        distance: f64,
-        freespace: bool,
-        rule: Rule,
-    ) -> Self {
-        Self::new(entity_ref, distance, freespace, RelativeDistanceType::Longitudinal, rule)
+    pub fn longitudinal(entity_ref: &str, distance: f64, freespace: bool, rule: Rule) -> Self {
+        Self::new(
+            entity_ref,
+            distance,
+            freespace,
+            RelativeDistanceType::Longitudinal,
+            rule,
+        )
     }
-    
+
     /// Create lateral distance condition
-    pub fn lateral(
-        entity_ref: &str,
-        distance: f64,
-        freespace: bool,
-        rule: Rule,
-    ) -> Self {
-        Self::new(entity_ref, distance, freespace, RelativeDistanceType::Lateral, rule)
+    pub fn lateral(entity_ref: &str, distance: f64, freespace: bool, rule: Rule) -> Self {
+        Self::new(
+            entity_ref,
+            distance,
+            freespace,
+            RelativeDistanceType::Lateral,
+            rule,
+        )
     }
-    
+
     /// Create cartesian distance condition
-    pub fn cartesian(
-        entity_ref: &str,
-        distance: f64,
-        freespace: bool,
-        rule: Rule,
-    ) -> Self {
-        Self::new(entity_ref, distance, freespace, RelativeDistanceType::Cartesian, rule)
+    pub fn cartesian(entity_ref: &str, distance: f64, freespace: bool, rule: Rule) -> Self {
+        Self::new(
+            entity_ref,
+            distance,
+            freespace,
+            RelativeDistanceType::Cartesian,
+            rule,
+        )
     }
 }
 
@@ -501,33 +510,33 @@ impl AccelerationCondition {
             direction: None,
         }
     }
-    
+
     /// Set direction of acceleration measurement
     pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
         self.direction = Some(direction);
         self
     }
-    
+
     /// Create condition for acceleration greater than threshold
     pub fn greater_than(acceleration: f64) -> Self {
         Self::new(acceleration, Rule::GreaterThan)
     }
-    
+
     /// Create condition for acceleration less than threshold
     pub fn less_than(acceleration: f64) -> Self {
         Self::new(acceleration, Rule::LessThan)
     }
-    
+
     /// Create condition for longitudinal acceleration
     pub fn longitudinal(acceleration: f64, rule: Rule) -> Self {
         Self::new(acceleration, rule).with_direction(DirectionalDimension::Longitudinal)
     }
-    
+
     /// Create condition for lateral acceleration
     pub fn lateral(acceleration: f64, rule: Rule) -> Self {
         Self::new(acceleration, rule).with_direction(DirectionalDimension::Lateral)
     }
-    
+
     /// Create condition for vertical acceleration
     pub fn vertical(acceleration: f64, rule: Rule) -> Self {
         Self::new(acceleration, rule).with_direction(DirectionalDimension::Vertical)
@@ -541,7 +550,7 @@ impl StandStillCondition {
             duration: Double::literal(duration),
         }
     }
-    
+
     /// Create condition with specific duration
     pub fn with_duration(duration: f64) -> Self {
         Self::new(duration)
@@ -557,7 +566,7 @@ impl CollisionCondition {
             position: None,
         }
     }
-    
+
     /// Create collision condition for entity type
     pub fn with_type(entity_type: &str) -> Self {
         Self {
@@ -568,7 +577,7 @@ impl CollisionCondition {
             position: None,
         }
     }
-    
+
     /// Create collision condition at specific position
     pub fn at_position(position: Position) -> Self {
         Self {
@@ -577,7 +586,7 @@ impl CollisionCondition {
             position: Some(position),
         }
     }
-    
+
     /// Create general collision condition (any collision)
     pub fn any_collision() -> Self {
         Self {
@@ -595,7 +604,7 @@ impl OffRoadCondition {
             duration: Double::literal(duration),
         }
     }
-    
+
     /// Create condition with specific duration
     pub fn with_duration(duration: f64) -> Self {
         Self::new(duration)
@@ -609,7 +618,7 @@ impl EndOfRoadCondition {
             duration: Double::literal(duration),
         }
     }
-    
+
     /// Create condition with specific duration
     pub fn with_duration(duration: f64) -> Self {
         Self::new(duration)
@@ -629,29 +638,29 @@ impl TimeHeadwayCondition {
             routing_algorithm: None,
         }
     }
-    
+
     /// Create condition for headway less than threshold
     pub fn less_than(entity_ref: &str, headway: f64, freespace: bool) -> Self {
         Self::new(entity_ref, headway, Rule::LessThan, freespace)
     }
-    
+
     /// Create condition for headway greater than threshold
     pub fn greater_than(entity_ref: &str, headway: f64, freespace: bool) -> Self {
         Self::new(entity_ref, headway, Rule::GreaterThan, freespace)
     }
-    
+
     /// Set coordinate system for measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
         self.coordinate_system = Some(system);
         self
     }
-    
+
     /// Set relative distance type for measurement
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
         self.relative_distance_type = Some(distance_type);
         self
     }
-    
+
     /// Set routing algorithm for route-based measurement
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
         self.routing_algorithm = Some(algorithm);
@@ -666,7 +675,7 @@ impl TimeToCollisionCondition {
             entity_ref: Some(OSString::literal(entity_ref.to_string())),
             position: None,
         };
-        
+
         Self {
             value: Double::literal(value),
             rule,
@@ -677,14 +686,19 @@ impl TimeToCollisionCondition {
             target,
         }
     }
-    
+
     /// Create a new time to collision condition with position target
-    pub fn with_position_target(position: Position, value: f64, rule: Rule, freespace: bool) -> Self {
+    pub fn with_position_target(
+        position: Position,
+        value: f64,
+        rule: Rule,
+        freespace: bool,
+    ) -> Self {
         let target = TimeToCollisionTarget {
             entity_ref: None,
             position: Some(position),
         };
-        
+
         Self {
             value: Double::literal(value),
             rule,
@@ -695,39 +709,39 @@ impl TimeToCollisionCondition {
             target,
         }
     }
-    
+
     /// Create condition for collision time less than threshold (entity target)
     pub fn entity_less_than(entity_ref: &str, time: f64, freespace: bool) -> Self {
         Self::with_entity_target(entity_ref, time, Rule::LessThan, freespace)
     }
-    
+
     /// Create condition for collision time greater than threshold (entity target)
     pub fn entity_greater_than(entity_ref: &str, time: f64, freespace: bool) -> Self {
         Self::with_entity_target(entity_ref, time, Rule::GreaterThan, freespace)
     }
-    
+
     /// Create condition for collision time less than threshold (position target)
     pub fn position_less_than(position: Position, time: f64, freespace: bool) -> Self {
         Self::with_position_target(position, time, Rule::LessThan, freespace)
     }
-    
+
     /// Create condition for collision time greater than threshold (position target)
     pub fn position_greater_than(position: Position, time: f64, freespace: bool) -> Self {
         Self::with_position_target(position, time, Rule::GreaterThan, freespace)
     }
-    
+
     /// Set coordinate system for measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
         self.coordinate_system = Some(system);
         self
     }
-    
+
     /// Set relative distance type for measurement
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
         self.relative_distance_type = Some(distance_type);
         self
     }
-    
+
     /// Set routing algorithm for route-based measurement
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
         self.routing_algorithm = Some(algorithm);
@@ -743,7 +757,7 @@ impl TimeToCollisionTarget {
             position: None,
         }
     }
-    
+
     /// Create target with position
     pub fn position(position: Position) -> Self {
         Self {
@@ -912,22 +926,17 @@ impl ByEntityCondition {
             entity_ref: entity_ref.into(),
         })
     }
-    
+
     /// Create a reach position condition
     pub fn reach_position(position: Position, tolerance: f64) -> Self {
         ByEntityCondition::ReachPosition(ReachPositionCondition::new(position, tolerance))
     }
-    
+
     /// Create a distance condition
-    pub fn distance(
-        position: Position,
-        value: f64,
-        freespace: bool,
-        rule: Rule,
-    ) -> Self {
+    pub fn distance(position: Position, value: f64, freespace: bool, rule: Rule) -> Self {
         ByEntityCondition::Distance(DistanceCondition::new(position, value, freespace, rule))
     }
-    
+
     /// Create a relative distance condition
     pub fn relative_distance(
         entity_ref: &str,
@@ -944,12 +953,12 @@ impl ByEntityCondition {
             rule,
         ))
     }
-    
+
     /// Create an acceleration condition
     pub fn acceleration(value: f64, rule: Rule) -> Self {
         ByEntityCondition::Acceleration(AccelerationCondition::new(value, rule))
     }
-    
+
     /// Create an acceleration condition with direction
     pub fn acceleration_with_direction(
         value: f64,
@@ -957,58 +966,74 @@ impl ByEntityCondition {
         direction: DirectionalDimension,
     ) -> Self {
         ByEntityCondition::Acceleration(
-            AccelerationCondition::new(value, rule).with_direction(direction)
+            AccelerationCondition::new(value, rule).with_direction(direction),
         )
     }
-    
+
     /// Create a standstill condition
     pub fn standstill(duration: f64) -> Self {
         ByEntityCondition::StandStill(StandStillCondition::new(duration))
     }
-    
+
     /// Create a collision condition with specific target
     pub fn collision_with_target(target: &str) -> Self {
         ByEntityCondition::Collision(CollisionCondition::with_target(target))
     }
-    
+
     /// Create a collision condition for entity type
     pub fn collision_with_type(entity_type: &str) -> Self {
         ByEntityCondition::Collision(CollisionCondition::with_type(entity_type))
     }
-    
+
     /// Create a collision condition at position
     pub fn collision_at_position(position: Position) -> Self {
         ByEntityCondition::Collision(CollisionCondition::at_position(position))
     }
-    
+
     /// Create a general collision condition
     pub fn collision() -> Self {
         ByEntityCondition::Collision(CollisionCondition::any_collision())
     }
-    
+
     /// Create an off-road condition
     pub fn off_road(duration: f64) -> Self {
         ByEntityCondition::OffRoad(OffRoadCondition::new(duration))
     }
-    
+
     /// Create an end-of-road condition
     pub fn end_of_road(duration: f64) -> Self {
         ByEntityCondition::EndOfRoad(EndOfRoadCondition::new(duration))
     }
-    
+
     /// Create a time headway condition
     pub fn time_headway(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
-        ByEntityCondition::TimeHeadway(TimeHeadwayCondition::new(entity_ref, value, rule, freespace))
+        ByEntityCondition::TimeHeadway(TimeHeadwayCondition::new(
+            entity_ref, value, rule, freespace,
+        ))
     }
-    
+
     /// Create a time to collision condition with entity target
-    pub fn time_to_collision_entity(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
-        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_entity_target(entity_ref, value, rule, freespace))
+    pub fn time_to_collision_entity(
+        entity_ref: &str,
+        value: f64,
+        rule: Rule,
+        freespace: bool,
+    ) -> Self {
+        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_entity_target(
+            entity_ref, value, rule, freespace,
+        ))
     }
-    
+
     /// Create a time to collision condition with position target
-    pub fn time_to_collision_position(position: Position, value: f64, rule: Rule, freespace: bool) -> Self {
-        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_position_target(position, value, rule, freespace))
+    pub fn time_to_collision_position(
+        position: Position,
+        value: f64,
+        rule: Rule,
+        freespace: bool,
+    ) -> Self {
+        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_position_target(
+            position, value, rule, freespace,
+        ))
     }
 }
 
@@ -1031,7 +1056,10 @@ mod tests {
             .with_direction(DirectionalDimension::Longitudinal);
         assert_eq!(condition.value, Double::literal(3.0));
         assert_eq!(condition.rule, Rule::LessThan);
-        assert_eq!(condition.direction, Some(DirectionalDimension::Longitudinal));
+        assert_eq!(
+            condition.direction,
+            Some(DirectionalDimension::Longitudinal)
+        );
     }
 
     #[test]
@@ -1055,7 +1083,10 @@ mod tests {
         let condition = AccelerationCondition::longitudinal(4.0, Rule::EqualTo);
         assert_eq!(condition.value, Double::literal(4.0));
         assert_eq!(condition.rule, Rule::EqualTo);
-        assert_eq!(condition.direction, Some(DirectionalDimension::Longitudinal));
+        assert_eq!(
+            condition.direction,
+            Some(DirectionalDimension::Longitudinal)
+        );
     }
 
     #[test]
@@ -1145,22 +1176,22 @@ mod tests {
     fn test_acceleration_condition_serialization() {
         let condition = AccelerationCondition::new(2.5, Rule::GreaterThan)
             .with_direction(DirectionalDimension::Longitudinal);
-        
+
         // Test that it can be serialized and deserialized
         let serialized = serde_json::to_string(&condition).unwrap();
         let deserialized: AccelerationCondition = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(condition, deserialized);
     }
 
     #[test]
     fn test_standstill_condition_serialization() {
         let condition = StandStillCondition::new(3.5);
-        
+
         // Test that it can be serialized and deserialized
         let serialized = serde_json::to_string(&condition).unwrap();
         let deserialized: StandStillCondition = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(condition, deserialized);
     }
 
@@ -1169,12 +1200,12 @@ mod tests {
         // Test that all variants can be created and matched
         let acceleration = ByEntityCondition::acceleration(1.0, Rule::GreaterThan);
         let standstill = ByEntityCondition::standstill(2.0);
-        
+
         match acceleration {
             ByEntityCondition::Acceleration(_) => (),
             _ => panic!("Expected Acceleration variant"),
         }
-        
+
         match standstill {
             ByEntityCondition::StandStill(_) => (),
             _ => panic!("Expected StandStill variant"),
@@ -1184,7 +1215,10 @@ mod tests {
     #[test]
     fn test_collision_condition_new_with_target() {
         let condition = CollisionCondition::with_target("vehicle1");
-        assert_eq!(condition.target, Some(OSString::literal("vehicle1".to_string())));
+        assert_eq!(
+            condition.target,
+            Some(OSString::literal("vehicle1".to_string()))
+        );
         assert_eq!(condition.by_type, None);
         assert_eq!(condition.position, None);
     }
@@ -1195,7 +1229,10 @@ mod tests {
         assert_eq!(condition.target, None);
         assert!(condition.by_type.is_some());
         if let Some(by_type) = condition.by_type {
-            assert_eq!(by_type.target_type, OSString::literal("pedestrian".to_string()));
+            assert_eq!(
+                by_type.target_type,
+                OSString::literal("pedestrian".to_string())
+            );
         }
         assert_eq!(condition.position, None);
     }
@@ -1257,21 +1294,24 @@ mod tests {
         let collision_target = ByEntityCondition::collision_with_target("vehicle1");
         let collision_type = ByEntityCondition::collision_with_type("pedestrian");
         let collision_any = ByEntityCondition::collision();
-        
+
         match collision_target {
             ByEntityCondition::Collision(condition) => {
-                assert_eq!(condition.target, Some(OSString::literal("vehicle1".to_string())));
+                assert_eq!(
+                    condition.target,
+                    Some(OSString::literal("vehicle1".to_string()))
+                );
             }
             _ => panic!("Expected Collision variant"),
         }
-        
+
         match collision_type {
             ByEntityCondition::Collision(condition) => {
                 assert!(condition.by_type.is_some());
             }
             _ => panic!("Expected Collision variant"),
         }
-        
+
         match collision_any {
             ByEntityCondition::Collision(_) => (),
             _ => panic!("Expected Collision variant"),
@@ -1282,14 +1322,14 @@ mod tests {
     fn test_by_entity_condition_safety_variants() {
         let off_road = ByEntityCondition::off_road(2.0);
         let end_of_road = ByEntityCondition::end_of_road(3.0);
-        
+
         match off_road {
             ByEntityCondition::OffRoad(condition) => {
                 assert_eq!(condition.duration, Double::literal(2.0));
             }
             _ => panic!("Expected OffRoad variant"),
         }
-        
+
         match end_of_road {
             ByEntityCondition::EndOfRoad(condition) => {
                 assert_eq!(condition.duration, Double::literal(3.0));
@@ -1303,18 +1343,21 @@ mod tests {
         let collision = CollisionCondition::with_target("vehicle1");
         let off_road = OffRoadCondition::new(2.0);
         let end_of_road = EndOfRoadCondition::new(3.0);
-        
+
         // Test that they can be serialized and deserialized
         let collision_serialized = serde_json::to_string(&collision).unwrap();
-        let collision_deserialized: CollisionCondition = serde_json::from_str(&collision_serialized).unwrap();
+        let collision_deserialized: CollisionCondition =
+            serde_json::from_str(&collision_serialized).unwrap();
         assert_eq!(collision, collision_deserialized);
-        
+
         let off_road_serialized = serde_json::to_string(&off_road).unwrap();
-        let off_road_deserialized: OffRoadCondition = serde_json::from_str(&off_road_serialized).unwrap();
+        let off_road_deserialized: OffRoadCondition =
+            serde_json::from_str(&off_road_serialized).unwrap();
         assert_eq!(off_road, off_road_deserialized);
-        
+
         let end_of_road_serialized = serde_json::to_string(&end_of_road).unwrap();
-        let end_of_road_deserialized: EndOfRoadCondition = serde_json::from_str(&end_of_road_serialized).unwrap();
+        let end_of_road_deserialized: EndOfRoadCondition =
+            serde_json::from_str(&end_of_road_serialized).unwrap();
         assert_eq!(end_of_road, end_of_road_deserialized);
     }
 }

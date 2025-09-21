@@ -55,8 +55,6 @@ pub use movement::{
     TrajectoryFollowingMode,
 };
 
-
-
 // PHASE 4C: Export all traffic actions
 pub use traffic::{
     CentralSwarmObject,
@@ -85,24 +83,15 @@ pub use traffic::{
 
 // Export appearance actions
 pub use appearance::{
-    AppearanceAction,
+    AnimationAction, AppearanceAction, LightStateAction, SensorReference, SensorReferenceSet,
     VisibilityAction,
-    SensorReference,
-    SensorReferenceSet,
-    LightStateAction,
-    AnimationAction,
 };
 
 // Export trailer actions
-pub use trailer::{
-    TrailerAction,
-    ConnectTrailerAction,
-    DisconnectTrailerAction,
-};
+pub use trailer::{ConnectTrailerAction, DisconnectTrailerAction, TrailerAction};
 
 // Export updated controller action
 pub use control::{
-    ControllerAction,
     // Keep existing exports too
     ActivateControllerAction,
     // Core controller actions
@@ -112,6 +101,7 @@ pub use control::{
     // Phase 1 Groups: XSD group wrappers
     Brake,
     BrakeInput,
+    ControllerAction,
     Gear,
     // Supporting types
     ManualGear,
