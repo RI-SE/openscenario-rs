@@ -1,9 +1,9 @@
 //! Debug catalog resolution for ALKS scenarios
 
 use openscenario_rs::{
-    parser::xml::parse_from_file,
     catalog::{extract_scenario_parameters, resolve_catalog_reference_simple},
     error::Error,
+    parser::xml::parse_from_file,
     types::OpenScenarioDocumentType,
 };
 use std::env;
@@ -32,13 +32,22 @@ fn main() -> Result<(), Error> {
                     println!("Vehicle Catalog: {:?}", vehicle_catalog.directory.path);
                 }
                 if let Some(pedestrian_catalog) = &catalog_locations.pedestrian_catalog {
-                    println!("Pedestrian Catalog: {:?}", pedestrian_catalog.directory.path);
+                    println!(
+                        "Pedestrian Catalog: {:?}",
+                        pedestrian_catalog.directory.path
+                    );
                 }
                 if let Some(misc_object_catalog) = &catalog_locations.misc_object_catalog {
-                    println!("MiscObject Catalog: {:?}", misc_object_catalog.directory.path);
+                    println!(
+                        "MiscObject Catalog: {:?}",
+                        misc_object_catalog.directory.path
+                    );
                 }
                 if let Some(controller_catalog) = &catalog_locations.controller_catalog {
-                    println!("Controller Catalog: {:?}", controller_catalog.directory.path);
+                    println!(
+                        "Controller Catalog: {:?}",
+                        controller_catalog.directory.path
+                    );
                 }
 
                 // Extract parameters from the scenario
@@ -61,7 +70,7 @@ fn main() -> Result<(), Error> {
                                 println!("  Catalog Reference:");
                                 println!("    Catalog Name: {:?}", catalog_ref.catalog_name);
                                 println!("    Entry Name: {:?}", catalog_ref.entry_name);
-                                
+
                                 // Use the simple catalog resolution function
                                 match resolve_catalog_reference_simple(
                                     &catalog_ref.catalog_name,
@@ -72,13 +81,16 @@ fn main() -> Result<(), Error> {
                                 ) {
                                     Ok(found) => {
                                         println!("    ✓ Catalog resolution completed:");
-                                        println!("      Entry found: {}", if found { "✓ Yes" } else { "✗ No" });
-                                    },
+                                        println!(
+                                            "      Entry found: {}",
+                                            if found { "✓ Yes" } else { "✗ No" }
+                                        );
+                                    }
                                     Err(e) => {
                                         println!("    ✗ Catalog resolution failed: {}", e);
                                     }
                                 }
-                            },
+                            }
                             None => {
                                 println!("  No catalog reference (inline definition)");
                             }

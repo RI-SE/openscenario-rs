@@ -68,8 +68,6 @@ fn main() {
     }
 }
 
-
-
 /// Resolve file paths in OpenSCENARIO documents to be relative to the scenario file location
 fn resolve_file_paths_in_document(
     document: &mut openscenario_rs::types::scenario::storyboard::OpenScenario,
@@ -81,21 +79,32 @@ fn resolve_file_paths_in_document(
     let resolve_path_value = |value: &mut Value<String>, file_type: &str| -> bool {
         if let Some(literal_path) = value.as_literal() {
             // Only resolve if it's a relative path (not absolute)
-            if !literal_path.starts_with('/') && !literal_path.chars().nth(1).map_or(false, |c| c == ':') {
+            if !literal_path.starts_with('/')
+                && !literal_path.chars().nth(1).map_or(false, |c| c == ':')
+            {
                 match resolve_file_path(base_scenario_path, literal_path) {
                     Ok(resolved_path) => {
                         let resolved_str = resolved_path.to_string_lossy().to_string();
-                        println!("      ✅ Resolved {} path: {} → {}", file_type, literal_path, resolved_str);
+                        println!(
+                            "      ✅ Resolved {} path: {} → {}",
+                            file_type, literal_path, resolved_str
+                        );
                         *value = Value::Literal(resolved_str);
                         true
                     }
                     Err(e) => {
-                        println!("      ❌ Failed to resolve {} path {}: {}", file_type, literal_path, e);
+                        println!(
+                            "      ❌ Failed to resolve {} path {}: {}",
+                            file_type, literal_path, e
+                        );
                         false
                     }
                 }
             } else {
-                println!("      💡 Skipping absolute {} path: {}", file_type, literal_path);
+                println!(
+                    "      💡 Skipping absolute {} path: {}",
+                    file_type, literal_path
+                );
                 false
             }
         } else {
@@ -108,13 +117,13 @@ fn resolve_file_paths_in_document(
     // Process road network file references
     if let Some(road_network) = &mut document.road_network {
         println!("   🛣️  Processing road network files...");
-        
+
         if let Some(logic_file) = &mut road_network.logic_file {
             if resolve_path_value(&mut logic_file.filepath, "road logic") {
                 resolved_count += 1;
             }
         }
-        
+
         if let Some(scene_file) = &mut road_network.scene_graph_file {
             if resolve_path_value(&mut scene_file.filepath, "scene graph") {
                 resolved_count += 1;
@@ -125,45 +134,66 @@ fn resolve_file_paths_in_document(
     // Process catalog directory paths
     if let Some(catalog_locations) = &mut document.catalog_locations {
         println!("   📚 Processing catalog directory paths...");
-        
+
         if let Some(vehicle_catalog) = &mut catalog_locations.vehicle_catalog {
-            if resolve_path_value(&mut vehicle_catalog.directory.path, "vehicle catalog directory") {
+            if resolve_path_value(
+                &mut vehicle_catalog.directory.path,
+                "vehicle catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
-        
+
         if let Some(controller_catalog) = &mut catalog_locations.controller_catalog {
-            if resolve_path_value(&mut controller_catalog.directory.path, "controller catalog directory") {
+            if resolve_path_value(
+                &mut controller_catalog.directory.path,
+                "controller catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
-        
+
         if let Some(pedestrian_catalog) = &mut catalog_locations.pedestrian_catalog {
-            if resolve_path_value(&mut pedestrian_catalog.directory.path, "pedestrian catalog directory") {
+            if resolve_path_value(
+                &mut pedestrian_catalog.directory.path,
+                "pedestrian catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
-        
+
         if let Some(misc_object_catalog) = &mut catalog_locations.misc_object_catalog {
-            if resolve_path_value(&mut misc_object_catalog.directory.path, "misc object catalog directory") {
+            if resolve_path_value(
+                &mut misc_object_catalog.directory.path,
+                "misc object catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
 
         if let Some(environment_catalog) = &mut catalog_locations.environment_catalog {
-            if resolve_path_value(&mut environment_catalog.directory.path, "environment catalog directory") {
+            if resolve_path_value(
+                &mut environment_catalog.directory.path,
+                "environment catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
 
         if let Some(maneuver_catalog) = &mut catalog_locations.maneuver_catalog {
-            if resolve_path_value(&mut maneuver_catalog.directory.path, "maneuver catalog directory") {
+            if resolve_path_value(
+                &mut maneuver_catalog.directory.path,
+                "maneuver catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
 
         if let Some(trajectory_catalog) = &mut catalog_locations.trajectory_catalog {
-            if resolve_path_value(&mut trajectory_catalog.directory.path, "trajectory catalog directory") {
+            if resolve_path_value(
+                &mut trajectory_catalog.directory.path,
+                "trajectory catalog directory",
+            ) {
                 resolved_count += 1;
             }
         }
@@ -178,24 +208,35 @@ fn resolve_file_paths_in_document(
     // Process parameter variation scenario file references
     if let Some(param_dist) = &mut document.parameter_value_distribution {
         println!("   📊 Processing parameter variation scenario reference...");
-        
+
         // The scenario_file.filepath is a plain String, not a Value<String>
         // We need to handle this differently
         let scenario_filepath = &param_dist.scenario_file.filepath;
-        if !scenario_filepath.starts_with('/') && !scenario_filepath.chars().nth(1).map_or(false, |c| c == ':') {
+        if !scenario_filepath.starts_with('/')
+            && !scenario_filepath.chars().nth(1).map_or(false, |c| c == ':')
+        {
             match resolve_file_path(base_scenario_path, scenario_filepath) {
                 Ok(resolved_path) => {
                     let resolved_str = resolved_path.to_string_lossy().to_string();
-                    println!("      ✅ Resolved scenario file path: {} → {}", scenario_filepath, resolved_str);
+                    println!(
+                        "      ✅ Resolved scenario file path: {} → {}",
+                        scenario_filepath, resolved_str
+                    );
                     param_dist.scenario_file.filepath = resolved_str;
                     resolved_count += 1;
                 }
                 Err(e) => {
-                    println!("      ❌ Failed to resolve scenario file path {}: {}", scenario_filepath, e);
+                    println!(
+                        "      ❌ Failed to resolve scenario file path {}: {}",
+                        scenario_filepath, e
+                    );
                 }
             }
         } else {
-            println!("      💡 Skipping absolute scenario file path: {}", scenario_filepath);
+            println!(
+                "      💡 Skipping absolute scenario file path: {}",
+                scenario_filepath
+            );
         }
     }
 
@@ -237,12 +278,18 @@ fn resolve_expressions_in_document(
         if let Some(expr) = value.as_expression() {
             match evaluate_expression::<f64>(expr, parameters) {
                 Ok(result) => {
-                    println!("      🔍 Resolved numeric expression: {} → {}", expr, result);
+                    println!(
+                        "      🔍 Resolved numeric expression: {} → {}",
+                        expr, result
+                    );
                     *value = Value::Literal(result);
                     true
                 }
                 Err(e) => {
-                    println!("      ❌ Failed to resolve numeric expression {}: {}", expr, e);
+                    println!(
+                        "      ❌ Failed to resolve numeric expression {}: {}",
+                        expr, e
+                    );
                     false
                 }
             }
@@ -290,13 +337,13 @@ fn resolve_expressions_in_document(
 
     // In a full implementation, we would also walk through:
     // - Position coordinates (Value<f64>) using resolve_numeric_value
-    // - Speed values (Value<f64>) using resolve_numeric_value  
+    // - Speed values (Value<f64>) using resolve_numeric_value
     // - Time values (Value<f64>) using resolve_numeric_value
     // - All action parameters throughout the storyboard
     // - Condition parameters in triggers
     // - Trigger parameters and timing values
     // etc.
-    
+
     // For now, we focus on the most common expression locations in parameters and entity names
 
     Ok(resolved_count)
@@ -324,10 +371,7 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
     match document.document_type() {
         OpenScenarioDocumentType::Scenario => {
             if let Some(entities) = &document.entities {
-                println!(
-                    "   🎭 Entities: {}",
-                    entities.scenario_objects.len()
-                );
+                println!("   🎭 Entities: {}", entities.scenario_objects.len());
             } else {
                 println!("   🎭 Entities: 0");
             }
@@ -341,10 +385,11 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
 
             // Step 3: Check if scenario uses catalogs
             if let Some(catalog_locations) = document.catalog_locations.clone() {
-                if catalog_locations.vehicle_catalog.is_some() || 
-                   catalog_locations.pedestrian_catalog.is_some() ||
-                   catalog_locations.misc_object_catalog.is_some() ||
-                   catalog_locations.controller_catalog.is_some() {
+                if catalog_locations.vehicle_catalog.is_some()
+                    || catalog_locations.pedestrian_catalog.is_some()
+                    || catalog_locations.misc_object_catalog.is_some()
+                    || catalog_locations.controller_catalog.is_some()
+                {
                     println!("\n🗂️  Catalog locations found - proceeding with resolution:");
 
                     // Get the base directory for relative catalog paths
@@ -358,7 +403,9 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
                         base_dir,
                     )?;
                 } else {
-                    println!("\n💡 No catalog locations found - scenario uses inline entities only");
+                    println!(
+                        "\n💡 No catalog locations found - scenario uses inline entities only"
+                    );
                 }
             } else {
                 println!("\n💡 No catalog locations found - scenario uses inline entities only");
@@ -366,24 +413,34 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
         }
         OpenScenarioDocumentType::ParameterVariation => {
             println!("   📊 Parameter variation file - analyzing distributions");
-            
+
             // Analyze parameter variation file
             if let Some(param_dist) = &document.parameter_value_distribution {
-                println!("   📁 Referenced scenario: {}", param_dist.scenario_file.filepath);
-                
+                println!(
+                    "   📁 Referenced scenario: {}",
+                    param_dist.scenario_file.filepath
+                );
+
                 // Parse the referenced scenario file to show its structure
-                let scenario_path = resolve_scenario_path(input_path, &param_dist.scenario_file.filepath)?;
+                let scenario_path =
+                    resolve_scenario_path(input_path, &param_dist.scenario_file.filepath)?;
                 if let Ok(scenario_doc) = parse_from_file(&scenario_path) {
                     println!("   ✅ Successfully loaded referenced scenario");
-                    println!("      📋 Description: {:?}", scenario_doc.file_header.description);
+                    println!(
+                        "      📋 Description: {:?}",
+                        scenario_doc.file_header.description
+                    );
                     println!("      👤 Author: {:?}", scenario_doc.file_header.author);
-                    
+
                     if let Some(entities) = &scenario_doc.entities {
                         println!("      🎭 Entities: {}", entities.scenario_objects.len());
                     }
-                    
+
                     if let Some(params) = &scenario_doc.parameter_declarations {
-                        println!("      ⚙️  Template parameters: {}", params.parameter_declarations.len());
+                        println!(
+                            "      ⚙️  Template parameters: {}",
+                            params.parameter_declarations.len()
+                        );
                         for param in &params.parameter_declarations {
                             println!("         - {} = {:?}", param.name, param.value);
                         }
@@ -391,15 +448,17 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
                 } else {
                     println!("   ❌ Could not load referenced scenario file");
                 }
-                
+
                 // Analyze distributions
                 if let Some(deterministic) = &param_dist.deterministic {
                     analyze_deterministic_distributions(deterministic);
                 }
-                
+
                 if let Some(stochastic) = &param_dist.stochastic {
-                    println!("   🎲 Stochastic distributions: {} parameters", 
-                        stochastic.distributions.len());
+                    println!(
+                        "   🎲 Stochastic distributions: {} parameters",
+                        stochastic.distributions.len()
+                    );
                 }
             }
         }
@@ -414,10 +473,13 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
     // Step 4: Resolve file paths (make relative paths absolute relative to scenario location)
     println!("\n📁 File Path Resolution");
     println!("══════════════════════");
-    
+
     let file_paths_resolved = resolve_file_paths_in_document(&mut document, input_path)?;
     if file_paths_resolved > 0 {
-        println!("✅ Resolved {} file paths in the document", file_paths_resolved);
+        println!(
+            "✅ Resolved {} file paths in the document",
+            file_paths_resolved
+        );
     } else {
         println!("💡 No relative file paths found to resolve");
     }
@@ -425,13 +487,17 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
     // Step 5: Perform expression resolution (scan for ${...} expressions and evaluate them)
     println!("\n🧮 Expression Resolution");
     println!("═══════════════════════");
-    
+
     if document.is_scenario() {
         let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
-        let expressions_resolved = resolve_expressions_in_document(&mut document, &scenario_parameters)?;
-        
+        let expressions_resolved =
+            resolve_expressions_in_document(&mut document, &scenario_parameters)?;
+
         if expressions_resolved > 0 {
-            println!("✅ Resolved {} expressions in the scenario", expressions_resolved);
+            println!(
+                "✅ Resolved {} expressions in the scenario",
+                expressions_resolved
+            );
         } else {
             println!("💡 No expressions found to resolve in this scenario");
         }
@@ -542,7 +608,10 @@ fn resolve_catalog_references_simple(
                                 }
                             }
                             Err(e) => {
-                                println!("         ❌ Failed to resolve controller reference: {}", e);
+                                println!(
+                                    "         ❌ Failed to resolve controller reference: {}",
+                                    e
+                                );
                                 failed_references += 1;
                             }
                         }
@@ -599,10 +668,10 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
             }
 
             let has_catalogs = if let Some(catalog_locations) = &document.catalog_locations {
-                catalog_locations.vehicle_catalog.is_some() ||
-                catalog_locations.pedestrian_catalog.is_some() ||
-                catalog_locations.misc_object_catalog.is_some() ||
-                catalog_locations.controller_catalog.is_some()
+                catalog_locations.vehicle_catalog.is_some()
+                    || catalog_locations.pedestrian_catalog.is_some()
+                    || catalog_locations.misc_object_catalog.is_some()
+                    || catalog_locations.controller_catalog.is_some()
             } else {
                 false
             };
@@ -617,11 +686,14 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
         OpenScenarioDocumentType::ParameterVariation => {
             if let Some(param_dist) = &document.parameter_value_distribution {
                 println!("   📊 Parameter variation file");
-                println!("   📁 Referenced scenario: {}", param_dist.scenario_file.filepath);
-                
+                println!(
+                    "   📁 Referenced scenario: {}",
+                    param_dist.scenario_file.filepath
+                );
+
                 let mut total_params = 0;
                 let mut total_combinations = 1;
-                
+
                 if let Some(deterministic) = &param_dist.deterministic {
                     total_params += deterministic.single_distributions.len();
                     for dist in &deterministic.single_distributions {
@@ -629,7 +701,10 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                             total_combinations *= set.elements.len();
                         } else if let Some(range) = &dist.distribution_range {
                             if let Some(step_val) = range.step_width.as_literal() {
-                                if let (Some(lower), Some(upper)) = (range.range.lower_limit.as_literal(), range.range.upper_limit.as_literal()) {
+                                if let (Some(lower), Some(upper)) = (
+                                    range.range.lower_limit.as_literal(),
+                                    range.range.upper_limit.as_literal(),
+                                ) {
                                     if let Ok(step_f64) = step_val.parse::<f64>() {
                                         let count = ((upper - lower) / step_f64 + 1.0) as usize;
                                         total_combinations *= count;
@@ -640,11 +715,11 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                     }
                     total_params += deterministic.multi_distributions.len();
                 }
-                
+
                 if let Some(stochastic) = &param_dist.stochastic {
                     total_params += stochastic.distributions.len();
                 }
-                
+
                 println!("   🎯 Total varied parameters: {}", total_params);
                 println!("   🔢 Estimated combinations: {}", total_combinations);
             } else {
@@ -662,9 +737,12 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
 
 /// General-purpose file path resolver for OpenSCENARIO file references
 /// Resolves relative paths relative to the current scenario file's directory
-fn resolve_file_path(base_scenario_path: &Path, relative_filepath: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn resolve_file_path(
+    base_scenario_path: &Path,
+    relative_filepath: &str,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let base_dir = base_scenario_path.parent().unwrap_or(Path::new("."));
-    
+
     let resolved_path = if relative_filepath.starts_with("./") {
         // Explicit relative path: "./path/file.ext"
         base_dir.join(&relative_filepath[2..])
@@ -675,39 +753,56 @@ fn resolve_file_path(base_scenario_path: &Path, relative_filepath: &str) -> Resu
         // Absolute path (Unix: "/path" or Windows: "C:\path")
         PathBuf::from(relative_filepath)
     } else {
-        // Implicit relative path: "path/file.ext" 
+        // Implicit relative path: "path/file.ext"
         base_dir.join(relative_filepath)
     };
-    
+
     println!("      🔗 Resolving file path:");
     println!("         Base dir: {}", base_dir.display());
     println!("         Relative: {}", relative_filepath);
     println!("         Resolved: {}", resolved_path.display());
-    
+
     if !resolved_path.exists() {
-        println!("         ❌ File does not exist: {}", resolved_path.display());
-        return Err(format!("Referenced file does not exist: {}", resolved_path.display()).into());
+        println!(
+            "         ❌ File does not exist: {}",
+            resolved_path.display()
+        );
+        return Err(format!(
+            "Referenced file does not exist: {}",
+            resolved_path.display()
+        )
+        .into());
     }
-    
+
     println!("         ✅ File exists");
     Ok(resolved_path)
 }
 
 /// Resolve the absolute path to a scenario file referenced from a parameter variation
-fn resolve_scenario_path(variation_path: &Path, scenario_filepath: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn resolve_scenario_path(
+    variation_path: &Path,
+    scenario_filepath: &str,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     resolve_file_path(variation_path, scenario_filepath)
 }
 
 /// Analyze deterministic distributions and display their contents
-fn analyze_deterministic_distributions(deterministic: &openscenario_rs::types::distributions::Deterministic) {
-    println!("   🎯 Deterministic distributions: {} parameters", 
-        deterministic.single_distributions.len());
-    
+fn analyze_deterministic_distributions(
+    deterministic: &openscenario_rs::types::distributions::Deterministic,
+) {
+    println!(
+        "   🎯 Deterministic distributions: {} parameters",
+        deterministic.single_distributions.len()
+    );
+
     for dist in &deterministic.single_distributions {
         println!("      📊 Parameter: {}", dist.parameter_name);
-        
+
         if let Some(set) = &dist.distribution_set {
-            println!("         📋 Distribution Set: {} values", set.elements.len());
+            println!(
+                "         📋 Distribution Set: {} values",
+                set.elements.len()
+            );
             for (i, element) in set.elements.iter().enumerate().take(5) {
                 println!("            {}. {}", i + 1, element.value);
             }
@@ -715,21 +810,28 @@ fn analyze_deterministic_distributions(deterministic: &openscenario_rs::types::d
                 println!("            ... and {} more", set.elements.len() - 5);
             }
         }
-        
+
         if let Some(range) = &dist.distribution_range {
             println!("         📏 Distribution Range:");
-            println!("            Range: {} to {}", range.range.lower_limit, range.range.upper_limit);
+            println!(
+                "            Range: {} to {}",
+                range.range.lower_limit, range.range.upper_limit
+            );
             println!("            Step: {}", range.step_width);
         }
-        
+
         if let Some(user_def) = &dist.user_defined_distribution {
-            println!("         🔧 User Defined: {} (type: {})", 
-                user_def.content, user_def.distribution_type);
+            println!(
+                "         🔧 User Defined: {} (type: {})",
+                user_def.content, user_def.distribution_type
+            );
         }
     }
-    
+
     if !deterministic.multi_distributions.is_empty() {
-        println!("   🎯 Multi-parameter distributions: {} groups", 
-            deterministic.multi_distributions.len());
+        println!(
+            "   🎯 Multi-parameter distributions: {} groups",
+            deterministic.multi_distributions.len()
+        );
     }
 }

@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(storyboard) = &document.storyboard {
                     let _storyboard = storyboard;
                 }
-                
+
                 // Access entities
                 if let Some(entities) = &document.entities {
                     println!("Entities:");
@@ -44,9 +44,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("  - {:?}", entity.name);
                     }
                 }
-                
+
                 if let Some(catalog_locations) = &document.catalog_locations {
-                    println!("Catalog locations: {:#?}", catalog_locations.vehicle_catalog);
+                    println!(
+                        "Catalog locations: {:#?}",
+                        catalog_locations.vehicle_catalog
+                    );
                 }
             }
             openscenario_rs::types::OpenScenarioDocumentType::ParameterVariation => {
@@ -63,5 +66,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-
