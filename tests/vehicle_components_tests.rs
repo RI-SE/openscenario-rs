@@ -4,7 +4,10 @@
 //! Axle system implementation for various vehicle types.
 
 use openscenario_rs::types::{
-    entities::{axles::{Axle, Axles}, Vehicle},
+    entities::{
+        axles::{Axle, Axles},
+        Vehicle,
+    },
     geometry::{BoundingBox, Center, Dimensions},
 };
 use std::collections::HashMap;
@@ -12,7 +15,7 @@ use std::collections::HashMap;
 #[test]
 fn test_enhanced_bounding_box_operations() {
     let params = HashMap::new();
-    
+
     let bbox = BoundingBox {
         center: Center::default(),
         dimensions: Dimensions {
@@ -27,8 +30,12 @@ fn test_enhanced_bounding_box_operations() {
     assert_eq!(volume, 12.0);
 
     // Test point containment
-    assert!(bbox.contains_point_with_params(0.0, 0.0, 0.0, &params).unwrap());
-    assert!(!bbox.contains_point_with_params(3.0, 0.0, 0.0, &params).unwrap());
+    assert!(bbox
+        .contains_point_with_params(0.0, 0.0, 0.0, &params)
+        .unwrap());
+    assert!(!bbox
+        .contains_point_with_params(3.0, 0.0, 0.0, &params)
+        .unwrap());
 
     // Test distance calculation
     let distance = bbox.distance_to_point(3.0, 0.0, 0.0, &params).unwrap();
@@ -38,12 +45,12 @@ fn test_enhanced_bounding_box_operations() {
 #[test]
 fn test_bounding_box_intersection() {
     let params = HashMap::new();
-    
+
     let bbox1 = BoundingBox {
         center: Center::default(),
         dimensions: Dimensions::car(),
     };
-    
+
     let bbox2_overlapping = BoundingBox {
         center: Center {
             x: openscenario_rs::types::basic::Value::literal(1.0),
@@ -52,7 +59,7 @@ fn test_bounding_box_intersection() {
         },
         dimensions: Dimensions::car(),
     };
-    
+
     let bbox3_separate = BoundingBox {
         center: Center {
             x: openscenario_rs::types::basic::Value::literal(10.0),
@@ -69,7 +76,7 @@ fn test_bounding_box_intersection() {
 #[test]
 fn test_dimensions_presets() {
     let params = HashMap::new();
-    
+
     // Test all preset dimensions
     let car = Dimensions::car();
     let truck = Dimensions::truck();
@@ -127,13 +134,13 @@ fn test_axle_system_configurations() {
 #[test]
 fn test_axle_calculations() {
     let params = HashMap::new();
-    
+
     let car_axles = Axles::car();
     let wheelbase = car_axles.wheelbase(&params).unwrap();
     assert!(wheelbase > 0.0);
-    
+
     assert!(car_axles.is_steerable(&params).unwrap());
-    
+
     let trailer_axles = Axles::trailer();
     assert!(!trailer_axles.is_steerable(&params).unwrap());
 }
@@ -141,7 +148,7 @@ fn test_axle_calculations() {
 #[test]
 fn test_individual_axle_properties() {
     let params = HashMap::new();
-    
+
     let front_axle = Axle::front_car();
     let rear_axle = Axle::rear_car();
     let motorcycle_axle = Axle::front_motorcycle();
@@ -159,7 +166,7 @@ fn test_individual_axle_properties() {
     // Test turning radius
     let turning_radius = front_axle.turning_radius(2.8, &params).unwrap();
     assert!(turning_radius > 0.0 && turning_radius < f64::INFINITY);
-    
+
     let rear_turning_radius = rear_axle.turning_radius(2.8, &params).unwrap();
     assert_eq!(rear_turning_radius, f64::INFINITY);
 
@@ -177,7 +184,7 @@ fn test_individual_axle_properties() {
 #[test]
 fn test_vehicle_factory_methods() {
     let params = HashMap::new();
-    
+
     let car = Vehicle::new_car("TestCar".to_string());
     let truck = Vehicle::new_truck("TestTruck".to_string());
     let motorcycle = Vehicle::new_motorcycle("TestBike".to_string());
@@ -188,9 +195,18 @@ fn test_vehicle_factory_methods() {
     assert_eq!(motorcycle.name.as_literal().unwrap(), "TestBike");
 
     // Test categories
-    assert_eq!(car.vehicle_category, openscenario_rs::types::enums::VehicleCategory::Car);
-    assert_eq!(truck.vehicle_category, openscenario_rs::types::enums::VehicleCategory::Truck);
-    assert_eq!(motorcycle.vehicle_category, openscenario_rs::types::enums::VehicleCategory::Motorbike);
+    assert_eq!(
+        car.vehicle_category,
+        openscenario_rs::types::enums::VehicleCategory::Car
+    );
+    assert_eq!(
+        truck.vehicle_category,
+        openscenario_rs::types::enums::VehicleCategory::Truck
+    );
+    assert_eq!(
+        motorcycle.vehicle_category,
+        openscenario_rs::types::enums::VehicleCategory::Motorbike
+    );
 
     // Test axle counts
     assert_eq!(car.axle_count(), 2);
@@ -210,7 +226,7 @@ fn test_vehicle_factory_methods() {
 fn test_axle_serialization() {
     let axle = Axle::front_car();
     let xml = quick_xml::se::to_string(&axle).unwrap();
-    
+
     assert!(xml.contains("maxSteering"));
     assert!(xml.contains("wheelDiameter"));
     assert!(xml.contains("trackWidth"));
@@ -222,7 +238,7 @@ fn test_axle_serialization() {
 fn test_axles_serialization() {
     let axles = Axles::car();
     let xml = quick_xml::se::to_string(&axles).unwrap();
-    
+
     assert!(xml.contains("FrontAxle"));
     assert!(xml.contains("RearAxle"));
     assert!(!xml.contains("AdditionalAxle")); // Should be empty for car
@@ -231,25 +247,28 @@ fn test_axles_serialization() {
 #[test]
 fn test_vehicle_with_enhanced_components() {
     let params = HashMap::new();
-    
+
     let vehicle = Vehicle::new_truck("IntegrationTestTruck".to_string());
-    
+
     // Test that all components work together
     let wheelbase = vehicle.wheelbase(&params).unwrap();
     let footprint = vehicle.footprint_area(&params).unwrap();
     let volume = vehicle.bounding_box.volume_with_params(&params).unwrap();
-    
+
     assert!(wheelbase > 0.0);
     assert!(footprint > 0.0);
     assert!(volume > 0.0);
-    
+
     // Test that truck has appropriate characteristics
     assert_eq!(vehicle.axle_count(), 3);
     assert!(vehicle.is_steerable(&params).unwrap());
-    
+
     // Test bounding box operations
-    assert!(vehicle.bounding_box.contains_point_with_params(0.0, 0.0, 0.0, &params).unwrap());
-    
+    assert!(vehicle
+        .bounding_box
+        .contains_point_with_params(0.0, 0.0, 0.0, &params)
+        .unwrap());
+
     // Test serialization of complete vehicle
     let xml = quick_xml::se::to_string(&vehicle).unwrap();
     assert!(xml.contains("name=\"IntegrationTestTruck\""));

@@ -11,8 +11,8 @@
 use openscenario_rs::catalog::{CatalogLoader, CatalogManager, ParameterSubstitutionEngine};
 
 use openscenario_rs::parser::xml::{parse_catalog_from_str, serialize_catalog_to_string};
-use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::basic::{Directory, Value};
+use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::{
     entities::ParameterDefinition,
     files::CatalogFile,
@@ -382,7 +382,10 @@ fn test_catalog_manager_parameter_operations() {
 
         // Verify parameter was set
         assert_eq!(
-            *manager.parameter_engine().get_parameter(&format!("Param{}", i)).unwrap(),
+            *manager
+                .parameter_engine()
+                .get_parameter(&format!("Param{}", i))
+                .unwrap(),
             format!("Value{}", i)
         );
     }

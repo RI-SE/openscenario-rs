@@ -4,9 +4,9 @@
 //! including enhanced BoundingBox, Center distance calculations, new Dimensions defaults,
 //! and comprehensive Axle system integration.
 
-use openscenario_rs::types::geometry::{BoundingBox, Center, Dimensions};
-use openscenario_rs::types::entities::{Axle, Axles, Vehicle};
 use openscenario_rs::types::basic::Value;
+use openscenario_rs::types::entities::{Axle, Axles, Vehicle};
+use openscenario_rs::types::geometry::{BoundingBox, Center, Dimensions};
 use std::collections::HashMap;
 
 #[test]
@@ -112,7 +112,9 @@ fn test_center_distance_calculations() {
     params.insert("x1".to_string(), "0.0".to_string());
     params.insert("y1".to_string(), "0.0".to_string());
 
-    let distance_with_params = center_param1.distance_to_with_params(&center_param2, &params).unwrap();
+    let distance_with_params = center_param1
+        .distance_to_with_params(&center_param2, &params)
+        .unwrap();
     assert_eq!(distance_with_params, 10.0); // sqrt(6² + 8²) = 10
 }
 
@@ -189,7 +191,7 @@ fn test_axle_wheel_calculations() {
     let wheel_positions = car_front.wheel_positions(&params).unwrap();
     assert_eq!(wheel_positions.len(), 2);
     assert_eq!(wheel_positions[0], (1.4, -0.8)); // Left wheel
-    assert_eq!(wheel_positions[1], (1.4, 0.8));  // Right wheel
+    assert_eq!(wheel_positions[1], (1.4, 0.8)); // Right wheel
 
     // Test motorcycle front axle (single wheel)
     let motorcycle_front = Axle::front_motorcycle();

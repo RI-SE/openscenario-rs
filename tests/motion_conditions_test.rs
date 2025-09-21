@@ -2,8 +2,10 @@
 //!
 //! Tests AccelerationCondition and StandStillCondition implementations
 
-use openscenario_rs::types::conditions::entity::{AccelerationCondition, ByEntityCondition, StandStillCondition};
 use openscenario_rs::types::basic::Double;
+use openscenario_rs::types::conditions::entity::{
+    AccelerationCondition, ByEntityCondition, StandStillCondition,
+};
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
 
 #[test]
@@ -19,7 +21,10 @@ fn test_acceleration_condition_with_direction() {
     let condition = AccelerationCondition::longitudinal(3.0, Rule::LessThan);
     assert_eq!(condition.value, Double::literal(3.0));
     assert_eq!(condition.rule, Rule::LessThan);
-    assert_eq!(condition.direction, Some(DirectionalDimension::Longitudinal));
+    assert_eq!(
+        condition.direction,
+        Some(DirectionalDimension::Longitudinal)
+    );
 }
 
 #[test]
@@ -36,7 +41,10 @@ fn test_acceleration_condition_convenience_methods() {
 #[test]
 fn test_acceleration_condition_directional_methods() {
     let longitudinal = AccelerationCondition::longitudinal(4.0, Rule::EqualTo);
-    assert_eq!(longitudinal.direction, Some(DirectionalDimension::Longitudinal));
+    assert_eq!(
+        longitudinal.direction,
+        Some(DirectionalDimension::Longitudinal)
+    );
 
     let lateral = AccelerationCondition::lateral(2.0, Rule::GreaterOrEqual);
     assert_eq!(lateral.direction, Some(DirectionalDimension::Lateral));
@@ -111,14 +119,14 @@ fn test_serialization_deserialization() {
     // Test AccelerationCondition serialization
     let acc_condition = AccelerationCondition::new(2.5, Rule::GreaterThan)
         .with_direction(DirectionalDimension::Longitudinal);
-    
+
     let serialized = serde_json::to_string(&acc_condition).unwrap();
     let deserialized: AccelerationCondition = serde_json::from_str(&serialized).unwrap();
     assert_eq!(acc_condition, deserialized);
 
     // Test StandStillCondition serialization
     let standstill_condition = StandStillCondition::new(3.5);
-    
+
     let serialized = serde_json::to_string(&standstill_condition).unwrap();
     let deserialized: StandStillCondition = serde_json::from_str(&serialized).unwrap();
     assert_eq!(standstill_condition, deserialized);
@@ -184,8 +192,8 @@ fn test_acceleration_condition_all_directions() {
     ];
 
     for direction in directions {
-        let condition = AccelerationCondition::new(1.0, Rule::GreaterThan)
-            .with_direction(direction.clone());
+        let condition =
+            AccelerationCondition::new(1.0, Rule::GreaterThan).with_direction(direction.clone());
         assert_eq!(condition.direction, Some(direction));
     }
 }

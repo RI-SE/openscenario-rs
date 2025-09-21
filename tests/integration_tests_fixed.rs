@@ -12,11 +12,22 @@ use openscenario_rs::types::OpenScenario;
 use std::fs;
 
 /// Helper function to extract entities and storyboard from OpenScenario
-fn assert_scenario_document(scenario: &OpenScenario) -> (&openscenario_rs::types::Entities, &openscenario_rs::types::Storyboard) {
+fn assert_scenario_document(
+    scenario: &OpenScenario,
+) -> (
+    &openscenario_rs::types::Entities,
+    &openscenario_rs::types::Storyboard,
+) {
     assert!(scenario.is_scenario(), "Expected scenario document");
     (
-        scenario.entities.as_ref().expect("Scenario should have entities"),
-        scenario.storyboard.as_ref().expect("Scenario should have storyboard")
+        scenario
+            .entities
+            .as_ref()
+            .expect("Scenario should have entities"),
+        scenario
+            .storyboard
+            .as_ref()
+            .expect("Scenario should have storyboard"),
     )
 }
 
@@ -61,7 +72,10 @@ fn can_access_entities() {
     let xml = include_str!("data/simple_scenario.xosc");
     let scenario = parse_str(xml).unwrap();
 
-    let entities = scenario.entities.as_ref().expect("Scenario should have entities");
+    let entities = scenario
+        .entities
+        .as_ref()
+        .expect("Scenario should have entities");
     assert_eq!(entities.scenario_objects.len(), 2);
 
     // Find the ego vehicle
@@ -134,9 +148,15 @@ fn can_serialize_and_deserialize_scenario() {
         roundtrip.file_header.author.as_literal().unwrap()
     );
 
-    let original_entities = original.entities.as_ref().expect("Original should have entities");
-    let roundtrip_entities = roundtrip.entities.as_ref().expect("Roundtrip should have entities");
-    
+    let original_entities = original
+        .entities
+        .as_ref()
+        .expect("Original should have entities");
+    let roundtrip_entities = roundtrip
+        .entities
+        .as_ref()
+        .expect("Roundtrip should have entities");
+
     assert_eq!(
         original_entities.scenario_objects.len(),
         roundtrip_entities.scenario_objects.len()
@@ -265,7 +285,10 @@ fn can_parse_scenario_with_expressions() {
     let scenario = result.unwrap();
 
     // Check that we can access entities even with expressions
-    let entities = scenario.entities.as_ref().expect("Scenario should have entities");
+    let entities = scenario
+        .entities
+        .as_ref()
+        .expect("Scenario should have entities");
     assert_eq!(entities.scenario_objects.len(), 1);
 
     let ego = entities.find_object("Ego").unwrap();
@@ -342,7 +365,10 @@ mod cut_in_scenario_tests {
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
         {
-            let entities = scenario.entities.as_ref().expect("Scenario should have entities");
+            let entities = scenario
+                .entities
+                .as_ref()
+                .expect("Scenario should have entities");
             let entities = entities;
 
             // Should have 3 entities: Ego, A1, A2
@@ -394,8 +420,14 @@ mod cut_in_scenario_tests {
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
         {
-            let entities = scenario.entities.as_ref().expect("Scenario should have entities");
-            let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+            let entities = scenario
+                .entities
+                .as_ref()
+                .expect("Scenario should have entities");
+            let storyboard = scenario
+                .storyboard
+                .as_ref()
+                .expect("Scenario should have storyboard");
 
             // Verify init section exists and contains actions
             let init = &storyboard.init;
@@ -416,7 +448,10 @@ mod cut_in_scenario_tests {
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
-        let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+        let storyboard = scenario
+            .storyboard
+            .as_ref()
+            .expect("Scenario should have storyboard");
 
         // POST-MVP: Stories must be fully parsed
         assert!(
@@ -468,9 +503,15 @@ mod cut_in_scenario_tests {
             roundtrip_scenario.file_header.author.as_literal().unwrap()
         );
 
-        let entities = scenario.entities.as_ref().expect("Scenario should have entities");
-        let roundtrip_entities = roundtrip_scenario.entities.as_ref().expect("Roundtrip scenario should have entities");
-        
+        let entities = scenario
+            .entities
+            .as_ref()
+            .expect("Scenario should have entities");
+        let roundtrip_entities = roundtrip_scenario
+            .entities
+            .as_ref()
+            .expect("Roundtrip scenario should have entities");
+
         assert_eq!(
             entities.scenario_objects.len(),
             roundtrip_entities.scenario_objects.len()
@@ -500,7 +541,10 @@ mod cut_in_scenario_tests {
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
-        let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+        let storyboard = scenario
+            .storyboard
+            .as_ref()
+            .expect("Scenario should have storyboard");
 
         // POST-MVP: Verify trajectory system is fully functional
         assert!(!storyboard.stories.is_empty(), "Must contain stories");
@@ -594,7 +638,10 @@ mod cut_in_scenario_tests {
         // based on successful parsing (if it parses, the vertices are there).
 
         // The presence of stories indicates story parsing worked
-        let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+        let storyboard = scenario
+            .storyboard
+            .as_ref()
+            .expect("Scenario should have storyboard");
         if !storyboard.stories.is_empty() {
             // cut_in_101_exam.xosc is known to have ~630 vertices per trajectory
             // and 3 trajectories (Ego, A1, A2) - approximation for successful parsing
@@ -614,7 +661,10 @@ fn can_parse_routing_actions_in_story_events() {
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
 
     // Verify we can parse PrivateActions that include RoutingActions
-    let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+    let storyboard = scenario
+        .storyboard
+        .as_ref()
+        .expect("Scenario should have storyboard");
     let init = &storyboard.init;
 
     // Check that private actions can be parsed (including RoutingAction type)
@@ -683,7 +733,10 @@ fn can_validate_trajectory_following_modes() {
     let mut routing_actions_found = 0;
 
     // RoutingActions are in the Story structure, not Init - look in stories
-    let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+    let storyboard = scenario
+        .storyboard
+        .as_ref()
+        .expect("Scenario should have storyboard");
     for story in &storyboard.stories {
         for act in &story.acts {
             for maneuver_group in &act.maneuver_groups {
@@ -733,7 +786,10 @@ fn tdd_can_parse_story_level_start_triggers() {
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
 
     // When implemented, this should access story-level triggers
-    let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+    let storyboard = scenario
+        .storyboard
+        .as_ref()
+        .expect("Scenario should have storyboard");
     let story = &storyboard.stories[0];
     let act = &story.acts[0];
     let group = &act.maneuver_groups[0];
@@ -764,7 +820,10 @@ fn tdd_can_parse_condition_groups_and_conditions() {
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
 
     // Navigate to the first trigger (when parsing works)
-    let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+    let storyboard = scenario
+        .storyboard
+        .as_ref()
+        .expect("Scenario should have storyboard");
     let event = &storyboard.stories[0].acts[0].maneuver_groups[0].maneuvers[0].events[0];
     let trigger = event
         .start_trigger
@@ -803,9 +862,11 @@ fn tdd_can_parse_simulation_time_conditions() {
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
 
     // Navigate to conditions (when available)
-    let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
-    let condition_group = &storyboard.stories[0].acts[0].maneuver_groups[0].maneuvers[0]
-        .events[0]
+    let storyboard = scenario
+        .storyboard
+        .as_ref()
+        .expect("Scenario should have storyboard");
+    let condition_group = &storyboard.stories[0].acts[0].maneuver_groups[0].maneuvers[0].events[0]
         .start_trigger
         .as_ref()
         .unwrap()
@@ -1215,7 +1276,10 @@ fn can_parse_init_system_basic() {
     let result = parse_str(xml);
 
     if let Ok(scenario) = result {
-        let storyboard = scenario.storyboard.as_ref().expect("Scenario should have storyboard");
+        let storyboard = scenario
+            .storyboard
+            .as_ref()
+            .expect("Scenario should have storyboard");
         let init = &storyboard.init;
 
         // Test GlobalAction parsing

@@ -48,10 +48,7 @@ fn test_relative_lane_position_xml_roundtrip() {
     assert_eq!(deserialized.entity_ref.as_literal().unwrap(), "EgoVehicle");
     assert_eq!(deserialized.d_lane.as_literal().unwrap(), &-1);
     assert_eq!(deserialized.ds.as_literal().unwrap(), &15.0);
-    assert_eq!(
-        deserialized.offset.as_literal().unwrap(),
-        &0.5
-    );
+    assert_eq!(deserialized.offset.as_literal().unwrap(), &0.5);
 }
 
 #[test]
@@ -215,10 +212,7 @@ fn test_default_implementations() {
         rel_road_default.entity_ref.as_literal().unwrap(),
         "DefaultEntity"
     );
-    assert_eq!(
-        rel_road_default.ds.as_literal().unwrap(),
-        &0.0
-    );
+    assert_eq!(rel_road_default.ds.as_literal().unwrap(), &0.0);
     assert_eq!(rel_road_default.dt.as_literal().unwrap(), &0.0);
     assert!(rel_road_default.orientation.is_none());
 
@@ -272,4 +266,3 @@ fn test_builder_methods() {
     assert_eq!(pos4.offset.as_literal().unwrap(), &-0.5);
     assert!(pos4.orientation.is_some());
 }
-
