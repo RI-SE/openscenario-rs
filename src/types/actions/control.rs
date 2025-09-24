@@ -84,8 +84,6 @@ pub struct OverrideControllerValueAction {
     pub gear: Option<OverrideControllerValueActionGear>,
 }
 
-/// Individual Override Actions (6 types)
-
 /// Override brake action
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OverrideControllerValueActionBrake {
@@ -140,6 +138,76 @@ pub struct OverrideControllerValueActionClutch {
     pub active: Boolean,
     #[serde(rename = "@value")]
     pub value: Double,
+}
+
+// Individual Override Actions matching XSD schema names
+
+/// Override brake action (XSD compliant name)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideBrakeAction {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value", skip_serializing_if = "Option::is_none")]
+    pub value: Option<Double>, // deprecated
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub brake_input: Option<BrakeInput>,
+}
+
+/// Override throttle action (XSD compliant name)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideThrottleAction {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value")]
+    pub value: Double,
+    #[serde(rename = "@maxRate", skip_serializing_if = "Option::is_none")]
+    pub max_rate: Option<Double>,
+}
+
+/// Override steering wheel action (XSD compliant name)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideSteeringWheelAction {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value")]
+    pub value: Double,
+    #[serde(rename = "@maxRate", skip_serializing_if = "Option::is_none")]
+    pub max_rate: Option<Double>,
+    #[serde(rename = "@maxTorque", skip_serializing_if = "Option::is_none")]
+    pub max_torque: Option<Double>,
+}
+
+/// Override gear action (XSD compliant name)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideGearAction {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@number", skip_serializing_if = "Option::is_none")]
+    pub number: Option<Double>, // deprecated
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub gear: Option<Gear>,
+}
+
+/// Override parking brake action (XSD compliant name)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideParkingBrakeAction {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value", skip_serializing_if = "Option::is_none")]
+    pub value: Option<Double>, // deprecated
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub brake_input: Option<BrakeInput>,
+}
+
+/// Override clutch action (XSD compliant name)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverrideClutchAction {
+    #[serde(rename = "@active")]
+    pub active: Boolean,
+    #[serde(rename = "@value")]
+    pub value: Double,
+    #[serde(rename = "@maxRate", skip_serializing_if = "Option::is_none")]
+    pub max_rate: Option<Double>,
 }
 
 // PHASE 4B: Supporting Types for Gear Control

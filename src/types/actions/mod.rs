@@ -19,6 +19,7 @@ pub mod control; // Controller actions
 pub mod movement; // Movement actions (SpeedAction, TeleportAction, etc.)
 pub mod traffic; // Traffic actions
 pub mod trailer; // Trailer actions
+pub mod wrappers; // Action wrapper types matching XSD schema
 
 // PHASE 4A: Export all movement actions
 pub use movement::{
@@ -106,76 +107,28 @@ pub use control::{
     // Supporting types
     ManualGear,
     OverrideControllerValueAction,
-    // Individual override actions
+    // Individual override actions (legacy names)
     OverrideControllerValueActionBrake,
     OverrideControllerValueActionClutch,
     OverrideControllerValueActionGear,
     OverrideControllerValueActionParkingBrake,
     OverrideControllerValueActionSteeringWheel,
     OverrideControllerValueActionThrottle,
+    // XSD compliant override action names
+    OverrideBrakeAction,
+    OverrideClutchAction,
+    OverrideGearAction,
+    OverrideParkingBrakeAction,
+    OverrideSteeringWheelAction,
+    OverrideThrottleAction,
 };
 
-use serde::{Deserialize, Serialize};
+// Export wrapper types from the wrappers module
+pub use wrappers::*;
 
-// PHASE 4A+4B+4C: Complete Action enum with movement, controller, and traffic actions
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type")]
-pub enum Action {
-    // Original actions
-    Speed(SpeedAction),
-    Teleport(TeleportAction),
-    FollowTrajectory(FollowTrajectoryAction),
-    FollowRoute(FollowRouteAction),
-    AssignRoute(AssignRouteAction),
-    Routing(RoutingAction),
 
-    // Phase 4A: New movement actions
-    LaneChange(LaneChangeAction),
-    LaneOffset(LaneOffsetAction),
-    Lateral(LateralAction),
-    LateralDistance(LateralDistanceAction),
-    Longitudinal(LongitudinalAction),
-    LongitudinalDistance(LongitudinalDistanceAction),
-    SpeedProfile(SpeedProfileAction),
-    Synchronize(SynchronizeAction),
-    AcquirePosition(AcquirePositionAction),
 
-    // Phase 4B: Controller actions
-    AssignController(AssignControllerAction),
-    ActivateController(ActivateControllerAction),
-    OverrideControllerValue(OverrideControllerValueAction),
-    OverrideBrake(OverrideControllerValueActionBrake),
-    OverrideThrottle(OverrideControllerValueActionThrottle),
-    OverrideSteeringWheel(OverrideControllerValueActionSteeringWheel),
-    OverrideGear(OverrideControllerValueActionGear),
-    OverrideParkingBrake(OverrideControllerValueActionParkingBrake),
-    OverrideClutch(OverrideControllerValueActionClutch),
 
-    // Phase 4C: Traffic actions
-    TrafficSource(TrafficSourceAction),
-    TrafficSink(TrafficSinkAction),
-    TrafficSwarm(TrafficSwarmAction),
-    TrafficArea(TrafficAreaAction),
-    TrafficSignal(TrafficSignalAction),
-    TrafficSignalState(TrafficSignalStateAction),
-    TrafficSignalController(TrafficSignalControllerAction),
-    TrafficStop(TrafficStopAction),
-}
-
-impl Default for Action {
-    fn default() -> Self {
-        Action::Speed(SpeedAction::default())
-    }
-}
-
-// Define Action wrapper with common attributes
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionWrapper {
-    #[serde(rename = "@name")]
-    pub name: String,
-    #[serde(flatten)]
-    pub action: Action,
-}
 
 use crate::types::ValidationContext;
 
