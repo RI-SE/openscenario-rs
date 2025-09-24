@@ -877,7 +877,7 @@ fn tdd_can_parse_simulation_time_conditions() {
 
     // Verify condition type is parsed correctly
     if let Some(by_value) = &condition.by_value_condition {
-        if let Some(sim_time) = &by_value.simulation_time {
+        if let Some(sim_time) = &by_value.simulation_time_condition {
             println!(
                 "✅ Found SimulationTimeCondition with value: {}",
                 sim_time.value.as_literal().unwrap_or(&0.0)
@@ -959,7 +959,14 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         condition_edge: ConditionEdge::Rising,
         delay: Some(Value::literal(1.0)),
         by_value_condition: Some(ByValueCondition {
-            simulation_time: Some(time_condition),
+            simulation_time_condition: Some(time_condition),
+            parameter_condition: None,
+            time_of_day_condition: None,
+            storyboard_element_state_condition: None,
+            user_defined_value_condition: None,
+            traffic_signal_condition: None,
+            traffic_signal_controller_condition: None,
+            variable_condition: None,
         }),
         by_entity_condition: None,
     };
