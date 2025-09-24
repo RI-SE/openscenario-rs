@@ -14,12 +14,12 @@
 //! - Facilitating dynamic scenario adaptation based on entity states
 //! - Enabling complex multi-entity coordination and interaction patterns
 
-use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::basic::{Boolean, Double, Int, OSString};
 use crate::types::enums::{
-    CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule,
+    AngleType, CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule,
 };
 use crate::types::positions::Position;
-use crate::types::scenario::triggers::TriggeringEntities;
+use crate::types::scenario::triggers::{EntityRef, TriggeringEntities};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -257,54 +257,191 @@ pub struct TimeToCollisionCondition {
     pub target: TimeToCollisionTarget,
 }
 
-/// Target for time to collision condition
+/// Target for time to collision condition - matches XSD TimeToCollisionConditionTarget
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeToCollisionTarget {
     /// Target entity reference
-    #[serde(rename = "@entityRef", skip_serializing_if = "Option::is_none")]
-    pub entity_ref: Option<OSString>,
+    #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
+    pub entity_ref: Option<EntityRef>,
 
     /// Target position
     #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
 }
 
-/// Entity-based condition types
+/// Angle condition for entity orientation/direction triggering
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(untagged)]
-pub enum ByEntityCondition {
-    /// Schema-compliant structure with TriggeringEntities and EntityCondition
-    SchemaCompliant(ByEntityConditionSchema),
-    /// Legacy speed-based condition
-    Speed(SpeedCondition),
-    /// Legacy position reach condition (deprecated but supported)
-    ReachPosition(ReachPositionCondition),
-    /// Legacy distance to position condition
-    Distance(DistanceCondition),
-    /// Legacy relative distance between entities condition
-    RelativeDistance(RelativeDistanceCondition),
-    /// Legacy acceleration-based condition
-    Acceleration(AccelerationCondition),
-    /// Legacy standstill detection condition
-    StandStill(StandStillCondition),
-    /// Legacy collision detection condition
-    Collision(CollisionCondition),
-    /// Legacy off-road detection condition
-    OffRoad(OffRoadCondition),
-    /// Legacy end-of-road detection condition
-    EndOfRoad(EndOfRoadCondition),
-    /// Legacy time headway condition
-    TimeHeadway(TimeHeadwayCondition),
-    /// Legacy time to collision condition
-    TimeToCollision(TimeToCollisionCondition),
+#[serde(rename = "AngleCondition")]
+pub struct AngleCondition {
+    /// Type of angle measurement (relative or absolute)
+    #[serde(rename = "@angleType")]
+    pub angle_type: AngleType,
+
+    /// Target angle value in radians
+    #[serde(rename = "@angle")]
+    pub angle: Double,
+
+    /// Tolerance for angle matching in radians
+    #[serde(rename = "@angleTolerance")]
+    pub angle_tolerance: Double,
+
+    /// Coordinate system for angle measurement
+    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
+    pub coordinate_system: Option<CoordinateSystem>,
+}
+
+/// Off-road detection condition - matches XSD OffroadCondition
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "OffroadCondition")]
+pub struct OffroadCondition {
+    /// Duration entity must be off-road
+    #[serde(rename = "@duration")]
+    pub duration: Double,
+}
+
+/// Relative speed monitoring between entities
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "RelativeSpeedCondition")]
+pub struct RelativeSpeedCondition {
+    /// Reference entity for speed comparison
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: OSString,
+
+    /// Comparison rule (greater than, less than, etc.)
+    #[serde(rename = "@rule")]
+    pub rule: Rule,
+
+    /// Speed difference value
+    #[serde(rename = "@value")]
+    pub value: Double,
+
+    /// Direction of speed measurement (optional)
+    #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
+    pub direction: Option<DirectionalDimension>,
+}
+
+/// Relative lane range specification for clearance conditions
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RelativeLaneRange {
+    /// Starting lane offset
+    #[serde(rename = "@from", skip_serializing_if = "Option::is_none")]
+    pub from: Option<Int>,
+
+    /// Ending lane offset
+    #[serde(rename = "@to", skip_serializing_if = "Option::is_none")]
+    pub to: Option<Int>,
+}
+
+/// Clearance monitoring between entities
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "RelativeClearanceCondition")]
+pub struct RelativeClearanceCondition {
+    /// Lane ranges to check for clearance
+    #[serde(rename = "RelativeLaneRange", skip_serializing_if = "Vec::is_empty", default)]
+    pub relative_lane_ranges: Vec<RelativeLaneRange>,
+
+    /// Entity references to check clearance against
+    #[serde(rename = "EntityRef", skip_serializing_if = "Vec::is_empty", default)]
+    pub entity_refs: Vec<EntityRef>,
+
+    /// Whether to check opposite lanes
+    #[serde(rename = "@oppositeLanes")]
+    pub opposite_lanes: Boolean,
+
+    /// Distance to check forward (optional)
+    #[serde(rename = "@distanceForward", skip_serializing_if = "Option::is_none")]
+    pub distance_forward: Option<Double>,
+
+    /// Distance to check backward (optional)
+    #[serde(rename = "@distanceBackward", skip_serializing_if = "Option::is_none")]
+    pub distance_backward: Option<Double>,
+
+    /// Whether to use free space measurement
+    #[serde(rename = "@freeSpace")]
+    pub free_space: Boolean,
+}
+
+/// Relative angle conditions between entities
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "RelativeAngleCondition")]
+pub struct RelativeAngleCondition {
+    /// Reference entity for angle comparison
+    #[serde(rename = "@entityRef")]
+    pub entity_ref: OSString,
+
+    /// Type of angle measurement (relative or absolute)
+    #[serde(rename = "@angleType")]
+    pub angle_type: AngleType,
+
+    /// Target angle value in radians
+    #[serde(rename = "@angle")]
+    pub angle: Double,
+
+    /// Tolerance for angle matching in radians
+    #[serde(rename = "@angleTolerance")]
+    pub angle_tolerance: Double,
+
+    /// Coordinate system for angle measurement
+    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
+    pub coordinate_system: Option<CoordinateSystem>,
+}
+
+/// Distance-based condition triggering
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "TraveledDistanceCondition")]
+pub struct TraveledDistanceCondition {
+    /// Distance value to trigger on
+    #[serde(rename = "@value")]
+    pub value: Double,
+}
+
+/// Schema-compliant ByEntityCondition structure matching OpenSCENARIO XSD exactly
+/// This is the main ByEntityCondition type that should be used
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ByEntityCondition {
+    /// Entities that can trigger this condition
+    #[serde(rename = "TriggeringEntities")]
+    pub triggering_entities: TriggeringEntities,
+
+    /// The actual entity condition
+    #[serde(rename = "EntityCondition")]
+    pub entity_condition: EntityCondition,
 }
 
 /// EntityCondition enum for the actual condition types inside ByEntityConditionSchema
+/// Matches the XSD EntityCondition choice group exactly
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EntityCondition {
+    /// End-of-road detection condition
+    #[serde(rename = "EndOfRoadCondition")]
+    EndOfRoad(EndOfRoadCondition),
+    /// Collision detection condition
+    #[serde(rename = "CollisionCondition")]
+    Collision(CollisionCondition),
+    /// Off-road detection condition (matches XSD OffroadCondition)
+    #[serde(rename = "OffroadCondition")]
+    Offroad(OffroadCondition),
+    /// Time headway condition
+    #[serde(rename = "TimeHeadwayCondition")]
+    TimeHeadway(TimeHeadwayCondition),
+    /// Time to collision condition
+    #[serde(rename = "TimeToCollisionCondition")]
+    TimeToCollision(TimeToCollisionCondition),
+    /// Acceleration-based condition
+    #[serde(rename = "AccelerationCondition")]
+    Acceleration(AccelerationCondition),
+    /// Standstill detection condition
+    #[serde(rename = "StandStillCondition")]
+    StandStill(StandStillCondition),
     /// Speed-based condition
     #[serde(rename = "SpeedCondition")]
     Speed(SpeedCondition),
+    /// Relative speed monitoring between entities
+    #[serde(rename = "RelativeSpeedCondition")]
+    RelativeSpeed(RelativeSpeedCondition),
+    /// Distance-based condition triggering
+    #[serde(rename = "TraveledDistanceCondition")]
+    TraveledDistance(TraveledDistanceCondition),
     /// Position reach condition (deprecated but supported)
     #[serde(rename = "ReachPositionCondition")]
     ReachPosition(ReachPositionCondition),
@@ -314,40 +451,18 @@ pub enum EntityCondition {
     /// Relative distance between entities condition
     #[serde(rename = "RelativeDistanceCondition")]
     RelativeDistance(RelativeDistanceCondition),
-    /// Acceleration-based condition
-    #[serde(rename = "AccelerationCondition")]
-    Acceleration(AccelerationCondition),
-    /// Standstill detection condition
-    #[serde(rename = "StandStillCondition")]
-    StandStill(StandStillCondition),
-    /// Collision detection condition
-    #[serde(rename = "CollisionCondition")]
-    Collision(CollisionCondition),
-    /// Off-road detection condition
-    #[serde(rename = "OffRoadCondition")]
-    OffRoad(OffRoadCondition),
-    /// End-of-road detection condition
-    #[serde(rename = "EndOfRoadCondition")]
-    EndOfRoad(EndOfRoadCondition),
-    /// Time headway condition
-    #[serde(rename = "TimeHeadwayCondition")]
-    TimeHeadway(TimeHeadwayCondition),
-    /// Time to collision condition
-    #[serde(rename = "TimeToCollisionCondition")]
-    TimeToCollision(TimeToCollisionCondition),
+    /// Clearance monitoring between entities
+    #[serde(rename = "RelativeClearanceCondition")]
+    RelativeClearance(RelativeClearanceCondition),
+    /// Angle condition for entity orientation/direction triggering
+    #[serde(rename = "AngleCondition")]
+    Angle(AngleCondition),
+    /// Relative angle conditions between entities
+    #[serde(rename = "RelativeAngleCondition")]
+    RelativeAngle(RelativeAngleCondition),
 }
 
-/// Schema-compliant ByEntityCondition structure matching OpenSCENARIO XSD
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ByEntityConditionSchema {
-    /// Entities that can trigger this condition
-    #[serde(rename = "TriggeringEntities")]
-    pub triggering_entities: TriggeringEntities,
 
-    /// The actual entity condition
-    #[serde(rename = "EntityCondition")]
-    pub entity_condition: EntityCondition,
-}
 
 impl Default for SpeedCondition {
     fn default() -> Self {
@@ -672,7 +787,9 @@ impl TimeToCollisionCondition {
     /// Create a new time to collision condition with entity target
     pub fn with_entity_target(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
         let target = TimeToCollisionTarget {
-            entity_ref: Some(OSString::literal(entity_ref.to_string())),
+            entity_ref: Some(EntityRef {
+                entity_ref: OSString::literal(entity_ref.to_string()),
+            }),
             position: None,
         };
 
@@ -753,7 +870,9 @@ impl TimeToCollisionTarget {
     /// Create target with entity reference
     pub fn entity(entity_ref: &str) -> Self {
         Self {
-            entity_ref: Some(OSString::literal(entity_ref.to_string())),
+            entity_ref: Some(EntityRef {
+                entity_ref: OSString::literal(entity_ref.to_string()),
+            }),
             position: None,
         }
     }
@@ -889,8 +1008,82 @@ impl Default for TimeToCollisionCondition {
 impl Default for TimeToCollisionTarget {
     fn default() -> Self {
         Self {
-            entity_ref: Some(OSString::literal("DefaultEntity".to_string())),
+            entity_ref: Some(EntityRef {
+                entity_ref: OSString::literal("DefaultEntity".to_string()),
+            }),
             position: None,
+        }
+    }
+}
+
+impl Default for AngleCondition {
+    fn default() -> Self {
+        Self {
+            angle_type: AngleType::Relative,
+            angle: Double::literal(0.0),
+            angle_tolerance: Double::literal(0.1),
+            coordinate_system: None,
+        }
+    }
+}
+
+impl Default for OffroadCondition {
+    fn default() -> Self {
+        Self {
+            duration: Double::literal(1.0),
+        }
+    }
+}
+
+impl Default for RelativeSpeedCondition {
+    fn default() -> Self {
+        Self {
+            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            rule: Rule::GreaterThan,
+            value: Double::literal(5.0),
+            direction: None,
+        }
+    }
+}
+
+impl Default for RelativeLaneRange {
+    fn default() -> Self {
+        Self {
+            from: Some(Int::literal(-1)),
+            to: Some(Int::literal(1)),
+        }
+    }
+}
+
+impl Default for RelativeClearanceCondition {
+    fn default() -> Self {
+        Self {
+            relative_lane_ranges: vec![RelativeLaneRange::default()],
+            entity_refs: vec![EntityRef::default()],
+            opposite_lanes: Boolean::literal(false),
+            distance_forward: Some(Double::literal(50.0)),
+            distance_backward: Some(Double::literal(10.0)),
+            free_space: Boolean::literal(true),
+        }
+    }
+}
+
+impl Default for RelativeAngleCondition {
+    fn default() -> Self {
+        Self {
+            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            angle_type: AngleType::Relative,
+            angle: Double::literal(0.0),
+            angle_tolerance: Double::literal(0.1),
+            coordinate_system: None,
+        }
+    }
+}
+
+impl Default for TraveledDistanceCondition {
+    fn default() -> Self {
+        Self {
+            value: Double::literal(100.0),
         }
     }
 }
@@ -901,139 +1094,319 @@ impl Default for EntityCondition {
     }
 }
 
-impl Default for ByEntityConditionSchema {
+impl Default for ByEntityCondition {
     fn default() -> Self {
-        ByEntityConditionSchema {
+        Self {
             triggering_entities: TriggeringEntities::default(),
             entity_condition: EntityCondition::default(),
         }
     }
 }
 
-impl Default for ByEntityCondition {
-    fn default() -> Self {
-        ByEntityCondition::Speed(SpeedCondition::default())
-    }
-}
-
 // Convenience constructors for ByEntityCondition
 impl ByEntityCondition {
+    /// Create a new ByEntityCondition with the given triggering entities and entity condition
+    pub fn new(triggering_entities: TriggeringEntities, entity_condition: EntityCondition) -> Self {
+        Self {
+            triggering_entities,
+            entity_condition,
+        }
+    }
+
     /// Create a speed condition
-    pub fn speed(value: f64, rule: Rule, entity_ref: impl Into<String>) -> Self {
-        ByEntityCondition::Speed(SpeedCondition {
-            value: Double::literal(value),
-            rule,
-            entity_ref: entity_ref.into(),
-        })
+    pub fn speed(
+        triggering_entities: TriggeringEntities,
+        value: f64,
+        rule: Rule,
+        entity_ref: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Speed(SpeedCondition {
+                value: Double::literal(value),
+                rule,
+                entity_ref: entity_ref.into(),
+            }),
+        )
     }
 
     /// Create a reach position condition
-    pub fn reach_position(position: Position, tolerance: f64) -> Self {
-        ByEntityCondition::ReachPosition(ReachPositionCondition::new(position, tolerance))
+    pub fn reach_position(
+        triggering_entities: TriggeringEntities,
+        position: Position,
+        tolerance: f64,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::ReachPosition(ReachPositionCondition::new(position, tolerance)),
+        )
     }
 
     /// Create a distance condition
-    pub fn distance(position: Position, value: f64, freespace: bool, rule: Rule) -> Self {
-        ByEntityCondition::Distance(DistanceCondition::new(position, value, freespace, rule))
+    pub fn distance(
+        triggering_entities: TriggeringEntities,
+        position: Position,
+        value: f64,
+        freespace: bool,
+        rule: Rule,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Distance(DistanceCondition::new(position, value, freespace, rule)),
+        )
     }
 
     /// Create a relative distance condition
     pub fn relative_distance(
+        triggering_entities: TriggeringEntities,
         entity_ref: &str,
         value: f64,
         freespace: bool,
         distance_type: RelativeDistanceType,
         rule: Rule,
     ) -> Self {
-        ByEntityCondition::RelativeDistance(RelativeDistanceCondition::new(
-            entity_ref,
-            value,
-            freespace,
-            distance_type,
-            rule,
-        ))
+        Self::new(
+            triggering_entities,
+            EntityCondition::RelativeDistance(RelativeDistanceCondition::new(
+                entity_ref,
+                value,
+                freespace,
+                distance_type,
+                rule,
+            )),
+        )
     }
 
     /// Create an acceleration condition
-    pub fn acceleration(value: f64, rule: Rule) -> Self {
-        ByEntityCondition::Acceleration(AccelerationCondition::new(value, rule))
+    pub fn acceleration(
+        triggering_entities: TriggeringEntities,
+        value: f64,
+        rule: Rule,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Acceleration(AccelerationCondition::new(value, rule)),
+        )
     }
 
     /// Create an acceleration condition with direction
     pub fn acceleration_with_direction(
+        triggering_entities: TriggeringEntities,
         value: f64,
         rule: Rule,
         direction: DirectionalDimension,
     ) -> Self {
-        ByEntityCondition::Acceleration(
-            AccelerationCondition::new(value, rule).with_direction(direction),
+        Self::new(
+            triggering_entities,
+            EntityCondition::Acceleration(
+                AccelerationCondition::new(value, rule).with_direction(direction),
+            ),
         )
     }
 
     /// Create a standstill condition
-    pub fn standstill(duration: f64) -> Self {
-        ByEntityCondition::StandStill(StandStillCondition::new(duration))
+    pub fn standstill(triggering_entities: TriggeringEntities, duration: f64) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::StandStill(StandStillCondition::new(duration)),
+        )
     }
 
     /// Create a collision condition with specific target
-    pub fn collision_with_target(target: &str) -> Self {
-        ByEntityCondition::Collision(CollisionCondition::with_target(target))
+    pub fn collision_with_target(triggering_entities: TriggeringEntities, target: &str) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Collision(CollisionCondition::with_target(target)),
+        )
     }
 
     /// Create a collision condition for entity type
-    pub fn collision_with_type(entity_type: &str) -> Self {
-        ByEntityCondition::Collision(CollisionCondition::with_type(entity_type))
+    pub fn collision_with_type(
+        triggering_entities: TriggeringEntities,
+        entity_type: &str,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Collision(CollisionCondition::with_type(entity_type)),
+        )
     }
 
     /// Create a collision condition at position
-    pub fn collision_at_position(position: Position) -> Self {
-        ByEntityCondition::Collision(CollisionCondition::at_position(position))
+    pub fn collision_at_position(
+        triggering_entities: TriggeringEntities,
+        position: Position,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Collision(CollisionCondition::at_position(position)),
+        )
     }
 
     /// Create a general collision condition
-    pub fn collision() -> Self {
-        ByEntityCondition::Collision(CollisionCondition::any_collision())
+    pub fn collision(triggering_entities: TriggeringEntities) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Collision(CollisionCondition::any_collision()),
+        )
     }
 
-    /// Create an off-road condition
-    pub fn off_road(duration: f64) -> Self {
-        ByEntityCondition::OffRoad(OffRoadCondition::new(duration))
+    /// Create an off-road condition (legacy OffRoadCondition)
+    pub fn off_road(triggering_entities: TriggeringEntities, duration: f64) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::EndOfRoad(EndOfRoadCondition::with_duration(duration)),
+        )
+    }
+
+    /// Create an offroad condition (XSD-compliant OffroadCondition)
+    pub fn offroad(triggering_entities: TriggeringEntities, duration: f64) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Offroad(OffroadCondition {
+                duration: Double::literal(duration),
+            }),
+        )
     }
 
     /// Create an end-of-road condition
-    pub fn end_of_road(duration: f64) -> Self {
-        ByEntityCondition::EndOfRoad(EndOfRoadCondition::new(duration))
+    pub fn end_of_road(triggering_entities: TriggeringEntities, duration: f64) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::EndOfRoad(EndOfRoadCondition::new(duration)),
+        )
     }
 
     /// Create a time headway condition
-    pub fn time_headway(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
-        ByEntityCondition::TimeHeadway(TimeHeadwayCondition::new(
-            entity_ref, value, rule, freespace,
-        ))
-    }
-
-    /// Create a time to collision condition with entity target
-    pub fn time_to_collision_entity(
+    pub fn time_headway(
+        triggering_entities: TriggeringEntities,
         entity_ref: &str,
         value: f64,
         rule: Rule,
         freespace: bool,
     ) -> Self {
-        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_entity_target(
-            entity_ref, value, rule, freespace,
-        ))
+        Self::new(
+            triggering_entities,
+            EntityCondition::TimeHeadway(TimeHeadwayCondition::new(
+                entity_ref, value, rule, freespace,
+            )),
+        )
+    }
+
+    /// Create a time to collision condition with entity target
+    pub fn time_to_collision_entity(
+        triggering_entities: TriggeringEntities,
+        entity_ref: &str,
+        value: f64,
+        rule: Rule,
+        freespace: bool,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::TimeToCollision(TimeToCollisionCondition::with_entity_target(
+                entity_ref, value, rule, freespace,
+            )),
+        )
     }
 
     /// Create a time to collision condition with position target
     pub fn time_to_collision_position(
+        triggering_entities: TriggeringEntities,
         position: Position,
         value: f64,
         rule: Rule,
         freespace: bool,
     ) -> Self {
-        ByEntityCondition::TimeToCollision(TimeToCollisionCondition::with_position_target(
-            position, value, rule, freespace,
-        ))
+        Self::new(
+            triggering_entities,
+            EntityCondition::TimeToCollision(TimeToCollisionCondition::with_position_target(
+                position, value, rule, freespace,
+            )),
+        )
+    }
+
+    /// Create an angle condition
+    pub fn angle(
+        triggering_entities: TriggeringEntities,
+        angle_type: AngleType,
+        angle: f64,
+        angle_tolerance: f64,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::Angle(AngleCondition {
+                angle_type,
+                angle: Double::literal(angle),
+                angle_tolerance: Double::literal(angle_tolerance),
+                coordinate_system: None,
+            }),
+        )
+    }
+
+    /// Create a relative speed condition
+    pub fn relative_speed(
+        triggering_entities: TriggeringEntities,
+        entity_ref: &str,
+        rule: Rule,
+        value: f64,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::RelativeSpeed(RelativeSpeedCondition {
+                entity_ref: OSString::literal(entity_ref.to_string()),
+                rule,
+                value: Double::literal(value),
+                direction: None,
+            }),
+        )
+    }
+
+    /// Create a traveled distance condition
+    pub fn traveled_distance(triggering_entities: TriggeringEntities, value: f64) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::TraveledDistance(TraveledDistanceCondition {
+                value: Double::literal(value),
+            }),
+        )
+    }
+
+    /// Create a relative clearance condition
+    pub fn relative_clearance(
+        triggering_entities: TriggeringEntities,
+        opposite_lanes: bool,
+        free_space: bool,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::RelativeClearance(RelativeClearanceCondition {
+                relative_lane_ranges: vec![],
+                entity_refs: vec![],
+                opposite_lanes: Boolean::literal(opposite_lanes),
+                distance_forward: None,
+                distance_backward: None,
+                free_space: Boolean::literal(free_space),
+            }),
+        )
+    }
+
+    /// Create a relative angle condition
+    pub fn relative_angle(
+        triggering_entities: TriggeringEntities,
+        entity_ref: &str,
+        angle_type: AngleType,
+        angle: f64,
+        angle_tolerance: f64,
+    ) -> Self {
+        Self::new(
+            triggering_entities,
+            EntityCondition::RelativeAngle(RelativeAngleCondition {
+                entity_ref: OSString::literal(entity_ref.to_string()),
+                angle_type,
+                angle: Double::literal(angle),
+                angle_tolerance: Double::literal(angle_tolerance),
+                coordinate_system: None,
+            }),
+        )
     }
 }
 

@@ -19,10 +19,12 @@ pub mod entity; // Entity-based conditions
 pub mod value; // Value-based conditions
 
 pub use entity::{
-    AccelerationCondition, ByEntityCondition, ByEntityConditionSchema, CollisionCondition,
+    AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition,
     CollisionTarget, DistanceCondition, EndOfRoadCondition, EntityCondition, OffRoadCondition,
-    ReachPositionCondition, RelativeDistanceCondition, SpeedCondition, StandStillCondition,
-    TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
+    OffroadCondition, ReachPositionCondition, RelativeAngleCondition, RelativeClearanceCondition,
+    RelativeDistanceCondition, RelativeLaneRange, RelativeSpeedCondition, SpeedCondition,
+    StandStillCondition, TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
+    TraveledDistanceCondition,
 };
 pub use value::{
     ByValueCondition, ParameterCondition, SimulationTimeCondition, StoryboardElementStateCondition,
