@@ -13,3 +13,15 @@
 //! - Supporting type-safe scenario construction with compile-time validation
 //! - Enabling fluent API patterns for ergonomic scenario building
 //! - Facilitating builder debugging and construction monitoring
+
+use crate::error::Error;
+
+/// Builder-specific error type
+pub type BuilderError = Error;
+
+/// Builder result type
+pub type BuilderResult<T> = Result<T, BuilderError>;
+
+pub mod positions;
+pub mod scenario;
+pub mod fluent;

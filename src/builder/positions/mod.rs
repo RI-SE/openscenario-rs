@@ -5,7 +5,6 @@
 
 pub mod lane;
 pub mod relative;
-pub mod road;
 pub mod world;
 
 pub use lane::LanePositionBuilder;
