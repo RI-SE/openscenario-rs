@@ -26,6 +26,7 @@ markup_fmt = "0.23.4"
 [features]
 default = ["chrono"]
 chrono = ["dep:chrono"]
+builder = []
 
 [dev-dependencies]
 proptest = "1.0"
