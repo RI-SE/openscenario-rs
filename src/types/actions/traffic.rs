@@ -96,7 +96,7 @@ pub enum TrafficSignalActionChoice {
 pub struct TrafficSignalStateAction {
     #[serde(rename = "@name")]
     pub name: OSString,
-    #[serde(rename = "@statee")]
+    #[serde(rename = "@state")]
     pub state: OSString,
 }
 
@@ -140,14 +140,14 @@ pub struct Phase {
 pub struct TrafficSignalState {
     #[serde(rename = "@trafficSignalId")]
     pub traffic_signal_id: OSString,
-    #[serde(rename = "@statee")]
+    #[serde(rename = "@state")]
     pub state: OSString,
 }
 
 /// Traffic signal group state for signal group control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSignalGroupState {
-    #[serde(rename = "@statee")]
+    #[serde(rename = "@state")]
     pub state: OSString,
 }
 
