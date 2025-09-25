@@ -563,7 +563,7 @@ mod cut_in_scenario_tests {
 
         // This is the key test - verify we can access the story structure
         // Event contains a single action
-        let _action = &event.action;
+        let _actions = &event.actions;
 
         // The story structure parsing validates that we've progressed past the trajectory bottleneck
         // The actual trajectory system is tested separately in the RoutingAction tests
@@ -735,8 +735,9 @@ fn can_validate_trajectory_following_modes() {
             for maneuver_group in &act.maneuver_groups {
                 for maneuver in &maneuver_group.maneuvers {
                     for event in &maneuver.events {
-                        let action = &event.action;
-                        if let Some(ref private_action) = action.private_action {
+                        let actions = &event.actions;
+                        for action in actions {
+                            if let Some(ref private_action) = action.private_action {
                             if let Some(routing) = &private_action.routing_action {
                                 if let Some(follow_action) = &routing.follow_trajectory_action {
                                     routing_actions_found += 1;
@@ -748,6 +749,7 @@ fn can_validate_trajectory_following_modes() {
                                         "cut_in_101_exam.xosc uses followingMode='follow'"
                                     );
                                 }
+                            }
                             }
                         }
                     }
@@ -994,7 +996,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         name: Value::literal("SpeedEvent".to_string()),
         maximum_execution_count: Some(Value::literal(1)),
         priority: Some(Priority::Override),
-        action: StoryAction {
+        actions: vec![StoryAction {
             name: Value::literal("SpeedAction1".to_string()),
             private_action: Some(StoryPrivateAction {
                 longitudinal_action: Some(LongitudinalAction {
@@ -1009,7 +1011,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
                 appearance_action: None,
                 trailer_action: None,
             }),
-        },
+        }],
         start_trigger: Some(trigger),
     };
 
@@ -1102,8 +1104,8 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     );
 
     // Verify the action system
-    assert_eq!(event.action.name.as_literal().unwrap(), "SpeedAction1");
-    if let Some(private_action) = &event.action.private_action {
+    assert_eq!(event.actions[0].name.as_literal().unwrap(), "SpeedAction1");
+    if let Some(private_action) = &event.actions[0].private_action {
         if let Some(longitudinal_action) = &private_action.longitudinal_action {
             if let Some(speed_action) = &longitudinal_action.speed_action {
                 assert_eq!(

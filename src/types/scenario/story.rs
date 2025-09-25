@@ -194,9 +194,9 @@ pub struct Event {
     #[serde(rename = "@priority", skip_serializing_if = "Option::is_none")]
     pub priority: Option<Priority>,
 
-    /// The action to execute when this event triggers
+    /// The actions to execute when this event triggers
     #[serde(rename = "Action")]
-    pub action: StoryAction,
+    pub actions: Vec<StoryAction>,
 
     /// Trigger conditions to start this event
     #[serde(rename = "StartTrigger", skip_serializing_if = "Option::is_none")]
@@ -310,7 +310,7 @@ impl Default for Event {
             name: OSString::literal("DefaultEvent".to_string()),
             maximum_execution_count: None,
             priority: None,
-            action: StoryAction::default(),
+            actions: vec![StoryAction::default()],
             start_trigger: None,
         }
     }
@@ -401,14 +401,14 @@ mod tests {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
                     priority: Some(Priority::Override),
-                    action: StoryAction::default(),
+                    actions: vec![StoryAction::default()],
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
                     priority: None,
-                    action: StoryAction::default(),
+                    actions: vec![StoryAction::default()],
                     start_trigger: None,
                 },
             ],
@@ -426,7 +426,7 @@ mod tests {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
             priority: Some(Priority::Parallel),
-            action: StoryAction::default(),
+            actions: vec![StoryAction::default()],
             start_trigger: None,
         };
 
