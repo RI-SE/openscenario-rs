@@ -76,14 +76,14 @@ fn main() {
 
     // Create a comprehensive ByValueCondition with multiple conditions
     let comprehensive_condition = ByValueCondition {
-        parameter: Some(param_condition),
-        time_of_day: Some(time_of_day_condition),
-        simulation_time: Some(sim_time_condition),
-        storyboard_element_state: Some(storyboard_condition),
-        user_defined_value: Some(user_defined_condition),
-        traffic_signal: Some(traffic_signal_condition),
-        traffic_signal_controller: Some(traffic_controller_condition),
-        variable: Some(variable_condition),
+        parameter_condition: Some(param_condition),
+        time_of_day_condition: Some(time_of_day_condition),
+        simulation_time_condition: Some(sim_time_condition),
+        storyboard_element_state_condition: Some(storyboard_condition),
+        user_defined_value_condition: Some(user_defined_condition),
+        traffic_signal_condition: Some(traffic_signal_condition),
+        traffic_signal_controller_condition: Some(traffic_controller_condition),
+        variable_condition: Some(variable_condition),
     };
 
     println!("\nComprehensive ByValueCondition created with all 8 condition types!");
@@ -96,7 +96,8 @@ fn main() {
         value: OSString::parameter("dynamicValue".to_string()),
     };
     println!("\nParameter Reference Example:");
-    println!("- Parameter reference: ${{{}}}", 
+    println!(
+        "- Parameter reference: ${{{}}}",
         match param_ref_condition.parameter_ref {
             OSString::Parameter(ref name) => name,
             _ => "literal",
@@ -125,3 +126,4 @@ fn main() {
 
     println!("\nDemo completed successfully!");
 }
+
