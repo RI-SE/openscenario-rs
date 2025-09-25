@@ -1506,9 +1506,10 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_acceleration() {
-        let condition = ByEntityCondition::acceleration(3.0, Rule::GreaterThan);
-        match condition {
-            ByEntityCondition::Acceleration(acc_condition) => {
+        let triggering_entities = TriggeringEntities::default();
+        let condition = ByEntityCondition::acceleration(triggering_entities, 3.0, Rule::GreaterThan);
+        match condition.entity_condition {
+            EntityCondition::Acceleration(acc_condition) => {
                 assert_eq!(acc_condition.value, Double::literal(3.0));
                 assert_eq!(acc_condition.rule, Rule::GreaterThan);
                 assert_eq!(acc_condition.direction, None);
@@ -1519,13 +1520,15 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_acceleration_with_direction() {
+        let triggering_entities = TriggeringEntities::default();
         let condition = ByEntityCondition::acceleration_with_direction(
+            triggering_entities,
             2.5,
             Rule::LessThan,
             DirectionalDimension::Lateral,
         );
-        match condition {
-            ByEntityCondition::Acceleration(acc_condition) => {
+        match condition.entity_condition {
+            EntityCondition::Acceleration(acc_condition) => {
                 assert_eq!(acc_condition.value, Double::literal(2.5));
                 assert_eq!(acc_condition.rule, Rule::LessThan);
                 assert_eq!(acc_condition.direction, Some(DirectionalDimension::Lateral));
@@ -1536,9 +1539,10 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_standstill() {
-        let condition = ByEntityCondition::standstill(4.0);
-        match condition {
-            ByEntityCondition::StandStill(standstill_condition) => {
+        let triggering_entities = TriggeringEntities::default();
+        let condition = ByEntityCondition::standstill(triggering_entities, 4.0);
+        match condition.entity_condition {
+            EntityCondition::StandStill(standstill_condition) => {
                 assert_eq!(standstill_condition.duration, Double::literal(4.0));
             }
             _ => panic!("Expected StandStill variant"),
@@ -1571,16 +1575,17 @@ mod tests {
     #[test]
     fn test_by_entity_condition_enum_variants() {
         // Test that all variants can be created and matched
-        let acceleration = ByEntityCondition::acceleration(1.0, Rule::GreaterThan);
-        let standstill = ByEntityCondition::standstill(2.0);
+        let triggering_entities = TriggeringEntities::default();
+        let acceleration = ByEntityCondition::acceleration(triggering_entities.clone(), 1.0, Rule::GreaterThan);
+        let standstill = ByEntityCondition::standstill(triggering_entities, 2.0);
 
-        match acceleration {
-            ByEntityCondition::Acceleration(_) => (),
+        match acceleration.entity_condition {
+            EntityCondition::Acceleration(_) => (),
             _ => panic!("Expected Acceleration variant"),
         }
 
-        match standstill {
-            ByEntityCondition::StandStill(_) => (),
+        match standstill.entity_condition {
+            EntityCondition::StandStill(_) => (),
             _ => panic!("Expected StandStill variant"),
         }
     }
@@ -1664,12 +1669,13 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_collision_variants() {
-        let collision_target = ByEntityCondition::collision_with_target("vehicle1");
-        let collision_type = ByEntityCondition::collision_with_type("pedestrian");
-        let collision_any = ByEntityCondition::collision();
+        let triggering_entities = TriggeringEntities::default();
+        let collision_target = ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
+        let collision_type = ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+        let collision_any = ByEntityCondition::collision(triggering_entities);
 
-        match collision_target {
-            ByEntityCondition::Collision(condition) => {
+        match collision_target.entity_condition {
+            EntityCondition::Collision(condition) => {
                 assert_eq!(
                     condition.target,
                     Some(OSString::literal("vehicle1".to_string()))
@@ -1678,33 +1684,34 @@ mod tests {
             _ => panic!("Expected Collision variant"),
         }
 
-        match collision_type {
-            ByEntityCondition::Collision(condition) => {
+        match collision_type.entity_condition {
+            EntityCondition::Collision(condition) => {
                 assert!(condition.by_type.is_some());
             }
             _ => panic!("Expected Collision variant"),
         }
 
-        match collision_any {
-            ByEntityCondition::Collision(_) => (),
+        match collision_any.entity_condition {
+            EntityCondition::Collision(_) => (),
             _ => panic!("Expected Collision variant"),
         }
     }
 
     #[test]
     fn test_by_entity_condition_safety_variants() {
-        let off_road = ByEntityCondition::off_road(2.0);
-        let end_of_road = ByEntityCondition::end_of_road(3.0);
+        let triggering_entities = TriggeringEntities::default();
+        let off_road = ByEntityCondition::off_road(triggering_entities.clone(), 2.0);
+        let end_of_road = ByEntityCondition::end_of_road(triggering_entities, 3.0);
 
-        match off_road {
-            ByEntityCondition::OffRoad(condition) => {
+        match off_road.entity_condition {
+            EntityCondition::EndOfRoad(condition) => {
                 assert_eq!(condition.duration, Double::literal(2.0));
             }
-            _ => panic!("Expected OffRoad variant"),
+            _ => panic!("Expected EndOfRoad variant"),
         }
 
-        match end_of_road {
-            ByEntityCondition::EndOfRoad(condition) => {
+        match end_of_road.entity_condition {
+            EntityCondition::EndOfRoad(condition) => {
                 assert_eq!(condition.duration, Double::literal(3.0));
             }
             _ => panic!("Expected EndOfRoad variant"),

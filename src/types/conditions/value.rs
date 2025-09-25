@@ -66,7 +66,7 @@ pub struct TimeOfDayCondition {
 pub struct StoryboardElementStateCondition {
     #[serde(rename = "@storyboardElementRef")]
     pub storyboard_element_ref: OSString,
-    #[serde(rename = "@statee")]
+    #[serde(rename = "@state")]
     pub state: StoryboardElementState,
     #[serde(rename = "@storyboardElementType")]
     pub storyboard_element_type: StoryboardElementType,
@@ -88,7 +88,7 @@ pub struct UserDefinedValueCondition {
 pub struct TrafficSignalCondition {
     #[serde(rename = "@name")]
     pub name: OSString,
-    #[serde(rename = "@statee")]
+    #[serde(rename = "@state")]
     pub state: OSString,
 }
 
