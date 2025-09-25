@@ -7,17 +7,20 @@ use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     conditions::{
         ByEntityCondition, DistanceCondition, ReachPositionCondition, RelativeDistanceCondition,
+        EntityCondition,
     },
     enums::{RelativeDistanceType, Rule},
     positions::Position,
+    scenario::triggers::TriggeringEntities,
 };
 
 #[test]
 fn test_by_entity_condition_speed() {
-    let speed_condition = ByEntityCondition::speed(25.0, Rule::GreaterThan, "ego_vehicle");
+    let triggering_entities = TriggeringEntities::default();
+    let speed_condition = ByEntityCondition::speed(triggering_entities, 25.0, Rule::GreaterThan, "ego_vehicle");
 
-    match speed_condition {
-        ByEntityCondition::Speed(speed) => {
+    match speed_condition.entity_condition {
+        EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
             assert_eq!(speed.entity_ref, "ego_vehicle");
@@ -28,11 +31,12 @@ fn test_by_entity_condition_speed() {
 
 #[test]
 fn test_by_entity_condition_reach_position() {
+    let triggering_entities = TriggeringEntities::default();
     let position = Position::default();
-    let reach_condition = ByEntityCondition::reach_position(position, 3.0);
+    let reach_condition = ByEntityCondition::reach_position(triggering_entities, position, 3.0);
 
-    match reach_condition {
-        ByEntityCondition::ReachPosition(reach) => {
+    match reach_condition.entity_condition {
+        EntityCondition::ReachPosition(reach) => {
             assert_eq!(reach.tolerance, Double::literal(3.0));
             assert!(reach.position.world_position.is_some());
         }
@@ -42,11 +46,12 @@ fn test_by_entity_condition_reach_position() {
 
 #[test]
 fn test_by_entity_condition_distance() {
+    let triggering_entities = TriggeringEntities::default();
     let position = Position::default();
-    let distance_condition = ByEntityCondition::distance(position, 40.0, true, Rule::LessThan);
+    let distance_condition = ByEntityCondition::distance(triggering_entities, position, 40.0, true, Rule::LessThan);
 
-    match distance_condition {
-        ByEntityCondition::Distance(distance) => {
+    match distance_condition.entity_condition {
+        EntityCondition::Distance(distance) => {
             assert_eq!(distance.value, Double::literal(40.0));
             assert_eq!(distance.freespace, Boolean::literal(true));
             assert_eq!(distance.rule, Rule::LessThan);
@@ -57,7 +62,9 @@ fn test_by_entity_condition_distance() {
 
 #[test]
 fn test_by_entity_condition_relative_distance() {
+    let triggering_entities = TriggeringEntities::default();
     let relative_condition = ByEntityCondition::relative_distance(
+        triggering_entities,
         "target_vehicle",
         15.0,
         false,
@@ -65,8 +72,8 @@ fn test_by_entity_condition_relative_distance() {
         Rule::GreaterOrEqual,
     );
 
-    match relative_condition {
-        ByEntityCondition::RelativeDistance(relative) => {
+    match relative_condition.entity_condition {
+        EntityCondition::RelativeDistance(relative) => {
             assert_eq!(
                 relative.entity_ref,
                 OSString::literal("target_vehicle".to_string())
@@ -87,8 +94,8 @@ fn test_by_entity_condition_relative_distance() {
 fn test_by_entity_condition_default() {
     let default_condition = ByEntityCondition::default();
 
-    match default_condition {
-        ByEntityCondition::Speed(speed) => {
+    match default_condition.entity_condition {
+        EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
             assert_eq!(speed.entity_ref, "DefaultEntity");
@@ -136,9 +143,12 @@ fn test_spatial_condition_builders() {
 #[test]
 fn test_condition_equality() {
     // Test that identical conditions are equal
-    let condition1 = ByEntityCondition::speed(25.0, Rule::EqualTo, "vehicle1");
-    let condition2 = ByEntityCondition::speed(25.0, Rule::EqualTo, "vehicle1");
-    let condition3 = ByEntityCondition::speed(30.0, Rule::EqualTo, "vehicle1");
+    let triggering_entities1 = TriggeringEntities::default();
+    let triggering_entities2 = TriggeringEntities::default();
+    let triggering_entities3 = TriggeringEntities::default();
+    let condition1 = ByEntityCondition::speed(triggering_entities1, 25.0, Rule::EqualTo, "vehicle1");
+    let condition2 = ByEntityCondition::speed(triggering_entities2, 25.0, Rule::EqualTo, "vehicle1");
+    let condition3 = ByEntityCondition::speed(triggering_entities3, 30.0, Rule::EqualTo, "vehicle1");
 
     assert_eq!(condition1, condition2);
     assert_ne!(condition1, condition3);
@@ -146,7 +156,9 @@ fn test_condition_equality() {
 
 #[test]
 fn test_condition_cloning() {
+    let triggering_entities = TriggeringEntities::default();
     let original = ByEntityCondition::relative_distance(
+        triggering_entities,
         "test_vehicle",
         12.5,
         true,

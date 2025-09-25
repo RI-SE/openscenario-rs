@@ -4,9 +4,10 @@
 
 use openscenario_rs::types::basic::Double;
 use openscenario_rs::types::conditions::entity::{
-    AccelerationCondition, ByEntityCondition, StandStillCondition,
+    AccelerationCondition, ByEntityCondition, StandStillCondition, EntityCondition,
 };
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
+use openscenario_rs::types::scenario::triggers::TriggeringEntities;
 
 #[test]
 fn test_acceleration_condition_creation() {
@@ -67,9 +68,10 @@ fn test_standstill_condition_with_duration() {
 
 #[test]
 fn test_by_entity_condition_acceleration_variants() {
-    let simple = ByEntityCondition::acceleration(3.0, Rule::GreaterThan);
-    match simple {
-        ByEntityCondition::Acceleration(acc) => {
+    let triggering_entities = TriggeringEntities::default();
+    let simple = ByEntityCondition::acceleration(triggering_entities.clone(), 3.0, Rule::GreaterThan);
+    match simple.entity_condition {
+        EntityCondition::Acceleration(acc) => {
             assert_eq!(acc.value, Double::literal(3.0));
             assert_eq!(acc.rule, Rule::GreaterThan);
             assert_eq!(acc.direction, None);
@@ -78,12 +80,13 @@ fn test_by_entity_condition_acceleration_variants() {
     }
 
     let with_direction = ByEntityCondition::acceleration_with_direction(
+        triggering_entities,
         2.5,
         Rule::LessThan,
         DirectionalDimension::Lateral,
     );
-    match with_direction {
-        ByEntityCondition::Acceleration(acc) => {
+    match with_direction.entity_condition {
+        EntityCondition::Acceleration(acc) => {
             assert_eq!(acc.value, Double::literal(2.5));
             assert_eq!(acc.rule, Rule::LessThan);
             assert_eq!(acc.direction, Some(DirectionalDimension::Lateral));
@@ -94,9 +97,10 @@ fn test_by_entity_condition_acceleration_variants() {
 
 #[test]
 fn test_by_entity_condition_standstill_variant() {
-    let condition = ByEntityCondition::standstill(4.0);
-    match condition {
-        ByEntityCondition::StandStill(standstill) => {
+    let triggering_entities = TriggeringEntities::default();
+    let condition = ByEntityCondition::standstill(triggering_entities, 4.0);
+    match condition.entity_condition {
+        EntityCondition::StandStill(standstill) => {
             assert_eq!(standstill.duration, Double::literal(4.0));
         }
         _ => panic!("Expected StandStill variant"),
@@ -135,10 +139,12 @@ fn test_serialization_deserialization() {
 #[test]
 fn test_motion_conditions_in_enum() {
     // Test that both new condition types work within the ByEntityCondition enum
+    let triggering_entities = TriggeringEntities::default();
     let conditions = vec![
-        ByEntityCondition::acceleration(5.0, Rule::GreaterThan),
-        ByEntityCondition::standstill(2.0),
+        ByEntityCondition::acceleration(triggering_entities.clone(), 5.0, Rule::GreaterThan),
+        ByEntityCondition::standstill(triggering_entities.clone(), 2.0),
         ByEntityCondition::acceleration_with_direction(
+            triggering_entities,
             3.0,
             Rule::LessThan,
             DirectionalDimension::Vertical,
@@ -148,18 +154,18 @@ fn test_motion_conditions_in_enum() {
     assert_eq!(conditions.len(), 3);
 
     // Verify each condition type
-    match &conditions[0] {
-        ByEntityCondition::Acceleration(_) => (),
+    match &conditions[0].entity_condition {
+        EntityCondition::Acceleration(_) => (),
         _ => panic!("Expected Acceleration variant"),
     }
 
-    match &conditions[1] {
-        ByEntityCondition::StandStill(_) => (),
+    match &conditions[1].entity_condition {
+        EntityCondition::StandStill(_) => (),
         _ => panic!("Expected StandStill variant"),
     }
 
-    match &conditions[2] {
-        ByEntityCondition::Acceleration(acc) => {
+    match &conditions[2].entity_condition {
+        EntityCondition::Acceleration(acc) => {
             assert_eq!(acc.direction, Some(DirectionalDimension::Vertical));
         }
         _ => panic!("Expected Acceleration variant"),

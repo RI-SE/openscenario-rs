@@ -9,11 +9,13 @@
 use openscenario_rs::types::basic::{Boolean, Double};
 use openscenario_rs::types::conditions::entity::{
     ByEntityCondition, TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
+    EntityCondition,
 };
 use openscenario_rs::types::enums::{
     CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule,
 };
 use openscenario_rs::types::positions::{LaneCoordinate, Position, RoadCoordinate};
+use openscenario_rs::types::scenario::triggers::{TriggeringEntities, EntityRef};
 
 // ========== Temporal Condition Tests ==========
 
@@ -84,6 +86,7 @@ fn test_time_to_collision_condition_entity_target() {
             .entity_ref
             .as_ref()
             .unwrap()
+            .entity_ref
             .as_literal()
             .unwrap(),
         "vehicle1"
@@ -121,6 +124,7 @@ fn test_time_to_collision_condition_entity_less_than() {
             .entity_ref
             .as_ref()
             .unwrap()
+            .entity_ref
             .as_literal()
             .unwrap(),
         "obstacle"
@@ -140,6 +144,7 @@ fn test_time_to_collision_condition_entity_greater_than() {
             .entity_ref
             .as_ref()
             .unwrap()
+            .entity_ref
             .as_literal()
             .unwrap(),
         "pedestrian"
@@ -192,7 +197,7 @@ fn test_time_to_collision_target_entity() {
 
     assert!(target.entity_ref.is_some());
     assert_eq!(
-        target.entity_ref.as_ref().unwrap().as_literal().unwrap(),
+        target.entity_ref.as_ref().unwrap().entity_ref.as_literal().unwrap(),
         "target_vehicle"
     );
     assert!(target.position.is_none());
@@ -211,10 +216,11 @@ fn test_time_to_collision_target_position() {
 
 #[test]
 fn test_by_entity_condition_time_headway() {
-    let condition = ByEntityCondition::time_headway("vehicle1", 2.0, Rule::LessThan, true);
+    let triggering_entities = TriggeringEntities::default();
+    let condition = ByEntityCondition::time_headway(triggering_entities, "vehicle1", 2.0, Rule::LessThan, true);
 
-    match condition {
-        ByEntityCondition::TimeHeadway(th_condition) => {
+    match condition.entity_condition {
+        EntityCondition::TimeHeadway(th_condition) => {
             assert_eq!(th_condition.entity_ref.as_literal().unwrap(), "vehicle1");
             assert_eq!(th_condition.value, Double::literal(2.0));
             assert_eq!(th_condition.rule, Rule::LessThan);
@@ -226,11 +232,12 @@ fn test_by_entity_condition_time_headway() {
 
 #[test]
 fn test_by_entity_condition_time_to_collision_entity() {
+    let triggering_entities = TriggeringEntities::default();
     let condition =
-        ByEntityCondition::time_to_collision_entity("obstacle", 3.0, Rule::GreaterThan, false);
+        ByEntityCondition::time_to_collision_entity(triggering_entities, "obstacle", 3.0, Rule::GreaterThan, false);
 
-    match condition {
-        ByEntityCondition::TimeToCollision(ttc_condition) => {
+    match condition.entity_condition {
+        EntityCondition::TimeToCollision(ttc_condition) => {
             assert_eq!(ttc_condition.value, Double::literal(3.0));
             assert_eq!(ttc_condition.rule, Rule::GreaterThan);
             assert_eq!(ttc_condition.freespace, Boolean::literal(false));
@@ -241,6 +248,7 @@ fn test_by_entity_condition_time_to_collision_entity() {
                     .entity_ref
                     .as_ref()
                     .unwrap()
+                    .entity_ref
                     .as_literal()
                     .unwrap(),
                 "obstacle"
@@ -252,12 +260,13 @@ fn test_by_entity_condition_time_to_collision_entity() {
 
 #[test]
 fn test_by_entity_condition_time_to_collision_position() {
+    let triggering_entities = TriggeringEntities::default();
     let position = Position::default();
     let condition =
-        ByEntityCondition::time_to_collision_position(position.clone(), 4.5, Rule::EqualTo, true);
+        ByEntityCondition::time_to_collision_position(triggering_entities, position.clone(), 4.5, Rule::EqualTo, true);
 
-    match condition {
-        ByEntityCondition::TimeToCollision(ttc_condition) => {
+    match condition.entity_condition {
+        EntityCondition::TimeToCollision(ttc_condition) => {
             assert_eq!(ttc_condition.value, Double::literal(4.5));
             assert_eq!(ttc_condition.rule, Rule::EqualTo);
             assert_eq!(ttc_condition.freespace, Boolean::literal(true));
@@ -367,6 +376,7 @@ fn test_temporal_condition_defaults() {
             .entity_ref
             .as_ref()
             .unwrap()
+            .entity_ref
             .as_literal()
             .unwrap(),
         "DefaultEntity"
@@ -379,6 +389,7 @@ fn test_temporal_condition_defaults() {
             .entity_ref
             .as_ref()
             .unwrap()
+            .entity_ref
             .as_literal()
             .unwrap(),
         "DefaultEntity"
