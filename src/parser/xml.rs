@@ -65,7 +65,7 @@ pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
     xml.push('\n');
 
     let serialized = quick_xml::se::to_string(scenario)
-        .map_err(Error::XmlParseError)
+        .map_err(Error::XmlSerializeError)
         .map_err(|e| e.with_context("Failed to serialize OpenSCENARIO to XML"))?;
     let s = format_text(
         &serialized,
@@ -258,7 +258,7 @@ pub fn serialize_catalog_to_string(catalog: &CatalogFile) -> Result<String> {
     xml.push('\n');
 
     let serialized = quick_xml::se::to_string(catalog)
-        .map_err(Error::XmlParseError)
+        .map_err(Error::XmlSerializeError)
         .map_err(|e| e.with_context("Failed to serialize catalog to XML"))?;
 
     xml.push_str(&serialized);

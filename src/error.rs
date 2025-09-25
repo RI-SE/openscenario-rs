@@ -5,9 +5,13 @@ use thiserror::Error;
 /// Main error type for the OpenSCENARIO library
 #[derive(Error, Debug)]
 pub enum Error {
-    /// XML parsing failures
+    /// XML deserialization failures
     #[error("XML parsing error: {0}")]
     XmlParseError(#[from] quick_xml::DeError),
+
+    /// XML serialization failures
+    #[error("XML serialization error: {0}")]
+    XmlSerializeError(#[from] quick_xml::SeError),
 
     /// File I/O failures
     #[error("IO error: {0}")]
