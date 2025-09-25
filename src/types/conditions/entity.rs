@@ -411,6 +411,7 @@ pub struct ByEntityCondition {
 /// EntityCondition enum for the actual condition types inside ByEntityConditionSchema
 /// Matches the XSD EntityCondition choice group exactly
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
 pub enum EntityCondition {
     /// End-of-road detection condition
     #[serde(rename = "EndOfRoadCondition")]
