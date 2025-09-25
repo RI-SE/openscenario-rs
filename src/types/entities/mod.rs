@@ -6,11 +6,17 @@ use serde::{Deserialize, Serialize};
 
 pub mod axles;
 pub mod pedestrian;
+pub mod selection;
 pub mod vehicle;
 
 // Re-export entity types
 pub use axles::{Axle, Axles};
 pub use pedestrian::Pedestrian;
+pub use selection::{
+    ByName, ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntitySelection,
+    ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities, TemplateProperties,
+    TemplateProperty,
+};
 pub use vehicle::{Properties, Vehicle};
 
 /// Union type for all entity objects
