@@ -6,15 +6,11 @@ use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Deterministic {
     #[serde(rename = "DeterministicSingleParameterDistribution", default)]
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
-    #[serde(
-        rename = "DeterministicMultiParameterDistribution",
-        skip_serializing_if = "Vec::is_empty",
-        default
-    )]
+    #[serde(rename = "DeterministicMultiParameterDistribution", default)]
     pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
 }
 
@@ -33,59 +29,19 @@ impl Deterministic {
     pub fn add_multi(&mut self, distribution: DeterministicMultiParameterDistribution) {
         self.multi_distributions.push(distribution);
     }
-}
-
-// Custom Deserialize implementation to handle XSD choice group with single elements
-impl<'de> serde::Deserialize<'de> for Deterministic {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::{MapAccess, Visitor};
-        
-        struct DeterministicVisitor;
-        
-        impl<'de> Visitor<'de> for DeterministicVisitor {
-            type Value = Deterministic;
-            
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a Deterministic element")
-            }
-            
-            fn visit_map<A>(self, mut map: A) -> std::result::Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let mut single_distributions = Vec::new();
-                let mut multi_distributions = Vec::new();
-                
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "DeterministicSingleParameterDistribution" => {
-                            let single: DeterministicSingleParameterDistribution = map.next_value()?;
-                            single_distributions.push(single);
-                        }
-                        "DeterministicMultiParameterDistribution" => {
-                            let multi: DeterministicMultiParameterDistribution = map.next_value()?;
-                            multi_distributions.push(multi);
-                        }
-                        _ => {
-                            // Skip unknown keys  
-                            let _: serde_json::Value = map.next_value()?;
-                        }
-                    }
-                }
-                
-                Ok(Deterministic {
-                    single_distributions,
-                    multi_distributions,
-                })
-            }
-        }
-        
-        deserializer.deserialize_map(DeterministicVisitor)
+    
+    /// Get single distributions
+    pub fn single_distributions(&self) -> impl Iterator<Item = &DeterministicSingleParameterDistribution> {
+        self.single_distributions.iter()
+    }
+    
+    /// Get multi distributions
+    pub fn multi_distributions(&self) -> impl Iterator<Item = &DeterministicMultiParameterDistribution> {
+        self.multi_distributions.iter()
     }
 }
+
+
 
 /// Wrapper for deterministic parameter distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

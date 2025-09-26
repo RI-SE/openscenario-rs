@@ -1,0 +1,66 @@
+esmini GIT REV: v2.45.3-41-d7250cb6
+esmini GIT TAG: v2.46.0
+esmini GIT BRANCH: tags/v2.46.0
+esmini BUILD VERSION: 5116
+[] [info] Loaded output/cut_in_0_exam_resolved.xosc
+[2025-09-25 12:40:41]
+[] [info] Player options: --traj_filter 0.1 --text_scale 1.0 --follow_object 0 --camera_mode orbit --osc output/cut_in_0_exam_resolved.xosc --info_text 1 --logfile_path log.txt --log_level info 
+[] [info] No fixed timestep specified - running in realtime speed
+[] [info] Generated seed 2353903689
+[] [info] Loading output/cut_in_0_exam_resolved.xosc (v1.3)
+[] [info] 0 variables
+[] [warn] No OpenDRIVE file specified, continue without
+[] [warn] Warning: Empty controller node
+[] [warn] Missing esminiController property, using controller name: 
+[] [warn] Unsupported controller type: . Falling back to default controller
+[] [warn] Warning: Empty controller node
+[] [warn] Missing esminiController property, using controller name: 
+[] [warn] Unsupported controller type: . Falling back to default controller
+[] [warn] Warning: Empty controller node
+[] [warn] Missing esminiController property, using controller name: 
+[] [warn] Unsupported controller type: . Falling back to default controller
+[] [info] Parsing global action EnvironmentAction
+[] [warn] Unsupported global action: EnvironmentAction
+[] [warn] Info: "overwrite" priority deprecated in v1.2. Use "override" instead. Accepting it anyway.
+[] [warn] Info: "overwrite" priority deprecated in v1.2. Use "override" instead. Accepting it anyway.
+[] [warn] Info: "overwrite" priority deprecated in v1.2. Use "override" instead. Accepting it anyway.
+[] [info] 0 parameters
+[0.000] [info] Window created at 89,147 with size 4480,1440
+[0.000] [error] Failed to load visual model car_white.osgb. Also tried the following paths:
+[0.000] [info]     ../../esmini/esmini/bin/./car_white.osgb
+[0.000] [info]     ../../esmini/esmini/bin/../models/car_white.osgb
+[0.000] [info]     ../../esmini/esmini/bin/.//../resources/models/car_white.osgb
+[0.000] [info]     ../../esmini/esmini/bin/./car_white.osgb
+[0.000] [info]     output/./car_white.osgb
+[0.000] [info]     output/../models/car_white.osgb
+[0.000] [info]     output/.//../resources/models/car_white.osgb
+[0.000] [info]     output/./car_white.osgb
+[0.000] [info]     .//./car_white.osgb
+[0.000] [info]     .//../models/car_white.osgb
+[0.000] [info]     .//.//../resources/models/car_white.osgb
+[0.000] [info]     .//./car_white.osgb
+[0.000] [warn] Creating a dummy model instead
+[0.000] [info] Follow object 0
+[0.000] [info] Init Ego LongitudinalAction initState -> startTransition -> runningState
+[0.000] [info] Init Ego TeleportAction initState -> startTransition -> runningState
+[0.000] [info] Starting teleport Action
+[0.000] [info] Ego New position:
+[0.000] [info] Pos(0.00, 0.00, 0.00) Rot(0.00, 0.00, 0.00) roadId 4294967295 laneId 0 offset 0.00 t 0.00
+[0.000] [info] Init A1 LongitudinalAction initState -> startTransition -> runningState
+[0.000] [info] Init A1 TeleportAction initState -> startTransition -> runningState
+[0.000] [info] Starting teleport Action
+[0.000] [info] A1 New position:
+[0.000] [info] Pos(35.39, -3.05, 0.00) Rot(0.02, 0.00, 0.00) roadId 4294967295 laneId 0 offset 0.00 t 0.00
+[0.000] [info] Init A2 LongitudinalAction initState -> startTransition -> runningState
+[0.000] [info] Init A2 TeleportAction initState -> startTransition -> runningState
+[0.000] [info] Starting teleport Action
+[0.000] [info] A2 New position:
+[0.000] [info] Pos(222.39, -0.44, 0.00) Rot(6.28, 0.00, 0.00) roadId 4294967295 laneId 0 offset 0.00 t 0.00
+[0.000] [info] storyBoard initState -> startTransition -> runningState
+[0.000] [info] Cutin initState -> startTransition -> runningState
+[0.000] [info] Act_Ego initState -> initToStandbyTransition -> standbyState
+[0.000] [info] Act_A1 initState -> initToStandbyTransition -> standbyState
+[0.000] [info] Act_A2 initState -> initToStandbyTransition -> standbyState
+[0.000] [info] Init Ego LongitudinalAction runningState -> endTransition -> completeState
+[0.000] [info] Init Ego TeleportAction runningState -> endTransition -> completeState
+[0.0

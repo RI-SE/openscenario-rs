@@ -1,0 +1,11 @@
+esmini GIT REV: v2.45.3-41-d7250cb6
+esmini GIT TAG: v2.46.0
+esmini GIT BRANCH: tags/v2.46.0
+esmini BUILD VERSION: 5116
+[2025-09-25 11:49:20]
+[] [info] Player options: --traj_filter 0.1 --text_scale 1.0 --follow_object 0 --camera_mode orbit --osc output/alks_scenario_4_1_1_free_driving_variation_resolved.xosc --info_text 1 --logfile_path log.txt --log_level info 
+[] [info] Using parameter distribution file: output/alks_scenario_4_1_1_free_driving_variation_resolved.xosc
+[] [info] No fixed timestep specified - running in realtime speed
+[] [info] Generated seed 2301824419
+[] [error] Couldn't locate OpenSCENARIO file alks_scenario_4_1_1_free_driving_template.xosc
+[] [info] Closing
