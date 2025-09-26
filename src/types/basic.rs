@@ -130,6 +130,13 @@ where
     {
         let s = String::deserialize(deserializer)?;
 
+        // Handle empty strings for Double type - return error for invalid empty values
+        if s.is_empty() && std::any::type_name::<T>().contains("f64") {
+            return Err(serde::de::Error::custom(
+                "Empty string is not a valid value for Double type"
+            ));
+        }
+
         // Check if this is a parameter reference or expression
         if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
             let content = &s[2..s.len() - 1];

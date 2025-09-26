@@ -21,7 +21,40 @@ use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode, Speed
 use crate::types::geometry::shapes::Shape;
 use crate::types::positions::Position;
 use crate::types::routing::{Route, RouteRef};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Custom deserializer for optional Double that handles empty strings gracefully
+fn deserialize_optional_double<'de, D>(deserializer: D) -> Result<Option<Double>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = Option::<String>::deserialize(deserializer)?;
+    match s {
+        Some(s) if s.is_empty() => Ok(None),
+        Some(s) => {
+            // Try to deserialize as Double (Value<f64>)
+            match s.parse::<f64>() {
+                Ok(value) => Ok(Some(Double::literal(value))),
+                Err(_) => {
+                    // If it's not a literal, try to parse as parameter/expression
+                    if s.starts_with("${") && s.ends_with('}') {
+                        let content = &s[2..s.len() - 1];
+                        if content.contains(|c: char| "+-*/%()".contains(c)) {
+                            Ok(Some(Double::expression(content.to_string())))
+                        } else {
+                            Ok(Some(Double::parameter(content.to_string())))
+                        }
+                    } else if s.starts_with('$') {
+                        Ok(Some(Double::parameter(s[1..].to_string())))
+                    } else {
+                        Err(serde::de::Error::custom(format!("Invalid Double value: {}", s)))
+                    }
+                }
+            }
+        },
+        None => Ok(None),
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct SpeedAction {
@@ -112,19 +145,50 @@ pub struct TrajectoryFollowingMode {
     pub following_mode: FollowingMode,
 }
 
+/// Time reference for trajectory following
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TimeReference {
+    #[serde(rename = "Timing")]
+    pub timing: Timing,
+}
+
+/// Timing specification for trajectory following
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Timing {
+    #[serde(rename = "@domainAbsoluteRelative")]
+    pub domain_absolute_relative: OSString,
+    #[serde(rename = "@scale")]
+    pub scale: Double,
+    #[serde(rename = "@offset")]
+    pub offset: Double,
+}
+
 /// Follow trajectory action with trajectory reference support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FollowTrajectoryAction {
-    /// Direct trajectory definition (for backward compatibility)
+    /// Direct trajectory definition (deprecated, optional)
     #[serde(rename = "Trajectory", skip_serializing_if = "Option::is_none")]
     pub trajectory: Option<Trajectory>,
 
-    /// Reference to a trajectory in a catalog
+    /// Reference to a trajectory in a catalog (deprecated, optional)
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
     pub catalog_reference: Option<CatalogReference<CatalogTrajectory>>,
 
+    /// Time reference for trajectory following (required)
+    #[serde(rename = "TimeReference")]
+    pub time_reference: TimeReference,
+
+    /// Trajectory reference wrapper (optional)
+    #[serde(rename = "TrajectoryRef", skip_serializing_if = "Option::is_none")]
+    pub trajectory_ref: Option<TrajectoryRef>,
+
+    /// Trajectory following mode (required)
     #[serde(rename = "TrajectoryFollowingMode")]
     pub trajectory_following_mode: TrajectoryFollowingMode,
+
+    /// Initial distance offset attribute (optional)
+    #[serde(rename = "@initialDistanceOffset", skip_serializing_if = "Option::is_none")]
+    pub initial_distance_offset: Option<Double>,
 }
 
 impl Default for FollowTrajectoryAction {
@@ -132,7 +196,10 @@ impl Default for FollowTrajectoryAction {
         Self {
             trajectory: Some(Trajectory::default()),
             catalog_reference: None,
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
             trajectory_following_mode: TrajectoryFollowingMode::default(),
+            initial_distance_offset: None,
         }
     }
 }
@@ -191,7 +258,7 @@ impl Default for RoutingAction {
 /// Lane change action for lateral lane movements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneChangeAction {
-    #[serde(rename = "@targetLaneOffset")]
+    #[serde(rename = "@targetLaneOffset", default, deserialize_with = "deserialize_optional_double")]
     pub target_lane_offset: Option<Double>,
     #[serde(rename = "LaneChangeActionDynamics")]
     pub lane_change_action_dynamics: TransitionDynamics,
@@ -335,13 +402,28 @@ pub enum LongitudinalActionChoice {
 pub struct LongitudinalDistanceAction {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    #[serde(rename = "@distance")]
-    pub distance: Double,
-    #[serde(rename = "@freespace")]
+    
+    /// Fixed distance value (mutually exclusive with timeGap)
+    #[serde(rename = "@distance", skip_serializing_if = "Option::is_none")]
+    pub distance: Option<Double>,
+    
+    /// Time gap value (mutually exclusive with distance)
+    #[serde(rename = "@timeGap", skip_serializing_if = "Option::is_none")]
+    pub time_gap: Option<Double>,
+    
+    /// Coordinate system for distance measurement
+    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
+    pub coordinate_system: Option<OSString>,
+    
+    /// Displacement type for leading referenced entity
+    #[serde(rename = "@displacement", skip_serializing_if = "Option::is_none")]
+    pub displacement: Option<OSString>,
+    
+    #[serde(rename = "@freespace", skip_serializing_if = "Option::is_none")]
     pub freespace: Option<Boolean>,
     #[serde(rename = "@continuous")]
     pub continuous: Boolean,
-    #[serde(rename = "DynamicConstraints")]
+    #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
 }
 
@@ -499,6 +581,24 @@ impl Default for TrajectoryFollowingMode {
     }
 }
 
+impl Default for TimeReference {
+    fn default() -> Self {
+        Self {
+            timing: Timing::default(),
+        }
+    }
+}
+
+impl Default for Timing {
+    fn default() -> Self {
+        Self {
+            domain_absolute_relative: OSString::literal("absolute".to_string()),
+            scale: Double::literal(1.0),
+            offset: Double::literal(0.0),
+        }
+    }
+}
+
 impl Default for TrajectoryRef {
     fn default() -> Self {
         Self {
@@ -568,8 +668,28 @@ impl FollowTrajectoryAction {
         Self {
             trajectory: Some(trajectory),
             catalog_reference: None,
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
             trajectory_following_mode: TrajectoryFollowingMode { following_mode },
+            initial_distance_offset: None,
         }
+    }
+
+    /// Validates the FollowTrajectoryAction according to XSD requirements
+    /// TimeReference is required, trajectory sources are optional but at most one should be present
+    pub fn validate(&self) -> Result<(), String> {
+        let trajectory_count = [
+            self.trajectory.is_some(),
+            self.catalog_reference.is_some(),
+            self.trajectory_ref.is_some(),
+        ].iter().filter(|&&x| x).count();
+
+        if trajectory_count > 1 {
+            return Err("FollowTrajectoryAction can contain at most one trajectory source (Trajectory, CatalogReference, or TrajectoryRef), found multiple".to_string());
+        }
+
+        // TimeReference is required and always present due to struct definition
+        Ok(())
     }
 
     /// Create a follow trajectory action with catalog reference
@@ -580,7 +700,10 @@ impl FollowTrajectoryAction {
         Self {
             trajectory: None,
             catalog_reference: Some(catalog_reference),
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
             trajectory_following_mode: TrajectoryFollowingMode { following_mode },
+            initial_distance_offset: None,
         }
     }
 
@@ -964,7 +1087,10 @@ impl Default for LongitudinalDistanceAction {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            distance: Double::literal(10.0),
+            distance: Some(Double::literal(10.0)),
+            time_gap: None,
+            coordinate_system: None,
+            displacement: None,
             freespace: Some(Boolean::literal(true)),
             continuous: Boolean::literal(false),
             dynamic_constraints: None,
@@ -1509,6 +1635,64 @@ mod tests {
         let acquire_action = AcquirePositionAction::default();
         // Just verify it compiles and creates successfully
         let _ = acquire_action.position;
+    }
+
+    #[test]
+    fn test_follow_trajectory_action_validation() {
+        // Test valid action with direct trajectory
+        let valid_trajectory = FollowTrajectoryAction {
+            trajectory: Some(Trajectory::default()),
+            catalog_reference: None,
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
+            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            initial_distance_offset: None,
+        };
+        assert!(valid_trajectory.validate().is_ok());
+
+        // Test valid action with catalog reference
+        let valid_catalog = FollowTrajectoryAction {
+            trajectory: None,
+            catalog_reference: Some(CatalogReference::new("catalog".to_string(), "entry".to_string())),
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
+            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            initial_distance_offset: None,
+        };
+        assert!(valid_catalog.validate().is_ok());
+
+        // Test valid action with trajectory ref
+        let valid_ref = FollowTrajectoryAction {
+            trajectory: None,
+            catalog_reference: None,
+            time_reference: TimeReference::default(),
+            trajectory_ref: Some(TrajectoryRef::default()),
+            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            initial_distance_offset: None,
+        };
+        assert!(valid_ref.validate().is_ok());
+
+        // Test valid action with no trajectory source (only TimeReference required)
+        let valid_none = FollowTrajectoryAction {
+            trajectory: None,
+            catalog_reference: None,
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
+            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            initial_distance_offset: None,
+        };
+        assert!(valid_none.validate().is_ok());
+
+        // Test invalid action with multiple trajectory sources
+        let invalid_multiple = FollowTrajectoryAction {
+            trajectory: Some(Trajectory::default()),
+            catalog_reference: Some(CatalogReference::new("catalog".to_string(), "entry".to_string())),
+            time_reference: TimeReference::default(),
+            trajectory_ref: None,
+            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            initial_distance_offset: None,
+        };
+        assert!(invalid_multiple.validate().is_err());
     }
 }
 
