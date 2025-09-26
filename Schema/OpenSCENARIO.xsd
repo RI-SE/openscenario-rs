@@ -752,7 +752,7 @@
 		<xsd:attribute name="timeOffset" type="Double"/>
 	</xsd:complexType>
 	<xsd:complexType name="AnimationState">
-		<xsd:attribute name="statee" type="Double" use="required"/>
+		<xsd:attribute name="state" type="Double" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="AnimationType">
 		<xsd:choice>
@@ -2118,7 +2118,7 @@
 	</xsd:complexType>
 	<xsd:complexType name="StoryboardElementStateCondition">
 		<xsd:attribute name="storyboardElementRef" type="String" use="required"/>
-		<xsd:attribute name="statee" type="StoryboardElementState" use="required"/>
+		<xsd:attribute name="state" type="StoryboardElementState" use="required"/>
 		<xsd:attribute name="storyboardElementType" type="StoryboardElementType" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="Sun">
@@ -2253,7 +2253,7 @@
 	</xsd:complexType>
 	<xsd:complexType name="TrafficSignalCondition">
 		<xsd:attribute name="name" type="String" use="required"/>
-		<xsd:attribute name="statee" type="String" use="required"/>
+		<xsd:attribute name="state" type="String" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="TrafficSignalController">
 		<xsd:sequence>
@@ -2277,15 +2277,15 @@
 		<xsd:attribute name="phase" type="String" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="TrafficSignalGroupState">
-		<xsd:attribute name="statee" type="String" use="required"/>
+		<xsd:attribute name="state" type="String" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="TrafficSignalState">
-		<xsd:attribute name="statee" type="String" use="required"/>
+		<xsd:attribute name="state" type="String" use="required"/>
 		<xsd:attribute name="trafficSignalId" type="String" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="TrafficSignalStateAction">
 		<xsd:attribute name="name" type="String" use="required"/>
-		<xsd:attribute name="statee" type="String" use="required"/>
+		<xsd:attribute name="state" type="String" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="TrafficSinkAction">
 		<xsd:all>
