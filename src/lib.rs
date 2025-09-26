@@ -61,6 +61,11 @@ pub use parser::xml::{
     serialize_catalog_to_file, serialize_catalog_to_string, serialize_to_file, serialize_to_string,
 };
 
+// Re-export choice group infrastructure
+pub use parser::choice_groups::{
+    ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup, parse_choice_group,
+};
+
 // Re-export expression evaluation
 pub use expression::evaluate_expression;
 

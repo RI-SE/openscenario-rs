@@ -36,6 +36,10 @@ pub enum Error {
     /// Catalog system errors
     #[error("Catalog error: {0}")]
     CatalogError(String),
+
+    /// XSD Choice Group parsing errors
+    #[error("Choice group error: {0}")]
+    ChoiceGroupError(String),
 }
 
 impl Error {
@@ -77,6 +81,11 @@ impl Error {
     /// Create a catalog error
     pub fn catalog_error(message: &str) -> Self {
         Error::CatalogError(message.to_string())
+    }
+
+    /// Create a choice group error
+    pub fn choice_group_error(message: &str) -> Self {
+        Error::ChoiceGroupError(message.to_string())
     }
 }
 

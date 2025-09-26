@@ -6,7 +6,7 @@ use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Deterministic {
     #[serde(rename = "DeterministicSingleParameterDistribution", default)]
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
@@ -16,6 +16,75 @@ pub struct Deterministic {
         default
     )]
     pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
+}
+
+impl Deterministic {
+    /// Check if the container has no distributions
+    pub fn is_empty(&self) -> bool {
+        self.single_distributions.is_empty() && self.multi_distributions.is_empty()
+    }
+    
+    /// Add a single parameter distribution
+    pub fn add_single(&mut self, distribution: DeterministicSingleParameterDistribution) {
+        self.single_distributions.push(distribution);
+    }
+    
+    /// Add a multi parameter distribution
+    pub fn add_multi(&mut self, distribution: DeterministicMultiParameterDistribution) {
+        self.multi_distributions.push(distribution);
+    }
+}
+
+// Custom Deserialize implementation to handle XSD choice group with single elements
+impl<'de> serde::Deserialize<'de> for Deterministic {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{MapAccess, Visitor};
+        
+        struct DeterministicVisitor;
+        
+        impl<'de> Visitor<'de> for DeterministicVisitor {
+            type Value = Deterministic;
+            
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a Deterministic element")
+            }
+            
+            fn visit_map<A>(self, mut map: A) -> std::result::Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut single_distributions = Vec::new();
+                let mut multi_distributions = Vec::new();
+                
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "DeterministicSingleParameterDistribution" => {
+                            let single: DeterministicSingleParameterDistribution = map.next_value()?;
+                            single_distributions.push(single);
+                        }
+                        "DeterministicMultiParameterDistribution" => {
+                            let multi: DeterministicMultiParameterDistribution = map.next_value()?;
+                            multi_distributions.push(multi);
+                        }
+                        _ => {
+                            // Skip unknown keys  
+                            let _: serde_json::Value = map.next_value()?;
+                        }
+                    }
+                }
+                
+                Ok(Deterministic {
+                    single_distributions,
+                    multi_distributions,
+                })
+            }
+        }
+        
+        deserializer.deserialize_map(DeterministicVisitor)
+    }
 }
 
 /// Wrapper for deterministic parameter distributions
@@ -185,6 +254,25 @@ impl ValidateDistribution for DeterministicSingleParameterDistribution {
         }
 
         Ok(())
+    }
+}
+
+impl Deterministic {
+    /// Get total count of all distributions
+    pub fn total_count(&self) -> usize {
+        self.single_distributions.len() + self.multi_distributions.len()
+    }
+    
+    /// Get unified iterator over all distributions
+    pub fn all_distributions(&self) -> impl Iterator<Item = DeterministicParameterDistribution> + '_ {
+        self.single_distributions
+            .iter()
+            .map(|d| DeterministicParameterDistribution::Single(d.clone()))
+            .chain(
+                self.multi_distributions
+                    .iter()
+                    .map(|d| DeterministicParameterDistribution::Multi(d.clone()))
+            )
     }
 }
 

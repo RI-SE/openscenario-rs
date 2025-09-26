@@ -89,11 +89,18 @@ impl ParameterValueDistribution {
 
 impl Default for ParameterValueDistribution {
     fn default() -> Self {
+        // Create a minimal valid deterministic distribution for default
+        let single_dist = DeterministicSingleParameterDistribution::default();
+        let deterministic = Deterministic {
+            single_distributions: vec![single_dist],
+            multi_distributions: vec![],
+        };
+        
         Self {
             scenario_file: File {
                 filepath: "default.xosc".to_string(),
             },
-            deterministic: Some(Deterministic::default()),
+            deterministic: Some(deterministic),
             stochastic: None,
         }
     }
@@ -526,14 +533,14 @@ mod tests {
         assert!(default_group.validate().is_ok());
     }
 
-    #[test]
+#[test]
     fn test_parameter_value_distribution_definition_group() {
         let param_value_dist = ParameterValueDistribution::default();
         let group = ParameterValueDistributionDefinitionGroup::new(param_value_dist);
-
+        
         assert!(group.parameter_value_distribution().deterministic.is_some());
         assert!(group.validate().is_ok());
-
+        
         let default_group = ParameterValueDistributionDefinitionGroup::default();
         assert!(default_group.validate().is_ok());
     }
@@ -579,10 +586,21 @@ mod tests {
         let param_value_group = ParameterValueDistributionDefinitionGroup::default();
         let serialized = serde_json::to_string(&param_value_group)
             .expect("Failed to serialize ParameterValueDistributionDefinitionGroup");
-        let deserialized: ParameterValueDistributionDefinitionGroup =
-            serde_json::from_str(&serialized)
-                .expect("Failed to deserialize ParameterValueDistributionDefinitionGroup");
-        assert_eq!(param_value_group, deserialized);
+        println!("Serialized JSON: {}", serialized);
+        
+        // Try to deserialize step by step
+        let deserialized_result: std::result::Result<ParameterValueDistributionDefinitionGroup, serde_json::Error> = 
+            serde_json::from_str(&serialized);
+            
+        match deserialized_result {
+            Ok(deserialized) => {
+                assert_eq!(param_value_group, deserialized);
+            }
+            Err(e) => {
+                println!("Deserialization error: {:?}", e);
+                panic!("Failed to deserialize ParameterValueDistributionDefinitionGroup: {}", e);
+            }
+        }
     }
 
     #[test]

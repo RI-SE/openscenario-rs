@@ -792,7 +792,7 @@ fn analyze_deterministic_distributions(
 ) {
     println!(
         "   🎯 Deterministic distributions: {} parameters",
-        deterministic.single_distributions.len()
+        deterministic.total_count()
     );
 
     for dist in &deterministic.single_distributions {
@@ -828,10 +828,11 @@ fn analyze_deterministic_distributions(
         }
     }
 
-    if !deterministic.multi_distributions.is_empty() {
+    let multi_count = deterministic.all_distributions().count();
+    if multi_count > 0 {
         println!(
             "   🎯 Multi-parameter distributions: {} groups",
-            deterministic.multi_distributions.len()
+            multi_count
         );
     }
 }
