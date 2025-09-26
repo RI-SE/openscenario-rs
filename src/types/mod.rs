@@ -61,7 +61,6 @@ pub use scenario::storyboard::{
 // Re-export distribution types
 pub use distributions::{
     DeterministicMultiParameterDistribution,
-    DeterministicMultiParameterDistributionType,
     // Deterministic types
     DeterministicParameterDistribution,
     DeterministicSingleParameterDistribution,

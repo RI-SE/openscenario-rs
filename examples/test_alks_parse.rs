@@ -29,9 +29,8 @@ fn main() {
                             },
                             openscenario_rs::types::distributions::DeterministicParameterDistribution::Multi(multi) => {
                                 println!("  {}. Multi Parameter Distribution", i+1);
-                                if let openscenario_rs::types::distributions::DeterministicMultiParameterDistributionType::ValueSetDistribution(dist) = &multi.distribution_type {
-                                    println!("     📋 Value sets: {}", dist.parameter_value_sets.len());
-                                }
+                                let dist = &multi.distribution_type;
+                                println!("     📋 Value sets: {}", dist.parameter_value_sets.len());
                             }
                         }
                     }

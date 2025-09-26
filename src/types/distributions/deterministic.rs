@@ -6,12 +6,89 @@ use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// This version handles interspersed elements by collecting them all in one place
+#[derive(Debug, Clone, PartialEq)]
 pub struct Deterministic {
-    #[serde(rename = "DeterministicSingleParameterDistribution", default)]
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
-    #[serde(rename = "DeterministicMultiParameterDistribution", default)]
     pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
+}
+
+
+
+impl serde::Serialize for Deterministic {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeMap;
+        
+        let mut map = serializer.serialize_map(None)?;
+        
+        // Serialize single distributions
+        for dist in &self.single_distributions {
+            map.serialize_entry("DeterministicSingleParameterDistribution", dist)?;
+        }
+        
+        // Serialize multi distributions  
+        for dist in &self.multi_distributions {
+            map.serialize_entry("DeterministicMultiParameterDistribution", dist)?;
+        }
+        
+        map.end()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Deterministic {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{MapAccess, Visitor};
+        use std::fmt;
+
+        struct DeterministicVisitor;
+
+        impl<'de> Visitor<'de> for DeterministicVisitor {
+            type Value = Deterministic;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a map with distribution elements")
+            }
+
+            fn visit_map<M>(self, mut map: M) -> std::result::Result<Deterministic, M::Error>
+            where
+                M: MapAccess<'de>,
+            {
+                let mut single_distributions = Vec::new();
+                let mut multi_distributions = Vec::new();
+
+                // Process elements in the order they appear
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "DeterministicSingleParameterDistribution" => {
+                            let dist: DeterministicSingleParameterDistribution = map.next_value()?;
+                            single_distributions.push(dist);
+                        }
+                        "DeterministicMultiParameterDistribution" => {
+                            let dist: DeterministicMultiParameterDistribution = map.next_value()?;
+                            multi_distributions.push(dist);
+                        }
+                        _ => {
+                            // Skip unknown fields
+                            let _: serde::de::IgnoredAny = map.next_value()?;
+                        }
+                    }
+                }
+
+                Ok(Deterministic {
+                    single_distributions,
+                    multi_distributions,
+                })
+            }
+        }
+
+        deserializer.deserialize_map(DeterministicVisitor)
+    }
 }
 
 impl Deterministic {
@@ -113,15 +190,8 @@ impl DeterministicSingleParameterDistribution {
 /// Multi-parameter deterministic distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeterministicMultiParameterDistribution {
-    #[serde(flatten)]
-    pub distribution_type: DeterministicMultiParameterDistributionType,
-}
-
-/// Types of multi-parameter distributions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum DeterministicMultiParameterDistributionType {
-    ValueSetDistribution(ValueSetDistribution),
+    #[serde(rename = "ValueSetDistribution")]
+    pub distribution_type: ValueSetDistribution,
 }
 
 /// Discrete value set distribution
@@ -255,11 +325,7 @@ impl ValidateDistribution for Deterministic {
 
 impl ValidateDistribution for DeterministicMultiParameterDistribution {
     fn validate(&self) -> Result<()> {
-        match &self.distribution_type {
-            DeterministicMultiParameterDistributionType::ValueSetDistribution(dist) => {
-                dist.validate()
-            }
-        }
+        self.distribution_type.validate()
     }
 }
 
@@ -349,14 +415,8 @@ impl Default for DeterministicSingleParameterDistributionType {
 impl Default for DeterministicMultiParameterDistribution {
     fn default() -> Self {
         Self {
-            distribution_type: DeterministicMultiParameterDistributionType::default(),
+            distribution_type: ValueSetDistribution::default(),
         }
-    }
-}
-
-impl Default for DeterministicMultiParameterDistributionType {
-    fn default() -> Self {
-        Self::ValueSetDistribution(ValueSetDistribution::default())
     }
 }
 
@@ -476,6 +536,8 @@ impl DistributionSampler for DistributionRange {
         true
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
