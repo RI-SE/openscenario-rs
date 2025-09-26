@@ -1001,6 +1001,8 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
             private_action: Some(StoryPrivateAction {
                 longitudinal_action: Some(LongitudinalAction {
                     speed_action: Some(speed_action),
+                    longitudinal_distance_action: None,
+                    speed_profile_action: None,
                 }),
                 lateral_action: None,
                 visibility_action: None,

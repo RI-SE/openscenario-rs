@@ -7,8 +7,9 @@ fn test_deterministic_empty_deserializer() {
     
     assert!(result.is_ok());
     let det = result.unwrap();
-    assert_eq!(det.total_count(), 0);
-    assert!(det.is_empty());
+    let total_count = det.single_distributions.len() + det.multi_distributions.len();
+    assert_eq!(total_count, 0);
+    assert!(det.single_distributions.is_empty() && det.multi_distributions.is_empty());
 }
 
 #[test]
@@ -31,7 +32,8 @@ fn test_deterministic_single_multi_deserializer() {
     }
     assert!(result.is_ok());
     let det = result.unwrap();
-    assert_eq!(det.total_count(), 1);
+    let total_count = det.single_distributions.len() + det.multi_distributions.len();
+    assert_eq!(total_count, 1);
     assert_eq!(det.multi_distributions.len(), 1);
     assert_eq!(det.single_distributions.len(), 0);
 }
@@ -59,7 +61,8 @@ fn test_deterministic_mixed_deserializer() {
     
     assert!(result.is_ok());
     let det = result.unwrap();
-    assert_eq!(det.total_count(), 2);
+    let total_count = det.single_distributions.len() + det.multi_distributions.len();
+    assert_eq!(total_count, 2);
     assert_eq!(det.single_distributions.len(), 1);
     assert_eq!(det.multi_distributions.len(), 1);
     
@@ -72,14 +75,15 @@ fn test_deterministic_backward_compatibility() {
     // Test that the new API provides backward compatibility methods
     let mut det = Deterministic::default();
     
-    // Test adding distributions
+    // Test adding distributions manually
     let single = DeterministicSingleParameterDistribution::default();
-    det.add_single(single);
+    det.single_distributions.push(single);
     
     let multi = DeterministicMultiParameterDistribution::default();
-    det.add_multi(multi);
+    det.multi_distributions.push(multi);
     
-    assert_eq!(det.total_count(), 2);
+    let total_count = det.single_distributions.len() + det.multi_distributions.len();
+    assert_eq!(total_count, 2);
     assert_eq!(det.single_distributions.len(), 1);
     assert_eq!(det.multi_distributions.len(), 1);
 }

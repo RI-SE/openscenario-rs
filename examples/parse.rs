@@ -790,9 +790,10 @@ fn resolve_scenario_path(
 fn analyze_deterministic_distributions(
     deterministic: &openscenario_rs::types::distributions::Deterministic,
 ) {
+    let total_count = deterministic.single_distributions.len() + deterministic.multi_distributions.len();
     println!(
         "   🎯 Deterministic distributions: {} parameters",
-        deterministic.total_count()
+        total_count
     );
 
     for dist in &deterministic.single_distributions {
@@ -828,7 +829,7 @@ fn analyze_deterministic_distributions(
         }
     }
 
-    let multi_count = deterministic.all_distributions().count();
+    let multi_count = deterministic.multi_distributions.len();
     if multi_count > 0 {
         println!(
             "   🎯 Multi-parameter distributions: {} groups",

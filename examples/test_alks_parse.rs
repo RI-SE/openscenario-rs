@@ -20,16 +20,19 @@ fn main() {
                 println!("🎯 Parameter Value Distribution found!");
                 
                 if let Some(deterministic) = &param_dist.deterministic {
-                    println!("🔢 Deterministic distributions: {} total", deterministic.total_count());
+                    let total_count = deterministic.single_distributions.len() + deterministic.multi_distributions.len();
+                    println!("🔢 Deterministic distributions: {} total", total_count);
                     
-                    for (i, dist) in deterministic.all_distributions().enumerate() {
-                        match dist {
-                            openscenario_rs::types::distributions::DeterministicParameterDistribution::Single(single) => {
-                                println!("  {}. Single Parameter: {}", i+1, single.parameter_name);
-                            },
-                            openscenario_rs::types::distributions::DeterministicParameterDistribution::Multi(multi) => {
-                                println!("  {}. Multi Parameter Distribution", i+1);
-                                let dist = &multi.distribution_type;
+                    // Process single parameter distributions
+                    for (i, single) in deterministic.single_distributions.iter().enumerate() {
+                        println!("  {}. Single Parameter: {}", i+1, single.parameter_name);
+                    }
+                    
+                    // Process multi parameter distributions
+                    for (i, multi) in deterministic.multi_distributions.iter().enumerate() {
+                        println!("  {}. Multi Parameter Distribution", deterministic.single_distributions.len() + i + 1);
+                        match &multi.distribution_type {
+                            openscenario_rs::types::distributions::DeterministicMultiParameterDistributionType::ValueSetDistribution(dist) => {
                                 println!("     📋 Value sets: {}", dist.parameter_value_sets.len());
                             }
                         }
