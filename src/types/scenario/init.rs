@@ -12,7 +12,10 @@
 //! - Providing entity-specific private actions (speed, teleport, etc.)
 //! - Facilitating integration between initialization and story phases
 
-use crate::types::actions::movement::{RoutingAction, SpeedAction, TeleportAction};
+use crate::types::actions::control::ActivateControllerAction;
+use crate::types::actions::movement::{
+    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction, TeleportAction,
+};
 use crate::types::basic::OSString;
 use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
@@ -55,53 +58,138 @@ pub struct Private {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "PrivateAction")]
-    pub private_actions: Vec<PrivateActionWrapper>,
+    pub private_actions: Vec<PrivateAction>,
 }
 
-/// Wrapper for individual private actions with explicit element types
+/// Private actions that can be applied to individual entities
+/// XSD requires exactly one child element (choice group)
+/// The PrivateAction element in XML contains one of these action types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PrivateActionWrapper {
-    #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
+pub struct PrivateAction {
+    /// Exactly one of these fields should be present (XML choice group)
+    #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none", default)]
     pub longitudinal_action: Option<LongitudinalAction>,
-    #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none", default)]
     pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
-    #[serde(rename = "VisibilityAction", skip_serializing_if = "Option::is_none")]
-    pub visibility_action: Option<crate::types::actions::VisibilityAction>,
-    #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none")]
-    pub synchronize_action: Option<crate::types::actions::SynchronizeAction>,
-    #[serde(rename = "ControllerAction", skip_serializing_if = "Option::is_none")]
-    pub controller_action: Option<crate::types::actions::ControllerAction>,
-    #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none", default)]
     pub teleport_action: Option<TeleportAction>,
-    #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none", default)]
     pub routing_action: Option<RoutingAction>,
-    #[serde(rename = "AppearanceAction", skip_serializing_if = "Option::is_none")]
-    pub appearance_action: Option<crate::types::actions::AppearanceAction>,
-    #[serde(rename = "TrailerAction", skip_serializing_if = "Option::is_none")]
-    pub trailer_action: Option<crate::types::actions::TrailerAction>,
+    #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none", default)]
+    pub synchronize_action: Option<SynchronizeAction>,
+    #[serde(rename = "ActivateControllerAction", skip_serializing_if = "Option::is_none", default)]
+    pub activate_controller_action: Option<ActivateControllerAction>,
+    // Note: Other action types like VisibilityAction, ControllerAction,
+    // AppearanceAction, TrailerAction can be added when implemented
 }
 
-/// Types of private actions available for entity initialization
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub enum PrivateActionType {
-    LongitudinalAction(LongitudinalAction),
-    LateralAction(crate::types::actions::movement::LateralAction),
-    VisibilityAction(crate::types::actions::VisibilityAction),
-    SynchronizeAction(crate::types::actions::SynchronizeAction),
-    ControllerAction(crate::types::actions::ControllerAction),
-    TeleportAction(TeleportAction),
-    RoutingAction(RoutingAction),
-    AppearanceAction(crate::types::actions::AppearanceAction),
-    TrailerAction(crate::types::actions::TrailerAction),
+
+
+impl PrivateAction {
+    /// Get the action type contained in this PrivateAction
+    pub fn get_action_type(&self) -> Option<&str> {
+        if self.longitudinal_action.is_some() {
+            Some("LongitudinalAction")
+        } else if self.lateral_action.is_some() {
+            Some("LateralAction")
+        } else if self.teleport_action.is_some() {
+            Some("TeleportAction")
+        } else if self.routing_action.is_some() {
+            Some("RoutingAction")
+        } else if self.synchronize_action.is_some() {
+            Some("SynchronizeAction")
+        } else if self.activate_controller_action.is_some() {
+            Some("ActivateControllerAction")
+        } else {
+            None
+        }
+    }
+
+    /// Validates that exactly one action type is present (XSD choice group requirement)
+    pub fn validate(&self) -> Result<(), String> {
+        let action_count = [
+            self.longitudinal_action.is_some(),
+            self.lateral_action.is_some(),
+            self.teleport_action.is_some(),
+            self.routing_action.is_some(),
+            self.synchronize_action.is_some(),
+            self.activate_controller_action.is_some(),
+        ].iter().filter(|&&x| x).count();
+
+        match action_count {
+            1 => Ok(()),
+            0 => Err("PrivateAction must contain exactly one action type, found none".to_string()),
+            _ => Err("PrivateAction must contain exactly one action type, found multiple".to_string()),
+        }
+    }
+}
+
+impl Default for PrivateAction {
+    fn default() -> Self {
+        Self {
+            longitudinal_action: None,
+            lateral_action: None,
+            teleport_action: None,
+            routing_action: None,
+            synchronize_action: None,
+            activate_controller_action: None,
+        }
+    }
 }
 
 /// Longitudinal movement actions (speed control, etc.)
+/// XSD requires exactly one child element (choice group)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
-    #[serde(rename = "SpeedAction", skip_serializing_if = "Option::is_none")]
+    /// Exactly one of these fields should be present (XML choice group)
+    #[serde(rename = "SpeedAction", skip_serializing_if = "Option::is_none", default)]
     pub speed_action: Option<SpeedAction>,
-    // SpeedProfileAction, SynchronizeAction, etc. can be added later as Option fields
+    #[serde(rename = "LongitudinalDistanceAction", skip_serializing_if = "Option::is_none", default)]
+    pub longitudinal_distance_action: Option<LongitudinalDistanceAction>,
+    #[serde(rename = "SpeedProfileAction", skip_serializing_if = "Option::is_none", default)]
+    pub speed_profile_action: Option<SpeedProfileAction>,
+}
+
+
+
+impl LongitudinalAction {
+    /// Get the action type contained in this LongitudinalAction
+    pub fn get_action_type(&self) -> Option<&str> {
+        if self.speed_action.is_some() {
+            Some("SpeedAction")
+        } else if self.longitudinal_distance_action.is_some() {
+            Some("LongitudinalDistanceAction")
+        } else if self.speed_profile_action.is_some() {
+            Some("SpeedProfileAction")
+        } else {
+            None
+        }
+    }
+
+    /// Validates that exactly one action type is present (XSD choice group requirement)
+    pub fn validate(&self) -> Result<(), String> {
+        let action_count = [
+            self.speed_action.is_some(),
+            self.longitudinal_distance_action.is_some(),
+            self.speed_profile_action.is_some(),
+        ].iter().filter(|&&x| x).count();
+
+        match action_count {
+            1 => Ok(()),
+            0 => Err("LongitudinalAction must contain exactly one action type (SpeedAction, LongitudinalDistanceAction, or SpeedProfileAction), found none".to_string()),
+            _ => Err("LongitudinalAction must contain exactly one action type (SpeedAction, LongitudinalDistanceAction, or SpeedProfileAction), found multiple".to_string()),
+        }
+    }
+}
+
+impl Default for LongitudinalAction {
+    fn default() -> Self {
+        Self {
+            speed_action: Some(SpeedAction::default()),
+            longitudinal_distance_action: None,
+            speed_profile_action: None,
+        }
+    }
 }
 
 /// Types of longitudinal actions
@@ -129,29 +217,9 @@ impl Default for Private {
     }
 }
 
-impl Default for PrivateActionWrapper {
-    fn default() -> Self {
-        Self {
-            longitudinal_action: Some(LongitudinalAction::default()),
-            lateral_action: None,
-            visibility_action: None,
-            synchronize_action: None,
-            controller_action: None,
-            teleport_action: None,
-            routing_action: None,
-            appearance_action: None,
-            trailer_action: None,
-        }
-    }
-}
 
-impl Default for LongitudinalAction {
-    fn default() -> Self {
-        Self {
-            speed_action: Some(SpeedAction::default()),
-        }
-    }
-}
+
+
 
 impl Private {
     /// Create a new Private action container for the specified entity
@@ -163,7 +231,7 @@ impl Private {
     }
 
     /// Add a private action to this entity's initialization
-    pub fn add_action(mut self, action: PrivateActionWrapper) -> Self {
+    pub fn add_action(mut self, action: PrivateAction) -> Self {
         self.private_actions.push(action);
         self
     }
@@ -202,66 +270,29 @@ mod tests {
     #[test]
     fn test_private_action_builder() {
         let private = Private::new("TestEntity")
-            .add_action(PrivateActionWrapper {
+            .add_action(PrivateAction {
                 longitudinal_action: Some(LongitudinalAction {
                     speed_action: Some(SpeedAction::default()),
+                    longitudinal_distance_action: None,
+                    speed_profile_action: None,
                 }),
                 lateral_action: None,
-                visibility_action: None,
-                synchronize_action: None,
-                controller_action: None,
                 teleport_action: None,
                 routing_action: None,
-                appearance_action: None,
-                trailer_action: None,
+                synchronize_action: None,
+                activate_controller_action: None,
             })
-            .add_action(PrivateActionWrapper {
+            .add_action(PrivateAction {
                 longitudinal_action: None,
                 lateral_action: None,
-                visibility_action: None,
-                synchronize_action: None,
-                controller_action: None,
                 teleport_action: Some(TeleportAction::default()),
                 routing_action: None,
-                appearance_action: None,
-                trailer_action: None,
+                synchronize_action: None,
+                activate_controller_action: None,
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
         assert_eq!(private.private_actions.len(), 2);
-    }
-
-    #[test]
-    fn test_new_action_types() {
-        // Test VisibilityAction
-        let visibility_action = PrivateActionWrapper {
-            longitudinal_action: None,
-            lateral_action: None,
-            visibility_action: Some(crate::types::actions::VisibilityAction::default()),
-            synchronize_action: None,
-            controller_action: None,
-            teleport_action: None,
-            routing_action: None,
-            appearance_action: None,
-            trailer_action: None,
-        };
-
-        assert!(visibility_action.visibility_action.is_some());
-
-        // Test TrailerAction
-        let trailer_action = PrivateActionWrapper {
-            longitudinal_action: None,
-            lateral_action: None,
-            visibility_action: None,
-            synchronize_action: None,
-            controller_action: None,
-            teleport_action: None,
-            routing_action: None,
-            appearance_action: None,
-            trailer_action: Some(crate::types::actions::TrailerAction::default()),
-        };
-
-        assert!(trailer_action.trailer_action.is_some());
     }
 
     #[test]
@@ -312,5 +343,78 @@ mod tests {
         assert!(serialized.contains("<GlobalAction"));
         assert!(serialized.contains("<Private"));
         assert!(serialized.contains("entityRef=\"Ego\""));
+    }
+
+    #[test]
+    fn test_longitudinal_action_validation() {
+        // Test valid action with SpeedAction
+        let valid_speed = LongitudinalAction {
+            speed_action: Some(SpeedAction::default()),
+            longitudinal_distance_action: None,
+            speed_profile_action: None,
+        };
+        assert!(valid_speed.validate().is_ok());
+
+        // Test valid action with LongitudinalDistanceAction
+        let valid_distance = LongitudinalAction {
+            speed_action: None,
+            longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+            speed_profile_action: None,
+        };
+        assert!(valid_distance.validate().is_ok());
+
+        // Test valid action with SpeedProfileAction
+        let valid_profile = LongitudinalAction {
+            speed_action: None,
+            longitudinal_distance_action: None,
+            speed_profile_action: Some(SpeedProfileAction::default()),
+        };
+        assert!(valid_profile.validate().is_ok());
+
+        // Test invalid action with no actions
+        let invalid_none = LongitudinalAction {
+            speed_action: None,
+            longitudinal_distance_action: None,
+            speed_profile_action: None,
+        };
+        assert!(invalid_none.validate().is_err());
+
+        // Test invalid action with multiple actions
+        let invalid_multiple = LongitudinalAction {
+            speed_action: Some(SpeedAction::default()),
+            longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+            speed_profile_action: None,
+        };
+        assert!(invalid_multiple.validate().is_err());
+    }
+
+    #[test]
+    fn test_private_action_validation() {
+        // Test valid action with LongitudinalAction
+        let valid_longitudinal = PrivateAction {
+            longitudinal_action: Some(LongitudinalAction::default()),
+            lateral_action: None,
+            teleport_action: None,
+            routing_action: None,
+            synchronize_action: None,
+            activate_controller_action: None,
+        };
+        assert!(valid_longitudinal.validate().is_ok());
+
+        // Test invalid action with no actions
+        let invalid_none = PrivateAction::default();
+        // Default has speed_action, so it should be valid
+        assert!(invalid_none.validate().is_ok());
+
+        // Test invalid action with multiple actions
+        let invalid_multiple = PrivateAction {
+            longitudinal_action: Some(LongitudinalAction::default()),
+            lateral_action: Some(crate::types::actions::movement::LateralAction::default()),
+            teleport_action: None,
+            routing_action: None,
+            synchronize_action: None,
+            activate_controller_action: None,
+        };
+        assert!(invalid_multiple.validate().is_err());
     }
 }
