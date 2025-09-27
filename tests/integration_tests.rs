@@ -259,6 +259,7 @@ fn can_create_and_serialize_conditions() {
         value: openscenario_rs::types::Double::literal(25.0),
         rule: Rule::LessThan,
         entity_ref: "Ego".to_string(),
+        direction: None,
     };
 
     // Test creating Condition enum variants

@@ -169,3 +169,88 @@ fn test_condition_cloning() {
     let cloned = original.clone();
     assert_eq!(original, cloned);
 }
+
+#[test]
+fn test_entity_condition_xml_deserialization() {
+    // Test XML deserialization with our custom deserializer
+    let xml = r#"
+    <EntityCondition>
+        <RelativeDistanceCondition entityRef="CutInVehicle" relativeDistanceType="longitudinal" 
+                                 value="10.0" freespace="true" rule="lessThan" coordinateSystem="entity" />
+    </EntityCondition>
+    "#;
+
+    let result = quick_xml::de::from_str::<EntityCondition>(xml);
+    assert!(result.is_ok(), "Failed to deserialize EntityCondition: {:?}", result.err());
+    
+    let condition = result.unwrap();
+    match condition {
+        EntityCondition::RelativeDistance(rel_dist) => {
+            assert_eq!(rel_dist.entity_ref, OSString::literal("CutInVehicle".to_string()));
+            assert_eq!(rel_dist.value, Double::literal(10.0));
+            assert_eq!(rel_dist.freespace, Boolean::literal(true));
+            assert_eq!(rel_dist.relative_distance_type, RelativeDistanceType::Longitudinal);
+            assert_eq!(rel_dist.rule, Rule::LessThan);
+        }
+        _ => panic!("Expected RelativeDistanceCondition, got: {:?}", condition),
+    }
+}
+
+#[test]
+fn test_entity_condition_xml_deserialization_speed() {
+    // Test XML deserialization with SpeedCondition
+    let xml = r#"
+    <EntityCondition>
+        <SpeedCondition value="25.0" rule="greaterThan" entityRef="ego_vehicle" />
+    </EntityCondition>
+    "#;
+
+    let result = quick_xml::de::from_str::<EntityCondition>(xml);
+    assert!(result.is_ok(), "Failed to deserialize EntityCondition: {:?}", result.err());
+    
+    let condition = result.unwrap();
+    match condition {
+        EntityCondition::Speed(speed) => {
+            assert_eq!(speed.value, Double::literal(25.0));
+            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.entity_ref, "ego_vehicle");
+        }
+        _ => panic!("Expected SpeedCondition, got: {:?}", condition),
+    }
+}
+
+#[test]
+fn test_entity_condition_xml_deserialization_error_multiple_conditions() {
+    // Test that multiple conditions in one EntityCondition cause an error
+    let xml = r#"
+    <EntityCondition>
+        <SpeedCondition value="25.0" rule="greaterThan" entityRef="ego_vehicle" />
+        <RelativeDistanceCondition entityRef="CutInVehicle" relativeDistanceType="longitudinal" 
+                                 value="10.0" freespace="true" rule="lessThan" coordinateSystem="entity" />
+    </EntityCondition>
+    "#;
+
+    let result = quick_xml::de::from_str::<EntityCondition>(xml);
+    assert!(result.is_err(), "Expected error for multiple conditions");
+    
+    let error_msg = result.err().unwrap().to_string();
+    assert!(error_msg.contains("can only contain one condition type"), 
+            "Error message should mention single condition requirement: {}", error_msg);
+}
+
+#[test]
+fn test_entity_condition_xml_deserialization_error_unknown_condition() {
+    // Test that unknown condition types cause an error
+    let xml = r#"
+    <EntityCondition>
+        <UnknownCondition value="25.0" />
+    </EntityCondition>
+    "#;
+
+    let result = quick_xml::de::from_str::<EntityCondition>(xml);
+    assert!(result.is_err(), "Expected error for unknown condition type");
+    
+    let error_msg = result.err().unwrap().to_string();
+    assert!(error_msg.contains("Unknown EntityCondition type"), 
+            "Error message should mention unknown condition type: {}", error_msg);
+}

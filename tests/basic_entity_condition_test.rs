@@ -29,6 +29,7 @@ fn test_by_entity_condition_variants() {
         value: Double::literal(25.0),
         rule: Rule::GreaterThan,
         entity_ref: "test_vehicle".to_string(),
+        direction: None,
     });
 
     match speed_condition {
