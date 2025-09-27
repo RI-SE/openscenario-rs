@@ -28,32 +28,64 @@ fn deserialize_optional_double<'de, D>(deserializer: D) -> Result<Option<Double>
 where
     D: Deserializer<'de>,
 {
-    let s = Option::<String>::deserialize(deserializer)?;
-    match s {
-        Some(s) if s.is_empty() => Ok(None),
-        Some(s) => {
-            // Try to deserialize as Double (Value<f64>)
-            match s.parse::<f64>() {
-                Ok(value) => Ok(Some(Double::literal(value))),
+    use serde::de::{self, Visitor};
+    use std::fmt;
+
+    struct OptionalDoubleVisitor;
+
+    impl<'de> Visitor<'de> for OptionalDoubleVisitor {
+        type Value = Option<Double>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("an optional double value or empty string")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if value.is_empty() {
+                return Ok(None);
+            }
+
+            // Try to parse as f64 first
+            match value.parse::<f64>() {
+                Ok(val) => Ok(Some(Double::literal(val))),
                 Err(_) => {
-                    // If it's not a literal, try to parse as parameter/expression
-                    if s.starts_with("${") && s.ends_with('}') {
-                        let content = &s[2..s.len() - 1];
+                    // Try parameter/expression parsing
+                    if value.starts_with("${") && value.ends_with('}') && value.len() > 3 {
+                        let content = &value[2..value.len() - 1];
                         if content.contains(|c: char| "+-*/%()".contains(c)) {
                             Ok(Some(Double::expression(content.to_string())))
                         } else {
                             Ok(Some(Double::parameter(content.to_string())))
                         }
-                    } else if s.starts_with('$') {
-                        Ok(Some(Double::parameter(s[1..].to_string())))
+                    } else if value.starts_with('$') {
+                        Ok(Some(Double::parameter(value[1..].to_string())))
                     } else {
-                        Err(serde::de::Error::custom(format!("Invalid Double value: {}", s)))
+                        // For XSD compliance, empty or invalid values should be None
+                        Ok(None)
                     }
                 }
             }
-        },
-        None => Ok(None),
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
     }
+
+    deserializer.deserialize_any(OptionalDoubleVisitor)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
