@@ -1527,7 +1527,7 @@ mod tests {
         if let LongitudinalActionChoice::LongitudinalDistanceAction(dist) =
             distance_action.longitudinal_action_choice
         {
-            assert_eq!(dist.distance.as_literal(), Some(&10.0));
+            assert_eq!(dist.distance.unwrap().as_literal(), Some(&10.0));
         } else {
             panic!("Expected LongitudinalDistanceAction");
         }

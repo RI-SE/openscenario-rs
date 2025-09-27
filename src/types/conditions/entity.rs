@@ -24,54 +24,52 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedCondition {
+    /// Speed value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
+    
+    /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    #[serde(rename = "@entityRef")]
+    
+    /// Entity reference (library extension for convenience)
     pub entity_ref: String,
+    
+    /// Direction of speed measurement (optional)
+    #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
+    pub direction: Option<DirectionalDimension>,
 }
 
 /// Condition for reaching a specific position within tolerance
 /// Note: Marked as deprecated in XSD but still supported for compatibility
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "ReachPositionCondition")]
 pub struct ReachPositionCondition {
     /// Target position to reach
-    #[serde(rename = "Position")]
     pub position: Position,
 
     /// Distance tolerance for considering position reached
-    #[serde(rename = "@tolerance")]
     pub tolerance: Double,
 }
 
 /// Condition based on distance to a specific position
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "DistanceCondition")]
 pub struct DistanceCondition {
     /// Reference position for distance measurement
-    #[serde(rename = "Position")]
     pub position: Position,
 
     /// Distance value to compare against
-    #[serde(rename = "@value")]
     pub value: Double,
 
     /// Whether to use freespace (true) or reference point (false) distance
-    #[serde(rename = "@freespace")]
     pub freespace: Boolean,
 
     /// Comparison rule (greater than, less than, etc.)
-    #[serde(rename = "@rule")]
     pub rule: Rule,
 
     /// Whether to measure distance along route (deprecated)
-    #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
     pub along_route: Option<Boolean>,
 
     /// Coordinate system for distance measurement
-    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
 
     /// Type of relative distance measurement
@@ -82,13 +80,11 @@ pub struct DistanceCondition {
     pub relative_distance_type: Option<RelativeDistanceType>,
 
     /// Algorithm for route-based distance calculation
-    #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
 }
 
 /// Condition based on relative distance between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "RelativeDistanceCondition")]
 pub struct RelativeDistanceCondition {
     /// Reference entity for distance measurement
     #[serde(rename = "@entityRef")]
@@ -121,7 +117,6 @@ pub struct RelativeDistanceCondition {
 
 /// Condition based on entity acceleration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "AccelerationCondition")]
 pub struct AccelerationCondition {
     /// Acceleration value to compare against
     #[serde(rename = "@value")]
@@ -138,7 +133,6 @@ pub struct AccelerationCondition {
 
 /// Condition for detecting standstill state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "StandStillCondition")]
 pub struct StandStillCondition {
     /// Duration entity must be stationary
     #[serde(rename = "@duration")]
@@ -147,43 +141,34 @@ pub struct StandStillCondition {
 
 /// Condition for detecting collisions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "CollisionCondition")]
 pub struct CollisionCondition {
     /// Specific target entity (optional)
-    #[serde(rename = "@target", skip_serializing_if = "Option::is_none")]
     pub target: Option<OSString>,
 
     /// Collision detection by entity type
-    #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<CollisionTarget>,
 
     /// Position-based collision detection
-    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
 }
 
 /// Target specification for collision detection
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CollisionTarget {
-    #[serde(rename = "@type")]
     pub target_type: OSString,
 }
 
 /// Condition for detecting off-road state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "OffRoadCondition")]
 pub struct OffRoadCondition {
     /// Duration entity must be off-road
-    #[serde(rename = "@duration")]
     pub duration: Double,
 }
 
 /// Condition for detecting end-of-road state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "EndOfRoadCondition")]
 pub struct EndOfRoadCondition {
     /// Duration entity must be at end of road
-    #[serde(rename = "@duration")]
     pub duration: Double,
 }
 
@@ -211,10 +196,7 @@ pub struct TimeHeadwayCondition {
     pub coordinate_system: Option<CoordinateSystem>,
 
     /// Optional relative distance type
-    #[serde(
-        rename = "@relativeDistanceType",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
     pub relative_distance_type: Option<RelativeDistanceType>,
 
     /// Optional routing algorithm for route-based measurement
@@ -242,10 +224,7 @@ pub struct TimeToCollisionCondition {
     pub coordinate_system: Option<CoordinateSystem>,
 
     /// Optional relative distance type
-    #[serde(
-        rename = "@relativeDistanceType",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
     pub relative_distance_type: Option<RelativeDistanceType>,
 
     /// Optional routing algorithm for route-based measurement
@@ -253,7 +232,6 @@ pub struct TimeToCollisionCondition {
     pub routing_algorithm: Option<RoutingAlgorithm>,
 
     /// Target specification for collision detection
-    #[serde(rename = "Target")]
     pub target: TimeToCollisionTarget,
 }
 
@@ -261,62 +239,48 @@ pub struct TimeToCollisionCondition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeToCollisionTarget {
     /// Target entity reference
-    #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
     pub entity_ref: Option<EntityRef>,
 
     /// Target position
-    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
 }
 
 /// Angle condition for entity orientation/direction triggering
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "AngleCondition")]
 pub struct AngleCondition {
     /// Type of angle measurement (relative or absolute)
-    #[serde(rename = "@angleType")]
     pub angle_type: AngleType,
 
     /// Target angle value in radians
-    #[serde(rename = "@angle")]
     pub angle: Double,
 
     /// Tolerance for angle matching in radians
-    #[serde(rename = "@angleTolerance")]
     pub angle_tolerance: Double,
 
     /// Coordinate system for angle measurement
-    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
 /// Off-road detection condition - matches XSD OffroadCondition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "OffroadCondition")]
 pub struct OffroadCondition {
     /// Duration entity must be off-road
-    #[serde(rename = "@duration")]
     pub duration: Double,
 }
 
 /// Relative speed monitoring between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "RelativeSpeedCondition")]
 pub struct RelativeSpeedCondition {
     /// Reference entity for speed comparison
-    #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
 
     /// Comparison rule (greater than, less than, etc.)
-    #[serde(rename = "@rule")]
     pub rule: Rule,
 
     /// Speed difference value
-    #[serde(rename = "@value")]
     pub value: Double,
 
     /// Direction of speed measurement (optional)
-    #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
     pub direction: Option<DirectionalDimension>,
 }
 
@@ -324,71 +288,55 @@ pub struct RelativeSpeedCondition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeLaneRange {
     /// Starting lane offset
-    #[serde(rename = "@from", skip_serializing_if = "Option::is_none")]
     pub from: Option<Int>,
 
     /// Ending lane offset
-    #[serde(rename = "@to", skip_serializing_if = "Option::is_none")]
     pub to: Option<Int>,
 }
 
 /// Clearance monitoring between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "RelativeClearanceCondition")]
 pub struct RelativeClearanceCondition {
     /// Lane ranges to check for clearance
-    #[serde(rename = "RelativeLaneRange", skip_serializing_if = "Vec::is_empty", default)]
     pub relative_lane_ranges: Vec<RelativeLaneRange>,
 
     /// Entity references to check clearance against
-    #[serde(rename = "EntityRef", skip_serializing_if = "Vec::is_empty", default)]
     pub entity_refs: Vec<EntityRef>,
 
     /// Whether to check opposite lanes
-    #[serde(rename = "@oppositeLanes")]
     pub opposite_lanes: Boolean,
 
     /// Distance to check forward (optional)
-    #[serde(rename = "@distanceForward", skip_serializing_if = "Option::is_none")]
     pub distance_forward: Option<Double>,
 
     /// Distance to check backward (optional)
-    #[serde(rename = "@distanceBackward", skip_serializing_if = "Option::is_none")]
     pub distance_backward: Option<Double>,
 
     /// Whether to use free space measurement
-    #[serde(rename = "@freeSpace")]
     pub free_space: Boolean,
 }
 
 /// Relative angle conditions between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "RelativeAngleCondition")]
 pub struct RelativeAngleCondition {
     /// Reference entity for angle comparison
-    #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
 
     /// Type of angle measurement (relative or absolute)
-    #[serde(rename = "@angleType")]
     pub angle_type: AngleType,
 
     /// Target angle value in radians
-    #[serde(rename = "@angle")]
     pub angle: Double,
 
     /// Tolerance for angle matching in radians
-    #[serde(rename = "@angleTolerance")]
     pub angle_tolerance: Double,
 
     /// Coordinate system for angle measurement
-    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
 /// Distance-based condition triggering
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "TraveledDistanceCondition")]
 pub struct TraveledDistanceCondition {
     /// Distance value to trigger on
     #[serde(rename = "@value")]
@@ -410,57 +358,104 @@ pub struct ByEntityCondition {
 
 /// EntityCondition enum for the actual condition types inside ByEntityConditionSchema
 /// Matches the XSD EntityCondition choice group exactly
-#[derive(Debug, Clone, Serialize, PartialEq)]
-#[serde(untagged)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EntityCondition {
     /// End-of-road detection condition
-    #[serde(rename = "EndOfRoadCondition")]
     EndOfRoad(EndOfRoadCondition),
     /// Collision detection condition
-    #[serde(rename = "CollisionCondition")]
     Collision(CollisionCondition),
     /// Off-road detection condition (matches XSD OffroadCondition)
-    #[serde(rename = "OffroadCondition")]
     Offroad(OffroadCondition),
     /// Time headway condition
-    #[serde(rename = "TimeHeadwayCondition")]
     TimeHeadway(TimeHeadwayCondition),
     /// Time to collision condition
-    #[serde(rename = "TimeToCollisionCondition")]
     TimeToCollision(TimeToCollisionCondition),
     /// Acceleration-based condition
-    #[serde(rename = "AccelerationCondition")]
     Acceleration(AccelerationCondition),
     /// Standstill detection condition
-    #[serde(rename = "StandStillCondition")]
     StandStill(StandStillCondition),
     /// Speed-based condition
-    #[serde(rename = "SpeedCondition")]
     Speed(SpeedCondition),
     /// Relative speed monitoring between entities
-    #[serde(rename = "RelativeSpeedCondition")]
     RelativeSpeed(RelativeSpeedCondition),
     /// Distance-based condition triggering
-    #[serde(rename = "TraveledDistanceCondition")]
     TraveledDistance(TraveledDistanceCondition),
     /// Position reach condition (deprecated but supported)
-    #[serde(rename = "ReachPositionCondition")]
     ReachPosition(ReachPositionCondition),
     /// Distance to position condition
-    #[serde(rename = "DistanceCondition")]
     Distance(DistanceCondition),
     /// Relative distance between entities condition
-    #[serde(rename = "RelativeDistanceCondition")]
     RelativeDistance(RelativeDistanceCondition),
     /// Clearance monitoring between entities
-    #[serde(rename = "RelativeClearanceCondition")]
     RelativeClearance(RelativeClearanceCondition),
     /// Angle condition for entity orientation/direction triggering
-    #[serde(rename = "AngleCondition")]
     Angle(AngleCondition),
     /// Relative angle conditions between entities
-    #[serde(rename = "RelativeAngleCondition")]
     RelativeAngle(RelativeAngleCondition),
+}
+
+impl serde::Serialize for EntityCondition {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeMap;
+        
+        let mut map = serializer.serialize_map(None)?;
+        
+        match self {
+            EntityCondition::EndOfRoad(condition) => {
+                map.serialize_entry("EndOfRoadCondition", condition)?;
+            }
+            EntityCondition::Collision(condition) => {
+                map.serialize_entry("CollisionCondition", condition)?;
+            }
+            EntityCondition::Offroad(condition) => {
+                map.serialize_entry("OffroadCondition", condition)?;
+            }
+            EntityCondition::TimeHeadway(condition) => {
+                map.serialize_entry("TimeHeadwayCondition", condition)?;
+            }
+            EntityCondition::TimeToCollision(condition) => {
+                map.serialize_entry("TimeToCollisionCondition", condition)?;
+            }
+            EntityCondition::Acceleration(condition) => {
+                map.serialize_entry("AccelerationCondition", condition)?;
+            }
+            EntityCondition::StandStill(condition) => {
+                map.serialize_entry("StandStillCondition", condition)?;
+            }
+            EntityCondition::Speed(condition) => {
+                map.serialize_entry("SpeedCondition", condition)?;
+            }
+            EntityCondition::RelativeSpeed(condition) => {
+                map.serialize_entry("RelativeSpeedCondition", condition)?;
+            }
+            EntityCondition::TraveledDistance(condition) => {
+                map.serialize_entry("TraveledDistanceCondition", condition)?;
+            }
+            EntityCondition::ReachPosition(condition) => {
+                map.serialize_entry("ReachPositionCondition", condition)?;
+            }
+            EntityCondition::Distance(condition) => {
+                map.serialize_entry("DistanceCondition", condition)?;
+            }
+            EntityCondition::RelativeDistance(condition) => {
+                map.serialize_entry("RelativeDistanceCondition", condition)?;
+            }
+            EntityCondition::RelativeClearance(condition) => {
+                map.serialize_entry("RelativeClearanceCondition", condition)?;
+            }
+            EntityCondition::Angle(condition) => {
+                map.serialize_entry("AngleCondition", condition)?;
+            }
+            EntityCondition::RelativeAngle(condition) => {
+                map.serialize_entry("RelativeAngleCondition", condition)?;
+            }
+        }
+        
+        map.end()
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for EntityCondition {
@@ -605,6 +600,7 @@ impl Default for SpeedCondition {
             value: Double::literal(10.0),
             rule: Rule::GreaterThan,
             entity_ref: "DefaultEntity".to_string(),
+            direction: None,
         }
     }
 }
@@ -1261,6 +1257,7 @@ impl ByEntityCondition {
                 value: Double::literal(value),
                 rule,
                 entity_ref: entity_ref.into(),
+                direction: None,
             }),
         )
     }
