@@ -410,7 +410,7 @@ pub struct ByEntityCondition {
 
 /// EntityCondition enum for the actual condition types inside ByEntityConditionSchema
 /// Matches the XSD EntityCondition choice group exactly
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum EntityCondition {
     /// End-of-road detection condition
@@ -461,6 +461,140 @@ pub enum EntityCondition {
     /// Relative angle conditions between entities
     #[serde(rename = "RelativeAngleCondition")]
     RelativeAngle(RelativeAngleCondition),
+}
+
+impl<'de> serde::Deserialize<'de> for EntityCondition {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{MapAccess, Visitor};
+        use std::fmt;
+
+        struct EntityConditionVisitor;
+
+        impl<'de> Visitor<'de> for EntityConditionVisitor {
+            type Value = EntityCondition;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an EntityCondition with exactly one condition type")
+            }
+
+            fn visit_map<M>(self, mut map: M) -> std::result::Result<EntityCondition, M::Error>
+            where
+                M: MapAccess<'de>,
+            {
+                let mut condition_found = false;
+                let mut result = None;
+
+                // Process elements in the order they appear
+                while let Some(key) = map.next_key::<String>()? {
+                    if condition_found {
+                        return Err(serde::de::Error::custom(
+                            "EntityCondition can only contain one condition type"
+                        ));
+                    }
+
+                    match key.as_str() {
+                        "EndOfRoadCondition" => {
+                            let condition: EndOfRoadCondition = map.next_value()?;
+                            result = Some(EntityCondition::EndOfRoad(condition));
+                            condition_found = true;
+                        }
+                        "CollisionCondition" => {
+                            let condition: CollisionCondition = map.next_value()?;
+                            result = Some(EntityCondition::Collision(condition));
+                            condition_found = true;
+                        }
+                        "OffroadCondition" => {
+                            let condition: OffroadCondition = map.next_value()?;
+                            result = Some(EntityCondition::Offroad(condition));
+                            condition_found = true;
+                        }
+                        "TimeHeadwayCondition" => {
+                            let condition: TimeHeadwayCondition = map.next_value()?;
+                            result = Some(EntityCondition::TimeHeadway(condition));
+                            condition_found = true;
+                        }
+                        "TimeToCollisionCondition" => {
+                            let condition: TimeToCollisionCondition = map.next_value()?;
+                            result = Some(EntityCondition::TimeToCollision(condition));
+                            condition_found = true;
+                        }
+                        "AccelerationCondition" => {
+                            let condition: AccelerationCondition = map.next_value()?;
+                            result = Some(EntityCondition::Acceleration(condition));
+                            condition_found = true;
+                        }
+                        "StandStillCondition" => {
+                            let condition: StandStillCondition = map.next_value()?;
+                            result = Some(EntityCondition::StandStill(condition));
+                            condition_found = true;
+                        }
+                        "SpeedCondition" => {
+                            let condition: SpeedCondition = map.next_value()?;
+                            result = Some(EntityCondition::Speed(condition));
+                            condition_found = true;
+                        }
+                        "RelativeSpeedCondition" => {
+                            let condition: RelativeSpeedCondition = map.next_value()?;
+                            result = Some(EntityCondition::RelativeSpeed(condition));
+                            condition_found = true;
+                        }
+                        "TraveledDistanceCondition" => {
+                            let condition: TraveledDistanceCondition = map.next_value()?;
+                            result = Some(EntityCondition::TraveledDistance(condition));
+                            condition_found = true;
+                        }
+                        "ReachPositionCondition" => {
+                            let condition: ReachPositionCondition = map.next_value()?;
+                            result = Some(EntityCondition::ReachPosition(condition));
+                            condition_found = true;
+                        }
+                        "DistanceCondition" => {
+                            let condition: DistanceCondition = map.next_value()?;
+                            result = Some(EntityCondition::Distance(condition));
+                            condition_found = true;
+                        }
+                        "RelativeDistanceCondition" => {
+                            let condition: RelativeDistanceCondition = map.next_value()
+                                .map_err(|e| serde::de::Error::custom(
+                                    format!("Failed to deserialize RelativeDistanceCondition: {}", e)
+                                ))?;
+                            result = Some(EntityCondition::RelativeDistance(condition));
+                            condition_found = true;
+                        }
+                        "RelativeClearanceCondition" => {
+                            let condition: RelativeClearanceCondition = map.next_value()?;
+                            result = Some(EntityCondition::RelativeClearance(condition));
+                            condition_found = true;
+                        }
+                        "AngleCondition" => {
+                            let condition: AngleCondition = map.next_value()?;
+                            result = Some(EntityCondition::Angle(condition));
+                            condition_found = true;
+                        }
+                        "RelativeAngleCondition" => {
+                            let condition: RelativeAngleCondition = map.next_value()?;
+                            result = Some(EntityCondition::RelativeAngle(condition));
+                            condition_found = true;
+                        }
+                        _ => {
+                            return Err(serde::de::Error::custom(
+                                format!("Unknown EntityCondition type: {}", key)
+                            ));
+                        }
+                    }
+                }
+
+                result.ok_or_else(|| serde::de::Error::custom(
+                    "EntityCondition must contain exactly one condition type"
+                ))
+            }
+        }
+
+        deserializer.deserialize_map(EntityConditionVisitor)
+    }
 }
 
 
