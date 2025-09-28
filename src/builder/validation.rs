@@ -15,7 +15,7 @@ pub struct BuilderValidationContext {
     /// Base validation context
     base_context: ValidationContext,
     /// Builder-specific validation rules
-    builder_rules: Vec<BuilderValidationRule>,
+    builder_rules: Vec<Box<dyn BuilderValidationRule>>,
     /// Entity reference tracking
     entity_refs: HashMap<String, String>,
     /// Parameter tracking
@@ -34,7 +34,7 @@ impl BuilderValidationContext {
     }
     
     /// Add a builder-specific validation rule
-    pub fn add_rule(mut self, rule: BuilderValidationRule) -> Self {
+    pub fn add_rule(mut self, rule: Box<dyn BuilderValidationRule>) -> Self {
         self.builder_rules.push(rule);
         self
     }
@@ -115,20 +115,15 @@ pub struct EntityReferenceValidationRule;
 
 impl BuilderValidationRule for EntityReferenceValidationRule {
     fn validate(&self, scenario: &OpenScenario, context: &BuilderValidationContext) -> BuilderResult<()> {
-        // Validate that all entity references in actions and conditions exist
+        // Validate that all entity references in maneuver groups exist
         if let Some(storyboard) = &scenario.storyboard {
             for story in &storyboard.stories {
                 for act in &story.acts {
                     for maneuver_group in &act.maneuver_groups {
-                        for maneuver in &maneuver_group.maneuvers {
-                            for event in &maneuver.events {
-                                for action in &event.actions {
-                                    if let Some(private_action) = &action.private_action {
-                                        let entity_ref = private_action.entity_ref.to_string();
-                                        context.validate_entity_ref(&entity_ref)?;
-                                    }
-                                }
-                            }
+                        // Validate entity references in actors
+                        for entity_ref in &maneuver_group.actors.entity_refs {
+                            let entity_name = entity_ref.entity_ref.to_string();
+                            context.validate_entity_ref(&entity_name)?;
                         }
                     }
                 }
@@ -298,10 +293,10 @@ impl ValidationContextBuilder {
         
         // Add rules (note: we can't move Box<dyn Trait> easily, so we'll recreate standard rules)
         context = context
-            .add_rule(EntityReferenceValidationRule)
-            .add_rule(ParameterReferenceValidationRule)
-            .add_rule(CatalogReferenceValidationRule)
-            .add_rule(StoryboardStructureValidationRule);
+            .add_rule(Box::new(EntityReferenceValidationRule))
+            .add_rule(Box::new(ParameterReferenceValidationRule))
+            .add_rule(Box::new(CatalogReferenceValidationRule))
+            .add_rule(Box::new(StoryboardStructureValidationRule));
         
         // Add entities and parameters
         for (name, entity_type) in self.entities {

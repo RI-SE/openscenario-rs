@@ -89,8 +89,7 @@ impl<'parent> CatalogVehicleReferenceBuilder<'parent> {
             catalog_reference: None, // TODO: Store catalog reference if needed
             vehicle: Some(vehicle),
             pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
+            object_controller: None,
         };
         
         // Add to parent's entities
@@ -180,8 +179,7 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
             catalog_reference: None, // TODO: Store catalog reference if needed
             vehicle: None,
             pedestrian: Some(pedestrian),
-            misc_object: None,
-            external_object_reference: None,
+            object_controller: None,
         };
         
         // Add to parent's entities

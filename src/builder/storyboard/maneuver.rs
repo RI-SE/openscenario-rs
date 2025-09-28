@@ -4,9 +4,9 @@ use crate::builder::{BuilderError, BuilderResult, actions::{SpeedActionBuilder, 
 use crate::types::{
     scenario::{
         story::{Maneuver, Event, StoryAction, StoryPrivateAction},
-        init::PrivateAction,
         triggers::{Trigger, ConditionGroup},
     },
+    actions::wrappers::PrivateAction,
     basic::OSString,
     enums::Priority,
 };
@@ -287,9 +287,9 @@ impl<P> EventTriggerBuilder<P> {
     }
 }
 
-impl EventTriggerBuilder<SpeedActionEventBuilder<'_>> {
+impl<'a> EventTriggerBuilder<SpeedActionEventBuilder<'a>> {
     /// Finish trigger and return to speed action event builder
-    pub fn finish(self) -> SpeedActionEventBuilder<'_> {
+    pub fn finish(self) -> SpeedActionEventBuilder<'a> {
         let trigger = self.trigger_builder.build().unwrap(); // TODO: Better error handling
         self.parent.with_trigger(trigger)
     }

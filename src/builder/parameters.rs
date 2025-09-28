@@ -28,6 +28,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::String,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }
@@ -38,6 +39,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::Double,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }
@@ -48,6 +50,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::Int,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }
@@ -58,6 +61,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::Boolean,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }
@@ -68,6 +72,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::DateTime,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }
@@ -78,6 +83,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::UnsignedShort,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }
@@ -88,6 +94,7 @@ impl ParameterDeclarationsBuilder {
             name: OSString::literal(name.to_string()),
             parameter_type: ParameterType::UnsignedInt,
             value: OSString::literal(default_value.to_string()),
+            constraint_groups: Vec::new(),
         });
         self
     }

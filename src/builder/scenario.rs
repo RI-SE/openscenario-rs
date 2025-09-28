@@ -221,7 +221,7 @@ impl ScenarioBuilder<HasHeader> {
         
         params.parameter_declarations.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type,
+            parameter_type: param_type,
             value: OSString::literal(value.to_string()),
             constraint_groups: Vec::new(),
         });

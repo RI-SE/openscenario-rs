@@ -125,11 +125,9 @@ impl VehicleCatalogReferenceBuilder {
             }).collect())
         };
         
-        Ok(VehicleCatalogReference {
-            catalog_name: OSString::literal(catalog_name),
-            entry_name: OSString::literal(entry_name),
-            parameter_assignments,
-        })
+        let mut reference = VehicleCatalogReference::new(catalog_name, entry_name);
+        reference.parameter_assignments = parameter_assignments;
+        Ok(reference)
     }
 }
 
@@ -183,11 +181,9 @@ impl PedestrianCatalogReferenceBuilder {
             }).collect())
         };
         
-        Ok(PedestrianCatalogReference {
-            catalog_name: OSString::literal(catalog_name),
-            entry_name: OSString::literal(entry_name),
-            parameter_assignments,
-        })
+        let mut reference = PedestrianCatalogReference::new(catalog_name, entry_name);
+        reference.parameter_assignments = parameter_assignments;
+        Ok(reference)
     }
 }
 
