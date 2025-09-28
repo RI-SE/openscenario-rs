@@ -100,8 +100,23 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
             crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+                // Convert movement::LongitudinalAction to init::LongitudinalAction
+                let init_long_action = crate::types::scenario::init::LongitudinalAction {
+                    speed_action: match long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action),
+                        _ => None,
+                    },
+                    longitudinal_distance_action: match long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action),
+                        _ => None,
+                    },
+                    speed_profile_action: match long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action),
+                        _ => None,
+                    },
+                };
                 StoryPrivateAction {
-                    longitudinal_action: Some(long_action),
+                    longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
                     synchronize_action: None,
@@ -203,8 +218,23 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
             crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+                // Convert movement::LongitudinalAction to init::LongitudinalAction
+                let init_long_action = crate::types::scenario::init::LongitudinalAction {
+                    speed_action: match long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action),
+                        _ => None,
+                    },
+                    longitudinal_distance_action: match long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action),
+                        _ => None,
+                    },
+                    speed_profile_action: match long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action),
+                        _ => None,
+                    },
+                };
                 StoryPrivateAction {
-                    longitudinal_action: Some(long_action),
+                    longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
                     synchronize_action: None,

@@ -95,11 +95,21 @@ impl TimeConditionBuilder {
 /// Creates conditions that trigger when an entity's speed meets certain criteria.
 /// This is technically an entity condition but is commonly used, so it's included
 /// in the value conditions module for convenience.
-#[derive(Debug, Default)]  
+#[derive(Debug)]  
 pub struct SpeedConditionBuilder {
     entity_ref: Option<String>,
     speed: Option<f64>,
     rule: Rule,
+}
+
+impl Default for SpeedConditionBuilder {
+    fn default() -> Self {
+        Self {
+            entity_ref: None,
+            speed: None,
+            rule: Rule::GreaterThan,
+        }
+    }
 }
 
 impl SpeedConditionBuilder {
@@ -148,6 +158,8 @@ impl SpeedConditionBuilder {
             return Err(BuilderError::validation_error("Speed value is required"));
         }
         
+        let entity_ref = self.entity_ref.unwrap();
+        
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
@@ -157,13 +169,13 @@ impl SpeedConditionBuilder {
                 triggering_entities: TriggeringEntities {
                     triggering_entities_rule: TriggeringEntitiesRule::Any,
                     entity_refs: vec![EntityRef {
-                        entity_ref: OSString::literal(self.entity_ref.unwrap()),
+                        entity_ref: OSString::literal(entity_ref.clone()),
                     }],
                 },
                 entity_condition: EntityCondition::Speed(EntitySpeedCondition {
                     value: Double::literal(self.speed.unwrap()),
                     rule: self.rule,
-                    entity_ref: self.entity_ref.unwrap_or_default(),
+                    entity_ref,
                     direction: None,
                 }),
             }),
