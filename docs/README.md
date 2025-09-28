@@ -22,6 +22,7 @@ This documentation provides complete coverage of the library's capabilities, fro
 
 - **[Extension Guide](extension_guide.md)** - Creating custom types, actions, and integrations
 - **[Development Guide](development_guide.md)** - Contributing patterns and architectural insights
+- **[XSD Validation Fixes](xsd_validation_fixes.md)** - Resolving XSD compliance issues and implementation patterns
 
 ## 🎯 Quick Navigation
 
@@ -51,7 +52,8 @@ docs/
 ├── validation_guide.md      # Validation and error handling
 ├── extension_guide.md       # Customization and extensions
 ├── performance_guide.md     # Performance optimization
-└── development_guide.md     # Development patterns and troubleshooting
+├── development_guide.md     # Development patterns and troubleshooting
+└── xsd_validation_fixes.md  # XSD compliance fixes and patterns
 ```
 
 ## 🔍 Key Features Covered
@@ -80,6 +82,7 @@ docs/
 | **Optimize performance** | [Performance Guide](performance_guide.md) | Memory management, streaming |
 | **Add custom functionality** | [Extension Guide](extension_guide.md) | Custom types, actions, validators |
 | **Integrate with systems** | [Extension Guide](extension_guide.md) | Simulation bridges, data pipelines |
+| **Fix XSD validation issues** | [XSD Validation Fixes](xsd_validation_fixes.md) | Serialization patterns, compliance fixes |
 
 ## 🎲 Example Code Index
 
