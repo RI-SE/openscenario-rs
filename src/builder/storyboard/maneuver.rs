@@ -30,12 +30,12 @@ impl<'parent> ManeuverBuilder<'parent> {
     }
     
     /// Add a speed action event
-    pub fn add_speed_action(&mut self) -> SpeedActionEventBuilder<'_> {
+    pub fn add_speed_action(&mut self) -> SpeedActionEventBuilder<'parent> {
         SpeedActionEventBuilder::new(self)
     }
     
     /// Add a teleport action event
-    pub fn add_teleport_action(&mut self) -> TeleportActionEventBuilder<'_> {
+    pub fn add_teleport_action(&mut self) -> TeleportActionEventBuilder<'parent> {
         TeleportActionEventBuilder::new(self)
     }
     
@@ -102,16 +102,16 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
             crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
-                    speed_action: match long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action),
+                    speed_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action.clone()),
                         _ => None,
                     },
-                    longitudinal_distance_action: match long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action),
+                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action.clone()),
                         _ => None,
                     },
-                    speed_profile_action: match long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action),
+                    speed_profile_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action.clone()),
                         _ => None,
                     },
                 };
@@ -220,16 +220,16 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
             crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
-                    speed_action: match long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action),
+                    speed_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action.clone()),
                         _ => None,
                     },
-                    longitudinal_distance_action: match long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action),
+                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action.clone()),
                         _ => None,
                     },
-                    speed_profile_action: match long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action),
+                    speed_profile_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action.clone()),
                         _ => None,
                     },
                 };
