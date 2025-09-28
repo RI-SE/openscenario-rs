@@ -290,7 +290,7 @@ impl Default for RoutingAction {
 /// Lane change action for lateral lane movements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneChangeAction {
-    #[serde(rename = "@targetLaneOffset", default, deserialize_with = "deserialize_optional_double")]
+    #[serde(rename = "@targetLaneOffset", default, skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_optional_double")]
     pub target_lane_offset: Option<Double>,
     #[serde(rename = "LaneChangeActionDynamics")]
     pub lane_change_action_dynamics: TransitionDynamics,
