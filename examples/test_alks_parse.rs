@@ -15,27 +15,27 @@ fn main() {
         Ok(scenario) => {
             println!("✅ SUCCESS: Parsed OpenSCENARIO file!");
             println!("📄 Document type: {:?}", scenario.document_type());
-            
+
             if let Some(param_dist) = &scenario.parameter_value_distribution {
                 println!("🎯 Parameter Value Distribution found!");
-                
+
                 if let Some(deterministic) = &param_dist.deterministic {
-                    let total_count = deterministic.single_distributions.len() + deterministic.multi_distributions.len();
+                    let total_count = deterministic.single_distributions.len()
+                        + deterministic.multi_distributions.len();
                     println!("🔢 Deterministic distributions: {} total", total_count);
-                    
+
                     // Process single parameter distributions
                     for (i, single) in deterministic.single_distributions.iter().enumerate() {
-                        println!("  {}. Single Parameter: {}", i+1, single.parameter_name);
+                        println!("  {}. Single Parameter: {}", i + 1, single.parameter_name);
                     }
-                    
+
                     // Process multi parameter distributions
                     for (i, multi) in deterministic.multi_distributions.iter().enumerate() {
-                        println!("  {}. Multi Parameter Distribution", deterministic.single_distributions.len() + i + 1);
-                        match &multi.distribution_type {
-                            openscenario_rs::types::distributions::DeterministicMultiParameterDistributionType::ValueSetDistribution(dist) => {
-                                println!("     📋 Value sets: {}", dist.parameter_value_sets.len());
-                            }
-                        }
+                        println!(
+                            "  {}. Multi Parameter Distribution",
+                            deterministic.single_distributions.len() + i + 1
+                        );
+                        println!("     📋 Value sets: {}", multi.distribution_type.parameter_value_sets.len());
                     }
                 }
             }
