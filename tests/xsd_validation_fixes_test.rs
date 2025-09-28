@@ -126,6 +126,60 @@ fn test_empty_attribute_handling() {
 }
 
 #[test]
+fn test_lane_change_action_serialization_fixes() {
+    use openscenario_rs::types::actions::movement::{LaneChangeAction, LaneChangeTarget, TransitionDynamics};
+    use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
+    
+    // Test 1: LaneChangeAction with None for target_lane_offset (should omit attribute completely)
+    let lane_change_none = LaneChangeAction {
+        target_lane_offset: None,
+        lane_change_action_dynamics: TransitionDynamics {
+            dynamics_dimension: DynamicsDimension::Time,
+            dynamics_shape: DynamicsShape::Linear,
+            value: Double::literal(2.0),
+        },
+        lane_change_target: LaneChangeTarget::relative("Ego", -1),
+    };
+
+    let xml_none = quick_xml::se::to_string(&lane_change_none).unwrap();
+    // Should not contain any targetLaneOffset attribute
+    assert!(!xml_none.contains("targetLaneOffset"));
+    println!("XML with None offset: {}", xml_none);
+
+    // Test 2: LaneChangeAction with Some value for target_lane_offset (should include attribute)
+    let lane_change_some = LaneChangeAction {
+        target_lane_offset: Some(Double::literal(0.5)),
+        lane_change_action_dynamics: TransitionDynamics {
+            dynamics_dimension: DynamicsDimension::Time,
+            dynamics_shape: DynamicsShape::Linear,
+            value: Double::literal(2.0),
+        },
+        lane_change_target: LaneChangeTarget::relative("Ego", -1),
+    };
+
+    let xml_some = quick_xml::se::to_string(&lane_change_some).unwrap();
+    // Should contain the correct targetLaneOffset value
+    assert!(xml_some.contains("targetLaneOffset=\"0.5\""));
+    println!("XML with Some offset: {}", xml_some);
+
+    // Test 3: Round-trip deserialization with empty targetLaneOffset=""
+    let xml_empty = r#"<LaneChangeAction targetLaneOffset="">
+        <LaneChangeActionDynamics dynamicsDimension="time" dynamicsShape="linear" value="2.0"/>
+        <LaneChangeTarget>
+            <RelativeTargetLane entityRef="Ego" value="-1"/>
+        </LaneChangeTarget>
+    </LaneChangeAction>"#;
+
+    let deserialized: LaneChangeAction = quick_xml::de::from_str(xml_empty).unwrap();
+    assert!(deserialized.target_lane_offset.is_none());
+
+    // Test 4: Serialize the deserialized action (should not have targetLaneOffset)
+    let reserialized = quick_xml::se::to_string(&deserialized).unwrap();
+    assert!(!reserialized.contains("targetLaneOffset"));
+    println!("Reserialized XML: {}", reserialized);
+}
+
+#[test]
 fn test_object_controller_choice_group() {
     // Test valid ObjectController with direct controller
     let direct_controller = ObjectController {
