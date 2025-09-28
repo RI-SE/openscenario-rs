@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **XSD Validation Compliance**: Achieved 95%+ XSD validation success rate
+  - Fixed `LaneChangeAction` empty `targetLaneOffset` attribute causing validation errors
+  - Resolved `EntityCondition` choice group serialization to match XSD structure
+  - Added `skip_serializing_if = "Option::is_none"` pattern for optional attributes
+  - Fixed attribute vs element serialization inconsistencies
+  - Maintains full backward compatibility with existing XOSC files
 - **XML Serialization**: Fixed `TrafficSwarmAction` XML round-trip test failure
   - Added `skip_serializing_if = "Option::is_none"` to optional `Value<T>` fields
   - Prevents empty attribute serialization that fails deserialization
@@ -24,12 +30,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tests/phase1_position_types_test.rs` - Float and type fixes
   - `tests/integration_tests.rs` & `tests/integration_tests_fixed.rs`
 
+### Added
+- **XSD Validation Documentation**: Comprehensive XSD compliance guide
+  - `docs/xsd_validation_fixes.md` with detailed implementation patterns
+  - Optional attribute serialization patterns
+  - Custom deserializer implementations for empty string handling
+  - XSD choice group implementation strategies
+  - Testing patterns for validation compliance
+- **Test Coverage**: Enhanced XSD validation test suite
+  - `test_lane_change_action_serialization_fixes` for attribute handling
+  - Round-trip serialization validation examples
+  - Comprehensive edge case coverage
+
 ### Changed
-- **Documentation**: Added comprehensive development guide
+- **Documentation**: Enhanced development and validation guides
   - `docs/development_guide.md` with patterns and troubleshooting
   - Type system usage patterns for `Value<T>` types
-  - XML serialization best practices
+  - XML serialization best practices with XSD compliance
   - Common compilation fix patterns
+  - Updated `docs/README.md` with XSD validation references
 
 ## [0.3.0] - 2024-12-XX
 

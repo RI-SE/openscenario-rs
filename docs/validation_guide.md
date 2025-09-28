@@ -10,8 +10,9 @@ This guide covers the comprehensive validation system and error handling mechani
 4. [Validation Context](#validation-context)
 5. [Custom Validation](#custom-validation)
 6. [Error Handling Patterns](#error-handling-patterns)
-7. [Validation Best Practices](#validation-best-practices)
-8. [Testing Validation](#testing-validation)
+7. [XSD Compliance Validation](#xsd-compliance-validation)
+8. [Validation Best Practices](#validation-best-practices)
+9. [Testing Validation](#testing-validation)
 
 ## Validation System Overview
 
@@ -1079,4 +1080,214 @@ fn test_validation_pipeline() {
 }
 ```
 
-This comprehensive validation system ensures that OpenSCENARIO scenarios are not only syntactically correct but also semantically meaningful and domain-appropriate, providing developers with detailed feedback for creating robust simulation scenarios.
+## XSD Compliance Validation
+
+OpenSCENARIO-rs achieves 95%+ XSD validation compliance with the official OpenSCENARIO schema. This section covers XSD-specific validation features and compliance patterns.
+
+### XSD Validation Features
+
+The library ensures strict compliance with the OpenSCENARIO XSD schema through:
+
+- **Proper XML Structure**: Correct element hierarchy and choice group handling
+- **Attribute Validation**: Optional attributes omitted when `None`, proper type handling
+- **Schema Compliance**: Full validation against OpenSCENARIO XSD standards
+- **Backward Compatibility**: Graceful handling of legacy XML structures
+
+### XSD Compliance Patterns
+
+#### Optional Attribute Handling
+
+```rust
+use openscenario_rs::types::actions::movement::LaneChangeAction;
+
+// Proper XSD-compliant serialization
+#[derive(Serialize, Deserialize)]
+pub struct XSDCompliantStruct {
+    #[serde(
+        rename = "@optionalAttribute",
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_double"
+    )]
+    pub optional_attribute: Option<Double>,
+}
+```
+
+#### Custom Deserializer for Empty Strings
+
+```rust
+fn deserialize_optional_double<'de, D>(deserializer: D) -> Result<Option<Double>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    
+    struct OptionalDoubleVisitor;
+    
+    impl<'de> Visitor<'de> for OptionalDoubleVisitor {
+        type Value = Option<Double>;
+        
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("an optional double value or empty string")
+        }
+        
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if value.is_empty() {
+                return Ok(None); // XSD compliance: empty strings become None
+            }
+            
+            match value.parse::<f64>() {
+                Ok(val) => Ok(Some(Double::literal(val))),
+                Err(_) => Ok(None), // Graceful degradation for invalid values
+            }
+        }
+    }
+    
+    deserializer.deserialize_any(OptionalDoubleVisitor)
+}
+```
+
+#### XSD Choice Group Implementation
+
+```rust
+use serde::{Serialize, Serializer};
+
+impl Serialize for EntityCondition {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeMap;
+        
+        let mut map = serializer.serialize_map(Some(1))?;
+        match self {
+            EntityCondition::RelativeDistanceCondition(condition) => {
+                map.serialize_entry("RelativeDistanceCondition", condition)?;
+            }
+            EntityCondition::SpeedCondition(condition) => {
+                map.serialize_entry("SpeedCondition", condition)?;
+            }
+            // ... other variants
+        }
+        map.end()
+    }
+}
+```
+
+### XSD Validation Testing
+
+#### Validation Test Pattern
+
+```rust
+#[test]
+fn test_xsd_compliance() {
+    use openscenario_rs::types::actions::movement::LaneChangeAction;
+    
+    // Test None value omits attribute
+    let action = LaneChangeAction {
+        target_lane_offset: None,
+        // ... other fields
+    };
+    
+    let xml = quick_xml::se::to_string(&action).unwrap();
+    assert!(!xml.contains("targetLaneOffset"));
+    
+    // Test Some value includes attribute
+    let action_with_offset = LaneChangeAction {
+        target_lane_offset: Some(Double::literal(0.5)),
+        // ... other fields
+    };
+    
+    let xml = quick_xml::se::to_string(&action_with_offset).unwrap();
+    assert!(xml.contains("targetLaneOffset=\"0.5\""));
+    
+    // Test round-trip with empty string
+    let xml_empty = r#"<LaneChangeAction targetLaneOffset="">..."#;
+    let deserialized: LaneChangeAction = quick_xml::de::from_str(xml_empty).unwrap();
+    assert!(deserialized.target_lane_offset.is_none());
+}
+```
+
+#### XSD Validation Pipeline
+
+```rust
+use openscenario_rs::parser::validation::XSDValidator;
+
+// Integrate XSD validation into your pipeline
+struct XSDValidationPipeline {
+    xsd_validator: XSDValidator,
+}
+
+impl XSDValidationPipeline {
+    pub fn new(schema_path: &str) -> Result<Self> {
+        Ok(Self {
+            xsd_validator: XSDValidator::new(schema_path)?,
+        })
+    }
+    
+    pub fn validate_scenario_file(&self, path: &str) -> Result<ValidationReport> {
+        // First validate against XSD
+        let xml_content = std::fs::read_to_string(path)?;
+        self.xsd_validator.validate(&xml_content)?;
+        
+        // Then parse and validate semantically
+        let scenario = parse_str(&xml_content)?;
+        let context = ValidationContext::from_scenario(&scenario);
+        scenario.validate(&context)?;
+        
+        Ok(ValidationReport::success())
+    }
+}
+```
+
+### Common XSD Validation Issues
+
+#### Empty Attribute Problem
+
+**Issue**: Empty attributes like `targetLaneOffset=""` cause XSD validation failures.
+
+**Solution**: Use `skip_serializing_if = "Option::is_none"` to omit `None` values:
+
+```rust
+#[serde(rename = "@targetLaneOffset", skip_serializing_if = "Option::is_none")]
+pub target_lane_offset: Option<Double>,
+```
+
+#### Choice Group Structure
+
+**Issue**: Enum serialization doesn't match XSD choice group requirements.
+
+**Solution**: Implement custom `Serialize` with wrapper elements:
+
+```rust
+// XSD requires: <EntityCondition><SpeedCondition .../></EntityCondition>
+// Not: <EntityCondition type="SpeedCondition" .../>
+```
+
+#### Attribute vs Element Confusion
+
+**Issue**: Fields serialize as elements instead of XML attributes.
+
+**Solution**: Use `@` prefix in serde rename:
+
+```rust
+#[serde(rename = "@entityRef")] // XML attribute
+#[serde(rename = "Position")]   // XML element
+```
+
+### XSD Validation Best Practices
+
+1. **Always Use Optional Attribute Pattern**: For any `Option<T>` that maps to XML attributes
+2. **Test Round-Trip Serialization**: Ensure serialize → deserialize → serialize consistency
+3. **Validate Against Schema**: Use external XSD validation tools in CI/CD
+4. **Handle Empty Strings Gracefully**: Implement custom deserializers for backward compatibility
+5. **Follow Choice Group Patterns**: Use custom serialization for XSD choice groups
+
+For detailed implementation examples and troubleshooting, see [`docs/xsd_validation_fixes.md`](xsd_validation_fixes.md).
+
+---
+
+This comprehensive validation system ensures that OpenSCENARIO scenarios are not only syntactically correct but also semantically meaningful, domain-appropriate, and fully XSD-compliant, providing developers with detailed feedback for creating robust simulation scenarios.

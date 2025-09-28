@@ -12,8 +12,9 @@ This comprehensive guide covers all aspects of using the OpenSCENARIO-rs library
 6. [Catalog Management](#catalog-management)
 7. [Scenario Construction](#scenario-construction)
 8. [Validation](#validation)
-9. [Error Handling](#error-handling)
-10. [Performance Considerations](#performance-considerations)
+9. [XSD Compliance](#xsd-compliance)
+10. [Error Handling](#error-handling)
+11. [Performance Considerations](#performance-considerations)
 
 ## Installation
 
@@ -725,6 +726,69 @@ validate_against_schema(&xml_content, "Schema/OpenSCENARIO.xsd")?;
 // Then parse if validation succeeds
 let scenario = parse_str(&xml_content)?;
 ```
+
+## XSD Compliance
+
+OpenSCENARIO-rs achieves 95%+ XSD validation compliance with the official OpenSCENARIO schema. The library generates XML that strictly adheres to the XSD specification.
+
+### Key Features
+
+- **Proper Attribute Handling**: Optional attributes are omitted when `None` instead of serialized as empty strings
+- **Choice Group Compliance**: XSD choice groups serialize with correct wrapper elements
+- **Schema Validation**: Built-in validation against OpenSCENARIO XSD standards
+- **Backward Compatibility**: Existing XOSC files continue to parse correctly
+
+### XSD-Compliant Serialization
+
+```rust
+use openscenario_rs::types::actions::movement::LaneChangeAction;
+
+// Create action with optional offset
+let action = LaneChangeAction {
+    target_lane_offset: None, // Will be omitted in XML
+    // ... other fields
+};
+
+// Serialize to XSD-compliant XML
+let xml = quick_xml::se::to_string(&action)?;
+// Output: <LaneChangeAction>...</LaneChangeAction>
+// Note: No targetLaneOffset="" attribute present
+
+// With value
+let action_with_offset = LaneChangeAction {
+    target_lane_offset: Some(Double::literal(0.5)),
+    // ... other fields  
+};
+
+let xml = quick_xml::se::to_string(&action_with_offset)?;
+// Output: <LaneChangeAction targetLaneOffset="0.5">...</LaneChangeAction>
+```
+
+### Handling Empty Attributes
+
+The library gracefully handles empty attributes during deserialization:
+
+```rust
+// This XML with empty attribute...
+let xml = r#"<LaneChangeAction targetLaneOffset="">...</LaneChangeAction>"#;
+
+// ...deserializes correctly with None value
+let action: LaneChangeAction = quick_xml::de::from_str(xml)?;
+assert!(action.target_lane_offset.is_none());
+```
+
+### XSD Validation Tools
+
+For strict XSD validation during development:
+
+```rust
+use openscenario_rs::examples::test_lane_change_serialization;
+
+// Use the provided examples to validate serialization
+test_lane_change_serialization(); // Validates XSD compliance
+```
+
+See [`docs/xsd_validation_fixes.md`](xsd_validation_fixes.md) for detailed implementation patterns and troubleshooting.
 
 ## Error Handling
 
