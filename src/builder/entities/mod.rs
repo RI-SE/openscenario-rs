@@ -1,8 +1,10 @@
 //! Entity builders for programmatic scenario construction
 
 pub mod vehicle;
+pub mod catalog;
 
 pub use vehicle::VehicleBuilder;
+pub use catalog::{CatalogVehicleBuilder, CatalogPedestrianBuilder};
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::entities::{ScenarioObject, Entities};
