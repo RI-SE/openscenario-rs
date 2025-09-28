@@ -77,7 +77,7 @@ impl<'parent> StoryBuilder<'parent> {
     }
     
     /// Add an act to this story
-    pub fn add_act(&mut self, name: &str) -> ActBuilder<'parent> {
+    pub fn add_act(&mut self, name: &str) -> ActBuilder<'_> {
         ActBuilder::new(self, name)
     }
     
@@ -127,7 +127,7 @@ impl<'parent> ActBuilder<'parent> {
     }
     
     /// Add a maneuver to this act
-    pub fn add_maneuver(&mut self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'parent> {
+    pub fn add_maneuver(&mut self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'_> {
         crate::builder::storyboard::maneuver::ManeuverBuilder::new(self, name, entity_ref)
     }
     

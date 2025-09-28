@@ -30,12 +30,12 @@ impl<'parent> ManeuverBuilder<'parent> {
     }
     
     /// Add a speed action event
-    pub fn add_speed_action(&mut self) -> SpeedActionEventBuilder<'parent> {
+    pub fn add_speed_action(&mut self) -> SpeedActionEventBuilder<'_> {
         SpeedActionEventBuilder::new(self)
     }
     
     /// Add a teleport action event
-    pub fn add_teleport_action(&mut self) -> TeleportActionEventBuilder<'parent> {
+    pub fn add_teleport_action(&mut self) -> TeleportActionEventBuilder<'_> {
         TeleportActionEventBuilder::new(self)
     }
     
