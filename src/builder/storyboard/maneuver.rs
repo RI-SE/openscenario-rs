@@ -1,6 +1,6 @@
 //! Maneuver builders for entity behavior sequences
 
-use crate::builder::{BuilderError, BuilderResult, actions::{SpeedActionBuilder, TeleportActionBuilder}};
+use crate::builder::{BuilderError, BuilderResult, actions::{SpeedActionBuilder, TeleportActionBuilder, ActionBuilder}};
 use crate::types::{
     scenario::{
         story::{Maneuver, Event, StoryAction, StoryPrivateAction},
@@ -98,8 +98,8 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
         let private_action = self.action_builder.build_action()?;
         
         // Convert PrivateAction to StoryPrivateAction
-        let story_private_action = match private_action {
-            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
                 StoryPrivateAction {
                     longitudinal_action: Some(long_action),
                     lateral_action: None,
@@ -112,7 +112,7 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
                     trailer_action: None,
                 }
             },
-            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -201,8 +201,8 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
         let private_action = self.parent.action_builder.build_action()?;
         
         // Convert PrivateAction to StoryPrivateAction
-        let story_private_action = match private_action {
-            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
                 StoryPrivateAction {
                     longitudinal_action: Some(long_action),
                     lateral_action: None,
@@ -215,7 +215,7 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
                     trailer_action: None,
                 }
             },
-            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,

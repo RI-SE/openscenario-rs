@@ -5,7 +5,7 @@
 //! built scenarios comply with OpenSCENARIO schema requirements.
 
 use crate::builder::{BuilderError, BuilderResult};
-use crate::parser::validation::{ValidationContext, ValidationError};
+use crate::types::ValidationContext;
 use crate::types::scenario::storyboard::OpenScenario;
 use std::collections::HashMap;
 

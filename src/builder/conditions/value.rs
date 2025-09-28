@@ -33,7 +33,7 @@ use crate::types::{
 ///
 /// Creates conditions that trigger at specific simulation times or when
 /// simulation time meets certain criteria (greater than, less than, etc.).
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TimeConditionBuilder {
     time: Option<f64>,
     rule: Rule,

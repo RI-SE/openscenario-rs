@@ -42,7 +42,7 @@ use crate::types::{
 ///
 /// Creates conditions that trigger when an entity is within a certain distance
 /// of a target position. Supports both closer-than and farther-than triggers.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DistanceConditionBuilder {
     entity_ref: Option<String>,
     target_position: Option<Position>,
@@ -129,11 +129,11 @@ impl DistanceConditionBuilder {
                 entity_condition: EntityCondition::Distance(DistanceCondition {
                     position: self.target_position.unwrap(),
                     value: Double::literal(self.distance.unwrap()),
-                    freespace: self.freespace,
+                    freespace: crate::types::basic::Value::Literal(self.freespace),
                     rule: self.rule,
                     along_route: None,
                     coordinate_system: None,
-                    relative_distance_type: Some(RelativeDistanceType::EuclidianDistance),
+                    relative_distance_type: Some(RelativeDistanceType::Cartesian),
                     routing_algorithm: None,
                 }),
             }),
