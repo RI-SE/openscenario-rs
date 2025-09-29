@@ -147,18 +147,27 @@ mod tests {
     use crate::types::{
         positions::{Position, WorldPosition},
         basic::Value,
-        geometry::Orientation,
     };
 
     fn create_test_position() -> Position {
-        Position::World(WorldPosition {
-            x: Double::literal(100.0),
-            y: Double::literal(200.0),
-            z: Double::literal(0.0),
-            h: Double::literal(0.0),
-            p: Double::literal(0.0),
-            r: Double::literal(0.0),
-        })
+        Position {
+            world_position: Some(WorldPosition {
+                x: Double::literal(100.0),
+                y: Double::literal(200.0),
+                z: Some(Double::literal(0.0)),
+                h: Some(Double::literal(0.0)),
+                p: Some(Double::literal(0.0)),
+                r: Some(Double::literal(0.0)),
+            }),
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
+        }
     }
 
     #[test]
@@ -179,7 +188,7 @@ mod tests {
             EntityCondition::Distance(distance_condition) => {
                 assert_eq!(distance_condition.value.as_literal().unwrap(), &10.0);
                 assert_eq!(distance_condition.rule, Rule::LessThan);
-                assert!(!distance_condition.freespace);
+                assert_eq!(distance_condition.freespace.as_literal().unwrap(), &false);
             }
             _ => panic!("Expected Distance condition"),
         }
@@ -221,7 +230,7 @@ mod tests {
         let by_entity = condition.by_entity_condition.unwrap();
         match by_entity.entity_condition {
             EntityCondition::Distance(distance_condition) => {
-                assert!(distance_condition.freespace);
+                assert_eq!(distance_condition.freespace.as_literal().unwrap(), &true);
             }
             _ => panic!("Expected Distance condition"),
         }
