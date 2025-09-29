@@ -48,6 +48,11 @@ impl<'parent> ManeuverBuilder<'parent> {
         SpeedActionEventBuilder::new(self)
     }
     
+    /// Create a detached speed action builder (no lifetime constraints)
+    pub fn create_speed_action(&self) -> DetachedSpeedActionBuilder {
+        DetachedSpeedActionBuilder::new(&self.entity_ref)
+    }
+    
     /// Add a teleport action event
     /// 
     /// # Usage Note  
@@ -65,6 +70,11 @@ impl<'parent> ManeuverBuilder<'parent> {
     /// ```
     pub fn add_teleport_action(&mut self) -> TeleportActionEventBuilder<'_> {
         TeleportActionEventBuilder::new(self)
+    }
+    
+    /// Create a detached teleport action builder (no lifetime constraints)
+    pub fn create_teleport_action(&self) -> DetachedTeleportActionBuilder {
+        DetachedTeleportActionBuilder::new(&self.entity_ref)
     }
     
     /// Finish this maneuver
@@ -350,6 +360,446 @@ impl<'a> EventTriggerBuilder<SpeedActionEventBuilder<'a>> {
     pub fn finish(self) -> SpeedActionEventBuilder<'a> {
         let trigger = self.trigger_builder.build().unwrap(); // TODO: Better error handling
         self.parent.with_trigger(trigger)
+    }
+}
+
+/// Detached builder for maneuvers (no lifetime constraints)
+pub struct DetachedManeuverBuilder {
+    maneuver_name: String,
+    entity_ref: String,
+    events: Vec<Event>,
+}
+
+impl DetachedManeuverBuilder {
+    /// Create a new detached maneuver builder
+    pub fn new(name: &str, entity_ref: &str) -> Self {
+        Self {
+            maneuver_name: name.to_string(),
+            entity_ref: entity_ref.to_string(),
+            events: Vec::new(),
+        }
+    }
+    
+    /// Create a detached speed action builder
+    pub fn create_speed_action(&self) -> DetachedSpeedActionBuilder {
+        DetachedSpeedActionBuilder::new(&self.entity_ref)
+    }
+    
+    /// Create a detached teleport action builder
+    pub fn create_teleport_action(&self) -> DetachedTeleportActionBuilder {
+        DetachedTeleportActionBuilder::new(&self.entity_ref)
+    }
+    
+    /// Add a completed event to this maneuver
+    pub fn add_event(&mut self, event: Event) {
+        self.events.push(event);
+    }
+    
+    /// Attach this maneuver to an act builder
+    pub fn attach_to(self, act: &mut super::story::ActBuilder<'_>) {
+        let maneuver = Maneuver {
+            name: OSString::literal(self.maneuver_name),
+            events: self.events,
+            parameter_declarations: None,
+        };
+        act.add_maneuver_to_group(maneuver);
+    }
+    
+    /// Attach this maneuver to a detached act builder
+    pub fn attach_to_detached(self, act: &mut super::story::DetachedActBuilder) {
+        let maneuver = Maneuver {
+            name: OSString::literal(self.maneuver_name),
+            events: self.events,
+            parameter_declarations: None,
+        };
+        act.add_maneuver(maneuver);
+    }
+    
+    /// Build the final Maneuver object
+    pub fn build(self) -> Maneuver {
+        Maneuver {
+            name: OSString::literal(self.maneuver_name),
+            events: self.events,
+            parameter_declarations: None,
+        }
+    }
+}
+
+/// Detached builder for speed action events (no lifetime constraints)
+pub struct DetachedSpeedActionBuilder {
+    entity_ref: String,
+    action_builder: SpeedActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedSpeedActionBuilder {
+    /// Create a new detached speed action builder
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: SpeedActionBuilder::new().for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+    
+    /// Set event name
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+    
+    /// Set target speed
+    pub fn to_speed(mut self, speed: f64) -> Self {
+        self.action_builder = self.action_builder.to_speed(speed);
+        self
+    }
+    
+    /// Set custom start trigger for this event
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+    
+    /// Attach this speed action to a maneuver builder
+    pub fn attach_to(self, maneuver: &mut ManeuverBuilder<'_>) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+                // Convert movement::LongitudinalAction to init::LongitudinalAction
+                let init_long_action = crate::types::scenario::init::LongitudinalAction {
+                    speed_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action.clone()),
+                        _ => None,
+                    },
+                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action.clone()),
+                        _ => None,
+                    },
+                    speed_profile_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action.clone()),
+                        _ => None,
+                    },
+                };
+                StoryPrivateAction {
+                    longitudinal_action: Some(init_long_action),
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: None,
+                    routing_action: None,
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            },
+            _ => {
+                return Err(BuilderError::validation_error("Unsupported action type"));
+            }
+        };
+        
+        let event = Event {
+            name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
+                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
+            })),
+            actions: vec![StoryAction {
+                name: OSString::literal("SpeedAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        };
+        
+        maneuver.events.push(event);
+        Ok(())
+    }
+    
+    /// Attach this speed action to a detached maneuver builder
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+                // Convert movement::LongitudinalAction to init::LongitudinalAction
+                let init_long_action = crate::types::scenario::init::LongitudinalAction {
+                    speed_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action.clone()),
+                        _ => None,
+                    },
+                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action.clone()),
+                        _ => None,
+                    },
+                    speed_profile_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action.clone()),
+                        _ => None,
+                    },
+                };
+                StoryPrivateAction {
+                    longitudinal_action: Some(init_long_action),
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: None,
+                    routing_action: None,
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            },
+            _ => {
+                return Err(BuilderError::validation_error("Unsupported action type"));
+            }
+        };
+        
+        let event = Event {
+            name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
+                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
+            })),
+            actions: vec![StoryAction {
+                name: OSString::literal("SpeedAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        };
+        
+        maneuver.add_event(event);
+        Ok(())
+    }
+    
+    /// Build the final Event object
+    pub fn build(self) -> BuilderResult<Event> {
+        let private_action = self.action_builder.build_action()?;
+        
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+                // Convert movement::LongitudinalAction to init::LongitudinalAction
+                let init_long_action = crate::types::scenario::init::LongitudinalAction {
+                    speed_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => Some(speed_action.clone()),
+                        _ => None,
+                    },
+                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(dist_action) => Some(dist_action.clone()),
+                        _ => None,
+                    },
+                    speed_profile_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(profile_action) => Some(profile_action.clone()),
+                        _ => None,
+                    },
+                };
+                StoryPrivateAction {
+                    longitudinal_action: Some(init_long_action),
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: None,
+                    routing_action: None,
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            },
+            _ => {
+                return Err(BuilderError::validation_error("Unsupported action type"));
+            }
+        };
+        
+        Ok(Event {
+            name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
+                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
+            })),
+            actions: vec![StoryAction {
+                name: OSString::literal("SpeedAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        })
+    }
+}
+
+/// Detached builder for teleport action events (no lifetime constraints)
+pub struct DetachedTeleportActionBuilder {
+    entity_ref: String,
+    action_builder: TeleportActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedTeleportActionBuilder {
+    /// Create a new detached teleport action builder
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: TeleportActionBuilder::new().for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+    
+    /// Set event name
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+    
+    /// Set custom start trigger for this event
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+    
+    /// Start position configuration
+    pub fn to(self) -> DetachedTeleportPositionBuilder {
+        DetachedTeleportPositionBuilder::new(self)
+    }
+    
+    /// Attach this teleport action to a maneuver builder
+    pub fn attach_to(self, maneuver: &mut ManeuverBuilder<'_>) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+                StoryPrivateAction {
+                    longitudinal_action: None,
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: Some(teleport_action),
+                    routing_action: None,
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            },
+            _ => {
+                return Err(BuilderError::validation_error("Unsupported action type"));
+            }
+        };
+        
+        let event = Event {
+            name: OSString::literal(self.event_name.unwrap_or_else(|| "TeleportEvent".to_string())),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
+                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
+            })),
+            actions: vec![StoryAction {
+                name: OSString::literal("TeleportAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        };
+        
+        maneuver.events.push(event);
+        Ok(())
+    }
+    
+    /// Attach this teleport action to a detached maneuver builder
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+                StoryPrivateAction {
+                    longitudinal_action: None,
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: Some(teleport_action),
+                    routing_action: None,
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            },
+            _ => {
+                return Err(BuilderError::validation_error("Unsupported action type"));
+            }
+        };
+        
+        let event = Event {
+            name: OSString::literal(self.event_name.unwrap_or_else(|| "TeleportEvent".to_string())),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
+                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
+            })),
+            actions: vec![StoryAction {
+                name: OSString::literal("TeleportAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        };
+        
+        maneuver.add_event(event);
+        Ok(())
+    }
+    
+    /// Build the final Event object
+    pub fn build(self) -> BuilderResult<Event> {
+        let private_action = self.action_builder.build_action()?;
+        
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+                StoryPrivateAction {
+                    longitudinal_action: None,
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: Some(teleport_action),
+                    routing_action: None,
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            },
+            _ => {
+                return Err(BuilderError::validation_error("Unsupported action type"));
+            }
+        };
+        
+        Ok(Event {
+            name: OSString::literal(self.event_name.unwrap_or_else(|| "TeleportEvent".to_string())),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
+                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
+            })),
+            actions: vec![StoryAction {
+                name: OSString::literal("TeleportAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        })
+    }
+}
+
+/// Position builder for detached teleport events
+pub struct DetachedTeleportPositionBuilder {
+    parent: DetachedTeleportActionBuilder,
+}
+
+impl DetachedTeleportPositionBuilder {
+    /// Create a new detached teleport position builder
+    pub fn new(parent: DetachedTeleportActionBuilder) -> Self {
+        Self { parent }
+    }
+    
+    /// Set world position and finish
+    pub fn world_position(mut self, x: f64, y: f64, z: f64) -> DetachedTeleportActionBuilder {
+        self.parent.action_builder = self.parent.action_builder.to().world_position(x, y, z);
+        self.parent
     }
 }
 

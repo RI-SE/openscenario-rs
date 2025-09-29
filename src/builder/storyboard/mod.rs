@@ -3,8 +3,8 @@
 pub mod story;
 pub mod maneuver;
 
-pub use story::{StoryboardBuilder, StoryBuilder, ActBuilder};
-pub use maneuver::{ManeuverBuilder, SpeedActionEventBuilder, TeleportActionEventBuilder};
+pub use story::{StoryboardBuilder, StoryBuilder, ActBuilder, DetachedActBuilder};
+pub use maneuver::{ManeuverBuilder, SpeedActionEventBuilder, TeleportActionEventBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder, DetachedTeleportActionBuilder};
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{

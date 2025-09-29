@@ -22,7 +22,7 @@ pub mod validation; // Sprint 5
 pub use scenario::ScenarioBuilder;
 pub use entities::VehicleBuilder;
 pub use actions::{SpeedActionBuilder, TeleportActionBuilder};
-pub use storyboard::{StoryboardBuilder, StoryBuilder, ActBuilder, ManeuverBuilder};
+pub use storyboard::{StoryboardBuilder, StoryBuilder, ActBuilder, ManeuverBuilder, DetachedActBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder, DetachedTeleportActionBuilder};
 pub use conditions::{TriggerBuilder, TimeConditionBuilder, SpeedConditionBuilder, DistanceConditionBuilder};
 pub use catalog::{CatalogLocationsBuilder, CatalogEntityBuilder, VehicleCatalogReferenceBuilder, PedestrianCatalogReferenceBuilder};
 pub use parameters::{ParameterDeclarationsBuilder, ParameterizedValueBuilder, ParameterContext};

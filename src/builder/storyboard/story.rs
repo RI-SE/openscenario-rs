@@ -95,6 +95,21 @@ impl<'parent> StoryBuilder<'parent> {
         ActBuilder::new(self, name)
     }
     
+    /// Create a detached act builder (no lifetime constraints)
+    /// 
+    /// This method returns a DetachedActBuilder that has no lifetime parameters
+    /// and supports perfect fluent chaining. Use `attach_to()` to add the completed
+    /// act to this story.
+    /// 
+    /// # Example
+    /// ```rust,ignore
+    /// let mut detached_act = story_builder.create_act("act1");
+    /// detached_act.with_start_trigger(trigger).attach_to(&mut story_builder);
+    /// ```
+    pub fn create_act(&self, name: &str) -> DetachedActBuilder {
+        DetachedActBuilder::new(name)
+    }
+    
     /// Finish this story
     pub fn finish(self) -> &'parent mut StoryboardBuilder {
         let story = ScenarioStory {
@@ -159,6 +174,21 @@ impl<'parent> ActBuilder<'parent> {
         crate::builder::storyboard::maneuver::ManeuverBuilder::new(self, name, entity_ref)
     }
     
+    /// Create a detached maneuver builder (no lifetime constraints)
+    /// 
+    /// This method returns a DetachedManeuverBuilder that has no lifetime parameters
+    /// and supports perfect fluent chaining. Use `attach_to()` to add the completed
+    /// maneuver to this act.
+    /// 
+    /// # Example
+    /// ```rust,ignore
+    /// let detached_maneuver = act_builder.create_maneuver("maneuver1", "vehicle1");
+    /// detached_maneuver.attach_to(&mut act_builder);
+    /// ```
+    pub fn create_maneuver(&self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder {
+        crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref)
+    }
+    
     /// Internal method to add completed maneuver
     pub(crate) fn add_maneuver_to_group(&mut self, maneuver: crate::types::scenario::story::Maneuver) {
         // Find or create maneuver group
@@ -189,6 +219,86 @@ impl<'parent> ActBuilder<'parent> {
         
         self.parent.acts.push(act);
         self.parent
+    }
+}
+
+/// Detached builder for acts (no lifetime constraints)
+/// 
+/// This builder has no lifetime parameters and supports perfect fluent chaining.
+/// Use `attach_to()` to add the completed act to a story builder.
+pub struct DetachedActBuilder {
+    name: String,
+    maneuver_groups: Vec<ManeuverGroup>,
+    start_trigger: Option<Trigger>,
+    stop_trigger: Option<Trigger>,
+}
+
+impl DetachedActBuilder {
+    /// Create a new detached act builder
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            maneuver_groups: Vec::new(),
+            start_trigger: None,
+            stop_trigger: None,
+        }
+    }
+    
+    /// Set start trigger for this act
+    pub fn with_start_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+    
+    /// Set stop trigger for this act
+    pub fn with_stop_trigger(mut self, trigger: Trigger) -> Self {
+        self.stop_trigger = Some(trigger);
+        self
+    }
+    
+    /// Create a detached maneuver builder
+    pub fn create_maneuver(&self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder {
+        crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref)
+    }
+    
+    /// Add a completed maneuver to this act
+    pub fn add_maneuver(&mut self, maneuver: crate::types::scenario::story::Maneuver) {
+        // Find or create maneuver group
+        if self.maneuver_groups.is_empty() {
+            self.maneuver_groups.push(ManeuverGroup {
+                name: OSString::literal(format!("{}_Group", self.name)),
+                maximum_execution_count: Some(UnsignedInt::literal(1)),
+                actors: Actors {
+                    select_triggering_entities: Some(false),
+                    entity_refs: Vec::new(),
+                },
+                catalog_reference: None,
+                maneuvers: Vec::new(),
+            });
+        }
+        
+        self.maneuver_groups[0].maneuvers.push(maneuver);
+    }
+    
+    /// Attach this act to a story builder
+    pub fn attach_to(self, story: &mut StoryBuilder<'_>) {
+        let act = Act {
+            name: OSString::literal(self.name),
+            maneuver_groups: self.maneuver_groups,
+            start_trigger: self.start_trigger,
+            stop_trigger: self.stop_trigger,
+        };
+        story.acts.push(act);
+    }
+    
+    /// Build the final Act object
+    pub fn build(self) -> Act {
+        Act {
+            name: OSString::literal(self.name),
+            maneuver_groups: self.maneuver_groups,
+            start_trigger: self.start_trigger,
+            stop_trigger: self.stop_trigger,
+        }
     }
 }
 
