@@ -314,6 +314,14 @@ impl ScenarioBuilder<HasEntities> {
 
 // Implementation for Complete state (final scenarios with storyboard)
 impl ScenarioBuilder<Complete> {
+    /// Create a Complete state builder from existing data (internal use)
+    pub(crate) fn from_data_complete(data: PartialScenarioData) -> Self {
+        Self {
+            _state: PhantomData,
+            data,
+        }
+    }
+    
     /// Build the final scenario (same as HasEntities but with Complete state)
     pub fn build(self) -> BuilderResult<OpenScenario> {
         let file_header = self.data.file_header

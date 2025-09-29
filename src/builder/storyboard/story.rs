@@ -1,6 +1,6 @@
 //! Story and Act builders for scenario behavior definition
 
-use crate::builder::{BuilderError, BuilderResult, scenario::ScenarioBuilder, scenario::HasEntities};
+use crate::builder::{BuilderError, BuilderResult, scenario::ScenarioBuilder, scenario::HasEntities, scenario::Complete};
 use crate::types::{
     scenario::{
         storyboard::Storyboard,
@@ -45,10 +45,8 @@ impl StoryboardBuilder {
         let mut data = self.scenario_builder.data;
         data.storyboard = Some(storyboard);
         
-        ScenarioBuilder {
-            _state: PhantomData,
-            data,
-        }
+        // Create Complete state scenario builder
+        ScenarioBuilder::from_data_complete(data)
     }
 }
 
@@ -81,6 +79,7 @@ impl<'parent> StoryBuilder<'parent> {
     /// # Usage Note
     /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
     /// Use the returned ActBuilder and call `.finish()` to complete the act.
+    /// For unlimited fluent chaining, use `create_act()` instead.
     /// 
     /// # Example
     /// ```rust,ignore
@@ -91,7 +90,10 @@ impl<'parent> StoryBuilder<'parent> {
     /// // Or use the direct pattern:
     /// story_builder.add_act("act1").finish();
     /// ```
-    pub fn add_act(&mut self, name: &str) -> ActBuilder<'_> {
+    pub fn add_act<'a>(&'a mut self, name: &str) -> ActBuilder<'a> 
+    where 
+        'a: 'parent
+    {
         ActBuilder::new(self, name)
     }
     
@@ -160,6 +162,7 @@ impl<'parent> ActBuilder<'parent> {
     /// # Usage Note  
     /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
     /// Use the returned ManeuverBuilder and call `.finish()` to complete the maneuver.
+    /// For unlimited fluent chaining, use `create_maneuver()` instead.
     /// 
     /// # Example
     /// ```rust,ignore
@@ -170,7 +173,10 @@ impl<'parent> ActBuilder<'parent> {
     /// // Or use the direct pattern:
     /// act_builder.add_maneuver("maneuver1", "vehicle1").finish();
     /// ```
-    pub fn add_maneuver(&mut self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'_> {
+    pub fn add_maneuver<'a>(&'a mut self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'a> 
+    where 
+        'a: 'parent
+    {
         crate::builder::storyboard::maneuver::ManeuverBuilder::new(self, name, entity_ref)
     }
     

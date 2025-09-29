@@ -34,6 +34,7 @@ impl<'parent> ManeuverBuilder<'parent> {
     /// # Usage Note
     /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
     /// Use the returned SpeedActionEventBuilder and call `.finish()` to complete the action.
+    /// For unlimited fluent chaining, use `create_speed_action()` instead.
     /// 
     /// # Example
     /// ```rust,ignore
@@ -44,7 +45,10 @@ impl<'parent> ManeuverBuilder<'parent> {
     /// // Or use the direct pattern:
     /// maneuver_builder.add_speed_action().to_speed(30.0).finish();
     /// ```
-    pub fn add_speed_action(&mut self) -> SpeedActionEventBuilder<'_> {
+    pub fn add_speed_action<'a>(&'a mut self) -> SpeedActionEventBuilder<'a> 
+    where 
+        'a: 'parent
+    {
         SpeedActionEventBuilder::new(self)
     }
     
@@ -58,6 +62,7 @@ impl<'parent> ManeuverBuilder<'parent> {
     /// # Usage Note  
     /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
     /// Use the returned TeleportActionEventBuilder and call `.finish()` to complete the action.
+    /// For unlimited fluent chaining, use `create_teleport_action()` instead.
     /// 
     /// # Example
     /// ```rust,ignore
@@ -68,7 +73,10 @@ impl<'parent> ManeuverBuilder<'parent> {
     /// // Or use the direct pattern:
     /// maneuver_builder.add_teleport_action().finish();
     /// ```
-    pub fn add_teleport_action(&mut self) -> TeleportActionEventBuilder<'_> {
+    pub fn add_teleport_action<'a>(&'a mut self) -> TeleportActionEventBuilder<'a> 
+    where 
+        'a: 'parent
+    {
         TeleportActionEventBuilder::new(self)
     }
     
