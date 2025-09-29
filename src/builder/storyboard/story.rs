@@ -77,6 +77,20 @@ impl<'parent> StoryBuilder<'parent> {
     }
     
     /// Add an act to this story
+    /// 
+    /// # Usage Note
+    /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
+    /// Use the returned ActBuilder and call `.finish()` to complete the act.
+    /// 
+    /// # Example
+    /// ```rust,ignore
+    /// // Working pattern:
+    /// let act_builder = story_builder.add_act("act1");
+    /// act_builder.finish();
+    /// 
+    /// // Or use the direct pattern:
+    /// story_builder.add_act("act1").finish();
+    /// ```
     pub fn add_act(&mut self, name: &str) -> ActBuilder<'_> {
         ActBuilder::new(self, name)
     }
@@ -127,6 +141,20 @@ impl<'parent> ActBuilder<'parent> {
     }
     
     /// Add a maneuver to this act
+    /// 
+    /// # Usage Note  
+    /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
+    /// Use the returned ManeuverBuilder and call `.finish()` to complete the maneuver.
+    /// 
+    /// # Example
+    /// ```rust,ignore
+    /// // Working pattern:
+    /// let maneuver_builder = act_builder.add_maneuver("maneuver1", "vehicle1");
+    /// maneuver_builder.finish();
+    /// 
+    /// // Or use the direct pattern:
+    /// act_builder.add_maneuver("maneuver1", "vehicle1").finish();
+    /// ```
     pub fn add_maneuver(&mut self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'_> {
         crate::builder::storyboard::maneuver::ManeuverBuilder::new(self, name, entity_ref)
     }
