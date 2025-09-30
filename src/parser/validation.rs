@@ -351,7 +351,7 @@ impl ScenarioValidator {
     fn validate_scenario_object(
         &self,
         obj: &ScenarioObject,
-        context: &ValidationContext,
+        _context: &ValidationContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -885,6 +885,6 @@ mod tests {
         let result = validator.validate_scenario(&scenario);
 
         // In strict mode, should have validation context with strict mode enabled
-        assert!(result.metrics.elements_validated >= 0);
+        assert!(result.metrics.elements_validated > 0);
     }
 }

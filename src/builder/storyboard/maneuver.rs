@@ -195,9 +195,18 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
@@ -353,7 +362,7 @@ impl<P> EventTriggerBuilder<P> {
     
     /// Add speed condition
     pub fn speed_condition(mut self, entity_ref: &str, speed: f64) -> Self {
-        let condition = crate::builder::conditions::SpeedConditionBuilder::new()
+        let condition = crate::builder::conditions::ValueSpeedConditionBuilder::new()
             .for_entity(entity_ref)
             .speed_above(speed)
             .build()
@@ -388,6 +397,17 @@ impl DetachedManeuverBuilder {
         }
     }
     
+    /// Add a speed action using closure-based configuration
+    pub fn add_speed_action<F>(mut self, config: F) -> BuilderResult<Self>
+    where 
+        F: FnOnce(DetachedSpeedActionBuilder) -> DetachedSpeedActionBuilder
+    {
+        let speed_builder = DetachedSpeedActionBuilder::new(&self.entity_ref);
+        let configured_builder = config(speed_builder);
+        configured_builder.attach_to_detached(&mut self)?;
+        Ok(self)
+    }
+    
     /// Create a detached speed action builder
     pub fn create_speed_action(&self) -> DetachedSpeedActionBuilder {
         DetachedSpeedActionBuilder::new(&self.entity_ref)
@@ -420,7 +440,7 @@ impl DetachedManeuverBuilder {
             events: self.events,
             parameter_declarations: None,
         };
-        act.add_maneuver(maneuver);
+        act.add_completed_maneuver(maneuver);
     }
     
     /// Build the final Maneuver object
@@ -470,6 +490,24 @@ impl DetachedSpeedActionBuilder {
         self
     }
     
+    /// Add a time-based trigger (convenience method)
+    pub fn with_time_trigger(mut self, time: f64) -> BuilderResult<Self> {
+        let trigger = crate::builder::conditions::TriggerBuilder::new()
+            .add_condition(
+                crate::builder::conditions::TimeConditionBuilder::new()
+                    .at_time(time)
+                    .build()?
+            )
+            .build()?;
+        self.start_trigger = Some(trigger);
+        Ok(self)
+    }
+    
+    /// Start immediately (time = 0.0)
+    pub fn start_immediately(self) -> BuilderResult<Self> {
+        self.with_time_trigger(0.0)
+    }
+    
     /// Attach this speed action to a maneuver builder
     pub fn attach_to(self, maneuver: &mut ManeuverBuilder<'_>) -> BuilderResult<()> {
         let private_action = self.action_builder.build_action()?;
@@ -513,9 +551,18 @@ impl DetachedSpeedActionBuilder {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
@@ -569,9 +616,18 @@ impl DetachedSpeedActionBuilder {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
@@ -625,9 +681,18 @@ impl DetachedSpeedActionBuilder {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
@@ -700,9 +765,18 @@ impl DetachedTeleportActionBuilder {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "TeleportEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
@@ -741,9 +815,18 @@ impl DetachedTeleportActionBuilder {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "TeleportEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
@@ -782,9 +865,18 @@ impl DetachedTeleportActionBuilder {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "TeleportEvent".to_string())),
             maximum_execution_count: None,
             priority: Some(Priority::Override),
-            start_trigger: self.start_trigger.or_else(|| Some(Trigger {
-                condition_groups: vec![ConditionGroup { conditions: Vec::new() }],
-            })),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger instead of empty trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .ok()
+            }),
             actions: vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
@@ -824,7 +916,7 @@ mod tests {
             .with_entities();
             
         let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        let mut story_builder = storyboard_builder.add_story("TestStory");
+        let mut story_builder = storyboard_builder.add_story_simple("TestStory");
         let mut act_builder = story_builder.add_act("TestAct");
         
         let maneuver_builder = ManeuverBuilder::new(&mut act_builder, "TestManeuver", "ego");

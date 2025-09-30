@@ -4,7 +4,7 @@
 //! the OpenSCENARIO XSD schema structure.
 
 use openscenario_rs::types::actions::{wrappers::*, *};
-use openscenario_rs::types::basic::{*, Value};
+use openscenario_rs::types::basic::*;
 use openscenario_rs::types::positions::*;
 
 fn main() {

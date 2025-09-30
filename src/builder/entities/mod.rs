@@ -3,7 +3,7 @@
 pub mod vehicle;
 pub mod catalog;
 
-pub use vehicle::VehicleBuilder;
+pub use vehicle::{VehicleBuilder, DetachedVehicleBuilder};
 pub use catalog::{CatalogVehicleBuilder, CatalogPedestrianBuilder};
 
 use crate::builder::{BuilderError, BuilderResult};

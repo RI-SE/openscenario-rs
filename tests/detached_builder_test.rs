@@ -11,7 +11,7 @@ mod detached_builder_tests {
             .with_entities();
             
         let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        let mut story_builder = storyboard_builder.add_story("TestStory");
+        let mut story_builder = storyboard_builder.add_story_simple("TestStory");
         
         // Create detached act builder - this should work without lifetime constraints
         let detached_act = story_builder.create_act("act1");
@@ -71,7 +71,7 @@ mod detached_builder_tests {
             .with_entities();
             
         let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        let mut story_builder = storyboard_builder.add_story("TestStory");
+        let mut story_builder = storyboard_builder.add_story_simple("TestStory");
         
         // Create detached builders
         let mut detached_act = story_builder.create_act("act1");

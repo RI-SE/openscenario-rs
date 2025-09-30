@@ -25,5 +25,10 @@ xosc/
 /*.rs
 /*.md
 /log*.txt
+/*.sh
+/.metadev
+/.metaplan
+/.meta*
+examples/*.xosc
 # Analysis and planning documents
 high-level-ideas.md

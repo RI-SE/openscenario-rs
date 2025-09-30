@@ -117,7 +117,7 @@ impl DistanceConditionBuilder {
         Ok(Condition {
             name: OSString::literal("DistanceCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: None,
+            delay: Some(Double::literal(0.0)),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
@@ -135,6 +135,185 @@ impl DistanceConditionBuilder {
                     coordinate_system: None,
                     relative_distance_type: Some(RelativeDistanceType::Cartesian),
                     routing_algorithm: None,
+                }),
+            }),
+        })
+    }
+}
+
+/// Builder for relative distance conditions
+#[derive(Debug)]
+pub struct RelativeDistanceConditionBuilder {
+    entity_ref: Option<String>,
+    target_entity: Option<String>,
+    distance: Option<f64>,
+    rule: Rule,
+    freespace: bool,
+    relative_distance_type: RelativeDistanceType,
+}
+
+impl Default for RelativeDistanceConditionBuilder {
+    fn default() -> Self {
+        Self {
+            entity_ref: None,
+            target_entity: None,
+            distance: None,
+            rule: Rule::LessThan,
+            freespace: true,
+            relative_distance_type: RelativeDistanceType::Cartesian,
+        }
+    }
+}
+
+impl RelativeDistanceConditionBuilder {
+    /// Create new relative distance condition builder
+    pub fn new() -> Self {
+        Self {
+            rule: Rule::LessThan,
+            relative_distance_type: RelativeDistanceType::Cartesian,
+            ..Default::default()
+        }
+    }
+    
+    /// Set entity to monitor
+    pub fn for_entity(mut self, entity_ref: &str) -> Self {
+        self.entity_ref = Some(entity_ref.to_string());
+        self
+    }
+    
+    /// Set target entity
+    pub fn to_entity(mut self, target_entity: &str) -> Self {
+        self.target_entity = Some(target_entity.to_string());
+        self
+    }
+    
+    /// Set distance threshold (closer than)
+    pub fn closer_than(mut self, distance: f64) -> Self {
+        self.distance = Some(distance);
+        self.rule = Rule::LessThan;
+        self
+    }
+    
+    /// Set distance threshold (farther than)
+    pub fn farther_than(mut self, distance: f64) -> Self {
+        self.distance = Some(distance);
+        self.rule = Rule::GreaterThan;
+        self
+    }
+    
+    /// Use freespace distance calculation
+    pub fn use_freespace(mut self, freespace: bool) -> Self {
+        self.freespace = freespace;
+        self
+    }
+    
+    /// Set distance type to longitudinal
+    pub fn longitudinal(mut self) -> Self {
+        self.relative_distance_type = RelativeDistanceType::Longitudinal;
+        self
+    }
+    
+    /// Set distance type to lateral
+    pub fn lateral(mut self) -> Self {
+        self.relative_distance_type = RelativeDistanceType::Lateral;
+        self
+    }
+    
+    /// Build the condition
+    pub fn build(self) -> BuilderResult<Condition> {
+        if self.entity_ref.is_none() {
+            return Err(BuilderError::validation_error("Entity reference is required"));
+        }
+        if self.target_entity.is_none() {
+            return Err(BuilderError::validation_error("Target entity is required"));
+        }
+        if self.distance.is_none() {
+            return Err(BuilderError::validation_error("Distance threshold is required"));
+        }
+        
+        // Create a relative distance condition using entity condition structure
+        Ok(Condition {
+            name: OSString::literal("RelativeDistanceCondition".to_string()),
+            condition_edge: ConditionEdge::Rising,
+            delay: Some(Double::literal(0.0)),
+            by_value_condition: None,
+            by_entity_condition: Some(ByEntityCondition {
+                triggering_entities: TriggeringEntities {
+                    triggering_entities_rule: TriggeringEntitiesRule::Any,
+                    entity_refs: vec![EntityRef {
+                        entity_ref: OSString::literal(self.entity_ref.unwrap()),
+                    }],
+                },
+                entity_condition: EntityCondition::RelativeDistance(crate::types::conditions::entity::RelativeDistanceCondition {
+                    entity_ref: OSString::literal(self.target_entity.unwrap()),
+                    value: Double::literal(self.distance.unwrap()),
+                    freespace: crate::types::basic::Value::Literal(self.freespace),
+                    rule: self.rule,
+                    relative_distance_type: self.relative_distance_type,
+                    coordinate_system: None,
+                    routing_algorithm: None,
+                }),
+            }),
+        })
+    }
+}
+
+/// Builder for collision conditions
+#[derive(Debug, Default)]
+pub struct CollisionConditionBuilder {
+    entity_ref: Option<String>,
+    target_entity: Option<String>,
+    collision_type: Option<String>,
+}
+
+impl CollisionConditionBuilder {
+    /// Create new collision condition builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
+    /// Set entity to monitor
+    pub fn for_entity(mut self, entity_ref: &str) -> Self {
+        self.entity_ref = Some(entity_ref.to_string());
+        self
+    }
+    
+    /// Set target entity for collision detection
+    pub fn with_entity(mut self, target_entity: &str) -> Self {
+        self.target_entity = Some(target_entity.to_string());
+        self
+    }
+    
+    /// Set collision type
+    pub fn collision_type(mut self, collision_type: &str) -> Self {
+        self.collision_type = Some(collision_type.to_string());
+        self
+    }
+    
+    /// Build the condition
+    pub fn build(self) -> BuilderResult<Condition> {
+        if self.entity_ref.is_none() {
+            return Err(BuilderError::validation_error("Entity reference is required"));
+        }
+        
+        Ok(Condition {
+            name: OSString::literal("CollisionCondition".to_string()),
+            condition_edge: ConditionEdge::Rising,
+            delay: Some(Double::literal(0.0)),
+            by_value_condition: None,
+            by_entity_condition: Some(ByEntityCondition {
+                triggering_entities: TriggeringEntities {
+                    triggering_entities_rule: TriggeringEntitiesRule::Any,
+                    entity_refs: vec![EntityRef {
+                        entity_ref: OSString::literal(self.entity_ref.unwrap()),
+                    }],
+                },
+                entity_condition: EntityCondition::Collision(crate::types::conditions::entity::CollisionCondition {
+                    target: self.target_entity.map(OSString::literal),
+                    by_type: self.collision_type.map(|collision_type| crate::types::conditions::entity::CollisionTarget {
+                        target_type: OSString::literal(collision_type),
+                    }),
+                    position: None,
                 }),
             }),
         })

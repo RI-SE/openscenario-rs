@@ -2,9 +2,9 @@
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
-use crate::builder::positions::PositionBuilder;
+use crate::builder::positions::{UnifiedPositionBuilder, PositionBuilder};
 use crate::types::{
-    actions::movement::{SpeedAction, SpeedActionTarget, AbsoluteTargetSpeed, TeleportAction, TransitionDynamics},
+    actions::movement::{SpeedAction, SpeedActionTarget, AbsoluteTargetSpeed, TeleportAction, TransitionDynamics, LongitudinalAction, LongitudinalActionChoice},
     actions::wrappers::{PrivateAction, CorePrivateAction},
     basic::Double,
     enums::{DynamicsDimension, DynamicsShape},
@@ -63,8 +63,8 @@ impl ActionBuilder for SpeedActionBuilder {
         
         Ok(PrivateAction {
             action: CorePrivateAction::LongitudinalAction(
-                crate::types::actions::movement::LongitudinalAction {
-                    longitudinal_action_choice: crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action),
+                LongitudinalAction {
+                    longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(speed_action),
                 }
             ),
         })

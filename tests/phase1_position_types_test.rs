@@ -10,7 +10,7 @@ use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::positions::{
     Orientation, Position, RelativeLanePosition, RelativeRoadPosition,
 };
-use openscenario_rs::types::Int;
+
 
 #[test]
 fn test_relative_road_position_xml_roundtrip() {

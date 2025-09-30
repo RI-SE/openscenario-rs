@@ -266,8 +266,25 @@ impl ScenarioBuilder<HasHeader> {
 
 // Implementation for HasEntities state  
 impl ScenarioBuilder<HasEntities> {
-    /// Add a vehicle entity
-    pub fn add_vehicle(&mut self, name: &str) -> crate::builder::entities::VehicleBuilder<'_> {
+    /// Add a vehicle entity using closure-based configuration
+    pub fn add_vehicle<F>(mut self, name: &str, config: F) -> Self 
+    where 
+        F: FnOnce(crate::builder::entities::DetachedVehicleBuilder) -> crate::builder::entities::DetachedVehicleBuilder
+    {
+        let vehicle_builder = crate::builder::entities::DetachedVehicleBuilder::new(name);
+        let configured_builder = config(vehicle_builder);
+        let vehicle_object = configured_builder.build();
+        
+        // Add to entities
+        if let Some(ref mut entities) = self.data.entities {
+            entities.add_object(vehicle_object);
+        }
+        
+        self
+    }
+    
+    /// Add a vehicle entity (legacy method for backward compatibility)
+    pub fn add_vehicle_mut(&mut self, name: &str) -> crate::builder::entities::VehicleBuilder<'_> {
         crate::builder::entities::VehicleBuilder::new(self, name)
     }
     
@@ -281,8 +298,18 @@ impl ScenarioBuilder<HasEntities> {
         crate::builder::entities::catalog::CatalogPedestrianBuilder::new(self, name)
     }
     
-    /// Start building the storyboard
-    pub fn with_storyboard(self) -> crate::builder::storyboard::StoryboardBuilder {
+    /// Configure storyboard using closure-based pattern
+    pub fn with_storyboard<F>(self, config: F) -> ScenarioBuilder<Complete>
+    where 
+        F: FnOnce(crate::builder::storyboard::StoryboardBuilder) -> crate::builder::storyboard::StoryboardBuilder
+    {
+        let storyboard_builder = crate::builder::storyboard::StoryboardBuilder::new(self);
+        let configured_builder = config(storyboard_builder);
+        configured_builder.finish()
+    }
+    
+    /// Start building the storyboard (legacy method)
+    pub fn with_storyboard_mut(self) -> crate::builder::storyboard::StoryboardBuilder {
         crate::builder::storyboard::StoryboardBuilder::new(self)
     }
     

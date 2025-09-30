@@ -4,7 +4,7 @@
 //! compile and have correct defaults.
 
 use openscenario_rs::types::conditions::*;
-use openscenario_rs::types::basic::{Double, OSString};
+use openscenario_rs::types::basic::OSString;
 use openscenario_rs::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
 
 #[test]

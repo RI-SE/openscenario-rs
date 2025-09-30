@@ -41,3 +41,7 @@ path = "tools/xosc_validate.rs"
 [[bin]]
 name = "test_detached_compilation"
 path = "test_detached_compilation.rs"
+
+[[bin]]
+name = "test_simple_compilation"
+path = "test_simple_compilation.rs"

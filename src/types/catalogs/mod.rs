@@ -23,15 +23,38 @@ pub mod references;
 pub mod routes;
 pub mod trajectories;
 
-// Re-export catalog types
-pub use controllers::*;
-pub use entities::*;
-pub use environments::*;
-pub use files::*;
-pub use locations::*;
-pub use references::*;
-pub use routes::*;
-pub use trajectories::*;
+// Re-export catalog types with explicit imports to avoid ambiguity
+// Main catalog containers
+pub use controllers::ControllerCatalog;
+pub use environments::EnvironmentCatalog;
+pub use routes::RouteCatalog;
+pub use trajectories::TrajectoryCatalog;
+
+// Catalog entity types (from entities module - these are the primary definitions)
+pub use entities::{
+    CatalogEntity, CatalogVehicle, CatalogPedestrian, 
+    CatalogMiscObject, CatalogManeuver,
+    CatalogPerformance, CatalogAxles, CatalogFrontAxle, CatalogRearAxle, ParameterDefinition,
+};
+
+// Qualified re-exports to avoid conflicts - use entities module as primary
+pub use entities::CatalogController;
+pub use entities::CatalogEnvironment;
+pub use entities::CatalogRoute;
+pub use entities::CatalogTrajectory;
+
+// Supporting types from specialized modules
+pub use environments::{CatalogTimeOfDay, CatalogWeather, CatalogSun, CatalogFog, CatalogPrecipitation, CatalogRoadCondition};
+pub use trajectories::{CatalogPolyline, CatalogVertex, CatalogClothoid, CatalogNurbs, CatalogTrajectoryShape};
+
+// File and location types
+pub use files::{CatalogFile, CatalogContent};
+pub use locations::{
+    VehicleCatalogLocation, ControllerCatalogLocation, PedestrianCatalogLocation,
+    MiscObjectCatalogLocation, EnvironmentCatalogLocation, ManeuverCatalogLocation,
+    TrajectoryCatalogLocation, RouteCatalogLocation, CatalogLocations,
+};
+pub use references::{CatalogReference, VehicleCatalogReference, ControllerCatalogReference, PedestrianCatalogReference, ParameterAssignment};
 
 // Import necessary types for catalog groups
 use serde::{Deserialize, Serialize};

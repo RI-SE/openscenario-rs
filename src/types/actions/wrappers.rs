@@ -4,7 +4,7 @@
 //! according to the OpenSCENARIO specification hierarchy.
 
 use serde::{Deserialize, Serialize};
-use crate::types::basic::{OSString, Double, Boolean, Value, UnsignedInt};
+use crate::types::basic::{OSString, Double, Boolean, UnsignedInt};
 use crate::types::positions::Position;
 
 // Import individual action types

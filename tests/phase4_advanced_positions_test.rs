@@ -151,8 +151,8 @@ fn test_relative_object_position_default() {
 #[test]
 fn test_position_constructors() {
     let trajectory_pos = TrajectoryPosition::new(75.0);
-    let geographic_pos = GeographicPosition::new(48.8566, 2.3522); // Paris
-    let relative_pos = RelativeObjectPosition::behind("vehicle1", 25.0);
+    let _geographic_pos = GeographicPosition::new(48.8566, 2.3522); // Paris
+    let _relative_pos = RelativeObjectPosition::behind("vehicle1", 25.0);
 
     // Test Position construction
     let pos1 = Position {

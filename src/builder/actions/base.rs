@@ -2,6 +2,7 @@
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::actions::wrappers::PrivateAction;
+use crate::types::scenario::init::GlobalAction;
 
 /// Common trait for all action builders
 pub trait ActionBuilder {
@@ -16,4 +17,13 @@ pub trait ActionBuilder {
 pub trait ManeuverAction: ActionBuilder {
     /// Get the entity reference this action applies to
     fn entity_ref(&self) -> Option<&str>;
+}
+
+/// Common trait for global action builders
+pub trait GlobalActionBuilder {
+    /// Build the action into a GlobalAction
+    fn build_global_action(self) -> BuilderResult<GlobalAction>;
+    
+    /// Validate the action configuration
+    fn validate(&self) -> BuilderResult<()>;
 }

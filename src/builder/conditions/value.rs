@@ -22,11 +22,11 @@
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    conditions::value::{SimulationTimeCondition, ByValueCondition},
+    conditions::value::{SimulationTimeCondition, ByValueCondition, ParameterCondition, VariableCondition, StoryboardElementStateCondition},
     conditions::entity::{SpeedCondition as EntitySpeedCondition, ByEntityCondition, EntityCondition},
-    scenario::triggers::{Condition, TriggeringEntities, EntityRef},
+    scenario::triggers::{TriggeringEntities, EntityRef, Condition},
     basic::{Double, OSString},
-    enums::{Rule, TriggeringEntitiesRule, ConditionEdge},
+    enums::{Rule, TriggeringEntitiesRule, ConditionEdge, StoryboardElementType, StoryboardElementState},
 };
 
 /// Builder for simulation time conditions
@@ -71,7 +71,7 @@ impl TimeConditionBuilder {
         Ok(Condition {
             name: OSString::literal("TimeCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: None,
+            delay: Some(Double::literal(0.0)),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
                 time_of_day_condition: None,
@@ -163,7 +163,7 @@ impl SpeedConditionBuilder {
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: None,
+            delay: Some(Double::literal(0.0)),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
@@ -175,10 +175,264 @@ impl SpeedConditionBuilder {
                 entity_condition: EntityCondition::Speed(EntitySpeedCondition {
                     value: Double::literal(self.speed.unwrap()),
                     rule: self.rule,
-                    entity_ref,
+                    entity_ref: entity_ref.clone(),
                     direction: None,
                 }),
             }),
+        })
+    }
+}
+
+/// Builder for parameter conditions
+#[derive(Debug)]
+pub struct ParameterConditionBuilder {
+    parameter_ref: Option<String>,
+    value: Option<f64>,
+    rule: Rule,
+}
+
+impl Default for ParameterConditionBuilder {
+    fn default() -> Self {
+        Self {
+            parameter_ref: None,
+            value: None,
+            rule: Rule::EqualTo,
+        }
+    }
+}
+
+impl ParameterConditionBuilder {
+    /// Create new parameter condition builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
+    /// Set parameter reference
+    pub fn parameter(mut self, parameter_ref: &str) -> Self {
+        self.parameter_ref = Some(parameter_ref.to_string());
+        self
+    }
+    
+    /// Set parameter value threshold (above)
+    pub fn value_above(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self.rule = Rule::GreaterThan;
+        self
+    }
+    
+    /// Set parameter value threshold (below)
+    pub fn value_below(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self.rule = Rule::LessThan;
+        self
+    }
+    
+    /// Set exact parameter value
+    pub fn value_equals(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self.rule = Rule::EqualTo;
+        self
+    }
+    
+    /// Build the condition
+    pub fn build(self) -> BuilderResult<Condition> {
+        if self.parameter_ref.is_none() {
+            return Err(BuilderError::validation_error("Parameter reference is required"));
+        }
+        if self.value.is_none() {
+            return Err(BuilderError::validation_error("Parameter value is required"));
+        }
+        
+        Ok(Condition {
+            name: OSString::literal("ParameterCondition".to_string()),
+            condition_edge: ConditionEdge::Rising,
+            delay: Some(Double::literal(0.0)),
+            by_value_condition: Some(ByValueCondition {
+                parameter_condition: Some(ParameterCondition {
+                    parameter_ref: OSString::literal(self.parameter_ref.unwrap()),
+                    value: OSString::literal(self.value.unwrap().to_string()),
+                    rule: self.rule,
+                }),
+                time_of_day_condition: None,
+                simulation_time_condition: None,
+                storyboard_element_state_condition: None,
+                user_defined_value_condition: None,
+                traffic_signal_condition: None,
+                traffic_signal_controller_condition: None,
+                variable_condition: None,
+            }),
+            by_entity_condition: None,
+        })
+    }
+}
+
+/// Builder for variable conditions
+#[derive(Debug)]
+pub struct VariableConditionBuilder {
+    variable_ref: Option<String>,
+    value: Option<f64>,
+    rule: Rule,
+}
+
+impl Default for VariableConditionBuilder {
+    fn default() -> Self {
+        Self {
+            variable_ref: None,
+            value: None,
+            rule: Rule::EqualTo,
+        }
+    }
+}
+
+impl VariableConditionBuilder {
+    /// Create new variable condition builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
+    /// Set variable reference
+    pub fn variable(mut self, variable_ref: &str) -> Self {
+        self.variable_ref = Some(variable_ref.to_string());
+        self
+    }
+    
+    /// Set variable value threshold (above)
+    pub fn value_above(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self.rule = Rule::GreaterThan;
+        self
+    }
+    
+    /// Set variable value threshold (below)
+    pub fn value_below(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self.rule = Rule::LessThan;
+        self
+    }
+    
+    /// Set exact variable value
+    pub fn value_equals(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self.rule = Rule::EqualTo;
+        self
+    }
+    
+    /// Build the condition
+    pub fn build(self) -> BuilderResult<Condition> {
+        if self.variable_ref.is_none() {
+            return Err(BuilderError::validation_error("Variable reference is required"));
+        }
+        if self.value.is_none() {
+            return Err(BuilderError::validation_error("Variable value is required"));
+        }
+        
+        Ok(Condition {
+            name: OSString::literal("VariableCondition".to_string()),
+            condition_edge: ConditionEdge::Rising,
+            delay: Some(Double::literal(0.0)),
+            by_value_condition: Some(ByValueCondition {
+                parameter_condition: None,
+                time_of_day_condition: None,
+                simulation_time_condition: None,
+                storyboard_element_state_condition: None,
+                user_defined_value_condition: None,
+                traffic_signal_condition: None,
+                traffic_signal_controller_condition: None,
+                variable_condition: Some(VariableCondition {
+                    variable_ref: OSString::literal(self.variable_ref.unwrap()),
+                    value: OSString::literal(self.value.unwrap().to_string()),
+                    rule: self.rule,
+                }),
+            }),
+            by_entity_condition: None,
+        })
+    }
+}
+
+/// Builder for storyboard element state conditions
+#[derive(Debug, Default)]
+pub struct StoryboardElementStateConditionBuilder {
+    storyboard_element_type: Option<StoryboardElementType>,
+    storyboard_element_ref: Option<String>,
+    state: Option<StoryboardElementState>,
+}
+
+impl StoryboardElementStateConditionBuilder {
+    /// Create new storyboard element state condition builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
+    /// Set story element
+    pub fn story(mut self, story_ref: &str) -> Self {
+        self.storyboard_element_type = Some(StoryboardElementType::Story);
+        self.storyboard_element_ref = Some(story_ref.to_string());
+        self
+    }
+    
+    /// Set act element
+    pub fn act(mut self, act_ref: &str) -> Self {
+        self.storyboard_element_type = Some(StoryboardElementType::Act);
+        self.storyboard_element_ref = Some(act_ref.to_string());
+        self
+    }
+    
+    /// Set event element
+    pub fn event(mut self, event_ref: &str) -> Self {
+        self.storyboard_element_type = Some(StoryboardElementType::Event);
+        self.storyboard_element_ref = Some(event_ref.to_string());
+        self
+    }
+    
+    /// Set state to complete
+    pub fn complete(mut self) -> Self {
+        self.state = Some(StoryboardElementState::CompleteState);
+        self
+    }
+    
+    /// Set state to running
+    pub fn running(mut self) -> Self {
+        self.state = Some(StoryboardElementState::RunningState);
+        self
+    }
+    
+    /// Set state to standby
+    pub fn standby(mut self) -> Self {
+        self.state = Some(StoryboardElementState::StandbyState);
+        self
+    }
+    
+    /// Build the condition
+    pub fn build(self) -> BuilderResult<Condition> {
+        if self.storyboard_element_type.is_none() {
+            return Err(BuilderError::validation_error("Storyboard element type is required"));
+        }
+        if self.storyboard_element_ref.is_none() {
+            return Err(BuilderError::validation_error("Storyboard element reference is required"));
+        }
+        if self.state.is_none() {
+            return Err(BuilderError::validation_error("Element state is required"));
+        }
+        
+        Ok(Condition {
+            name: OSString::literal("StoryboardElementStateCondition".to_string()),
+            condition_edge: ConditionEdge::Rising,
+            delay: Some(Double::literal(0.0)),
+            by_value_condition: Some(ByValueCondition {
+                parameter_condition: None,
+                time_of_day_condition: None,
+                simulation_time_condition: None,
+                storyboard_element_state_condition: Some(StoryboardElementStateCondition {
+                    storyboard_element_type: self.storyboard_element_type.unwrap(),
+                    storyboard_element_ref: OSString::literal(self.storyboard_element_ref.unwrap()),
+                    state: self.state.unwrap(),
+                }),
+                user_defined_value_condition: None,
+                traffic_signal_condition: None,
+                traffic_signal_controller_condition: None,
+                variable_condition: None,
+            }),
+            by_entity_condition: None,
         })
     }
 }

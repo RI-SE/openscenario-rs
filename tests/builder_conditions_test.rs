@@ -85,14 +85,24 @@ mod condition_builder_tests {
 
     #[test]
     fn test_distance_condition_builder() {
-        let position = Position::World(WorldPosition {
-            x: Double::literal(100.0),
-            y: Double::literal(200.0),
-            z: Double::literal(0.0),
-            h: Double::literal(0.0),
-            p: Double::literal(0.0),
-            r: Double::literal(0.0),
-        });
+        let position = Position {
+            world_position: Some(WorldPosition {
+                x: Double::literal(100.0),
+                y: Double::literal(200.0),
+                z: Some(Double::literal(0.0)),
+                h: Some(Double::literal(0.0)),
+                p: Some(Double::literal(0.0)),
+                r: Some(Double::literal(0.0)),
+            }),
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
+        };
         
         let condition = DistanceConditionBuilder::new()
             .for_entity("ego")
@@ -108,7 +118,7 @@ mod condition_builder_tests {
             openscenario_rs::types::conditions::entity::EntityCondition::Distance(distance_condition) => {
                 assert_eq!(distance_condition.value.as_literal().unwrap(), &10.0);
                 assert_eq!(distance_condition.rule, Rule::LessThan);
-                assert!(!distance_condition.freespace);
+                assert_eq!(distance_condition.freespace.as_literal().unwrap(), &false);
             }
             _ => panic!("Expected Distance condition"),
         }
@@ -201,14 +211,24 @@ mod condition_builder_tests {
         assert!(result.unwrap_err().to_string().contains("Speed value is required"));
 
         // Distance condition without entity reference
-        let position = Position::World(WorldPosition {
-            x: Double::literal(0.0),
-            y: Double::literal(0.0),
-            z: Double::literal(0.0),
-            h: Double::literal(0.0),
-            p: Double::literal(0.0),
-            r: Double::literal(0.0),
-        });
+        let position = Position {
+            world_position: Some(WorldPosition {
+                x: Double::literal(0.0),
+                y: Double::literal(0.0),
+                z: Some(Double::literal(0.0)),
+                h: Some(Double::literal(0.0)),
+                p: Some(Double::literal(0.0)),
+                r: Some(Double::literal(0.0)),
+            }),
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
+        };
         
         let result = DistanceConditionBuilder::new()
             .to_position(position)
@@ -242,5 +262,28 @@ mod condition_builder_tests {
             
         assert_eq!(trigger.condition_groups.len(), 1);
         assert_eq!(trigger.condition_groups[0].conditions.len(), 2);
+    }
+
+    #[test]
+    fn test_condition_delay_attribute() {
+        // Test that all condition builders include the required delay attribute
+        let time_condition = TimeConditionBuilder::new()
+            .at_time(5.0)
+            .build()
+            .unwrap();
+            
+        // Verify delay attribute is present with default value of 0.0
+        assert!(time_condition.delay.is_some());
+        assert_eq!(time_condition.delay.unwrap().as_literal().unwrap(), &0.0);
+        
+        let speed_condition = SpeedConditionBuilder::new()
+            .for_entity("ego")
+            .speed_above(30.0)
+            .build()
+            .unwrap();
+            
+        // Verify delay attribute is present with default value of 0.0
+        assert!(speed_condition.delay.is_some());
+        assert_eq!(speed_condition.delay.unwrap().as_literal().unwrap(), &0.0);
     }
 }

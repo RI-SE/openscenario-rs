@@ -2,9 +2,15 @@
 
 pub mod base;
 pub mod movement;
+pub mod lateral;
+pub mod controller;
+pub mod global;
 
 pub use base::{ActionBuilder, ManeuverAction};
 pub use movement::{SpeedActionBuilder, TeleportActionBuilder};
+pub use lateral::{LaneChangeActionBuilder, LateralDistanceActionBuilder, LaneOffsetActionBuilder};
+pub use controller::{ActivateControllerActionBuilder, OverrideControllerValueActionBuilder, AssignControllerActionBuilder};
+pub use global::{EnvironmentActionBuilder};
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::actions::wrappers::PrivateAction;

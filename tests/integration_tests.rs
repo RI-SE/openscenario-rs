@@ -211,12 +211,12 @@ fn can_create_and_serialize_actions() {
     use openscenario_rs::types::actions::movement::{
         AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics,
     };
-    use openscenario_rs::types::actions::CoreActionWrapper as Action;
+
     use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
     use openscenario_rs::types::positions::Position;
 
     // Test creating a SpeedAction
-    let speed_action = SpeedAction {
+    let _speed_action = SpeedAction {
         speed_action_dynamics: TransitionDynamics {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
@@ -231,7 +231,7 @@ fn can_create_and_serialize_actions() {
     };
 
     // Test creating a TeleportAction
-    let teleport_action = TeleportAction {
+    let _teleport_action = TeleportAction {
         position: Position::default(),
     };
 

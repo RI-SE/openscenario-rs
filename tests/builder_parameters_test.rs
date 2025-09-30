@@ -191,12 +191,12 @@ mod parameter_builder_tests {
         assert_eq!(resolved, "42");
         
         // Test parameter value resolution
-        let param_value = openscenario_rs::types::basic::Value::Parameter("speed".to_string());
+        let param_value: openscenario_rs::types::basic::Value<String> = openscenario_rs::types::basic::Value::Parameter("speed".to_string());
         let resolved = context.resolve_value(&param_value).unwrap();
         assert_eq!(resolved, "30.0");
         
         // Test expression value resolution (returns as-is for now)
-        let expr_value = openscenario_rs::types::basic::Value::Expression("$speed * 2".to_string());
+        let expr_value: openscenario_rs::types::basic::Value<String> = openscenario_rs::types::basic::Value::Expression("$speed * 2".to_string());
         let resolved = context.resolve_value(&expr_value).unwrap();
         assert_eq!(resolved, "$speed * 2");
     }

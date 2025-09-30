@@ -13,7 +13,7 @@ mod triggered_scenario_tests {
             .finish();
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
-        let mut story_builder = storyboard_builder.add_story("triggered_story");
+        let mut story_builder = storyboard_builder.add_story_simple("triggered_story");
         let mut act_builder = story_builder.add_act("triggered_act");
         let mut maneuver_builder = act_builder.add_maneuver("speed_maneuver", "ego");
         
@@ -67,7 +67,7 @@ mod triggered_scenario_tests {
             .finish();
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
-        let mut story_builder = storyboard_builder.add_story("speed_story");
+        let mut story_builder = storyboard_builder.add_story_simple("speed_story");
         let mut act_builder = story_builder.add_act("speed_act");
         let mut maneuver_builder = act_builder.add_maneuver("brake_maneuver", "ego");
         
@@ -125,7 +125,7 @@ mod triggered_scenario_tests {
             .finish();
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
-        let mut story_builder = storyboard_builder.add_story("multi_story");
+        let mut story_builder = storyboard_builder.add_story_simple("multi_story");
         let mut act_builder = story_builder.add_act("multi_act");
         let mut maneuver_builder = act_builder.add_maneuver("complex_maneuver", "ego");
         
@@ -188,7 +188,7 @@ mod triggered_scenario_tests {
             .finish();
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
-        let mut story_builder = storyboard_builder.add_story("default_story");
+        let mut story_builder = storyboard_builder.add_story_simple("default_story");
         let mut act_builder = story_builder.add_act("default_act");
         let mut maneuver_builder = act_builder.add_maneuver("default_maneuver", "ego");
         

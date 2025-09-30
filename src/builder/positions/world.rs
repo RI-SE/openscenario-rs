@@ -57,6 +57,25 @@ impl WorldPositionBuilder {
         self.r = Some(r);
         self
     }
+
+    /// Set coordinates all at once (x, y, z)
+    pub fn at_coordinates(mut self, x: f64, y: f64, z: f64) -> Self {
+        self.x = Some(x);
+        self.y = Some(y);
+        self.z = Some(z);
+        self
+    }
+
+    /// Set the heading angle (alias for heading method)
+    pub fn with_heading(mut self, h: f64) -> Self {
+        self.h = Some(h);
+        self
+    }
+
+    /// Build the world position
+    pub fn build(self) -> BuilderResult<Position> {
+        self.finish()
+    }
 }
 
 impl PositionBuilder for WorldPositionBuilder {

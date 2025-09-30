@@ -28,9 +28,11 @@
 
 pub mod value;
 pub mod spatial;
+pub mod entity;
 
-pub use value::{TimeConditionBuilder, SpeedConditionBuilder};
-pub use spatial::{DistanceConditionBuilder};
+pub use value::{TimeConditionBuilder, SpeedConditionBuilder, SpeedConditionBuilder as ValueSpeedConditionBuilder, ParameterConditionBuilder, VariableConditionBuilder, StoryboardElementStateConditionBuilder};
+pub use spatial::{DistanceConditionBuilder, RelativeDistanceConditionBuilder, CollisionConditionBuilder};
+pub use entity::{AccelerationConditionBuilder, EnhancedSpeedConditionBuilder, TraveledDistanceConditionBuilder, ReachPositionConditionBuilder, EndOfRoadConditionBuilder};
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
@@ -132,6 +134,11 @@ impl ConditionGroupBuilder {
             self.parent
         }
     }
+
+    /// Build the condition group and return to trigger builder (alias for finish_group)
+    pub fn build(self) -> TriggerBuilder {
+        self.finish_group()
+    }
 }
 
 /// Helper builder for time conditions within groups
@@ -162,14 +169,14 @@ impl TimeConditionGroupBuilder {
 /// Helper builder for speed conditions within groups
 pub struct SpeedConditionGroupBuilder {
     parent: ConditionGroupBuilder,
-    builder: SpeedConditionBuilder,
+    builder: ValueSpeedConditionBuilder,
 }
 
 impl SpeedConditionGroupBuilder {
     pub fn new(parent: ConditionGroupBuilder) -> Self {
         Self {
             parent,
-            builder: SpeedConditionBuilder::new(),
+            builder: ValueSpeedConditionBuilder::new(),
         }
     }
     
@@ -217,7 +224,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let speed_condition = SpeedConditionBuilder::new()
+        let speed_condition = ValueSpeedConditionBuilder::new()
             .for_entity("ego")
             .speed_above(30.0)
             .build()

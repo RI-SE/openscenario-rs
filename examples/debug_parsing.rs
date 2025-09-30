@@ -1,4 +1,4 @@
-use std::io::BufRead;
+
 use openscenario_rs::parser::xml::parse_from_str;
 
 fn main() {
