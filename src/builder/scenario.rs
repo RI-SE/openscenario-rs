@@ -313,6 +313,11 @@ impl ScenarioBuilder<HasEntities> {
         crate::builder::storyboard::StoryboardBuilder::new(self)
     }
     
+    /// Create a storyboard builder (alias for with_storyboard_mut)
+    pub fn create_storyboard(self) -> crate::builder::storyboard::StoryboardBuilder {
+        crate::builder::storyboard::StoryboardBuilder::new(self)
+    }
+    
     /// Build the final OpenScenario document
     pub fn build(self) -> BuilderResult<OpenScenario> {
         let file_header = self.data.file_header

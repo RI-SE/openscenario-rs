@@ -23,9 +23,19 @@ pub mod validation; // Sprint 5
 // Export main builders
 pub use scenario::ScenarioBuilder;
 pub use entities::{VehicleBuilder, DetachedVehicleBuilder};
-pub use actions::{SpeedActionBuilder, TeleportActionBuilder, EnvironmentActionBuilder};
+pub use actions::{
+    SpeedActionBuilder, TeleportActionBuilder, EnvironmentActionBuilder,
+    LaneChangeActionBuilder, LateralDistanceActionBuilder, LaneOffsetActionBuilder,
+    ActivateControllerActionBuilder, OverrideControllerValueActionBuilder,
+    EntityActionBuilder, VariableActionBuilder
+};
 pub use storyboard::{StoryboardBuilder, StoryBuilder, ActBuilder, ManeuverBuilder, DetachedActBuilder, DetachedStoryBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder};
-pub use conditions::{TriggerBuilder, TimeConditionBuilder, SpeedConditionBuilder, ValueSpeedConditionBuilder};
+pub use conditions::{
+    TriggerBuilder, TimeConditionBuilder, SpeedConditionBuilder, ValueSpeedConditionBuilder,
+    ParameterConditionBuilder, VariableConditionBuilder, AccelerationConditionBuilder,
+    TraveledDistanceConditionBuilder, ReachPositionConditionBuilder, RelativeDistanceConditionBuilder,
+    CollisionConditionBuilder
+};
 pub use init::{InitActionBuilder, PrivateActionBuilder, GlobalActionBuilder};
 pub use templates::{BasicScenarioTemplate, ScenarioTemplate};
 pub use catalog::{CatalogLocationsBuilder, CatalogEntityBuilder, VehicleCatalogReferenceBuilder, PedestrianCatalogReferenceBuilder};

@@ -10,7 +10,7 @@ pub use base::{ActionBuilder, ManeuverAction};
 pub use movement::{SpeedActionBuilder, TeleportActionBuilder};
 pub use lateral::{LaneChangeActionBuilder, LateralDistanceActionBuilder, LaneOffsetActionBuilder};
 pub use controller::{ActivateControllerActionBuilder, OverrideControllerValueActionBuilder, AssignControllerActionBuilder};
-pub use global::{EnvironmentActionBuilder};
+pub use global::{EnvironmentActionBuilder, EntityActionBuilder, VariableActionBuilder};
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::actions::wrappers::PrivateAction;

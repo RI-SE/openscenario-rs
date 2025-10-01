@@ -320,10 +320,10 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::ControllerAction(controller_action) = action.action {
             let activate = controller_action.activate_controller_action.unwrap();
-            assert!(*activate.lateral.as_literal().unwrap());
-            assert!(*activate.longitudinal.as_literal().unwrap());
-            assert!(!*activate.lighting.as_literal().unwrap());
-            assert!(!*activate.animation.as_literal().unwrap());
+            assert!(*activate.lateral.unwrap().as_literal().unwrap());
+            assert!(*activate.longitudinal.unwrap().as_literal().unwrap());
+            assert!(!*activate.lighting.unwrap().as_literal().unwrap());
+            assert!(!*activate.animation.unwrap().as_literal().unwrap());
         } else {
             panic!("Expected ControllerAction");
         }
@@ -377,7 +377,7 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::ControllerAction(controller_action) = action.action {
             let assign = controller_action.assign_controller_action.unwrap();
-            assert_eq!(assign.controller.name.as_literal().unwrap(), "TestController");
+            assert_eq!(assign.controller.unwrap().name.as_literal().unwrap(), "TestController");
         } else {
             panic!("Expected ControllerAction");
         }

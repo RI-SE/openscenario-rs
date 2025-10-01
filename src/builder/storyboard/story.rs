@@ -1,14 +1,17 @@
 //! Story and Act builders for scenario behavior definition
 
-use crate::builder::{BuilderError, BuilderResult, scenario::ScenarioBuilder, scenario::HasEntities, scenario::Complete, init::InitActionBuilder};
+use crate::builder::{
+    init::InitActionBuilder, scenario::Complete, scenario::HasEntities, scenario::ScenarioBuilder,
+    BuilderError, BuilderResult,
+};
 use crate::types::{
+    basic::{OSString, ParameterDeclarations, UnsignedInt},
     scenario::{
-        storyboard::Storyboard,
-        story::{ScenarioStory, Act, ManeuverGroup, Actors, EntityRef},
         init::Init,
+        story::{Act, Actors, EntityRef, ManeuverGroup, ScenarioStory},
+        storyboard::Storyboard,
         triggers::Trigger,
     },
-    basic::{OSString, UnsignedInt, ParameterDeclarations},
 };
 use std::marker::PhantomData;
 
@@ -29,22 +32,22 @@ impl StoryboardBuilder {
             stop_trigger: None,
         }
     }
-    
+
     /// Set initialization actions using InitActionBuilder
     pub fn with_init_actions(mut self, init: Init) -> Self {
         self.init = Some(init);
         self
     }
-    
+
     /// Create an init action builder for this storyboard
     pub fn create_init_actions(self) -> InitActionBuilderForStoryboard {
         InitActionBuilderForStoryboard::new(self)
     }
-    
+
     /// Add a story using closure-based configuration
     pub fn add_story<F>(mut self, name: &str, config: F) -> Self
-    where 
-        F: FnOnce(DetachedStoryBuilder) -> DetachedStoryBuilder
+    where
+        F: FnOnce(DetachedStoryBuilder) -> DetachedStoryBuilder,
     {
         let story_builder = DetachedStoryBuilder::new(name);
         let configured_builder = config(story_builder);
@@ -52,74 +55,79 @@ impl StoryboardBuilder {
         self.stories.push(story);
         self
     }
-    
+
     /// Add a story to the storyboard (simple method)
     pub fn add_story_simple(&mut self, name: &str) -> StoryBuilder<'_> {
         StoryBuilder::new(self, name)
     }
-    
+
     /// Add a story to the storyboard (legacy method)
     pub fn add_story_mut(&mut self, name: &str) -> StoryBuilder<'_> {
         StoryBuilder::new(self, name)
     }
-    
+
     /// Set stop trigger for the entire storyboard
     pub fn with_stop_trigger(mut self, trigger: Trigger) -> Self {
         self.stop_trigger = Some(trigger);
         self
     }
-    
+
     /// Stop scenario after specified time
     pub fn stop_after_time(mut self, time: f64) -> BuilderResult<Self> {
         use crate::builder::conditions::{TimeConditionBuilder, TriggerBuilder};
         use crate::types::scenario::triggers::ConditionGroup;
-        
-        let time_condition = TimeConditionBuilder::new()
-            .at_time(time)
-            .build()?;
-            
+
+        let time_condition = TimeConditionBuilder::new().at_time(time).build()?;
+
         let trigger = TriggerBuilder::new()
             .add_condition_group()
             .add_condition(time_condition)
             .finish_group()
             .build()?;
-            
+
         Ok(self.with_stop_trigger(trigger))
     }
-    
+
     /// Stop when entity reaches position
-    pub fn stop_when_entity_reaches(mut self, entity: &str, position: crate::types::positions::Position) -> BuilderResult<Self> {
+    pub fn stop_when_entity_reaches(
+        mut self,
+        entity: &str,
+        position: crate::types::positions::Position,
+    ) -> BuilderResult<Self> {
         use crate::builder::conditions::{ReachPositionConditionBuilder, TriggerBuilder};
         use crate::types::scenario::triggers::ConditionGroup;
-        
+
         let reach_condition = ReachPositionConditionBuilder::new()
             .for_entity(entity)
             .at_position(position)
             .build()?;
-            
+
         let trigger = TriggerBuilder::new()
             .add_condition_group()
             .add_condition(reach_condition)
             .finish_group()
             .build()?;
-            
+
         Ok(self.with_stop_trigger(trigger))
     }
-    
+
     /// Stop on custom condition
-    pub fn stop_on_condition(mut self, condition: crate::types::scenario::triggers::Condition) -> BuilderResult<Self> {
+    pub fn stop_on_condition(
+        mut self,
+        condition: crate::types::scenario::triggers::Condition,
+    ) -> BuilderResult<Self> {
         use crate::builder::conditions::TriggerBuilder;
         use crate::types::scenario::triggers::ConditionGroup;
-        
+
         let trigger = TriggerBuilder::new()
             .add_condition_group()
             .add_condition(condition)
             .finish_group()
             .build()?;
-            
+
         Ok(self.with_stop_trigger(trigger))
     }
-    
+
     /// Finish storyboard and return to scenario builder
     pub fn finish(mut self) -> ScenarioBuilder<crate::builder::scenario::Complete> {
         let storyboard = Storyboard {
@@ -132,11 +140,11 @@ impl StoryboardBuilder {
             stories: self.stories,
             stop_trigger: self.stop_trigger,
         };
-        
+
         // Convert scenario builder to Complete state
         let mut data = self.scenario_builder.data;
         data.storyboard = Some(storyboard);
-        
+
         // Create Complete state scenario builder
         ScenarioBuilder::from_data_complete(data)
     }
@@ -159,42 +167,42 @@ impl<'parent> StoryBuilder<'parent> {
             parameter_declarations: None,
         }
     }
-    
+
     /// Add parameter declarations to this story
     pub fn with_parameters(mut self, params: ParameterDeclarations) -> Self {
         self.parameter_declarations = Some(params);
         self
     }
-    
+
     /// Add an act to this story
-    /// 
+    ///
     /// # Usage Note
     /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
     /// Use the returned ActBuilder and call `.finish()` to complete the act.
     /// For unlimited fluent chaining, use `create_act()` instead.
-    /// 
+    ///
     /// # Example
     /// ```rust,ignore
     /// // Working pattern:
     /// let act_builder = story_builder.add_act("act1");
     /// act_builder.finish();
-    /// 
+    ///
     /// // Or use the direct pattern:
     /// story_builder.add_act("act1").finish();
     /// ```
-    pub fn add_act<'a>(&'a mut self, name: &str) -> ActBuilder<'a> 
-    where 
-        'a: 'parent
+    pub fn add_act<'a>(&'a mut self, name: &str) -> ActBuilder<'a>
+    where
+        'a: 'parent,
     {
         ActBuilder::new(self, name)
     }
-    
+
     /// Create a detached act builder (no lifetime constraints)
-    /// 
+    ///
     /// This method returns a DetachedActBuilder that has no lifetime parameters
     /// and supports perfect fluent chaining. Use `attach_to()` to add the completed
     /// act to this story.
-    /// 
+    ///
     /// # Example
     /// ```rust,ignore
     /// let mut detached_act = story_builder.create_act("act1");
@@ -203,7 +211,7 @@ impl<'parent> StoryBuilder<'parent> {
     pub fn create_act(&self, name: &str) -> DetachedActBuilder {
         DetachedActBuilder::new(name)
     }
-    
+
     /// Finish this story
     pub fn finish(self) -> &'parent mut StoryboardBuilder {
         let story = ScenarioStory {
@@ -211,7 +219,7 @@ impl<'parent> StoryBuilder<'parent> {
             parameter_declarations: self.parameter_declarations,
             acts: self.acts,
         };
-        
+
         self.parent.stories.push(story);
         self.parent
     }
@@ -236,59 +244,70 @@ impl<'parent> ActBuilder<'parent> {
             stop_trigger: None,
         }
     }
-    
+
     /// Set start trigger for this act
     pub fn with_start_trigger(mut self, trigger: Trigger) -> Self {
         self.start_trigger = Some(trigger);
         self
     }
-    
+
     /// Set stop trigger for this act
     pub fn with_stop_trigger(mut self, trigger: Trigger) -> Self {
         self.stop_trigger = Some(trigger);
         self
     }
-    
+
     /// Add a maneuver to this act
-    /// 
+    ///
     /// # Usage Note  
     /// Due to Rust lifetime variance constraints, fluent chaining may be limited.
     /// Use the returned ManeuverBuilder and call `.finish()` to complete the maneuver.
     /// For unlimited fluent chaining, use `create_maneuver()` instead.
-    /// 
+    ///
     /// # Example
     /// ```rust,ignore
     /// // Working pattern:
     /// let maneuver_builder = act_builder.add_maneuver("maneuver1", "vehicle1");
     /// maneuver_builder.finish();
-    /// 
+    ///
     /// // Or use the direct pattern:
     /// act_builder.add_maneuver("maneuver1", "vehicle1").finish();
     /// ```
-    pub fn add_maneuver<'a>(&'a mut self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'a> 
-    where 
-        'a: 'parent
+    pub fn add_maneuver<'a>(
+        &'a mut self,
+        name: &str,
+        entity_ref: &str,
+    ) -> crate::builder::storyboard::maneuver::ManeuverBuilder<'a>
+    where
+        'a: 'parent,
     {
         crate::builder::storyboard::maneuver::ManeuverBuilder::new(self, name, entity_ref)
     }
-    
+
     /// Create a detached maneuver builder (no lifetime constraints)
-    /// 
+    ///
     /// This method returns a DetachedManeuverBuilder that has no lifetime parameters
     /// and supports perfect fluent chaining. Use `attach_to()` to add the completed
     /// maneuver to this act.
-    /// 
+    ///
     /// # Example
     /// ```rust,ignore
     /// let detached_maneuver = act_builder.create_maneuver("maneuver1", "vehicle1");
     /// detached_maneuver.attach_to(&mut act_builder);
     /// ```
-    pub fn create_maneuver(&self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder {
+    pub fn create_maneuver(
+        &self,
+        name: &str,
+        entity_ref: &str,
+    ) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder {
         crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref)
     }
-    
+
     /// Internal method to add completed maneuver
-    pub(crate) fn add_maneuver_to_group(&mut self, maneuver: crate::types::scenario::story::Maneuver) {
+    pub(crate) fn add_maneuver_to_group(
+        &mut self,
+        maneuver: crate::types::scenario::story::Maneuver,
+    ) {
         // Find or create maneuver group
         if self.maneuver_groups.is_empty() {
             self.maneuver_groups.push(ManeuverGroup {
@@ -302,10 +321,10 @@ impl<'parent> ActBuilder<'parent> {
                 maneuvers: Vec::new(),
             });
         }
-        
+
         self.maneuver_groups[0].maneuvers.push(maneuver);
     }
-    
+
     /// Finish this act
     pub fn finish(self) -> &'parent mut StoryBuilder<'parent> {
         let act = Act {
@@ -314,14 +333,14 @@ impl<'parent> ActBuilder<'parent> {
             start_trigger: self.start_trigger,
             stop_trigger: self.stop_trigger,
         };
-        
+
         self.parent.acts.push(act);
         self.parent
     }
 }
 
 /// Detached builder for acts (no lifetime constraints)
-/// 
+///
 /// This builder has no lifetime parameters and supports perfect fluent chaining.
 /// Use `attach_to()` to add the completed act to a story builder.
 pub struct DetachedActBuilder {
@@ -341,28 +360,31 @@ impl DetachedActBuilder {
             stop_trigger: None,
         }
     }
-    
+
     /// Set start trigger for this act
     pub fn with_start_trigger(mut self, trigger: Trigger) -> Self {
         self.start_trigger = Some(trigger);
         self
     }
-    
+
     /// Set stop trigger for this act
     pub fn with_stop_trigger(mut self, trigger: Trigger) -> Self {
         self.stop_trigger = Some(trigger);
         self
     }
-    
+
     /// Add a maneuver using closure-based configuration
     pub fn add_maneuver<F>(mut self, name: &str, entity_ref: &str, config: F) -> Self
-    where 
-        F: FnOnce(crate::builder::storyboard::maneuver::DetachedManeuverBuilder) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder
+    where
+        F: FnOnce(
+            crate::builder::storyboard::maneuver::DetachedManeuverBuilder,
+        ) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder,
     {
-        let maneuver_builder = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref);
+        let maneuver_builder =
+            crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref);
         let configured_builder = config(maneuver_builder);
         let maneuver = configured_builder.build();
-        
+
         // Find or create maneuver group
         if self.maneuver_groups.is_empty() {
             self.maneuver_groups.push(ManeuverGroup {
@@ -376,16 +398,20 @@ impl DetachedActBuilder {
                 maneuvers: Vec::new(),
             });
         }
-        
+
         self.maneuver_groups[0].maneuvers.push(maneuver);
         self
     }
-    
+
     /// Create a detached maneuver builder
-    pub fn create_maneuver(&self, name: &str, entity_ref: &str) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder {
+    pub fn create_maneuver(
+        &self,
+        name: &str,
+        entity_ref: &str,
+    ) -> crate::builder::storyboard::maneuver::DetachedManeuverBuilder {
         crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref)
     }
-    
+
     /// Add a completed maneuver to this act
     pub fn add_completed_maneuver(&mut self, maneuver: crate::types::scenario::story::Maneuver) {
         // Find or create maneuver group
@@ -401,10 +427,10 @@ impl DetachedActBuilder {
                 maneuvers: Vec::new(),
             });
         }
-        
+
         self.maneuver_groups[0].maneuvers.push(maneuver);
     }
-    
+
     /// Attach this act to a story builder
     pub fn attach_to(self, story: &mut StoryBuilder<'_>) {
         let act = Act {
@@ -415,7 +441,7 @@ impl DetachedActBuilder {
         };
         story.acts.push(act);
     }
-    
+
     /// Build the final Act object
     pub fn build(self) -> Act {
         Act {
@@ -440,30 +466,34 @@ impl InitActionBuilderForStoryboard {
             init_builder: InitActionBuilder::new(),
         }
     }
-    
+
     /// Add a global environment action with default environment
     pub fn add_global_environment_action(mut self) -> Self {
         self.init_builder = self.init_builder.add_global_environment_action();
         self
     }
-    
+
     /// Add a teleport action for an entity (convenience method)
-    pub fn add_teleport_action(mut self, entity_ref: &str, position: crate::types::positions::Position) -> Self {
+    pub fn add_teleport_action(
+        mut self,
+        entity_ref: &str,
+        position: crate::types::positions::Position,
+    ) -> Self {
         self.init_builder = self.init_builder.add_teleport_action(entity_ref, position);
         self
     }
-    
+
     /// Add a speed action for an entity (convenience method)
     pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> Self {
         self.init_builder = self.init_builder.add_speed_action(entity_ref, speed);
         self
     }
-    
+
     /// Create a private action builder for an entity
     pub fn create_private_action(self, entity_ref: &str) -> PrivateActionBuilderForStoryboard {
         PrivateActionBuilderForStoryboard::new(self, entity_ref)
     }
-    
+
     /// Finish building init actions and return to storyboard builder
     pub fn finish(self) -> BuilderResult<StoryboardBuilder> {
         let init = self.init_builder.build()?;
@@ -487,17 +517,17 @@ impl DetachedStoryBuilder {
             parameter_declarations: None,
         }
     }
-    
+
     /// Add parameter declarations to this story
     pub fn with_parameters(mut self, params: ParameterDeclarations) -> Self {
         self.parameter_declarations = Some(params);
         self
     }
-    
+
     /// Add an act using closure-based configuration
     pub fn add_act<F>(mut self, name: &str, config: F) -> Self
-    where 
-        F: FnOnce(DetachedActBuilder) -> DetachedActBuilder
+    where
+        F: FnOnce(DetachedActBuilder) -> DetachedActBuilder,
     {
         let act_builder = DetachedActBuilder::new(name);
         let configured_builder = config(act_builder);
@@ -505,7 +535,7 @@ impl DetachedStoryBuilder {
         self.acts.push(act);
         self
     }
-    
+
     /// Build the final story
     pub fn build(self) -> ScenarioStory {
         ScenarioStory {
@@ -528,7 +558,7 @@ impl PrivateActionBuilderForStoryboard {
         let storyboard_builder = parent.storyboard_builder;
         let private_builder = parent.init_builder.create_private_action(entity_ref);
         Self {
-            parent: InitActionBuilderForStoryboard { 
+            parent: InitActionBuilderForStoryboard {
                 storyboard_builder,
                 init_builder: InitActionBuilder::new(), // Placeholder, will be replaced by finish()
             },
@@ -536,19 +566,19 @@ impl PrivateActionBuilderForStoryboard {
             private_builder,
         }
     }
-    
+
     /// Add a teleport action to position the entity
     pub fn add_teleport_action(mut self, position: crate::types::positions::Position) -> Self {
         self.private_builder = self.private_builder.add_teleport_action(position);
         self
     }
-    
+
     /// Add a speed action to set initial velocity
     pub fn add_speed_action(mut self, speed: f64) -> Self {
         self.private_builder = self.private_builder.add_speed_action(speed);
         self
     }
-    
+
     /// Finish this private action and return to init builder
     pub fn finish(self) -> InitActionBuilderForStoryboard {
         InitActionBuilderForStoryboard {
@@ -568,10 +598,10 @@ mod tests {
         let scenario_builder = ScenarioBuilder::new()
             .with_header("Test", "Author")
             .with_entities();
-            
+
         let storyboard_builder = StoryboardBuilder::new(scenario_builder);
         assert_eq!(storyboard_builder.stories.len(), 0);
-        assert!(storyboard_builder.init.is_some());
+        assert!(storyboard_builder.init.is_none());
     }
 
     #[test]
@@ -579,11 +609,12 @@ mod tests {
         let scenario_builder = ScenarioBuilder::new()
             .with_header("Test", "Author")
             .with_entities();
-            
+
         let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
         let story_builder = StoryBuilder::new(&mut storyboard_builder, "TestStory");
-        
+
         assert_eq!(story_builder.name, "TestStory");
         assert_eq!(story_builder.acts.len(), 0);
     }
 }
+
