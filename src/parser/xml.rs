@@ -15,7 +15,7 @@
 //!
 //! ## Parsing Scenarios
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::xml::{parse_from_file, parse_from_str};
 //!
 //! // Parse from file with automatic error context
@@ -36,7 +36,7 @@
 //!
 //! ## Validation During Parsing
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::xml::{parse_from_file_validated, validate_xml_structure};
 //!
 //! // Validate structure before full parsing
@@ -48,7 +48,7 @@
 //!
 //! ## Serialization
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::xml::{serialize_to_string, serialize_to_file};
 //!
 //! // Serialize to formatted XML string
@@ -61,7 +61,7 @@
 //!
 //! # Catalog File Operations
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::xml::{
 //!     parse_catalog_from_file, serialize_catalog_to_file,
 //!     parse_catalog_from_str_validated
@@ -81,7 +81,8 @@
 //!
 //! All parsing functions return `Result<T>` with detailed error context:
 //!
-//! ```rust
+//! ```rust,no_run
+//! # use openscenario_rs::parser::xml::parse_from_file;
 //! match parse_from_file("scenario.xosc") {
 //!     Ok(scenario) => {
 //!         // Process valid scenario

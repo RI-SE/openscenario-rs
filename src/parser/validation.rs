@@ -15,7 +15,7 @@
 //!
 //! ## Simple Validation
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::validation::ScenarioValidator;
 //! use openscenario_rs::parser::xml::parse_from_file;
 //!
@@ -47,7 +47,7 @@
 //!
 //! ## Custom Validation Configuration
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
 //!
 //! let config = ValidationConfig {
@@ -156,9 +156,10 @@
 //!
 //! # Integration with Parsing
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::{xml, validation};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse and validate in one step
 //! let scenario = xml::parse_from_file_validated("scenario.xosc")?;
 //! 
@@ -170,6 +171,8 @@
 //! if validation_result.is_clean() {
 //!     println!("Scenario is fully valid and clean");
 //! }
+//! # Ok(())
+//! # }
 //! ```
 
 use crate::{

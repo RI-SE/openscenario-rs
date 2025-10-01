@@ -62,14 +62,17 @@
 //!
 //! ## Catalog File Parsing
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::xml::{parse_catalog_from_file, serialize_catalog_to_file};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse a catalog file
 //! let catalog = parse_catalog_from_file("vehicles.xosc")?;
 //!
 //! // Serialize back to file
 //! serialize_catalog_to_file(&catalog, "output_catalog.xosc")?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Performance Considerations
