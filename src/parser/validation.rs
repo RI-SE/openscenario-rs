@@ -881,10 +881,36 @@ mod tests {
         };
         let mut validator = ScenarioValidator::with_config(config);
 
-        let scenario = OpenScenario::default();
+        // Create scenario with entities to ensure validation occurs
+        let vehicle = crate::types::entities::vehicle::Vehicle {
+            name: crate::types::basic::Value::literal("TestCar".to_string()),
+            vehicle_category: crate::types::enums::VehicleCategory::Car,
+            bounding_box: crate::types::geometry::BoundingBox::default(),
+            performance: Default::default(),
+            axles: Default::default(),
+            properties: None,
+        };
+
+        let scenario_object = crate::types::entities::ScenarioObject {
+            name: crate::types::basic::Value::literal("TestVehicle".to_string()),
+            vehicle: Some(vehicle),
+            pedestrian: None,
+            catalog_reference: None,
+            object_controller: Default::default(),
+        };
+
+        let entities = crate::types::entities::Entities {
+            scenario_objects: vec![scenario_object],
+        };
+
+        let mut scenario = OpenScenario::default();
+        scenario.entities = Some(entities);
+        
         let result = validator.validate_scenario(&scenario);
 
-        // In strict mode, should have validation context with strict mode enabled
+        // In strict mode with entities, should have validation metrics
         assert!(result.metrics.elements_validated > 0);
+        // Should also validate that strict mode is actually enabled in the validator
+        assert!(validator.config.strict_mode);
     }
 }
