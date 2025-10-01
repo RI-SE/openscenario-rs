@@ -33,6 +33,7 @@ pub struct SpeedCondition {
     pub rule: Rule,
     
     /// Entity reference (library extension for convenience)
+    #[serde(rename = "@entityRef")]
     pub entity_ref: String,
     
     /// Direction of speed measurement (optional)
