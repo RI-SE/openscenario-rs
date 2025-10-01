@@ -102,7 +102,7 @@ fn test_infrastructure_action() {
     };
     
     let serialized = serde_json::to_string(&infra_action).unwrap();
-    assert!(serialized.contains("traffic_signal_action"));
+    assert!(serialized.contains("TrafficSignalAction"));
 }
 
 #[test]
