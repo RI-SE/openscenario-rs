@@ -59,7 +59,7 @@ mod condition_builder_tests {
             openscenario_rs::types::conditions::entity::EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &30.0);
                 assert_eq!(speed_condition.rule, Rule::GreaterThan);
-                assert_eq!(speed_condition.entity_ref, "ego");
+                assert_eq!(speed_condition.entity_ref.as_literal().unwrap(), "ego");
             }
             _ => panic!("Expected Speed condition"),
         }

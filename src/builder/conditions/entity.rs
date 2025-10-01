@@ -415,7 +415,7 @@ mod tests {
             
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::Acceleration(acc_condition) = by_entity.entity_condition {
-                assert_eq!(acc_condition.value.value(), 2.0);
+                assert_eq!(*acc_condition.value.as_literal().unwrap(), 2.0);
                 assert_eq!(acc_condition.rule, Rule::GreaterThan);
             } else {
                 panic!("Expected Acceleration condition");
@@ -435,7 +435,7 @@ mod tests {
             
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::Speed(speed_condition) = by_entity.entity_condition {
-                assert_eq!(speed_condition.value.value(), 30.0);
+                assert_eq!(*speed_condition.value.as_literal().unwrap(), 30.0);
                 assert_eq!(speed_condition.rule, Rule::LessThan);
             } else {
                 panic!("Expected Speed condition");
@@ -455,7 +455,7 @@ mod tests {
             
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::TraveledDistance(distance_condition) = by_entity.entity_condition {
-                assert_eq!(distance_condition.value.value(), 100.0);
+                assert_eq!(*distance_condition.value.as_literal().unwrap(), 100.0);
             } else {
                 panic!("Expected TraveledDistance condition");
             }
@@ -497,7 +497,7 @@ mod tests {
             
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::ReachPosition(reach_condition) = by_entity.entity_condition {
-                assert_eq!(reach_condition.tolerance.value(), 2.0);
+                assert_eq!(*reach_condition.tolerance.as_literal().unwrap(), 2.0);
             } else {
                 panic!("Expected ReachPosition condition");
             }
@@ -516,7 +516,7 @@ mod tests {
             
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::EndOfRoad(end_condition) = by_entity.entity_condition {
-                assert_eq!(end_condition.duration.value(), 1.0);
+                assert_eq!(*end_condition.duration.as_literal().unwrap(), 1.0);
             } else {
                 panic!("Expected EndOfRoad condition");
             }

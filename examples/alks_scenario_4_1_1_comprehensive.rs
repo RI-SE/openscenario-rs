@@ -87,37 +87,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut scenario_with_entities = scenario_builder;
     
     // Ego vehicle: ALKS subject under test with realistic automotive specifications
-    scenario_with_entities.add_vehicle_mut("Ego")
-        .car()
+    scenario_with_entities = scenario_with_entities.add_vehicle("Ego", |v| v.car()
         .with_dimensions(4.5, 1.8, 1.4)  // Realistic passenger car dimensions (L×W×H)
         .with_performance(
             180.0,  // 180 km/h max speed (highway capable)
             4.0,    // 4.0 m/s² max acceleration (realistic for passenger car)
             9.0,    // 9.0 m/s² max deceleration (emergency braking)
-        )
-        .finish();
+        ));
     
     // Target vehicle: Lead vehicle for following scenario
-    scenario_with_entities.add_vehicle_mut("Target")
-        .car()
+    scenario_with_entities = scenario_with_entities.add_vehicle("Target", |v| v.car()
         .with_dimensions(4.2, 1.7, 1.3)  // Slightly smaller target vehicle
         .with_performance(
             160.0,  // 160 km/h max speed
             3.5,    // 3.5 m/s² max acceleration
             8.5,    // 8.5 m/s² max deceleration
-        )
-        .finish();
+        ));
     
     // Background traffic vehicle for realistic environment
-    scenario_with_entities.add_vehicle_mut("Background")
-        .car()
+    scenario_with_entities = scenario_with_entities.add_vehicle("Background", |v| v.car()
         .with_dimensions(4.0, 1.6, 1.2)  // Compact car for background traffic
         .with_performance(
             140.0,  // 140 km/h max speed
             3.0,    // 3.0 m/s² max acceleration
             7.5,    // 7.5 m/s² max deceleration
-        )
-        .finish();
+        ));
     println!("✅");
 
     // Phase 3: Three-Act ALKS Test Sequence with Advanced Detached Builder Pattern

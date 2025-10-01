@@ -8,9 +8,7 @@ mod triggered_scenario_tests {
             .with_header("Triggered Test", "Test Author")
             .with_entities();
             
-        scenario_builder.add_vehicle("ego")
-            .car()
-            .finish();
+        scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
         let mut story_builder = storyboard_builder.add_story_simple("triggered_story");
@@ -62,9 +60,7 @@ mod triggered_scenario_tests {
             .with_header("Speed Triggered Test", "Test Author")
             .with_entities();
             
-        scenario_builder.add_vehicle("ego")
-            .car()
-            .finish();
+        scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
         let mut story_builder = storyboard_builder.add_story_simple("speed_story");
@@ -108,7 +104,7 @@ mod triggered_scenario_tests {
         match &by_entity.entity_condition {
             openscenario_rs::types::conditions::entity::EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &50.0);
-                assert_eq!(speed_condition.entity_ref, "ego");
+                assert_eq!(speed_condition.entity_ref.as_literal().unwrap(), "ego");
             }
             _ => panic!("Expected Speed condition"),
         }
@@ -120,9 +116,7 @@ mod triggered_scenario_tests {
             .with_header("Multi Condition Test", "Test Author")
             .with_entities();
             
-        scenario_builder.add_vehicle("ego")
-            .car()
-            .finish();
+        scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
         let mut story_builder = storyboard_builder.add_story_simple("multi_story");
@@ -183,9 +177,7 @@ mod triggered_scenario_tests {
             .with_header("Default Trigger Test", "Test Author")
             .with_entities();
             
-        scenario_builder.add_vehicle("ego")
-            .car()
-            .finish();
+        scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
             
         let mut storyboard_builder = scenario_builder.with_storyboard();
         let mut story_builder = storyboard_builder.add_story_simple("default_story");

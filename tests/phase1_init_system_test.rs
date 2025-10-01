@@ -11,6 +11,7 @@ mod tests {
         InitActionBuilder, 
         ScenarioBuilder,
         BasicScenarioTemplate,
+        ScenarioTemplate,
         TriggerBuilder,
         TimeConditionBuilder,
     };
@@ -69,7 +70,7 @@ mod tests {
         assert!(longitudinal.speed_action.is_some());
         
         let speed_action = longitudinal.speed_action.as_ref().unwrap();
-        assert_eq!(speed_action.speed_target.absolute_value.as_ref().unwrap().as_literal().unwrap(), 30.0);
+        assert_eq!(*speed_action.speed_action_target.absolute.as_ref().unwrap().value.as_literal().unwrap(), 30.0);
     }
 
     #[test]
@@ -135,36 +136,36 @@ mod tests {
         assert!(by_value.simulation_time_condition.is_some());
         
         let time_condition = by_value.simulation_time_condition.as_ref().unwrap();
-        assert_eq!(time_condition.value.as_literal().unwrap(), 5.0);
+        assert_eq!(*time_condition.value.as_literal().unwrap(), 5.0);
     }
 
     #[test]
     fn test_basic_scenario_template() {
         // Test that BasicScenarioTemplate provides working foundation
-        let scenario = BasicScenarioTemplate::create();
+        let scenario_builder = BasicScenarioTemplate::create();
+        let scenario = scenario_builder.build().unwrap();
         
         // Should have header
-        assert!(scenario.data.header.is_some());
-        let header = scenario.data.header.as_ref().unwrap();
-        assert_eq!(header.name.as_literal().unwrap(), "Basic Scenario");
+        let header = &scenario.file_header;
+        assert_eq!(header.description.as_literal().unwrap(), "Basic Scenario");
         assert_eq!(header.author.as_literal().unwrap(), "openscenario-rs");
         
         // Should have entities
-        assert!(scenario.data.entities.is_some());
+        assert!(scenario.entities.is_some());
     }
 
     #[test]
     fn test_alks_scenario_template() {
         // Test ALKS template provides proper initialization
-        let scenario = BasicScenarioTemplate::alks_template();
+        let scenario_builder = BasicScenarioTemplate::alks_template();
+        let scenario = scenario_builder.build().unwrap();
         
         // Should have proper header
-        assert!(scenario.data.header.is_some());
-        let header = scenario.data.header.as_ref().unwrap();
-        assert_eq!(header.name.as_literal().unwrap(), "ALKS Scenario");
+        let header = &scenario.file_header;
+        assert_eq!(header.description.as_literal().unwrap(), "ALKS Scenario");
         
         // Should have entities
-        assert!(scenario.data.entities.is_some());
+        assert!(scenario.entities.is_some());
     }
 
     #[test]
@@ -264,9 +265,11 @@ mod tests {
         assert_eq!(ego_private.private_actions.len(), 2);
         
         // 3. Templates provide working scenarios
-        let scenario = BasicScenarioTemplate::alks_template();
-        assert!(scenario.data.header.is_some());
-        assert!(scenario.data.entities.is_some());
+        let scenario_builder = BasicScenarioTemplate::alks_template();
+        let scenario = scenario_builder.build().unwrap();
+        // Verify the scenario has required components through public API
+        assert_eq!(scenario.file_header.description.as_literal().unwrap(), "ALKS Scenario");
+        assert!(scenario.entities.is_some());
         
         println!("✅ Phase 1 Success Criteria Met:");
         println!("   - Non-empty triggers can be created");

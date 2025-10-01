@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_header(&format!("Test Scenario {}", i), "Benchmark")
             .with_entities();
         
-        builder.add_vehicle("ego").car().finish();
+        builder = builder.add_vehicle("ego", |v| v.car());
         let _scenario = builder.build()?;
     }
     
@@ -39,9 +39,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_header(&format!("Complex Scenario {}", i), "Benchmark")
             .with_entities();
             
-        builder.add_vehicle("vehicle_0").car().finish();
-        builder.add_vehicle("vehicle_1").car().finish();
-        builder.add_vehicle("vehicle_2").car().finish();
+        builder = builder.add_vehicle("vehicle_0", |v| v.car());
+        builder = builder.add_vehicle("vehicle_1", |v| v.car());
+        builder = builder.add_vehicle("vehicle_2", |v| v.car());
         
         let _scenario = builder.build()?;
     }
@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_header(&format!("Simple Scenario {}", i), "Benchmark")
             .with_entities();
             
-        builder.add_vehicle("ego").car().finish();
+        builder = builder.add_vehicle("ego", |v| v.car());
         let _scenario = builder.build()?;
     }
     
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_header(&format!("Memory Test {}", i), "Benchmark")
             .with_entities();
             
-        builder.add_vehicle("ego").car().finish();
+        builder = builder.add_vehicle("ego", |v| v.car());
         let scenario = builder.build()?;
         scenarios.push(scenario);
     }
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_header("Serialization Test", "Benchmark")
             .with_entities();
             
-        builder.add_vehicle("ego").car().finish();
+        builder = builder.add_vehicle("ego", |v| v.car());
         return Ok(()); // Skip serialization test if no scenarios
     };
     

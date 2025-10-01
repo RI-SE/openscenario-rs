@@ -47,7 +47,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut scenario_with_entities = scenario_builder;
 
     // Add Ego vehicle (ALKS subject under test)
-    scenario_with_entities.add_vehicle("Ego").car().finish();
+    scenario_with_entities = scenario_with_entities.add_vehicle("Ego", |vehicle| vehicle.car());
+    
+    // Add Target vehicle (lead vehicle for following scenario)
+    scenario_with_entities = scenario_with_entities.add_vehicle("Target", |vehicle| vehicle.car());
 
     println!("✅ Added Ego and Target vehicles with ALKS specifications");
 

@@ -320,10 +320,10 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::ControllerAction(controller_action) = action.action {
             let activate = controller_action.activate_controller_action.unwrap();
-            assert!(activate.lateral.value());
-            assert!(activate.longitudinal.value());
-            assert!(!activate.lighting.value());
-            assert!(!activate.animation.value());
+            assert!(*activate.lateral.as_literal().unwrap());
+            assert!(*activate.longitudinal.as_literal().unwrap());
+            assert!(!*activate.lighting.as_literal().unwrap());
+            assert!(!*activate.animation.as_literal().unwrap());
         } else {
             panic!("Expected ControllerAction");
         }
@@ -344,16 +344,16 @@ mod tests {
             let override_action = controller_action.override_controller_value_action.unwrap();
             
             let throttle = override_action.throttle.unwrap();
-            assert!(throttle.active.value());
-            assert_eq!(throttle.value.value(), 0.8);
+            assert!(*throttle.active.as_literal().unwrap());
+            assert_eq!(*throttle.value.as_literal().unwrap(), 0.8);
             
             let brake = override_action.brake.unwrap();
-            assert!(!brake.active.value());
-            assert_eq!(brake.value.value(), 0.0);
+            assert!(!*brake.active.as_literal().unwrap());
+            assert_eq!(*brake.value.as_literal().unwrap(), 0.0);
             
             let steering = override_action.steering_wheel.unwrap();
-            assert!(steering.active.value());
-            assert_eq!(steering.value.value(), 0.2);
+            assert!(*steering.active.as_literal().unwrap());
+            assert_eq!(*steering.value.as_literal().unwrap(), 0.2);
         } else {
             panic!("Expected ControllerAction");
         }
@@ -377,7 +377,7 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::ControllerAction(controller_action) = action.action {
             let assign = controller_action.assign_controller_action.unwrap();
-            assert_eq!(assign.controller.name.value(), "TestController");
+            assert_eq!(assign.controller.name.as_literal().unwrap(), "TestController");
         } else {
             panic!("Expected ControllerAction");
         }

@@ -9,10 +9,8 @@ mod vehicle_builder_tests {
             .with_header("Test", "Author")
             .with_entities();
             
-        scenario_builder
-            .add_vehicle("ego")
-            .car()
-            .finish();
+        scenario_builder = scenario_builder
+            .add_vehicle("ego", |v| v.car());
             
         let scenario = scenario_builder.build().unwrap();
             
@@ -36,13 +34,9 @@ mod vehicle_builder_tests {
             .with_header("Multi Vehicle Test", "Test Author")
             .with_entities();
             
-        scenario_builder
-            .add_vehicle("ego")
-            .car()
-            .finish()
-            .add_vehicle("truck1")
-            .truck()
-            .finish();
+        scenario_builder = scenario_builder
+            .add_vehicle("ego", |v| v.car())
+            .add_vehicle("truck1", |v| v.truck());
             
         let scenario = scenario_builder.build().unwrap();
             
@@ -62,12 +56,10 @@ mod vehicle_builder_tests {
             .with_header("Custom Vehicle Test", "Test Author")
             .with_entities();
             
-        scenario_builder
-            .add_vehicle("custom")
-            .car()
-            .with_dimensions(5.0, 2.0, 1.8)
-            .with_performance(150.0, 5.0, 12.0)
-            .finish();
+        scenario_builder = scenario_builder
+            .add_vehicle("custom", |v| v.car()
+                .with_dimensions(5.0, 2.0, 1.8)
+                .with_performance(150.0, 5.0, 12.0));
             
         let scenario = scenario_builder.build().unwrap();
             

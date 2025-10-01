@@ -323,8 +323,8 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::LateralAction(lateral_action) = action.action {
             if let crate::types::actions::movement::LateralActionChoice::LaneChangeAction(lane_change) = lateral_action.lateral_choice {
-                assert_eq!(lane_change.target_lane_offset.unwrap().value(), 0.5);
-                assert_eq!(lane_change.lane_change_action_dynamics.value.value(), 2.0);
+                assert_eq!(*lane_change.target_lane_offset.unwrap().as_literal().unwrap(), 0.5);
+                assert_eq!(*lane_change.lane_change_action_dynamics.value.as_literal().unwrap(), 2.0);
             } else {
                 panic!("Expected LaneChangeAction");
             }
@@ -347,10 +347,10 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::LateralAction(lateral_action) = action.action {
             if let crate::types::actions::movement::LateralActionChoice::LateralDistanceAction(distance_action) = lateral_action.lateral_choice {
-                assert_eq!(distance_action.entity_ref.value(), "target");
-                assert_eq!(distance_action.distance.unwrap().value(), 5.0);
-                assert!(distance_action.freespace.value());
-                assert!(distance_action.continuous.value());
+                assert_eq!(distance_action.entity_ref.as_literal().unwrap(), "target");
+                assert_eq!(*distance_action.distance.unwrap().as_literal().unwrap(), 5.0);
+                assert!(*distance_action.freespace.as_literal().unwrap());
+                assert!(*distance_action.continuous.as_literal().unwrap());
             } else {
                 panic!("Expected LateralDistanceAction");
             }
@@ -372,8 +372,8 @@ mod tests {
         // Verify the action was built correctly
         if let CorePrivateAction::LateralAction(lateral_action) = action.action {
             if let crate::types::actions::movement::LateralActionChoice::LaneOffsetAction(offset_action) = lateral_action.lateral_choice {
-                assert!(!offset_action.continuous.value());
-                assert_eq!(offset_action.dynamics.max_lateral_acc.unwrap().value(), 2.0);
+                assert!(!*offset_action.continuous.as_literal().unwrap());
+                assert_eq!(*offset_action.dynamics.max_lateral_acc.unwrap().as_literal().unwrap(), 2.0);
             } else {
                 panic!("Expected LaneOffsetAction");
             }
