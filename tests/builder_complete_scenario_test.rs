@@ -39,10 +39,20 @@ mod complete_scenario_tests {
 
     #[test]
     fn test_minimal_storyboard_creation() {
+        use openscenario_rs::types::scenario::init::{Init, Actions};
+        
+        // Create truly empty init actions
+        let empty_init = Init {
+            actions: Actions {
+                global_actions: vec![],
+                private_actions: vec![],
+            },
+        };
+        
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
             .with_entities()
-            .with_storyboard(|storyboard| storyboard)
+            .with_storyboard(|storyboard| storyboard.with_init_actions(empty_init))
             .build()
             .unwrap();
             
