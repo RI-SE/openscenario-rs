@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <OpenSCENARIO>
-  <FileHeader revMajor="1" revMinor="1" date="2023-01-01T00:00:00" description="Test scenario with multiple actions in event" name="MultipleActionsTest"/>
+  <FileHeader revMajor="1" revMinor="1" date="2023-01-01T00:00:00" description="Test scenario with multiple actions in event" name="MultipleActionsTest" author="TestAuthor"/>
   <Entities>
     <ScenarioObject name="Ego">
       <Vehicle name="vehicle.tesla.model3" vehicleCategory="car">
