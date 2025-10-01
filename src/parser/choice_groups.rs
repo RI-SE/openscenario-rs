@@ -89,6 +89,7 @@ impl ChoiceGroupParser {
                 let element_start_tag = format!("<{}", element_name);
                 let element_end_tag = format!("</{}>", element_name);
                 let element_self_closing = format!("<{}/>", element_name);
+                let element_self_closing_with_space = format!("<{} ", element_name);
                 
                 // Find the next occurrence of this element
                 let element_pos = if let Some(pos) = content[search_pos..].find(&element_start_tag) {
@@ -97,12 +98,53 @@ impl ChoiceGroupParser {
                     break; // No more occurrences of this element
                 };
 
-                // Check if it's self-closing
-                if content[element_pos..].starts_with(&element_self_closing) {
-                    let element_xml = &content[element_pos..element_pos + element_self_closing.len()];
+                // Skip if this element is nested inside another element we don't want
+                // Check if there's an unclosed tag before this element
+                let content_before = &content[search_pos..element_pos];
+                let mut depth_check = 0;
+                let mut check_pos = 0;
+                while check_pos < content_before.len() {
+                    if let Some(open_pos) = content_before[check_pos..].find('<') {
+                        let abs_open_pos = check_pos + open_pos;
+                        if abs_open_pos + 1 < content_before.len() {
+                            let tag_start = abs_open_pos + 1;
+                            if content_before.chars().nth(tag_start).unwrap() == '/' {
+                                depth_check -= 1;
+                            } else {
+                                // Check if it's a self-closing tag
+                                if let Some(close_pos) = content_before[abs_open_pos..].find('>') {
+                                    let tag_content = &content_before[abs_open_pos..abs_open_pos + close_pos + 1];
+                                    if !tag_content.ends_with("/>") {
+                                        depth_check += 1;
+                                    }
+                                }
+                            }
+                        }
+                        check_pos = abs_open_pos + 1;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Skip this element if it's nested
+                if depth_check > 0 {
+                    search_pos = element_pos + element_start_tag.len();
+                    continue;
+                }
+
+                // Check if it's self-closing (either <element/> or <element .../>)
+                let is_self_closing = content[element_pos..].starts_with(&element_self_closing) ||
+                    (content[element_pos..].starts_with(&element_self_closing_with_space) &&
+                     content[element_pos..].find('>').map_or(false, |pos| {
+                         content[element_pos..element_pos + pos + 1].ends_with("/>")
+                     }));
+
+                if is_self_closing {
+                    let tag_end = content[element_pos..].find('>').unwrap() + element_pos + 1;
+                    let element_xml = &content[element_pos..tag_end];
                     let variant = T::parse_choice_element(element_name, element_xml)?;
                     variants.push((element_pos, variant)); // This should now work correctly
-                    search_pos = element_pos + element_self_closing.len();
+                    search_pos = tag_end;
                 } else {
                     // Find the end of the opening tag
                     let tag_end_pos = content[element_pos..].find('>').ok_or_else(|| {
@@ -132,7 +174,9 @@ impl ChoiceGroupParser {
                             } else {
                                 depth -= 1;
                                 if depth == 0 {
-                                    element_end_pos = Some(current_pos + content[current_pos..].find(&element_end_tag).unwrap() + element_end_tag.len());
+                                    if let Some(end_tag_pos) = content[current_pos..].find(&element_end_tag) {
+                                        element_end_pos = Some(current_pos + end_tag_pos + element_end_tag.len());
+                                    }
                                 }
                                 break;
                             }
