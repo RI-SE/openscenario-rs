@@ -403,8 +403,8 @@ mod tests {
 
         // Test invalid action with no actions
         let invalid_none = PrivateAction::default();
-        // Default has speed_action, so it should be valid
-        assert!(invalid_none.validate().is_ok());
+        // Default has no actions (all None), so validation should fail
+        assert!(invalid_none.validate().is_err());
 
         // Test invalid action with multiple actions
         let invalid_multiple = PrivateAction {
