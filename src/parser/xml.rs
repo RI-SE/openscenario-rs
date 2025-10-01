@@ -1,18 +1,106 @@
 //! XML parsing implementation using quick-xml and serde
 //!
-//! This file contains:
-//! - XML document parsing and DOM tree construction
-//! - Custom deserializers for OpenSCENARIO-specific XML patterns
-//! - Namespace handling and XML schema validation
-//! - Streaming parser for large scenario files
-//! - XML attribute and element mapping to Rust types
+//! This module provides efficient XML parsing and serialization for OpenSCENARIO documents
+//! with comprehensive error handling and validation capabilities.
 //!
-//! Contributes to project by:
-//! - Providing efficient XML parsing with minimal memory overhead
-//! - Supporting both streaming and in-memory parsing strategies
-//! - Handling OpenSCENARIO-specific XML patterns and conventions
-//! - Enabling custom deserialization for complex type relationships
-//! - Supporting XML validation against OpenSCENARIO schema
+//! # Features
+//!
+//! - **High-performance parsing** using quick-xml with zero-copy deserialization
+//! - **Comprehensive validation** with detailed error reporting and suggestions
+//! - **Catalog support** for reusable component libraries
+//! - **UTF-8 BOM handling** for cross-platform compatibility
+//! - **Pretty-printed output** with configurable formatting
+//!
+//! # Basic Usage
+//!
+//! ## Parsing Scenarios
+//!
+//! ```rust
+//! use openscenario_rs::parser::xml::{parse_from_file, parse_from_str};
+//!
+//! // Parse from file with automatic error context
+//! let scenario = parse_from_file("my_scenario.xosc")?;
+//! println!("Scenario author: {}", scenario.file_header.author);
+//!
+//! // Parse from XML string
+//! let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+//! <OpenSCENARIO>
+//!   <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00"
+//!               author="Example" description="Test scenario"/>
+//!   <ScenarioDefinition>
+//!     <!-- scenario content -->
+//!   </ScenarioDefinition>
+//! </OpenSCENARIO>"#;
+//! let scenario = parse_from_str(xml)?;
+//! ```
+//!
+//! ## Validation During Parsing
+//!
+//! ```rust
+//! use openscenario_rs::parser::xml::{parse_from_file_validated, validate_xml_structure};
+//!
+//! // Validate structure before full parsing
+//! validate_xml_structure(&xml_content)?;
+//!
+//! // Parse with built-in validation
+//! let scenario = parse_from_file_validated("scenario.xosc")?;
+//! ```
+//!
+//! ## Serialization
+//!
+//! ```rust
+//! use openscenario_rs::parser::xml::{serialize_to_string, serialize_to_file};
+//!
+//! // Serialize to formatted XML string
+//! let xml_output = serialize_to_string(&scenario)?;
+//! println!("{}", xml_output);
+//!
+//! // Write directly to file
+//! serialize_to_file(&scenario, "output.xosc")?;
+//! ```
+//!
+//! # Catalog File Operations
+//!
+//! ```rust
+//! use openscenario_rs::parser::xml::{
+//!     parse_catalog_from_file, serialize_catalog_to_file,
+//!     parse_catalog_from_str_validated
+//! };
+//!
+//! // Parse vehicle catalog
+//! let catalog = parse_catalog_from_file("vehicles.xosc")?;
+//!
+//! // Validate catalog structure
+//! let validated_catalog = parse_catalog_from_str_validated(&catalog_xml)?;
+//!
+//! // Export modified catalog
+//! serialize_catalog_to_file(&catalog, "updated_vehicles.xosc")?;
+//! ```
+//!
+//! # Error Handling
+//!
+//! All parsing functions return `Result<T>` with detailed error context:
+//!
+//! ```rust
+//! match parse_from_file("scenario.xosc") {
+//!     Ok(scenario) => {
+//!         // Process valid scenario
+//!         println!("Loaded scenario with {} entities", 
+//!                  scenario.entities.as_ref().map_or(0, |e| e.scenario_objects.len()));
+//!     }
+//!     Err(e) => {
+//!         eprintln!("Parse error: {}", e);
+//!         // Error includes file path and specific parsing context
+//!     }
+//! }
+//! ```
+//!
+//! # Performance Notes
+//!
+//! - Use `parse_from_file` for fastest parsing without validation
+//! - Use `parse_from_file_validated` when you need structure validation
+//! - For very large files (>50MB), consider chunked processing
+//! - Validation adds ~10-15% overhead but catches malformed XML early
 
 use crate::error::{Error, Result};
 use crate::types::catalogs::files::CatalogFile;

@@ -1,4 +1,28 @@
 //! Movement action builders (SpeedAction, TeleportAction, etc.)
+//!
+//! This module provides builders for actions that control entity movement,
+//! including speed changes and position updates.
+//!
+//! # Available Builders
+//!
+//! - [`SpeedActionBuilder`] - Control entity speed (absolute speed targets)
+//! - [`TeleportActionBuilder`] - Instantly move entities to new positions
+//!
+//! # Usage Examples
+//!
+//! ```rust
+//! use openscenario_rs::builder::actions::movement::{SpeedActionBuilder, TeleportActionBuilder};
+//!
+//! // Create a speed action to set vehicle to 25 m/s
+//! let speed_action = SpeedActionBuilder::new()
+//!     .for_entity("ego_vehicle")
+//!     .to_speed(25.0);
+//!
+//! // Teleport vehicle to specific world coordinates
+//! let teleport_action = TeleportActionBuilder::new()
+//!     .for_entity("ego_vehicle")
+//!     .to_world_position(100.0, 200.0, 0.0);
+//! ```
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
