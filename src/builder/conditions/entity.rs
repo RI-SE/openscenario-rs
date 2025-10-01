@@ -2,14 +2,11 @@
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    conditions::{
-        entity::{
+    conditions::entity::{
             ByEntityCondition, AccelerationCondition, SpeedCondition, TraveledDistanceCondition,
-            EndOfRoadCondition, ReachPositionCondition, CollisionCondition, OffroadCondition,
-            TimeHeadwayCondition, TimeToCollisionCondition, StandStillCondition, EntityCondition
+            EndOfRoadCondition, ReachPositionCondition, EntityCondition
         },
-    },
-    basic::{Double, Boolean, OSString},
+    basic::{Double, OSString},
     enums::{Rule, ConditionEdge, TriggeringEntitiesRule, DirectionalDimension},
     positions::Position,
     scenario::triggers::{TriggeringEntities, Condition, EntityRef},

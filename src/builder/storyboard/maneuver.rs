@@ -6,7 +6,6 @@ use crate::types::{
         story::{Maneuver, Event, StoryAction, StoryPrivateAction},
         triggers::{Trigger, ConditionGroup},
     },
-    actions::wrappers::PrivateAction,
     basic::OSString,
     enums::Priority,
 };

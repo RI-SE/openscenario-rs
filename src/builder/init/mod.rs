@@ -31,8 +31,6 @@ pub mod private;
 pub use actions::InitActionBuilder;
 pub use private::{PrivateActionBuilder, GlobalActionBuilder};
 
-use crate::builder::{BuilderError, BuilderResult};
-use crate::types::scenario::init::{Init, Actions, GlobalAction, Private};
 
 /// Convenience functions for common initialization patterns
 impl InitActionBuilder {

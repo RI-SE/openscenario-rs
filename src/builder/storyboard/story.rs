@@ -1,19 +1,17 @@
 //! Story and Act builders for scenario behavior definition
 
 use crate::builder::{
-    init::InitActionBuilder, scenario::Complete, scenario::HasEntities, scenario::ScenarioBuilder,
-    BuilderError, BuilderResult,
+    init::InitActionBuilder, scenario::HasEntities, scenario::ScenarioBuilder, BuilderResult,
 };
 use crate::types::{
     basic::{OSString, ParameterDeclarations, UnsignedInt},
     scenario::{
         init::Init,
-        story::{Act, Actors, EntityRef, ManeuverGroup, ScenarioStory},
+        story::{Act, Actors, ManeuverGroup, ScenarioStory},
         storyboard::Storyboard,
         triggers::Trigger,
     },
 };
-use std::marker::PhantomData;
 
 /// Builder for complete storyboard
 pub struct StoryboardBuilder {
@@ -73,9 +71,9 @@ impl StoryboardBuilder {
     }
 
     /// Stop scenario after specified time
-    pub fn stop_after_time(mut self, time: f64) -> BuilderResult<Self> {
+    pub fn stop_after_time(self, time: f64) -> BuilderResult<Self> {
         use crate::builder::conditions::{TimeConditionBuilder, TriggerBuilder};
-        use crate::types::scenario::triggers::ConditionGroup;
+        
 
         let time_condition = TimeConditionBuilder::new().at_time(time).build()?;
 
@@ -90,12 +88,12 @@ impl StoryboardBuilder {
 
     /// Stop when entity reaches position
     pub fn stop_when_entity_reaches(
-        mut self,
+        self,
         entity: &str,
         position: crate::types::positions::Position,
     ) -> BuilderResult<Self> {
         use crate::builder::conditions::{ReachPositionConditionBuilder, TriggerBuilder};
-        use crate::types::scenario::triggers::ConditionGroup;
+        
 
         let reach_condition = ReachPositionConditionBuilder::new()
             .for_entity(entity)
@@ -113,11 +111,11 @@ impl StoryboardBuilder {
 
     /// Stop on custom condition
     pub fn stop_on_condition(
-        mut self,
+        self,
         condition: crate::types::scenario::triggers::Condition,
     ) -> BuilderResult<Self> {
         use crate::builder::conditions::TriggerBuilder;
-        use crate::types::scenario::triggers::ConditionGroup;
+        
 
         let trigger = TriggerBuilder::new()
             .add_condition_group()
@@ -129,7 +127,7 @@ impl StoryboardBuilder {
     }
 
     /// Finish storyboard and return to scenario builder
-    pub fn finish(mut self) -> ScenarioBuilder<crate::builder::scenario::Complete> {
+    pub fn finish(self) -> ScenarioBuilder<crate::builder::scenario::Complete> {
         let storyboard = Storyboard {
             init: self.init.unwrap_or_else(|| {
                 // Provide basic default with environment action if no init specified

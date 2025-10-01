@@ -1,9 +1,8 @@
 //! Main init action builder implementation
 
 use super::private::{GlobalActionBuilder, PrivateActionBuilder};
-use crate::builder::{BuilderError, BuilderResult};
+use crate::builder::BuilderResult;
 use crate::types::{
-    basic::Value,
     environment::Environment,
     positions::Position,
     scenario::init::{Actions, EnvironmentAction, GlobalAction, Init, Private},

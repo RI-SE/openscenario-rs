@@ -11,7 +11,7 @@ use crate::types::{
         locations::{CatalogLocations, VehicleCatalogLocation, PedestrianCatalogLocation, ControllerCatalogLocation},
         references::{VehicleCatalogReference, PedestrianCatalogReference, ControllerCatalogReference},
     },
-    entities::{vehicle::Vehicle, pedestrian::Pedestrian},
+    entities::vehicle::Vehicle,
     controllers::Controller,
 };
 use std::collections::HashMap;

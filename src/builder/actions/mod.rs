@@ -68,7 +68,7 @@ pub use lateral::{LaneChangeActionBuilder, LateralDistanceActionBuilder, LaneOff
 pub use controller::{ActivateControllerActionBuilder, OverrideControllerValueActionBuilder, AssignControllerActionBuilder};
 pub use global::{EnvironmentActionBuilder, EntityActionBuilder, VariableActionBuilder};
 
-use crate::builder::{BuilderError, BuilderResult};
+use crate::builder::BuilderResult;
 use crate::types::actions::wrappers::PrivateAction;
 
 /// Collection of actions for a maneuver

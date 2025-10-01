@@ -6,8 +6,7 @@
 use crate::builder::{BuilderError, BuilderResult, scenario::ScenarioBuilder, scenario::HasEntities};
 use crate::builder::catalog::{CatalogEntityBuilder, VehicleCatalogReferenceBuilder, PedestrianCatalogReferenceBuilder};
 use crate::types::{
-    entities::{ScenarioObject, vehicle::Vehicle, pedestrian::Pedestrian},
-    catalogs::references::{VehicleCatalogReference, PedestrianCatalogReference},
+    entities::ScenarioObject,
     basic::OSString,
 };
 
@@ -35,7 +34,7 @@ impl<'parent> CatalogVehicleBuilder<'parent> {
     }
     
     /// Load vehicle from catalog reference
-    pub fn from_catalog(mut self, catalog_name: &str, entry_name: &str) -> CatalogVehicleReferenceBuilder<'parent> {
+    pub fn from_catalog(self, catalog_name: &str, entry_name: &str) -> CatalogVehicleReferenceBuilder<'parent> {
         CatalogVehicleReferenceBuilder::new(self, catalog_name, entry_name)
     }
     
@@ -73,7 +72,7 @@ impl<'parent> CatalogVehicleReferenceBuilder<'parent> {
     }
     
     /// Finish and resolve the catalog reference
-    pub fn finish(mut self) -> BuilderResult<&'parent mut ScenarioBuilder<HasEntities>> {
+    pub fn finish(self) -> BuilderResult<&'parent mut ScenarioBuilder<HasEntities>> {
         // Build the catalog reference
         let reference = self.reference_builder.build()?;
         
@@ -125,7 +124,7 @@ impl<'parent> CatalogPedestrianBuilder<'parent> {
     }
     
     /// Load pedestrian from catalog reference
-    pub fn from_catalog(mut self, catalog_name: &str, entry_name: &str) -> CatalogPedestrianReferenceBuilder<'parent> {
+    pub fn from_catalog(self, catalog_name: &str, entry_name: &str) -> CatalogPedestrianReferenceBuilder<'parent> {
         CatalogPedestrianReferenceBuilder::new(self, catalog_name, entry_name)
     }
     
@@ -163,7 +162,7 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
     }
     
     /// Finish and resolve the catalog reference
-    pub fn finish(mut self) -> BuilderResult<&'parent mut ScenarioBuilder<HasEntities>> {
+    pub fn finish(self) -> BuilderResult<&'parent mut ScenarioBuilder<HasEntities>> {
         // Build the catalog reference
         let reference = self.reference_builder.build()?;
         

@@ -7,7 +7,7 @@ pub mod basic;
 
 pub use basic::BasicScenarioTemplate;
 
-use crate::builder::{BuilderResult, scenario::{ScenarioBuilder, HasEntities}};
+use crate::builder::scenario::{ScenarioBuilder, HasEntities};
 
 /// Trait for scenario templates
 pub trait ScenarioTemplate {

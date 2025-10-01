@@ -1,6 +1,5 @@
 //! Vehicle entity builder with fluent API
 
-use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     entities::{Vehicle, ScenarioObject},
     entities::vehicle::{Properties, Performance},

@@ -8,7 +8,7 @@ use crate::types::{
         RelativeTargetLane, AbsoluteTargetLane,
         LateralDistanceAction, LaneOffsetAction, LaneOffsetActionDynamics,
         LaneOffsetTarget, LaneOffsetTargetChoice, RelativeTargetLaneOffset,
-        AbsoluteTargetLaneOffset, TransitionDynamics, LateralAction, LateralActionChoice,
+        AbsoluteTargetLaneOffset, TransitionDynamics, LateralAction,
         DynamicConstraints
     },
     actions::wrappers::{PrivateAction, CorePrivateAction},

@@ -11,7 +11,6 @@
 //! - **CollisionCondition**: Triggers on collision detection
 //!
 
-use crate::builder::positions::PositionBuilder;
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     basic::{Double, OSString},

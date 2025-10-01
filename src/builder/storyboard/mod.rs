@@ -6,14 +6,7 @@ pub mod maneuver;
 pub use story::{StoryboardBuilder, StoryBuilder, ActBuilder, DetachedActBuilder, DetachedStoryBuilder};
 pub use maneuver::{ManeuverBuilder, SpeedActionEventBuilder, TeleportActionEventBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder, DetachedTeleportActionBuilder};
 
-use crate::builder::{BuilderError, BuilderResult};
-use crate::types::{
-    scenario::{
-        storyboard::Storyboard,
-        story::ScenarioStory,
-        init::Init,
-    },
-};
+use crate::types::scenario::story::ScenarioStory;
 
 /// Collection of stories for a storyboard
 #[derive(Debug, Default)]

@@ -26,7 +26,7 @@
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
-use crate::builder::positions::{UnifiedPositionBuilder, PositionBuilder};
+use crate::builder::positions::PositionBuilder;
 use crate::types::{
     actions::movement::{SpeedAction, SpeedActionTarget, AbsoluteTargetSpeed, TeleportAction, TransitionDynamics, LongitudinalAction, LongitudinalActionChoice},
     actions::wrappers::{PrivateAction, CorePrivateAction},

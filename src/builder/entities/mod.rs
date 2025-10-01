@@ -6,7 +6,6 @@ pub mod catalog;
 pub use vehicle::{VehicleBuilder, DetachedVehicleBuilder};
 pub use catalog::{CatalogVehicleBuilder, CatalogPedestrianBuilder};
 
-use crate::builder::{BuilderError, BuilderResult};
 use crate::types::entities::{ScenarioObject, Entities};
 
 /// Collection of entity builders for scenario construction

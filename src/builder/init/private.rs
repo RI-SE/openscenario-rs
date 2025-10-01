@@ -1,12 +1,12 @@
 //! Private and global action builders for entity-specific initialization
 
 use super::actions::InitActionBuilder;
-use crate::builder::{BuilderError, BuilderResult};
+use crate::builder::BuilderResult;
 use crate::types::{
     actions::movement::{
-        AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics,
+        SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics,
     },
-    basic::{Double, OSString, Value},
+    basic::{Double, Value},
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
     positions::Position,

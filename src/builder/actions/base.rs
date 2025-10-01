@@ -1,6 +1,6 @@
 //! Base traits and utilities for action builders
 
-use crate::builder::{BuilderError, BuilderResult};
+use crate::builder::BuilderResult;
 use crate::types::actions::wrappers::PrivateAction;
 use crate::types::scenario::init::GlobalAction;
 

@@ -6,7 +6,6 @@ use crate::types::{
     scenario::init::{GlobalAction, EnvironmentAction},
     environment::Environment,
     actions::wrappers::PrivateAction,
-    basic::OSString,
 };
 
 /// Builder for environment actions

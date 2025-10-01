@@ -37,8 +37,6 @@ pub use entity::{AccelerationConditionBuilder, EnhancedSpeedConditionBuilder, Tr
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     scenario::triggers::{Trigger, ConditionGroup},
-    conditions::entity::ByEntityCondition,
-    conditions::value::ByValueCondition,
     scenario::triggers::Condition,
 };
 
@@ -59,7 +57,7 @@ impl TriggerBuilder {
     }
     
     /// Add a condition group (OR logic between groups)
-    pub fn add_condition_group(mut self) -> ConditionGroupBuilder {
+    pub fn add_condition_group(self) -> ConditionGroupBuilder {
         ConditionGroupBuilder::new(self)
     }
     
@@ -124,7 +122,7 @@ impl ConditionGroupBuilder {
     }
     
     /// Finish this group and return to trigger builder
-    pub fn finish_group(mut self) -> TriggerBuilder {
+    pub fn finish_group(self) -> TriggerBuilder {
         if !self.conditions.is_empty() {
             let group = ConditionGroup {
                 conditions: self.conditions,
@@ -160,7 +158,7 @@ impl TimeConditionGroupBuilder {
         self
     }
     
-    pub fn finish(mut self) -> BuilderResult<ConditionGroupBuilder> {
+    pub fn finish(self) -> BuilderResult<ConditionGroupBuilder> {
         let condition = self.builder.build()?;
         Ok(self.parent.add_condition(condition))
     }
@@ -190,7 +188,7 @@ impl SpeedConditionGroupBuilder {
         self
     }
     
-    pub fn finish(mut self) -> BuilderResult<ConditionGroupBuilder> {
+    pub fn finish(self) -> BuilderResult<ConditionGroupBuilder> {
         let condition = self.builder.build()?;
         Ok(self.parent.add_condition(condition))
     }
