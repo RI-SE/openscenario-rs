@@ -261,7 +261,7 @@ When uncertain about type usage patterns:
 **Files Modified**:
 - `src/types/actions/movement.rs` - Added `skip_serializing_if` to `targetLaneOffset`
 - `src/types/conditions/entity.rs` - Custom `Serialize` for choice groups
-- `tests/xsd_validation_fixes_test.rs` - Comprehensive XSD compliance tests
+- `tests/xsd_validation_test.rs` - Comprehensive XSD compliance tests
 - `examples/test_lane_change_serialization.rs` - Validation example
 - `docs/xsd_validation_fixes.md` - Complete implementation guide
 
@@ -285,8 +285,8 @@ When uncertain about type usage patterns:
 - `src/types/actions/movement.rs` - Raw value assignment fixes
 - `src/types/road.rs` - OSString comparison fixes
 - `src/types/positions/road.rs` - Multiple Value<T> fixes
-- `tests/phase1_position_types_test.rs` - Float literal and type fixes
-- `tests/integration_tests.rs` & `tests/integration_tests_fixed.rs` - Minor fixes
+- `tests/position_types_test.rs` - Float literal and type fixes
+- `tests/openscenario_integration_test.rs` & `tests/scenario_parsing_integration_test.rs` - Minor fixes
 
 **Key Pattern**: Always use `skip_serializing_if = "Option::is_none"` for optional `Value<T>` fields to prevent empty attribute serialization issues.
 

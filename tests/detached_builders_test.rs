@@ -1,5 +1,5 @@
 #[cfg(feature = "builder")]
-mod detached_builder_tests {
+mod detached_builders_tests {
     use openscenario_rs::builder::{ScenarioBuilder, StoryboardBuilder};
     use openscenario_rs::builder::storyboard::{DetachedActBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder};
 

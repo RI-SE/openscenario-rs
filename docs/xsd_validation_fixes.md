@@ -208,7 +208,7 @@ fn test_xsd_compliance() {
 
 The fixes are validated by comprehensive test suites:
 
-- **`tests/xsd_validation_fixes_test.rs`**: Core XSD compliance tests
+- **`tests/xsd_validation_test.rs`**: Core XSD compliance tests
 - **`examples/test_lane_change_serialization.rs`**: LaneChangeAction serialization verification
 - **`examples/test_serialization_debug.rs`**: XML output validation utility
 
@@ -227,8 +227,8 @@ The fixes are validated by comprehensive test suites:
 - `src/types/actions/movement.rs` - LaneChangeAction attribute fixes
 
 ### Tests & Validation  
-- `tests/xsd_validation_fixes_test.rs` - Comprehensive XSD validation tests
-- `tests/entity_condition_integration_tests.rs` - EntityCondition tests
+- `tests/xsd_validation_test.rs` - Comprehensive XSD validation tests
+- `tests/entity_conditions_integration_test.rs` - EntityCondition tests
 - `examples/test_lane_change_serialization.rs` - LaneChangeAction verification
 
 ## Impact

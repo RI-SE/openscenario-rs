@@ -173,7 +173,7 @@ let brake_override = OverrideBrakeAction {
 ## Testing
 
 ### Test Coverage
-- Comprehensive test suite in `tests/action_wrapper_types_test.rs`
+- Comprehensive test suite in `tests/actions_serialization_test.rs`
 - Serialization/deserialization tests for all wrapper types
 - Default implementation tests
 - Individual action type tests
