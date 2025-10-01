@@ -6,8 +6,8 @@
 use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     conditions::{
-        ByEntityCondition, DistanceCondition, ReachPositionCondition, RelativeDistanceCondition,
-        EntityCondition,
+        ByEntityCondition, DistanceCondition, EntityCondition, ReachPositionCondition,
+        RelativeDistanceCondition,
     },
     enums::{RelativeDistanceType, Rule},
     positions::Position,
@@ -17,13 +17,17 @@ use openscenario_rs::types::{
 #[test]
 fn test_by_entity_condition_speed() {
     let triggering_entities = TriggeringEntities::default();
-    let speed_condition = ByEntityCondition::speed(triggering_entities, 25.0, Rule::GreaterThan, "ego_vehicle");
+    let speed_condition =
+        ByEntityCondition::speed(triggering_entities, 25.0, Rule::GreaterThan, "ego_vehicle");
 
     match speed_condition.entity_condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(speed.entity_ref, "ego_vehicle");
+            assert_eq!(
+                speed.entity_ref.as_literal(),
+                Some("ego_vehicle".to_string()).as_ref()
+            );
         }
         _ => panic!("Expected Speed condition"),
     }
@@ -48,7 +52,8 @@ fn test_by_entity_condition_reach_position() {
 fn test_by_entity_condition_distance() {
     let triggering_entities = TriggeringEntities::default();
     let position = Position::default();
-    let distance_condition = ByEntityCondition::distance(triggering_entities, position, 40.0, true, Rule::LessThan);
+    let distance_condition =
+        ByEntityCondition::distance(triggering_entities, position, 40.0, true, Rule::LessThan);
 
     match distance_condition.entity_condition {
         EntityCondition::Distance(distance) => {
@@ -98,7 +103,10 @@ fn test_by_entity_condition_default() {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(speed.entity_ref, "DefaultEntity");
+            assert_eq!(
+                speed.entity_ref.as_literal(),
+                Some("DefaultEntity".to_string()).as_ref()
+            );
         }
         _ => panic!("Expected default to be Speed condition"),
     }
@@ -146,9 +154,12 @@ fn test_condition_equality() {
     let triggering_entities1 = TriggeringEntities::default();
     let triggering_entities2 = TriggeringEntities::default();
     let triggering_entities3 = TriggeringEntities::default();
-    let condition1 = ByEntityCondition::speed(triggering_entities1, 25.0, Rule::EqualTo, "vehicle1");
-    let condition2 = ByEntityCondition::speed(triggering_entities2, 25.0, Rule::EqualTo, "vehicle1");
-    let condition3 = ByEntityCondition::speed(triggering_entities3, 30.0, Rule::EqualTo, "vehicle1");
+    let condition1 =
+        ByEntityCondition::speed(triggering_entities1, 25.0, Rule::EqualTo, "vehicle1");
+    let condition2 =
+        ByEntityCondition::speed(triggering_entities2, 25.0, Rule::EqualTo, "vehicle1");
+    let condition3 =
+        ByEntityCondition::speed(triggering_entities3, 30.0, Rule::EqualTo, "vehicle1");
 
     assert_eq!(condition1, condition2);
     assert_ne!(condition1, condition3);
@@ -181,15 +192,25 @@ fn test_entity_condition_xml_deserialization() {
     "#;
 
     let result = quick_xml::de::from_str::<EntityCondition>(xml);
-    assert!(result.is_ok(), "Failed to deserialize EntityCondition: {:?}", result.err());
-    
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize EntityCondition: {:?}",
+        result.err()
+    );
+
     let condition = result.unwrap();
     match condition {
         EntityCondition::RelativeDistance(rel_dist) => {
-            assert_eq!(rel_dist.entity_ref, OSString::literal("CutInVehicle".to_string()));
+            assert_eq!(
+                rel_dist.entity_ref,
+                OSString::literal("CutInVehicle".to_string())
+            );
             assert_eq!(rel_dist.value, Double::literal(10.0));
             assert_eq!(rel_dist.freespace, Boolean::literal(true));
-            assert_eq!(rel_dist.relative_distance_type, RelativeDistanceType::Longitudinal);
+            assert_eq!(
+                rel_dist.relative_distance_type,
+                RelativeDistanceType::Longitudinal
+            );
             assert_eq!(rel_dist.rule, Rule::LessThan);
         }
         _ => panic!("Expected RelativeDistanceCondition, got: {:?}", condition),
@@ -206,14 +227,21 @@ fn test_entity_condition_xml_deserialization_speed() {
     "#;
 
     let result = quick_xml::de::from_str::<EntityCondition>(xml);
-    assert!(result.is_ok(), "Failed to deserialize EntityCondition: {:?}", result.err());
-    
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize EntityCondition: {:?}",
+        result.err()
+    );
+
     let condition = result.unwrap();
     match condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(speed.entity_ref, "ego_vehicle");
+            assert_eq!(
+                speed.entity_ref.as_literal(),
+                Some("ego_vehicle".to_string()).as_ref()
+            );
         }
         _ => panic!("Expected SpeedCondition, got: {:?}", condition),
     }
@@ -232,10 +260,13 @@ fn test_entity_condition_xml_deserialization_error_multiple_conditions() {
 
     let result = quick_xml::de::from_str::<EntityCondition>(xml);
     assert!(result.is_err(), "Expected error for multiple conditions");
-    
+
     let error_msg = result.err().unwrap().to_string();
-    assert!(error_msg.contains("can only contain one condition type"), 
-            "Error message should mention single condition requirement: {}", error_msg);
+    assert!(
+        error_msg.contains("can only contain one condition type"),
+        "Error message should mention single condition requirement: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -249,8 +280,11 @@ fn test_entity_condition_xml_deserialization_error_unknown_condition() {
 
     let result = quick_xml::de::from_str::<EntityCondition>(xml);
     assert!(result.is_err(), "Expected error for unknown condition type");
-    
+
     let error_msg = result.err().unwrap().to_string();
-    assert!(error_msg.contains("Unknown EntityCondition type"), 
-            "Error message should mention unknown condition type: {}", error_msg);
+    assert!(
+        error_msg.contains("Unknown EntityCondition type"),
+        "Error message should mention unknown condition type: {}",
+        error_msg
+    );
 }

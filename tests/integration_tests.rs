@@ -8,7 +8,7 @@
 
 use openscenario_rs::parse_str;
 use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
-use openscenario_rs::types::OpenScenario;
+use openscenario_rs::types::{OSString, OpenScenario};
 use std::fs;
 
 /// Helper function to extract entities and storyboard from OpenScenario
@@ -235,8 +235,6 @@ fn can_create_and_serialize_actions() {
         position: Position::default(),
     };
 
-
-
     // If we get here without compile errors, the actions are working
     assert!(true);
 }
@@ -258,7 +256,7 @@ fn can_create_and_serialize_conditions() {
     let speed_condition = SpeedCondition {
         value: openscenario_rs::types::Double::literal(25.0),
         rule: Rule::LessThan,
-        entity_ref: "Ego".to_string(),
+        entity_ref: OSString::Literal("Ego".to_string()),
         direction: None,
     };
 
@@ -739,18 +737,18 @@ fn can_validate_trajectory_following_modes() {
                         let actions = &event.actions;
                         for action in actions {
                             if let Some(ref private_action) = action.private_action {
-                            if let Some(routing) = &private_action.routing_action {
-                                if let Some(follow_action) = &routing.follow_trajectory_action {
-                                    routing_actions_found += 1;
+                                if let Some(routing) = &private_action.routing_action {
+                                    if let Some(follow_action) = &routing.follow_trajectory_action {
+                                        routing_actions_found += 1;
 
-                                    use openscenario_rs::types::enums::FollowingMode;
-                                    assert_eq!(
-                                        follow_action.trajectory_following_mode.following_mode,
-                                        FollowingMode::Follow,
-                                        "cut_in_101_exam.xosc uses followingMode='follow'"
-                                    );
+                                        use openscenario_rs::types::enums::FollowingMode;
+                                        assert_eq!(
+                                            follow_action.trajectory_following_mode.following_mode,
+                                            FollowingMode::Follow,
+                                            "cut_in_101_exam.xosc uses followingMode='follow'"
+                                        );
+                                    }
                                 }
-                            }
                             }
                         }
                     }

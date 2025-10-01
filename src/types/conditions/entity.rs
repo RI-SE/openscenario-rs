@@ -27,15 +27,17 @@ pub struct SpeedCondition {
     /// Speed value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Entity reference (library extension for convenience)
+    //#[serde(rename = "@entityRef")]
+    //
     #[serde(rename = "@entityRef")]
-    pub entity_ref: String,
-    
+    pub entity_ref: OSString,
+
     /// Direction of speed measurement (optional)
     #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
     pub direction: Option<DirectionalDimension>,
@@ -197,7 +199,10 @@ pub struct TimeHeadwayCondition {
     pub coordinate_system: Option<CoordinateSystem>,
 
     /// Optional relative distance type
-    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@relativeDistanceType",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_distance_type: Option<RelativeDistanceType>,
 
     /// Optional routing algorithm for route-based measurement
@@ -225,7 +230,10 @@ pub struct TimeToCollisionCondition {
     pub coordinate_system: Option<CoordinateSystem>,
 
     /// Optional relative distance type
-    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@relativeDistanceType",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_distance_type: Option<RelativeDistanceType>,
 
     /// Optional routing algorithm for route-based measurement
@@ -401,9 +409,9 @@ impl serde::Serialize for EntityCondition {
         S: serde::Serializer,
     {
         use serde::ser::SerializeMap;
-        
+
         let mut map = serializer.serialize_map(None)?;
-        
+
         match self {
             EntityCondition::EndOfRoad(condition) => {
                 map.serialize_entry("EndOfRoadCondition", condition)?;
@@ -454,7 +462,7 @@ impl serde::Serialize for EntityCondition {
                 map.serialize_entry("RelativeAngleCondition", condition)?;
             }
         }
-        
+
         map.end()
     }
 }
@@ -487,7 +495,7 @@ impl<'de> serde::Deserialize<'de> for EntityCondition {
                 while let Some(key) = map.next_key::<String>()? {
                     if condition_found {
                         return Err(serde::de::Error::custom(
-                            "EntityCondition can only contain one condition type"
+                            "EntityCondition can only contain one condition type",
                         ));
                     }
 
@@ -553,10 +561,13 @@ impl<'de> serde::Deserialize<'de> for EntityCondition {
                             condition_found = true;
                         }
                         "RelativeDistanceCondition" => {
-                            let condition: RelativeDistanceCondition = map.next_value()
-                                .map_err(|e| serde::de::Error::custom(
-                                    format!("Failed to deserialize RelativeDistanceCondition: {}", e)
-                                ))?;
+                            let condition: RelativeDistanceCondition =
+                                map.next_value().map_err(|e| {
+                                    serde::de::Error::custom(format!(
+                                        "Failed to deserialize RelativeDistanceCondition: {}",
+                                        e
+                                    ))
+                                })?;
                             result = Some(EntityCondition::RelativeDistance(condition));
                             condition_found = true;
                         }
@@ -576,16 +587,19 @@ impl<'de> serde::Deserialize<'de> for EntityCondition {
                             condition_found = true;
                         }
                         _ => {
-                            return Err(serde::de::Error::custom(
-                                format!("Unknown EntityCondition type: {}", key)
-                            ));
+                            return Err(serde::de::Error::custom(format!(
+                                "Unknown EntityCondition type: {}",
+                                key
+                            )));
                         }
                     }
                 }
 
-                result.ok_or_else(|| serde::de::Error::custom(
-                    "EntityCondition must contain exactly one condition type"
-                ))
+                result.ok_or_else(|| {
+                    serde::de::Error::custom(
+                        "EntityCondition must contain exactly one condition type",
+                    )
+                })
             }
         }
 
@@ -593,14 +607,12 @@ impl<'de> serde::Deserialize<'de> for EntityCondition {
     }
 }
 
-
-
 impl Default for SpeedCondition {
     fn default() -> Self {
         Self {
             value: Double::literal(10.0),
             rule: Rule::GreaterThan,
-            entity_ref: "DefaultEntity".to_string(),
+            entity_ref: OSString::Literal("DefaultEntity".to_string()),
             direction: None,
         }
     }
@@ -1250,14 +1262,14 @@ impl ByEntityCondition {
         triggering_entities: TriggeringEntities,
         value: f64,
         rule: Rule,
-        entity_ref: impl Into<String>,
+        entity_ref: &str,
     ) -> Self {
         Self::new(
             triggering_entities,
             EntityCondition::Speed(SpeedCondition {
                 value: Double::literal(value),
                 rule,
-                entity_ref: entity_ref.into(),
+                entity_ref: OSString::Literal(entity_ref.to_string()),
                 direction: None,
             }),
         )
@@ -1311,11 +1323,7 @@ impl ByEntityCondition {
     }
 
     /// Create an acceleration condition
-    pub fn acceleration(
-        triggering_entities: TriggeringEntities,
-        value: f64,
-        rule: Rule,
-    ) -> Self {
+    pub fn acceleration(triggering_entities: TriggeringEntities, value: f64, rule: Rule) -> Self {
         Self::new(
             triggering_entities,
             EntityCondition::Acceleration(AccelerationCondition::new(value, rule)),
@@ -1354,10 +1362,7 @@ impl ByEntityCondition {
     }
 
     /// Create a collision condition for entity type
-    pub fn collision_with_type(
-        triggering_entities: TriggeringEntities,
-        entity_type: &str,
-    ) -> Self {
+    pub fn collision_with_type(triggering_entities: TriggeringEntities, entity_type: &str) -> Self {
         Self::new(
             triggering_entities,
             EntityCondition::Collision(CollisionCondition::with_type(entity_type)),
@@ -1640,7 +1645,8 @@ mod tests {
     #[test]
     fn test_by_entity_condition_acceleration() {
         let triggering_entities = TriggeringEntities::default();
-        let condition = ByEntityCondition::acceleration(triggering_entities, 3.0, Rule::GreaterThan);
+        let condition =
+            ByEntityCondition::acceleration(triggering_entities, 3.0, Rule::GreaterThan);
         match condition.entity_condition {
             EntityCondition::Acceleration(acc_condition) => {
                 assert_eq!(acc_condition.value, Double::literal(3.0));
@@ -1709,7 +1715,8 @@ mod tests {
     fn test_by_entity_condition_enum_variants() {
         // Test that all variants can be created and matched
         let triggering_entities = TriggeringEntities::default();
-        let acceleration = ByEntityCondition::acceleration(triggering_entities.clone(), 1.0, Rule::GreaterThan);
+        let acceleration =
+            ByEntityCondition::acceleration(triggering_entities.clone(), 1.0, Rule::GreaterThan);
         let standstill = ByEntityCondition::standstill(triggering_entities, 2.0);
 
         match acceleration.entity_condition {
@@ -1803,8 +1810,10 @@ mod tests {
     #[test]
     fn test_by_entity_condition_collision_variants() {
         let triggering_entities = TriggeringEntities::default();
-        let collision_target = ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-        let collision_type = ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+        let collision_target =
+            ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
+        let collision_type =
+            ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
         let collision_any = ByEntityCondition::collision(triggering_entities);
 
         match collision_target.entity_condition {
