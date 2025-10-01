@@ -172,7 +172,7 @@ impl EnhancedSpeedConditionBuilder {
         let speed_condition = SpeedCondition {
             value: Double::literal(self.value.unwrap()),
             rule: self.rule,
-            entity_ref: self.entity_ref.clone().unwrap(),
+            entity_ref: OSString::literal(self.entity_ref.clone().unwrap()),
             direction: None,
         };
         
@@ -466,18 +466,26 @@ mod tests {
 
     #[test]
     fn test_reach_position_condition_builder() {
-        use crate::types::positions::{Position, PositionChoice, WorldPosition};
-        use crate::types::geometry::Orientation;
+        use crate::types::positions::{Position, WorldPosition};
+        use crate::types::basic::Double;
         
         let position = Position {
-            position_choice: PositionChoice::WorldPosition(WorldPosition {
-                x: 100.0,
-                y: 200.0,
-                z: Some(0.0),
-                h: 0.0,
-                p: Some(0.0),
-                r: Some(0.0),
+            world_position: Some(WorldPosition {
+                x: Double::literal(100.0),
+                y: Double::literal(200.0),
+                z: Some(Double::literal(0.0)),
+                h: Some(Double::literal(0.0)),
+                p: Some(Double::literal(0.0)),
+                r: Some(Double::literal(0.0)),
             }),
+            relative_world_position: None,
+            road_position: None,
+            relative_road_position: None,
+            lane_position: None,
+            relative_lane_position: None,
+            trajectory_position: None,
+            geographic_position: None,
+            relative_object_position: None,
         };
         
         let condition = ReachPositionConditionBuilder::new()

@@ -175,7 +175,7 @@ impl SpeedConditionBuilder {
                 entity_condition: EntityCondition::Speed(EntitySpeedCondition {
                     value: Double::literal(self.speed.unwrap()),
                     rule: self.rule,
-                    entity_ref: entity_ref.clone(),
+                    entity_ref: OSString::literal(entity_ref.clone()),
                     direction: None,
                 }),
             }),

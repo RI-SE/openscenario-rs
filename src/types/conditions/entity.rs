@@ -51,6 +51,7 @@ pub struct ReachPositionCondition {
     pub position: Position,
 
     /// Distance tolerance for considering position reached
+    #[serde(rename = "@tolerance")]
     pub tolerance: Double,
 }
 
@@ -61,18 +62,23 @@ pub struct DistanceCondition {
     pub position: Position,
 
     /// Distance value to compare against
+    #[serde(rename = "@value")]
     pub value: Double,
 
     /// Whether to use freespace (true) or reference point (false) distance
+    #[serde(rename = "@freespace")]
     pub freespace: Boolean,
 
     /// Comparison rule (greater than, less than, etc.)
+    #[serde(rename = "@rule")]
     pub rule: Rule,
 
     /// Whether to measure distance along route (deprecated)
+    #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
     pub along_route: Option<Boolean>,
 
     /// Coordinate system for distance measurement
+    #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
 
     /// Type of relative distance measurement
@@ -83,6 +89,7 @@ pub struct DistanceCondition {
     pub relative_distance_type: Option<RelativeDistanceType>,
 
     /// Algorithm for route-based distance calculation
+    #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
 }
 
