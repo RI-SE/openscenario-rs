@@ -1,6 +1,6 @@
 [package]
 name = "openscenario-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Ashfaq Farooqui"]
 description = "Rust library for parsing and manipulating OpenSCENARIO files"
@@ -37,3 +37,11 @@ serde_json = "1.0.143"
 [[bin]]
 name = "xosc-validate"
 path = "tools/xosc_validate.rs"
+
+[[bin]]
+name = "scenario_analyzer"
+path = "tools/scenario_analyzer.rs"
+
+[[bin]]
+name = "scenario_analyzer_simple"
+path = "tools/scenario_analyzer_simple.rs"
