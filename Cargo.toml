@@ -41,7 +41,3 @@ path = "tools/xosc_validate.rs"
 [[bin]]
 name = "scenario_analyzer"
 path = "tools/scenario_analyzer.rs"
-
-[[bin]]
-name = "scenario_analyzer_simple"
-path = "tools/scenario_analyzer_simple.rs"
