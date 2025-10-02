@@ -115,4 +115,3 @@ fn test_event_serialization_with_multiple_actions() {
         "Should have 2 Action elements in serialized XML"
     );
 }
-

@@ -1,7 +1,7 @@
 use openscenario_rs::types::{
-    conditions::entity::{EntityCondition, RelativeDistanceCondition, ByEntityCondition},
-    basic::{Double, Boolean, OSString},
-    enums::{RelativeDistanceType, Rule, CoordinateSystem},
+    basic::{Boolean, Double, OSString},
+    conditions::entity::{ByEntityCondition, EntityCondition, RelativeDistanceCondition},
+    enums::{CoordinateSystem, RelativeDistanceType, Rule},
     scenario::triggers::TriggeringEntities,
 };
 
@@ -20,12 +20,12 @@ fn main() {
     };
 
     let entity_condition = EntityCondition::RelativeDistance(rel_dist_condition);
-    
+
     match quick_xml::se::to_string(&entity_condition) {
         Ok(xml) => {
             println!("✅ EntityCondition XML:");
             println!("{}", xml);
-            
+
             // Check if the fix worked - should have attributes instead of child elements
             if xml.contains("entityRef=") && xml.contains("value=") && xml.contains("freespace=") {
                 println!("🎉 SUCCESS: RelativeDistanceCondition is using XML attributes!");
@@ -58,7 +58,9 @@ fn main() {
         Ok(xml) => {
             println!("\n✅ ByEntityCondition XML:");
             println!("{}", xml);
-            println!("\nThis should show EntityCondition element with RelativeDistanceCondition inside");
+            println!(
+                "\nThis should show EntityCondition element with RelativeDistanceCondition inside"
+            );
         }
         Err(e) => {
             println!("❌ ByEntityCondition serialization failed: {}", e);

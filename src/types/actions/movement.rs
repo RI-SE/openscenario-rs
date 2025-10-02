@@ -219,7 +219,10 @@ pub struct FollowTrajectoryAction {
     pub trajectory_following_mode: TrajectoryFollowingMode,
 
     /// Initial distance offset attribute (optional)
-    #[serde(rename = "@initialDistanceOffset", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@initialDistanceOffset",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub initial_distance_offset: Option<Double>,
 }
 
@@ -290,7 +293,12 @@ impl Default for RoutingAction {
 /// Lane change action for lateral lane movements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneChangeAction {
-    #[serde(rename = "@targetLaneOffset", default, skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_optional_double")]
+    #[serde(
+        rename = "@targetLaneOffset",
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_double"
+    )]
     pub target_lane_offset: Option<Double>,
     #[serde(rename = "LaneChangeActionDynamics")]
     pub lane_change_action_dynamics: TransitionDynamics,
@@ -434,23 +442,23 @@ pub enum LongitudinalActionChoice {
 pub struct LongitudinalDistanceAction {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    
+
     /// Fixed distance value (mutually exclusive with timeGap)
     #[serde(rename = "@distance", skip_serializing_if = "Option::is_none")]
     pub distance: Option<Double>,
-    
+
     /// Time gap value (mutually exclusive with distance)
     #[serde(rename = "@timeGap", skip_serializing_if = "Option::is_none")]
     pub time_gap: Option<Double>,
-    
+
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<OSString>,
-    
+
     /// Displacement type for leading referenced entity
     #[serde(rename = "@displacement", skip_serializing_if = "Option::is_none")]
     pub displacement: Option<OSString>,
-    
+
     #[serde(rename = "@freespace", skip_serializing_if = "Option::is_none")]
     pub freespace: Option<Boolean>,
     #[serde(rename = "@continuous")]
@@ -714,7 +722,10 @@ impl FollowTrajectoryAction {
             self.trajectory.is_some(),
             self.catalog_reference.is_some(),
             self.trajectory_ref.is_some(),
-        ].iter().filter(|&&x| x).count();
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
 
         if trajectory_count > 1 {
             return Err("FollowTrajectoryAction can contain at most one trajectory source (Trajectory, CatalogReference, or TrajectoryRef), found multiple".to_string());
@@ -1685,7 +1696,10 @@ mod tests {
         // Test valid action with catalog reference
         let valid_catalog = FollowTrajectoryAction {
             trajectory: None,
-            catalog_reference: Some(CatalogReference::new("catalog".to_string(), "entry".to_string())),
+            catalog_reference: Some(CatalogReference::new(
+                "catalog".to_string(),
+                "entry".to_string(),
+            )),
             time_reference: TimeReference::default(),
             trajectory_ref: None,
             trajectory_following_mode: TrajectoryFollowingMode::default(),
@@ -1718,7 +1732,10 @@ mod tests {
         // Test invalid action with multiple trajectory sources
         let invalid_multiple = FollowTrajectoryAction {
             trajectory: Some(Trajectory::default()),
-            catalog_reference: Some(CatalogReference::new("catalog".to_string(), "entry".to_string())),
+            catalog_reference: Some(CatalogReference::new(
+                "catalog".to_string(),
+                "entry".to_string(),
+            )),
             time_reference: TimeReference::default(),
             trajectory_ref: None,
             trajectory_following_mode: TrajectoryFollowingMode::default(),

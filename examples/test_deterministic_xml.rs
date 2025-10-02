@@ -30,11 +30,14 @@ fn main() {
     </Deterministic>"#;
 
     println!("Testing XML: {}", xml);
-    
+
     match quick_xml::de::from_str::<TestDeterministic>(xml) {
         Ok(result) => {
             println!("✅ Success: {:?}", result);
-            println!("Single distributions: {}", result.single_distributions.len());
+            println!(
+                "Single distributions: {}",
+                result.single_distributions.len()
+            );
             println!("Multi distributions: {}", result.multi_distributions.len());
         }
         Err(e) => {

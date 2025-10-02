@@ -36,10 +36,10 @@
 //! ```bash
 //! # Basic analysis
 //! cargo run --bin scenario_analyzer -- path/to/scenario.xosc
-//! 
+//!
 //! # Verbose mode with execution flow analysis
 //! cargo run --bin scenario_analyzer -- --verbose path/to/scenario.xosc
-//! 
+//!
 //! # JSON output for programmatic processing
 //! cargo run --bin scenario_analyzer -- --format json path/to/scenario.xosc
 //! ```
@@ -48,18 +48,9 @@ use openscenario_rs::{
     catalog::{extract_scenario_parameters, resolve_catalog_reference_simple},
     expression::evaluate_expression,
     parse_from_file,
-    types::{
-        basic::Value,
-        scenario::storyboard::OpenScenario,
-        OpenScenarioDocumentType,
-    },
+    types::{basic::Value, scenario::storyboard::OpenScenario, OpenScenarioDocumentType},
 };
-use std::{
-    collections::HashMap,
-    env,
-    path::Path,
-    process,
-};
+use std::{collections::HashMap, env, path::Path, process};
 
 /// Configuration for the analysis tool
 #[derive(Debug, Clone)]
@@ -155,10 +146,11 @@ struct PedestrianAnalysis {
 #[derive(Debug)]
 enum EntitySource {
     Inline,
-    CatalogReference { catalog_name: String, entry_name: String },
+    CatalogReference {
+        catalog_name: String,
+        entry_name: String,
+    },
 }
-
-
 
 /// Storyboard analysis results
 #[derive(Debug)]
@@ -522,7 +514,7 @@ fn main() {
 /// Parse command line arguments
 fn parse_args() -> Result<Config, Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    
+
     if args.len() < 2 {
         return Err("Missing required argument: scenario file".into());
     }
@@ -551,7 +543,11 @@ fn parse_args() -> Result<Config, Box<dyn std::error::Error>> {
                 match args[i].as_str() {
                     "json" => config.format = OutputFormat::Json,
                     "text" => config.format = OutputFormat::Text,
-                    other => return Err(format!("Invalid format '{}'. Use 'json' or 'text'", other).into()),
+                    other => {
+                        return Err(
+                            format!("Invalid format '{}'. Use 'json' or 'text'", other).into()
+                        )
+                    }
                 }
             }
             arg if arg.starts_with("--") => {
@@ -582,7 +578,9 @@ fn parse_args() -> Result<Config, Box<dyn std::error::Error>> {
 
 /// Print usage information
 fn print_usage() {
-    let program_name = env::args().next().unwrap_or_else(|| "scenario_analyzer".to_string());
+    let program_name = env::args()
+        .next()
+        .unwrap_or_else(|| "scenario_analyzer".to_string());
     println!("Usage: {} [OPTIONS] <scenario_file.xosc>", program_name);
     println!();
     println!("OPTIONS:");
@@ -626,16 +624,41 @@ fn run_analysis(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Analyze the OpenSCENARIO document
-fn analyze_document(document: &OpenScenario, input_path: &Path) -> Result<AnalysisResult, Box<dyn std::error::Error>> {
+fn analyze_document(
+    document: &OpenScenario,
+    input_path: &Path,
+) -> Result<AnalysisResult, Box<dyn std::error::Error>> {
     let document_type = document.document_type();
 
     // Extract header information
     let header_info = HeaderInfo {
-        description: document.file_header.description.as_literal().map_or("N/A".to_string(), |v| v.clone()),
-        author: document.file_header.author.as_literal().map_or("N/A".to_string(), |v| v.clone()),
-        date: document.file_header.date.as_literal().map_or("N/A".to_string(), |v| v.clone()),
-        rev_major: document.file_header.rev_major.as_literal().copied().unwrap_or(0),
-        rev_minor: document.file_header.rev_minor.as_literal().copied().unwrap_or(0),
+        description: document
+            .file_header
+            .description
+            .as_literal()
+            .map_or("N/A".to_string(), |v| v.clone()),
+        author: document
+            .file_header
+            .author
+            .as_literal()
+            .map_or("N/A".to_string(), |v| v.clone()),
+        date: document
+            .file_header
+            .date
+            .as_literal()
+            .map_or("N/A".to_string(), |v| v.clone()),
+        rev_major: document
+            .file_header
+            .rev_major
+            .as_literal()
+            .copied()
+            .unwrap_or(0),
+        rev_minor: document
+            .file_header
+            .rev_minor
+            .as_literal()
+            .copied()
+            .unwrap_or(0),
     };
 
     // Analyze entities
@@ -652,11 +675,12 @@ fn analyze_document(document: &OpenScenario, input_path: &Path) -> Result<Analys
     let parameter_analysis = analyze_parameters(document);
 
     // Analyze parameter variations (only for parameter variation documents)
-    let parameter_variation_analysis = if document_type == OpenScenarioDocumentType::ParameterVariation {
-        Some(analyze_parameter_variation(document, input_path)?)
-    } else {
-        None
-    };
+    let parameter_variation_analysis =
+        if document_type == OpenScenarioDocumentType::ParameterVariation {
+            Some(analyze_parameter_variation(document, input_path)?)
+        } else {
+            None
+        };
 
     // Analyze catalogs (including resolution attempts)
     let catalog_analysis = analyze_catalogs(document, input_path);
@@ -671,8 +695,6 @@ fn analyze_document(document: &OpenScenario, input_path: &Path) -> Result<Analys
         catalog_analysis,
     })
 }
-
-
 
 /// Analyze entities in the document
 fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
@@ -696,10 +718,10 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
 
     if let Some(entities) = &document.entities {
         analysis.total_entities = entities.scenario_objects.len();
-        
+
         for entity in &entities.scenario_objects {
             let entity_name = entity.get_name().unwrap_or("Unknown");
-            
+
             // Analyze entity types
             if let Some(vehicle) = &entity.vehicle {
                 analysis.vehicles += 1;
@@ -718,17 +740,23 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
                 analysis.vehicles += 1;
                 analysis.vehicles_catalog += 1;
                 analysis.catalog_references += 1; // Keep for total catalog reference tracking
-                
+
                 // Analyze catalog reference details
-                let catalog_name = catalog_ref.catalog_name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                let entry_name = catalog_ref.entry_name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                
+                let catalog_name = catalog_ref
+                    .catalog_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+                let entry_name = catalog_ref
+                    .entry_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+
                 let vehicle_analysis = VehicleAnalysis {
                     entity_name: entity_name.to_string(),
                     vehicle_name: entry_name.clone(),
                     category: "catalog-referenced".to_string(),
                     has_front_axle: false, // Unknown for catalog references
-                    axle_count: 0, // Unknown for catalog references
+                    axle_count: 0,         // Unknown for catalog references
                     source: EntitySource::CatalogReference {
                         catalog_name,
                         entry_name,
@@ -743,13 +771,20 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
 }
 
 /// Analyze a vehicle entity
-fn analyze_vehicle(vehicle: &openscenario_rs::types::entities::Vehicle, entity_name: &str, entity: &openscenario_rs::types::entities::ScenarioObject) -> VehicleAnalysis {
+fn analyze_vehicle(
+    vehicle: &openscenario_rs::types::entities::Vehicle,
+    entity_name: &str,
+    entity: &openscenario_rs::types::entities::ScenarioObject,
+) -> VehicleAnalysis {
     // Extract vehicle name
-    let vehicle_name = vehicle.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-    
+    let vehicle_name = vehicle
+        .name
+        .as_literal()
+        .map_or("Unknown".to_string(), |v| v.clone());
+
     // Extract category
     let category = format!("{:?}", vehicle.vehicle_category).to_lowercase();
-    
+
     // Analyze axles (safely)
     let has_front_axle = vehicle.axles.front_axle.is_some();
     let mut axle_count = 1; // rear axle is always present
@@ -757,7 +792,7 @@ fn analyze_vehicle(vehicle: &openscenario_rs::types::entities::Vehicle, entity_n
         axle_count += 1;
     }
     axle_count += vehicle.axles.additional_axles.len();
-    
+
     // Determine source
     let source = if entity.catalog_reference.is_some() {
         EntitySource::CatalogReference {
@@ -767,7 +802,7 @@ fn analyze_vehicle(vehicle: &openscenario_rs::types::entities::Vehicle, entity_n
     } else {
         EntitySource::Inline
     };
-    
+
     VehicleAnalysis {
         entity_name: entity_name.to_string(),
         vehicle_name,
@@ -779,13 +814,20 @@ fn analyze_vehicle(vehicle: &openscenario_rs::types::entities::Vehicle, entity_n
 }
 
 /// Analyze a pedestrian entity
-fn analyze_pedestrian(pedestrian: &openscenario_rs::types::entities::Pedestrian, entity_name: &str, entity: &openscenario_rs::types::entities::ScenarioObject) -> PedestrianAnalysis {
+fn analyze_pedestrian(
+    pedestrian: &openscenario_rs::types::entities::Pedestrian,
+    entity_name: &str,
+    entity: &openscenario_rs::types::entities::ScenarioObject,
+) -> PedestrianAnalysis {
     // Extract pedestrian name
-    let pedestrian_name = pedestrian.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-    
+    let pedestrian_name = pedestrian
+        .name
+        .as_literal()
+        .map_or("Unknown".to_string(), |v| v.clone());
+
     // Extract category
     let category = format!("{:?}", pedestrian.pedestrian_category).to_lowercase();
-    
+
     // Determine source
     let source = if entity.catalog_reference.is_some() {
         EntitySource::CatalogReference {
@@ -795,7 +837,7 @@ fn analyze_pedestrian(pedestrian: &openscenario_rs::types::entities::Pedestrian,
     } else {
         EntitySource::Inline
     };
-    
+
     PedestrianAnalysis {
         entity_name: entity_name.to_string(),
         pedestrian_name,
@@ -846,8 +888,9 @@ fn analyze_storyboard(document: &OpenScenario) -> StoryboardAnalysis {
         let actions = &storyboard.init.actions;
         analysis.init_actions.global_actions = actions.global_actions.len();
         analysis.init_actions.private_actions = actions.private_actions.len();
-        analysis.init_actions.total_actions = analysis.init_actions.global_actions + analysis.init_actions.private_actions;
-        
+        analysis.init_actions.total_actions =
+            analysis.init_actions.global_actions + analysis.init_actions.private_actions;
+
         // Analyze story structure
         if !storyboard.stories.is_empty() {
             let mut story_stats = StoryAnalysis {
@@ -858,27 +901,30 @@ fn analyze_storyboard(document: &OpenScenario) -> StoryboardAnalysis {
                 total_events: 0,
                 total_actions: 0,
             };
-            
+
             for story in &storyboard.stories {
                 story_stats.total_acts += story.acts.len();
-                
+
                 for act in &story.acts {
                     story_stats.total_maneuver_groups += act.maneuver_groups.len();
-                    
+
                     for mg in &act.maneuver_groups {
                         story_stats.total_maneuvers += mg.maneuvers.len();
-                        
+
                         // Collect unique actors
                         for entity_ref in &mg.actors.entity_refs {
-                            let actor_name = entity_ref.entity_ref.as_literal().map_or("Unknown".to_string(), |v| v.clone());
+                            let actor_name = entity_ref
+                                .entity_ref
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.clone());
                             if !analysis.statistics.unique_actors.contains(&actor_name) {
                                 analysis.statistics.unique_actors.push(actor_name);
                             }
                         }
-                        
+
                         for maneuver in &mg.maneuvers {
                             story_stats.total_events += maneuver.events.len();
-                            
+
                             for event in &maneuver.events {
                                 story_stats.total_actions += event.actions.len();
                             }
@@ -886,16 +932,36 @@ fn analyze_storyboard(document: &OpenScenario) -> StoryboardAnalysis {
                     }
                 }
             }
-            
+
             analysis.story_analysis = Some(story_stats);
         }
-        
+
         // Update statistics
-        analysis.statistics.total_acts = analysis.story_analysis.as_ref().map(|s| s.total_acts).unwrap_or(0);
-        analysis.statistics.total_maneuver_groups = analysis.story_analysis.as_ref().map(|s| s.total_maneuver_groups).unwrap_or(0);
-        analysis.statistics.total_maneuvers = analysis.story_analysis.as_ref().map(|s| s.total_maneuvers).unwrap_or(0);
-        analysis.statistics.total_events = analysis.story_analysis.as_ref().map(|s| s.total_events).unwrap_or(0);
-        analysis.statistics.total_actions = analysis.story_analysis.as_ref().map(|s| s.total_actions).unwrap_or(0);
+        analysis.statistics.total_acts = analysis
+            .story_analysis
+            .as_ref()
+            .map(|s| s.total_acts)
+            .unwrap_or(0);
+        analysis.statistics.total_maneuver_groups = analysis
+            .story_analysis
+            .as_ref()
+            .map(|s| s.total_maneuver_groups)
+            .unwrap_or(0);
+        analysis.statistics.total_maneuvers = analysis
+            .story_analysis
+            .as_ref()
+            .map(|s| s.total_maneuvers)
+            .unwrap_or(0);
+        analysis.statistics.total_events = analysis
+            .story_analysis
+            .as_ref()
+            .map(|s| s.total_events)
+            .unwrap_or(0);
+        analysis.statistics.total_actions = analysis
+            .story_analysis
+            .as_ref()
+            .map(|s| s.total_actions)
+            .unwrap_or(0);
         analysis.statistics.total_init_actions = analysis.init_actions.total_actions;
 
         // Perform detailed analysis
@@ -908,7 +974,9 @@ fn analyze_storyboard(document: &OpenScenario) -> StoryboardAnalysis {
 }
 
 /// Analyze initialization details
-fn analyze_init_detailed(init: &openscenario_rs::types::scenario::init::Init) -> DetailedInitAnalysis {
+fn analyze_init_detailed(
+    init: &openscenario_rs::types::scenario::init::Init,
+) -> DetailedInitAnalysis {
     let mut analysis = DetailedInitAnalysis {
         entity_initializations: Vec::new(),
         environment_setup: None,
@@ -929,8 +997,11 @@ fn analyze_init_detailed(init: &openscenario_rs::types::scenario::init::Init) ->
 
     // Analyze private actions (entity initialization)
     for private_action in &init.actions.private_actions {
-        let entity_name = private_action.entity_ref.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-        
+        let entity_name = private_action
+            .entity_ref
+            .as_literal()
+            .map_or("Unknown".to_string(), |v| v.clone());
+
         let mut entity_init = EntityInitialization {
             entity_name: entity_name.clone(),
             position_info: None,
@@ -943,24 +1014,50 @@ fn analyze_init_detailed(init: &openscenario_rs::types::scenario::init::Init) ->
                 if let Some(world_pos) = &teleport_action.position.world_position {
                     entity_init.position_info = Some(PositionInfo {
                         position_type: "WorldPosition".to_string(),
-                        coordinates: format!("X: {}, Y: {}", 
-                            world_pos.x.as_literal().map_or("Unknown".to_string(), |v| v.to_string()),
-                            world_pos.y.as_literal().map_or("Unknown".to_string(), |v| v.to_string())
+                        coordinates: format!(
+                            "X: {}, Y: {}",
+                            world_pos
+                                .x
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.to_string()),
+                            world_pos
+                                .y
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.to_string())
                         ),
-                        heading: world_pos.h.as_ref().and_then(|h| h.as_literal()).map(|h| h.to_string()),
+                        heading: world_pos
+                            .h
+                            .as_ref()
+                            .and_then(|h| h.as_literal())
+                            .map(|h| h.to_string()),
                     });
                 } else if let Some(lane_pos) = &teleport_action.position.lane_position {
                     entity_init.position_info = Some(PositionInfo {
                         position_type: "LanePosition".to_string(),
-                        coordinates: format!("Road: {}, Lane: {}, S: {}", 
-                            lane_pos.road_id.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
-                            lane_pos.lane_id.as_literal().map_or("Unknown".to_string(), |v| v.to_string()),
-                            lane_pos.s.as_literal().map_or("Unknown".to_string(), |v| v.to_string())
+                        coordinates: format!(
+                            "Road: {}, Lane: {}, S: {}",
+                            lane_pos
+                                .road_id
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.clone()),
+                            lane_pos
+                                .lane_id
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.to_string()),
+                            lane_pos
+                                .s
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.to_string())
                         ),
-                        heading: lane_pos.orientation.as_ref().and_then(|o| o.h.as_ref()).and_then(|h| h.as_literal()).map(|h| h.to_string()),
+                        heading: lane_pos
+                            .orientation
+                            .as_ref()
+                            .and_then(|o| o.h.as_ref())
+                            .and_then(|h| h.as_literal())
+                            .map(|h| h.to_string()),
                     });
                 }
-                
+
                 entity_init.actions.push(InitActionDetail {
                     action_type: "TeleportAction".to_string(),
                     action_description: "Set initial position".to_string(),
@@ -981,7 +1078,7 @@ fn analyze_init_detailed(init: &openscenario_rs::types::scenario::init::Init) ->
                         } else {
                             "Unknown".to_string()
                         };
-                        
+
                         entity_init.speed_info = Some(SpeedInfo {
                             speed_value,
                             speed_type: "Absolute".to_string(),
@@ -997,14 +1094,17 @@ fn analyze_init_detailed(init: &openscenario_rs::types::scenario::init::Init) ->
                         } else {
                             "Unknown".to_string()
                         };
-                        
+
                         entity_init.speed_info = Some(SpeedInfo {
-                            speed_value: format!("{} (relative to {})", speed_value, relative.entity_ref),
+                            speed_value: format!(
+                                "{} (relative to {})",
+                                speed_value, relative.entity_ref
+                            ),
                             speed_type: "Relative".to_string(),
                         });
                     }
                 }
-                
+
                 entity_init.actions.push(InitActionDetail {
                     action_type: "LongitudinalAction".to_string(),
                     action_description: "Set initial speed".to_string(),
@@ -1020,16 +1120,25 @@ fn analyze_init_detailed(init: &openscenario_rs::types::scenario::init::Init) ->
 }
 
 /// Analyze Acts in detail
-fn analyze_acts_detailed(stories: &[openscenario_rs::types::scenario::story::ScenarioStory]) -> Vec<DetailedActAnalysis> {
+fn analyze_acts_detailed(
+    stories: &[openscenario_rs::types::scenario::story::ScenarioStory],
+) -> Vec<DetailedActAnalysis> {
     let mut detailed_acts = Vec::new();
 
     for story in stories {
         for (act_idx, act) in story.acts.iter().enumerate() {
-            let act_name = act.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-            
+            let act_name = act
+                .name
+                .as_literal()
+                .map_or("Unknown".to_string(), |v| v.clone());
+
             let mut detailed_act = DetailedActAnalysis {
                 act_name: act_name.clone(),
-                act_description: Some(format!("Act {} in story {}", act_idx + 1, story.name.as_literal().map_or("Unknown", |v| v))),
+                act_description: Some(format!(
+                    "Act {} in story {}",
+                    act_idx + 1,
+                    story.name.as_literal().map_or("Unknown", |v| v)
+                )),
                 maneuver_groups: Vec::new(),
                 start_conditions: Vec::new(),
                 stop_conditions: Vec::new(),
@@ -1052,21 +1161,39 @@ fn analyze_acts_detailed(stories: &[openscenario_rs::types::scenario::story::Sce
 
             // Analyze maneuver groups
             for maneuver_group in &act.maneuver_groups {
-                let group_name = maneuver_group.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                
+                let group_name = maneuver_group
+                    .name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+
                 let mut detailed_group = DetailedManeuverGroupAnalysis {
                     group_name: group_name.clone(),
-                    actors: maneuver_group.actors.entity_refs.iter()
-                        .map(|entity_ref| entity_ref.entity_ref.as_literal().map_or("Unknown".to_string(), |v| v.clone()))
+                    actors: maneuver_group
+                        .actors
+                        .entity_refs
+                        .iter()
+                        .map(|entity_ref| {
+                            entity_ref
+                                .entity_ref
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.clone())
+                        })
                         .collect(),
-                    maximum_execution_count: maneuver_group.maximum_execution_count.as_ref().and_then(|v| v.as_literal()).copied(),
+                    maximum_execution_count: maneuver_group
+                        .maximum_execution_count
+                        .as_ref()
+                        .and_then(|v| v.as_literal())
+                        .copied(),
                     maneuvers: Vec::new(),
                 };
 
                 // Analyze maneuvers within the group
                 for maneuver in &maneuver_group.maneuvers {
-                    let maneuver_name = maneuver.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                    
+                    let maneuver_name = maneuver
+                        .name
+                        .as_literal()
+                        .map_or("Unknown".to_string(), |v| v.clone());
+
                     let mut detailed_maneuver = DetailedManeuverAnalysis {
                         maneuver_name: maneuver_name.clone(),
                         events: Vec::new(),
@@ -1075,29 +1202,41 @@ fn analyze_acts_detailed(stories: &[openscenario_rs::types::scenario::story::Sce
 
                     // Analyze events within the maneuver
                     for event in &maneuver.events {
-                        let event_name = event.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                        
+                        let event_name = event
+                            .name
+                            .as_literal()
+                            .map_or("Unknown".to_string(), |v| v.clone());
+
                         let mut detailed_event = DetailedEventAnalysis {
                             event_name: event_name.clone(),
                             priority: event.priority.as_ref().map(|p| format!("{:?}", p)),
-                            maximum_execution_count: event.maximum_execution_count.as_ref().and_then(|v| v.as_literal()).copied(),
+                            maximum_execution_count: event
+                                .maximum_execution_count
+                                .as_ref()
+                                .and_then(|v| v.as_literal())
+                                .copied(),
                             start_conditions: Vec::new(),
                             actions: Vec::new(),
                         };
 
                         // Analyze start conditions
                         if let Some(start_trigger) = &event.start_trigger {
-                            detailed_event.start_conditions = analyze_trigger_conditions(start_trigger);
+                            detailed_event.start_conditions =
+                                analyze_trigger_conditions(start_trigger);
                         }
 
                         // Analyze actions within the event
                         for action in &event.actions {
-                            let action_name = action.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                            let (action_type, action_category) = if let Some(private_action) = &action.private_action {
-                                analyze_private_action_type(private_action)
-                            } else {
-                                ("Unknown".to_string(), "Unknown".to_string())
-                            };
+                            let action_name = action
+                                .name
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.clone());
+                            let (action_type, action_category) =
+                                if let Some(private_action) = &action.private_action {
+                                    analyze_private_action_type(private_action)
+                                } else {
+                                    ("Unknown".to_string(), "Unknown".to_string())
+                                };
 
                             detailed_event.actions.push(EventActionAnalysis {
                                 action_name,
@@ -1124,7 +1263,9 @@ fn analyze_acts_detailed(stories: &[openscenario_rs::types::scenario::story::Sce
 }
 
 /// Analyze execution flow
-fn analyze_execution_flow(stories: &[openscenario_rs::types::scenario::story::ScenarioStory]) -> ExecutionFlowAnalysis {
+fn analyze_execution_flow(
+    stories: &[openscenario_rs::types::scenario::story::ScenarioStory],
+) -> ExecutionFlowAnalysis {
     let mut flow_analysis = ExecutionFlowAnalysis {
         flow_diagram: Vec::new(),
         condition_dependencies: Vec::new(),
@@ -1142,7 +1283,10 @@ fn analyze_execution_flow(stories: &[openscenario_rs::types::scenario::story::Sc
     for story in stories {
         flow_analysis.flow_diagram.push(FlowStep {
             step_type: "Story".to_string(),
-            step_name: story.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
+            step_name: story
+                .name
+                .as_literal()
+                .map_or("Unknown".to_string(), |v| v.clone()),
             level: 0,
             description: format!("Story with {} acts", story.acts.len()),
         });
@@ -1151,37 +1295,61 @@ fn analyze_execution_flow(stories: &[openscenario_rs::types::scenario::story::Sc
             step_order += 1;
             flow_analysis.flow_diagram.push(FlowStep {
                 step_type: "Act".to_string(),
-                step_name: act.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
+                step_name: act
+                    .name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone()),
                 level: 1,
                 description: format!("Act with {} maneuver groups", act.maneuver_groups.len()),
             });
 
             // Analyze timeline steps
-            flow_analysis.timeline_analysis.sequence_steps.push(TimelineStep {
-                step_order,
-                step_name: act.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
-                step_type: "Act".to_string(),
-                actors_involved: act.maneuver_groups.iter()
-                    .flat_map(|mg| mg.actors.entity_refs.iter())
-                    .map(|entity_ref| entity_ref.entity_ref.as_literal().map_or("Unknown".to_string(), |v| v.clone()))
-                    .collect(),
-                estimated_start_time: None,
-            });
+            flow_analysis
+                .timeline_analysis
+                .sequence_steps
+                .push(TimelineStep {
+                    step_order,
+                    step_name: act
+                        .name
+                        .as_literal()
+                        .map_or("Unknown".to_string(), |v| v.clone()),
+                    step_type: "Act".to_string(),
+                    actors_involved: act
+                        .maneuver_groups
+                        .iter()
+                        .flat_map(|mg| mg.actors.entity_refs.iter())
+                        .map(|entity_ref| {
+                            entity_ref
+                                .entity_ref
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.clone())
+                        })
+                        .collect(),
+                    estimated_start_time: None,
+                });
 
             for maneuver_group in &act.maneuver_groups {
                 flow_analysis.flow_diagram.push(FlowStep {
                     step_type: "ManeuverGroup".to_string(),
-                    step_name: maneuver_group.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
+                    step_name: maneuver_group
+                        .name
+                        .as_literal()
+                        .map_or("Unknown".to_string(), |v| v.clone()),
                     level: 2,
-                    description: format!("ManeuverGroup with {} maneuvers for {} actors", 
+                    description: format!(
+                        "ManeuverGroup with {} maneuvers for {} actors",
                         maneuver_group.maneuvers.len(),
-                        maneuver_group.actors.entity_refs.len()),
+                        maneuver_group.actors.entity_refs.len()
+                    ),
                 });
 
                 for maneuver in &maneuver_group.maneuvers {
                     flow_analysis.flow_diagram.push(FlowStep {
                         step_type: "Maneuver".to_string(),
-                        step_name: maneuver.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
+                        step_name: maneuver
+                            .name
+                            .as_literal()
+                            .map_or("Unknown".to_string(), |v| v.clone()),
                         level: 3,
                         description: format!("Maneuver with {} events", maneuver.events.len()),
                     });
@@ -1189,7 +1357,10 @@ fn analyze_execution_flow(stories: &[openscenario_rs::types::scenario::story::Sc
                     for event in &maneuver.events {
                         flow_analysis.flow_diagram.push(FlowStep {
                             step_type: "Event".to_string(),
-                            step_name: event.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()),
+                            step_name: event
+                                .name
+                                .as_literal()
+                                .map_or("Unknown".to_string(), |v| v.clone()),
                             level: 4,
                             description: format!("Event with {} actions", event.actions.len()),
                         });
@@ -1203,9 +1374,11 @@ fn analyze_execution_flow(stories: &[openscenario_rs::types::scenario::story::Sc
 }
 
 /// Analyze trigger conditions
-fn analyze_trigger_conditions(_trigger: &openscenario_rs::types::scenario::triggers::Trigger) -> Vec<ConditionAnalysis> {
+fn analyze_trigger_conditions(
+    _trigger: &openscenario_rs::types::scenario::triggers::Trigger,
+) -> Vec<ConditionAnalysis> {
     let mut conditions = Vec::new();
-    
+
     // For now, provide a simplified analysis
     // In a full implementation, this would analyze all condition types
     conditions.push(ConditionAnalysis {
@@ -1214,12 +1387,14 @@ fn analyze_trigger_conditions(_trigger: &openscenario_rs::types::scenario::trigg
         trigger_value: None,
         entity_ref: None,
     });
-    
+
     conditions
 }
 
 /// Analyze private action type
-fn analyze_private_action_type(private_action: &openscenario_rs::types::scenario::story::StoryPrivateAction) -> (String, String) {
+fn analyze_private_action_type(
+    private_action: &openscenario_rs::types::scenario::story::StoryPrivateAction,
+) -> (String, String) {
     if private_action.longitudinal_action.is_some() {
         ("LongitudinalAction".to_string(), "Movement".to_string())
     } else if private_action.lateral_action.is_some() {
@@ -1244,7 +1419,10 @@ fn analyze_private_action_type(private_action: &openscenario_rs::types::scenario
 }
 
 /// Analyze parameter variation document
-fn analyze_parameter_variation(document: &OpenScenario, input_path: &Path) -> Result<ParameterVariationAnalysis, Box<dyn std::error::Error>> {
+fn analyze_parameter_variation(
+    document: &OpenScenario,
+    input_path: &Path,
+) -> Result<ParameterVariationAnalysis, Box<dyn std::error::Error>> {
     let mut analysis = ParameterVariationAnalysis {
         referenced_scenario_info: None,
         deterministic_analysis: None,
@@ -1256,7 +1434,7 @@ fn analyze_parameter_variation(document: &OpenScenario, input_path: &Path) -> Re
     if let Some(param_dist) = &document.parameter_value_distribution {
         // Analyze referenced scenario
         let scenario_filepath = param_dist.scenario_file.filepath.clone();
-        
+
         let scenario_path_result = resolve_scenario_path(input_path, &scenario_filepath);
         let mut referenced_info = ReferencedScenarioInfo {
             filepath: scenario_filepath.clone(),
@@ -1272,21 +1450,28 @@ fn analyze_parameter_variation(document: &OpenScenario, input_path: &Path) -> Re
         match scenario_path_result {
             Ok(scenario_path) => {
                 referenced_info.resolved_path = scenario_path.display().to_string();
-                
+
                 match parse_from_file(&scenario_path) {
                     Ok(scenario_doc) => {
                         referenced_info.loaded_successfully = true;
-                        referenced_info.description = scenario_doc.file_header.description
-                            .as_literal().map_or("N/A".to_string(), |v| v.clone());
-                        referenced_info.author = scenario_doc.file_header.author
-                            .as_literal().map_or("N/A".to_string(), |v| v.clone());
-                        
+                        referenced_info.description = scenario_doc
+                            .file_header
+                            .description
+                            .as_literal()
+                            .map_or("N/A".to_string(), |v| v.clone());
+                        referenced_info.author = scenario_doc
+                            .file_header
+                            .author
+                            .as_literal()
+                            .map_or("N/A".to_string(), |v| v.clone());
+
                         if let Some(entities) = &scenario_doc.entities {
                             referenced_info.entities_count = entities.scenario_objects.len();
                         }
-                        
+
                         if let Some(params) = &scenario_doc.parameter_declarations {
-                            referenced_info.template_parameters = params.parameter_declarations
+                            referenced_info.template_parameters = params
+                                .parameter_declarations
                                 .iter()
                                 .map(|p| format!("{} = {:?}", p.name, p.value))
                                 .collect();
@@ -1301,13 +1486,14 @@ fn analyze_parameter_variation(document: &OpenScenario, input_path: &Path) -> Re
                 referenced_info.error_message = Some(e.to_string());
             }
         }
-        
+
         analysis.referenced_scenario_info = Some(referenced_info);
 
         // Analyze deterministic distributions
         if let Some(deterministic) = &param_dist.deterministic {
             let det_analysis = analyze_deterministic_distributions(deterministic);
-            analysis.total_parameters += det_analysis.single_distributions.len() + det_analysis.multi_distributions_count;
+            analysis.total_parameters +=
+                det_analysis.single_distributions.len() + det_analysis.multi_distributions_count;
             analysis.estimated_combinations *= det_analysis.total_combinations;
             analysis.deterministic_analysis = Some(det_analysis);
         }
@@ -1339,14 +1525,22 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
 
     if let Some(param_decls) = &document.parameter_declarations {
         analysis.total_parameters = param_decls.parameter_declarations.len();
-        analysis.parameter_names = param_decls.parameter_declarations
+        analysis.parameter_names = param_decls
+            .parameter_declarations
             .iter()
-            .map(|p| p.name.as_literal().map_or("Unknown".to_string(), |v| v.clone()))
+            .map(|p| {
+                p.name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone())
+            })
             .collect();
-            
+
         // Collect detailed parameter information
         for param in &param_decls.parameter_declarations {
-            let name = param.name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
+            let name = param
+                .name
+                .as_literal()
+                .map_or("Unknown".to_string(), |v| v.clone());
             let is_expression = param.value.as_expression().is_some();
             let value_str = if let Some(literal) = param.value.as_literal() {
                 literal.clone()
@@ -1355,12 +1549,13 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
             } else {
                 "Unknown".to_string()
             };
-            
+
             let resolved_value = if is_expression {
                 if let Some(expr) = param.value.as_expression() {
                     // Try to resolve using scenario parameters if available
                     if document.document_type() == OpenScenarioDocumentType::Scenario {
-                        let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
+                        let scenario_parameters =
+                            extract_scenario_parameters(&document.parameter_declarations);
                         match evaluate_expression::<String>(expr, &scenario_parameters) {
                             Ok(resolved) => Some(resolved),
                             Err(_) => None,
@@ -1374,7 +1569,7 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
             } else {
                 None
             };
-            
+
             let detail = ParameterDetail {
                 name: name.clone(),
                 value: value_str,
@@ -1383,7 +1578,7 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
                 is_expression,
                 resolved_value,
             };
-            
+
             analysis.parameter_details.push(detail);
         }
     }
@@ -1392,7 +1587,7 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
     if document.document_type() == OpenScenarioDocumentType::Scenario {
         let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
         let expression_results = resolve_expressions_in_scenario(document, &scenario_parameters);
-        
+
         analysis.expressions_found = expression_results.expressions_found;
         analysis.expressions_resolved = expression_results.expressions_resolved;
         analysis.expressions_failed = expression_results.expressions_failed;
@@ -1435,12 +1630,12 @@ fn analyze_catalogs(document: &OpenScenario, input_path: &Path) -> CatalogAnalys
         if document.document_type() == OpenScenarioDocumentType::Scenario {
             let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
             let resolution_results = resolve_catalog_references_in_scenario(
-                document, 
-                catalog_locations, 
+                document,
+                catalog_locations,
                 &scenario_parameters,
-                input_path
+                input_path,
             );
-            
+
             analysis.resolution_attempts = resolution_results.resolution_attempts;
             analysis.resolution_successes = resolution_results.resolution_successes;
             analysis.resolution_failures = resolution_results.resolution_failures;
@@ -1452,14 +1647,20 @@ fn analyze_catalogs(document: &OpenScenario, input_path: &Path) -> CatalogAnalys
 }
 
 /// Format analysis results as text output
-fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+fn format_text_output(
+    analysis: &AnalysisResult,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Document overview
     print_section("📋 Document Overview", "", 0);
     println!("  Document Type: {:?}", analysis.document_type);
     println!("  Description: {}", analysis.header_info.description);
     println!("  Author: {}", analysis.header_info.author);
     println!("  Date: {}", analysis.header_info.date);
-    println!("  Version: {}.{}", analysis.header_info.rev_major, analysis.header_info.rev_minor);
+    println!(
+        "  Version: {}.{}",
+        analysis.header_info.rev_major, analysis.header_info.rev_minor
+    );
     println!();
 
     // Entity analysis
@@ -1475,20 +1676,28 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
     println!("═══════════════════");
     println!();
     println!("📊 Parameter Summary:");
-    println!("   - Total Parameters: {}", analysis.parameter_analysis.total_parameters);
-    
+    println!(
+        "   - Total Parameters: {}",
+        analysis.parameter_analysis.total_parameters
+    );
+
     if analysis.parameter_analysis.total_parameters > 0 {
         println!();
         println!("🔍 All Parameters Found in XOSC File:");
         println!();
-        
+
         // Display parameter details
-        for (i, detail) in analysis.parameter_analysis.parameter_details.iter().enumerate() {
+        for (i, detail) in analysis
+            .parameter_analysis
+            .parameter_details
+            .iter()
+            .enumerate()
+        {
             println!("   [{}] Parameter: \"{}\"", i + 1, detail.name);
             println!("       Value: {}", detail.value);
             println!("       Type: {}", detail.parameter_type);
             println!("       Context: {}", detail.context);
-            
+
             if detail.is_expression {
                 println!("       Expression: Yes");
                 if let Some(resolved) = &detail.resolved_value {
@@ -1501,7 +1710,7 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
             }
             println!();
         }
-        
+
         // Also show just the names for quick reference
         if config.verbose && !analysis.parameter_analysis.parameter_names.is_empty() {
             println!("📋 Quick Parameter Reference:");
@@ -1526,22 +1735,42 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
         println!("═══════════════════════");
         println!();
         println!("📊 Resolution Statistics:");
-        println!("   - Total expressions found: {}", analysis.parameter_analysis.expressions_found);
-        println!("   - Successfully resolved: {} ({:.1}%)", 
-                 analysis.parameter_analysis.expressions_resolved,
-                 if analysis.parameter_analysis.expressions_found > 0 {
-                     (analysis.parameter_analysis.expressions_resolved as f64 / analysis.parameter_analysis.expressions_found as f64) * 100.0
-                 } else { 0.0 });
-        println!("   - Failed to resolve: {} ({:.1}%)", 
-                 analysis.parameter_analysis.expressions_failed,
-                 if analysis.parameter_analysis.expressions_found > 0 {
-                     (analysis.parameter_analysis.expressions_failed as f64 / analysis.parameter_analysis.expressions_found as f64) * 100.0
-                 } else { 0.0 });
+        println!(
+            "   - Total expressions found: {}",
+            analysis.parameter_analysis.expressions_found
+        );
+        println!(
+            "   - Successfully resolved: {} ({:.1}%)",
+            analysis.parameter_analysis.expressions_resolved,
+            if analysis.parameter_analysis.expressions_found > 0 {
+                (analysis.parameter_analysis.expressions_resolved as f64
+                    / analysis.parameter_analysis.expressions_found as f64)
+                    * 100.0
+            } else {
+                0.0
+            }
+        );
+        println!(
+            "   - Failed to resolve: {} ({:.1}%)",
+            analysis.parameter_analysis.expressions_failed,
+            if analysis.parameter_analysis.expressions_found > 0 {
+                (analysis.parameter_analysis.expressions_failed as f64
+                    / analysis.parameter_analysis.expressions_found as f64)
+                    * 100.0
+            } else {
+                0.0
+            }
+        );
         println!();
 
         if !analysis.parameter_analysis.resolution_examples.is_empty() {
             println!("🔍 Resolution Examples:");
-            for (i, example) in analysis.parameter_analysis.resolution_examples.iter().enumerate() {
+            for (i, example) in analysis
+                .parameter_analysis
+                .resolution_examples
+                .iter()
+                .enumerate()
+            {
                 println!("   [{}] {} → {}", i + 1, example.original, example.resolved);
                 println!("       Location: {}", example.location);
                 println!();
@@ -1560,16 +1789,43 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
     println!("═══════════════════");
     println!();
     println!("📊 Catalog Configuration:");
-    println!("   - Has Catalog Locations: {}", analysis.catalog_analysis.has_catalog_locations);
+    println!(
+        "   - Has Catalog Locations: {}",
+        analysis.catalog_analysis.has_catalog_locations
+    );
     if config.verbose || analysis.catalog_analysis.has_catalog_locations {
-        println!("   - Vehicle Catalog: {}", analysis.catalog_analysis.vehicle_catalog);
-        println!("   - Pedestrian Catalog: {}", analysis.catalog_analysis.pedestrian_catalog);
-        println!("   - Misc Object Catalog: {}", analysis.catalog_analysis.misc_object_catalog);
-        println!("   - Controller Catalog: {}", analysis.catalog_analysis.controller_catalog);
-        println!("   - Environment Catalog: {}", analysis.catalog_analysis.environment_catalog);
-        println!("   - Maneuver Catalog: {}", analysis.catalog_analysis.maneuver_catalog);
-        println!("   - Trajectory Catalog: {}", analysis.catalog_analysis.trajectory_catalog);
-        println!("   - Route Catalog: {}", analysis.catalog_analysis.route_catalog);
+        println!(
+            "   - Vehicle Catalog: {}",
+            analysis.catalog_analysis.vehicle_catalog
+        );
+        println!(
+            "   - Pedestrian Catalog: {}",
+            analysis.catalog_analysis.pedestrian_catalog
+        );
+        println!(
+            "   - Misc Object Catalog: {}",
+            analysis.catalog_analysis.misc_object_catalog
+        );
+        println!(
+            "   - Controller Catalog: {}",
+            analysis.catalog_analysis.controller_catalog
+        );
+        println!(
+            "   - Environment Catalog: {}",
+            analysis.catalog_analysis.environment_catalog
+        );
+        println!(
+            "   - Maneuver Catalog: {}",
+            analysis.catalog_analysis.maneuver_catalog
+        );
+        println!(
+            "   - Trajectory Catalog: {}",
+            analysis.catalog_analysis.trajectory_catalog
+        );
+        println!(
+            "   - Route Catalog: {}",
+            analysis.catalog_analysis.route_catalog
+        );
     }
     println!();
 
@@ -1579,25 +1835,51 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
         println!("═════════════════════");
         println!();
         println!("📊 Resolution Statistics:");
-        println!("   - Total resolution attempts: {}", analysis.catalog_analysis.resolution_attempts);
-        println!("   - Successfully resolved: {} ({:.1}%)", 
-                 analysis.catalog_analysis.resolution_successes,
-                 if analysis.catalog_analysis.resolution_attempts > 0 {
-                     (analysis.catalog_analysis.resolution_successes as f64 / analysis.catalog_analysis.resolution_attempts as f64) * 100.0
-                 } else { 0.0 });
-        println!("   - Failed to resolve: {} ({:.1}%)", 
-                 analysis.catalog_analysis.resolution_failures,
-                 if analysis.catalog_analysis.resolution_attempts > 0 {
-                     (analysis.catalog_analysis.resolution_failures as f64 / analysis.catalog_analysis.resolution_attempts as f64) * 100.0
-                 } else { 0.0 });
+        println!(
+            "   - Total resolution attempts: {}",
+            analysis.catalog_analysis.resolution_attempts
+        );
+        println!(
+            "   - Successfully resolved: {} ({:.1}%)",
+            analysis.catalog_analysis.resolution_successes,
+            if analysis.catalog_analysis.resolution_attempts > 0 {
+                (analysis.catalog_analysis.resolution_successes as f64
+                    / analysis.catalog_analysis.resolution_attempts as f64)
+                    * 100.0
+            } else {
+                0.0
+            }
+        );
+        println!(
+            "   - Failed to resolve: {} ({:.1}%)",
+            analysis.catalog_analysis.resolution_failures,
+            if analysis.catalog_analysis.resolution_attempts > 0 {
+                (analysis.catalog_analysis.resolution_failures as f64
+                    / analysis.catalog_analysis.resolution_attempts as f64)
+                    * 100.0
+            } else {
+                0.0
+            }
+        );
         println!();
 
         if !analysis.catalog_analysis.resolution_results.is_empty() {
             println!("🔍 Resolution Details:");
-            for (i, result) in analysis.catalog_analysis.resolution_results.iter().enumerate() {
+            for (i, result) in analysis
+                .catalog_analysis
+                .resolution_results
+                .iter()
+                .enumerate()
+            {
                 let status = if result.success { "✅" } else { "❌" };
-                println!("   [{}] {} Entity '{}' → {}/{}", 
-                         i + 1, status, result.entity_name, result.catalog_name, result.entry_name);
+                println!(
+                    "   [{}] {} Entity '{}' → {}/{}",
+                    i + 1,
+                    status,
+                    result.entity_name,
+                    result.catalog_name,
+                    result.entry_name
+                );
                 println!("       Type: {} reference", result.resolution_type);
                 if let Some(error) = &result.error_message {
                     println!("       Error: {}", error);
@@ -1605,7 +1887,9 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
                 println!();
             }
         }
-    } else if analysis.document_type == OpenScenarioDocumentType::Scenario && analysis.catalog_analysis.has_catalog_locations {
+    } else if analysis.document_type == OpenScenarioDocumentType::Scenario
+        && analysis.catalog_analysis.has_catalog_locations
+    {
         print_section("🗂️ Catalog Resolution", "", 0);
         println!("═════════════════════");
         println!();
@@ -1617,124 +1901,180 @@ fn format_text_output(analysis: &AnalysisResult, config: &Config) -> Result<(), 
 }
 
 /// Print entity analysis
-fn print_entity_analysis(analysis: &EntityAnalysis, _config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+fn print_entity_analysis(
+    analysis: &EntityAnalysis,
+    _config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     print_section("🎭 Entity Analysis", "", 0);
     println!("═══════════════════");
     println!();
-    
+
     // Summary statistics
     println!("📊 Summary Statistics:");
     println!("   - Total entities: {}", analysis.total_entities);
     if analysis.total_entities > 0 {
-        println!("   - Vehicles: {} ({:.1}%) [{} catalog + {} inline]", 
-                 analysis.vehicles, 
-                 (analysis.vehicles as f64 / analysis.total_entities as f64) * 100.0,
-                 analysis.vehicles_catalog,
-                 analysis.vehicles_inline);
-        println!("   - Pedestrians: {} ({:.1}%) [{} catalog + {} inline]", 
-                 analysis.pedestrians, 
-                 (analysis.pedestrians as f64 / analysis.total_entities as f64) * 100.0,
-                 analysis.pedestrians_catalog,
-                 analysis.pedestrians_inline);
-        println!("   - Misc objects: {} ({:.1}%) [{} catalog + {} inline]", 
-                 analysis.misc_objects, 
-                 (analysis.misc_objects as f64 / analysis.total_entities as f64) * 100.0,
-                 analysis.misc_objects_catalog,
-                 analysis.misc_objects_inline);
-        println!("   - Catalog references: {} entities", 
-                 analysis.catalog_references);
-        println!("   - Inline definitions: {} entities", 
-                 analysis.inline_definitions);
-
+        println!(
+            "   - Vehicles: {} ({:.1}%) [{} catalog + {} inline]",
+            analysis.vehicles,
+            (analysis.vehicles as f64 / analysis.total_entities as f64) * 100.0,
+            analysis.vehicles_catalog,
+            analysis.vehicles_inline
+        );
+        println!(
+            "   - Pedestrians: {} ({:.1}%) [{} catalog + {} inline]",
+            analysis.pedestrians,
+            (analysis.pedestrians as f64 / analysis.total_entities as f64) * 100.0,
+            analysis.pedestrians_catalog,
+            analysis.pedestrians_inline
+        );
+        println!(
+            "   - Misc objects: {} ({:.1}%) [{} catalog + {} inline]",
+            analysis.misc_objects,
+            (analysis.misc_objects as f64 / analysis.total_entities as f64) * 100.0,
+            analysis.misc_objects_catalog,
+            analysis.misc_objects_inline
+        );
+        println!(
+            "   - Catalog references: {} entities",
+            analysis.catalog_references
+        );
+        println!(
+            "   - Inline definitions: {} entities",
+            analysis.inline_definitions
+        );
     }
     println!();
-    
+
     // Vehicle entities
     if !analysis.vehicle_analyses.is_empty() {
         println!("🚗 Vehicle Entities:");
         println!();
-        
+
         for (i, vehicle) in analysis.vehicle_analyses.iter().enumerate() {
-            println!("   [{}] {} (name: \"{}\")", i + 1, vehicle.entity_name, vehicle.vehicle_name);
+            println!(
+                "   [{}] {} (name: \"{}\")",
+                i + 1,
+                vehicle.entity_name,
+                vehicle.vehicle_name
+            );
             println!("       Category: {}", vehicle.category);
-            println!("       Axles: {} total, front axle: {}", 
-                     vehicle.axle_count, 
-                     if vehicle.has_front_axle { "Yes" } else { "No" });
-            
+            println!(
+                "       Axles: {} total, front axle: {}",
+                vehicle.axle_count,
+                if vehicle.has_front_axle { "Yes" } else { "No" }
+            );
+
             // Source
             match &vehicle.source {
                 EntitySource::Inline => {
                     println!("       Source: Inline definition");
-                },
-                EntitySource::CatalogReference { catalog_name, entry_name } => {
-                    println!("       Source: Catalog reference → {}/{}", catalog_name, entry_name);
-                },
+                }
+                EntitySource::CatalogReference {
+                    catalog_name,
+                    entry_name,
+                } => {
+                    println!(
+                        "       Source: Catalog reference → {}/{}",
+                        catalog_name, entry_name
+                    );
+                }
             }
-            
+
             println!();
         }
     }
-    
+
     // Pedestrian entities
     if !analysis.pedestrian_analyses.is_empty() {
         println!("🚶 Pedestrian Entities:");
         println!();
-        
+
         for (i, pedestrian) in analysis.pedestrian_analyses.iter().enumerate() {
-            println!("   [{}] {} (name: \"{}\")", i + 1, pedestrian.entity_name, pedestrian.pedestrian_name);
+            println!(
+                "   [{}] {} (name: \"{}\")",
+                i + 1,
+                pedestrian.entity_name,
+                pedestrian.pedestrian_name
+            );
             println!("       Category: {}", pedestrian.category);
-            
+
             // Source
             match &pedestrian.source {
                 EntitySource::Inline => {
                     println!("       Source: Inline definition");
-                },
-                EntitySource::CatalogReference { catalog_name, entry_name } => {
-                    println!("       Source: Catalog reference → {}/{}", catalog_name, entry_name);
-                },
+                }
+                EntitySource::CatalogReference {
+                    catalog_name,
+                    entry_name,
+                } => {
+                    println!(
+                        "       Source: Catalog reference → {}/{}",
+                        catalog_name, entry_name
+                    );
+                }
             }
-            
+
             println!();
         }
     }
-    
+
     Ok(())
 }
 
 /// Print storyboard analysis
-fn print_storyboard_analysis(analysis: &StoryboardAnalysis, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+fn print_storyboard_analysis(
+    analysis: &StoryboardAnalysis,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     print_section("🎬 Storyboard Analysis", "", 0);
     println!("═════════════════════");
     println!();
-    
+
     // Enhanced Initialization Analysis
     print_section("📋 INITIALIZATION ANALYSIS", "", 0);
     println!("═══════════════════════════");
     println!();
-    
-    if analysis.detailed_init_analysis.entity_initializations.is_empty() {
+
+    if analysis
+        .detailed_init_analysis
+        .entity_initializations
+        .is_empty()
+    {
         println!("💡 No entity initializations found");
     } else {
         println!("🎭 Entities Initialized:");
         for entity_init in &analysis.detailed_init_analysis.entity_initializations {
-            println!("  - {} ({})", entity_init.entity_name, 
-                if let Some(pos) = &entity_init.position_info { &pos.position_type } else { "No position" });
-            
+            println!(
+                "  - {} ({})",
+                entity_init.entity_name,
+                if let Some(pos) = &entity_init.position_info {
+                    &pos.position_type
+                } else {
+                    "No position"
+                }
+            );
+
             if let Some(pos) = &entity_init.position_info {
                 println!("    📍 Position: {} {}", pos.position_type, pos.coordinates);
                 if let Some(heading) = &pos.heading {
                     println!("    🧭 Heading: {}", heading);
                 }
             }
-            
+
             if let Some(speed) = &entity_init.speed_info {
-                println!("    🏃 Speed: {} {} km/h", speed.speed_type, speed.speed_value);
+                println!(
+                    "    🏃 Speed: {} {} km/h",
+                    speed.speed_type, speed.speed_value
+                );
             }
-            
+
             if !entity_init.actions.is_empty() {
                 println!("    🎬 Actions:");
                 for action in &entity_init.actions {
-                    println!("      • {}: {}", action.action_type, action.action_description);
+                    println!(
+                        "      • {}: {}",
+                        action.action_type, action.action_description
+                    );
                 }
             }
             println!();
@@ -1767,7 +2107,10 @@ fn print_storyboard_analysis(analysis: &StoryboardAnalysis, config: &Config) -> 
             if !act.start_conditions.is_empty() {
                 println!("  🚦 Start Conditions:");
                 for condition in &act.start_conditions {
-                    println!("    - {}: {}", condition.condition_type, condition.condition_description);
+                    println!(
+                        "    - {}: {}",
+                        condition.condition_type, condition.condition_description
+                    );
                     if let Some(value) = &condition.trigger_value {
                         println!("      Value: {}", value);
                     }
@@ -1777,38 +2120,47 @@ fn print_storyboard_analysis(analysis: &StoryboardAnalysis, config: &Config) -> 
 
             if !act.maneuver_groups.is_empty() {
                 for (mg_idx, maneuver_group) in act.maneuver_groups.iter().enumerate() {
-                    println!("  ManeuverGroup {}: \"{}\" (Actors: {})", 
-                        mg_idx + 1, 
+                    println!(
+                        "  ManeuverGroup {}: \"{}\" (Actors: {})",
+                        mg_idx + 1,
                         maneuver_group.group_name,
-                        maneuver_group.actors.join(", "));
-                    
+                        maneuver_group.actors.join(", ")
+                    );
+
                     if let Some(max_exec) = maneuver_group.maximum_execution_count {
                         println!("    Max Executions: {}", max_exec);
                     }
 
                     for (m_idx, maneuver) in maneuver_group.maneuvers.iter().enumerate() {
                         println!("    Maneuver {}: \"{}\"", m_idx + 1, maneuver.maneuver_name);
-                        
+
                         for (e_idx, event) in maneuver.events.iter().enumerate() {
-                            println!("      Event {}: \"{}\" (Priority: {})", 
-                                e_idx + 1, 
+                            println!(
+                                "      Event {}: \"{}\" (Priority: {})",
+                                e_idx + 1,
                                 event.event_name,
-                                event.priority.as_ref().unwrap_or(&"default".to_string()));
-                            
+                                event.priority.as_ref().unwrap_or(&"default".to_string())
+                            );
+
                             if !event.start_conditions.is_empty() {
                                 println!("        Start Conditions:");
                                 for condition in &event.start_conditions {
-                                    println!("          - {}: {}", condition.condition_type, condition.condition_description);
+                                    println!(
+                                        "          - {}: {}",
+                                        condition.condition_type, condition.condition_description
+                                    );
                                 }
                             }
-                            
+
                             if !event.actions.is_empty() {
                                 println!("        Actions:");
                                 for action in &event.actions {
-                                    println!("          - {}: {} ({})", 
-                                        action.action_category, 
+                                    println!(
+                                        "          - {}: {} ({})",
+                                        action.action_category,
                                         action.action_type,
-                                        action.action_name);
+                                        action.action_name
+                                    );
                                 }
                             }
                         }
@@ -1820,11 +2172,17 @@ fn print_storyboard_analysis(analysis: &StoryboardAnalysis, config: &Config) -> 
             if !act.stop_conditions.is_empty() {
                 println!("  🛑 Stop Conditions:");
                 for condition in &act.stop_conditions {
-                    println!("    - {}: {}", condition.condition_type, condition.condition_description);
+                    println!(
+                        "    - {}: {}",
+                        condition.condition_type, condition.condition_description
+                    );
                 }
             }
-            
-            println!("  ⏱️ Timing: Execution order {}", act.timing_info.execution_order);
+
+            println!(
+                "  ⏱️ Timing: Execution order {}",
+                act.timing_info.execution_order
+            );
             println!();
             println!("  {}", "─".repeat(50));
             println!();
@@ -1836,21 +2194,29 @@ fn print_storyboard_analysis(analysis: &StoryboardAnalysis, config: &Config) -> 
         print_section("🔄 EXECUTION FLOW ANALYSIS", "", 0);
         println!("═══════════════════════════");
         println!();
-        
+
         println!("📊 Flow Diagram:");
         for flow_step in &analysis.execution_flow.flow_diagram {
             let indent = "  ".repeat(flow_step.level as usize);
-            println!("{}{}. {} - {}", indent, flow_step.level + 1, flow_step.step_name, flow_step.description);
+            println!(
+                "{}{}. {} - {}",
+                indent,
+                flow_step.level + 1,
+                flow_step.step_name,
+                flow_step.description
+            );
         }
         println!();
 
         println!("📅 Timeline Analysis:");
         for step in &analysis.execution_flow.timeline_analysis.sequence_steps {
-            println!("  [{}] {}: {} (Actors: {})", 
-                step.step_order, 
-                step.step_type, 
+            println!(
+                "  [{}] {}: {} (Actors: {})",
+                step.step_order,
+                step.step_type,
                 step.step_name,
-                step.actors_involved.join(", "));
+                step.actors_involved.join(", ")
+            );
         }
         println!();
     }
@@ -1862,18 +2228,27 @@ fn print_storyboard_analysis(analysis: &StoryboardAnalysis, config: &Config) -> 
     println!("   - Total ManeuverGroups: {}", stats.total_maneuver_groups);
     println!("   - Total Maneuvers: {}", stats.total_maneuvers);
     println!("   - Total Events: {}", stats.total_events);
-    println!("   - Total Actions: {} ({} init + {} story)", 
-             stats.total_actions + stats.total_init_actions,
-             stats.total_init_actions,
-             stats.total_actions);
-    println!("   - Unique Actors: {} ({})", stats.unique_actors.len(), stats.unique_actors.join(", "));
-    
+    println!(
+        "   - Total Actions: {} ({} init + {} story)",
+        stats.total_actions + stats.total_init_actions,
+        stats.total_init_actions,
+        stats.total_actions
+    );
+    println!(
+        "   - Unique Actors: {} ({})",
+        stats.unique_actors.len(),
+        stats.unique_actors.join(", ")
+    );
+
     println!();
     Ok(())
 }
 
 /// Print parameter variation analysis
-fn print_parameter_variation_analysis(analysis: &ParameterVariationAnalysis, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+fn print_parameter_variation_analysis(
+    analysis: &ParameterVariationAnalysis,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     print_section("📊 Parameter Variation Analysis", "", 0);
     println!("═══════════════════════════════");
     println!();
@@ -1883,15 +2258,18 @@ fn print_parameter_variation_analysis(analysis: &ParameterVariationAnalysis, con
         println!("📁 Referenced Scenario:");
         println!("   File: {}", ref_info.filepath);
         println!("   Resolved Path: {}", ref_info.resolved_path);
-        
+
         if ref_info.loaded_successfully {
             println!("   ✅ Successfully loaded referenced scenario");
             println!("   📋 Description: {}", ref_info.description);
             println!("   👤 Author: {}", ref_info.author);
             println!("   🎭 Entities: {}", ref_info.entities_count);
-            
+
             if !ref_info.template_parameters.is_empty() {
-                println!("   ⚙️  Template parameters: {}", ref_info.template_parameters.len());
+                println!(
+                    "   ⚙️  Template parameters: {}",
+                    ref_info.template_parameters.len()
+                );
                 for param in &ref_info.template_parameters {
                     println!("      - {}", param);
                 }
@@ -1909,13 +2287,14 @@ fn print_parameter_variation_analysis(analysis: &ParameterVariationAnalysis, con
 
     // Deterministic distributions
     if let Some(det_analysis) = &analysis.deterministic_analysis {
-        let total_count = det_analysis.single_distributions.len() + det_analysis.multi_distributions_count;
+        let total_count =
+            det_analysis.single_distributions.len() + det_analysis.multi_distributions_count;
         println!("🎯 Deterministic distributions: {} parameters", total_count);
         println!();
 
         for (i, dist) in det_analysis.single_distributions.iter().enumerate() {
             println!("   [{}] Parameter: {}", i + 1, dist.parameter_name);
-            
+
             match dist.distribution_type.as_str() {
                 "Set" => {
                     println!("      📋 Distribution Set: {} values", dist.value_count);
@@ -1929,9 +2308,15 @@ fn print_parameter_variation_analysis(analysis: &ParameterVariationAnalysis, con
                 "Range" => {
                     println!("      📏 Distribution Range:");
                     if let Some(range_info) = &dist.range_info {
-                        println!("         Range: {} to {}", range_info.lower_limit, range_info.upper_limit);
+                        println!(
+                            "         Range: {} to {}",
+                            range_info.lower_limit, range_info.upper_limit
+                        );
                         println!("         Step: {}", range_info.step_width);
-                        println!("         Calculated values: {}", range_info.calculated_count);
+                        println!(
+                            "         Calculated values: {}",
+                            range_info.calculated_count
+                        );
                     }
                 }
                 "User Defined" => {
@@ -1941,28 +2326,43 @@ fn print_parameter_variation_analysis(analysis: &ParameterVariationAnalysis, con
                     }
                 }
                 _ => {
-                    println!("      ❓ Unknown distribution type: {}", dist.distribution_type);
+                    println!(
+                        "      ❓ Unknown distribution type: {}",
+                        dist.distribution_type
+                    );
                 }
             }
             println!();
         }
 
         if det_analysis.multi_distributions_count > 0 {
-            println!("   🎯 Multi-parameter distributions: {} groups", det_analysis.multi_distributions_count);
+            println!(
+                "   🎯 Multi-parameter distributions: {} groups",
+                det_analysis.multi_distributions_count
+            );
             println!();
         }
     }
 
     // Stochastic distributions
     if let Some(stoch_analysis) = &analysis.stochastic_analysis {
-        println!("🎲 Stochastic distributions: {} parameters", stoch_analysis.distributions_count);
+        println!(
+            "🎲 Stochastic distributions: {} parameters",
+            stoch_analysis.distributions_count
+        );
         println!();
     }
 
     // Summary statistics
     println!("📊 Summary Statistics:");
-    println!("   🎯 Total varied parameters: {}", analysis.total_parameters);
-    println!("   🔢 Estimated combinations: {}", analysis.estimated_combinations);
+    println!(
+        "   🎯 Total varied parameters: {}",
+        analysis.total_parameters
+    );
+    println!(
+        "   🔢 Estimated combinations: {}",
+        analysis.estimated_combinations
+    );
     println!();
 
     Ok(())
@@ -1973,100 +2373,230 @@ fn format_json_output(analysis: &AnalysisResult) -> Result<(), Box<dyn std::erro
     println!("{{");
     println!("  \"document_type\": \"{:?}\",", analysis.document_type);
     println!("  \"header\": {{");
-    println!("    \"description\": \"{}\",", analysis.header_info.description);
+    println!(
+        "    \"description\": \"{}\",",
+        analysis.header_info.description
+    );
     println!("    \"author\": \"{}\",", analysis.header_info.author);
     println!("    \"date\": \"{}\",", analysis.header_info.date);
-    println!("    \"version\": \"{}.{}\"", analysis.header_info.rev_major, analysis.header_info.rev_minor);
+    println!(
+        "    \"version\": \"{}.{}\"",
+        analysis.header_info.rev_major, analysis.header_info.rev_minor
+    );
     println!("  }},");
     println!("  \"entities\": {{");
-    println!("    \"total\": {},", analysis.entity_analysis.total_entities);
+    println!(
+        "    \"total\": {},",
+        analysis.entity_analysis.total_entities
+    );
     println!("    \"vehicles\": {},", analysis.entity_analysis.vehicles);
-    println!("    \"vehicles_inline\": {},", analysis.entity_analysis.vehicles_inline);
-    println!("    \"vehicles_catalog\": {},", analysis.entity_analysis.vehicles_catalog);
-    println!("    \"pedestrians\": {},", analysis.entity_analysis.pedestrians);
-    println!("    \"pedestrians_inline\": {},", analysis.entity_analysis.pedestrians_inline);
-    println!("    \"pedestrians_catalog\": {},", analysis.entity_analysis.pedestrians_catalog);
-    println!("    \"misc_objects\": {},", analysis.entity_analysis.misc_objects);
-    println!("    \"misc_objects_inline\": {},", analysis.entity_analysis.misc_objects_inline);
-    println!("    \"misc_objects_catalog\": {},", analysis.entity_analysis.misc_objects_catalog);
-    println!("    \"unknown_catalog_references\": {},", analysis.entity_analysis.unknown_catalog_references);
-    println!("    \"catalog_references\": {}", analysis.entity_analysis.catalog_references);
+    println!(
+        "    \"vehicles_inline\": {},",
+        analysis.entity_analysis.vehicles_inline
+    );
+    println!(
+        "    \"vehicles_catalog\": {},",
+        analysis.entity_analysis.vehicles_catalog
+    );
+    println!(
+        "    \"pedestrians\": {},",
+        analysis.entity_analysis.pedestrians
+    );
+    println!(
+        "    \"pedestrians_inline\": {},",
+        analysis.entity_analysis.pedestrians_inline
+    );
+    println!(
+        "    \"pedestrians_catalog\": {},",
+        analysis.entity_analysis.pedestrians_catalog
+    );
+    println!(
+        "    \"misc_objects\": {},",
+        analysis.entity_analysis.misc_objects
+    );
+    println!(
+        "    \"misc_objects_inline\": {},",
+        analysis.entity_analysis.misc_objects_inline
+    );
+    println!(
+        "    \"misc_objects_catalog\": {},",
+        analysis.entity_analysis.misc_objects_catalog
+    );
+    println!(
+        "    \"unknown_catalog_references\": {},",
+        analysis.entity_analysis.unknown_catalog_references
+    );
+    println!(
+        "    \"catalog_references\": {}",
+        analysis.entity_analysis.catalog_references
+    );
     println!("  }},");
-    
+
     if let Some(storyboard) = &analysis.storyboard_analysis {
         println!("  \"storyboard\": {{");
-        println!("    \"init_actions\": {},", storyboard.statistics.total_init_actions);
-        println!("    \"stories\": {},", storyboard.story_analysis.as_ref().map(|s| s.total_stories).unwrap_or(0));
+        println!(
+            "    \"init_actions\": {},",
+            storyboard.statistics.total_init_actions
+        );
+        println!(
+            "    \"stories\": {},",
+            storyboard
+                .story_analysis
+                .as_ref()
+                .map(|s| s.total_stories)
+                .unwrap_or(0)
+        );
         println!("    \"acts\": {},", storyboard.statistics.total_acts);
-        println!("    \"maneuver_groups\": {},", storyboard.statistics.total_maneuver_groups);
-        println!("    \"maneuvers\": {},", storyboard.statistics.total_maneuvers);
+        println!(
+            "    \"maneuver_groups\": {},",
+            storyboard.statistics.total_maneuver_groups
+        );
+        println!(
+            "    \"maneuvers\": {},",
+            storyboard.statistics.total_maneuvers
+        );
         println!("    \"events\": {},", storyboard.statistics.total_events);
         println!("    \"actions\": {},", storyboard.statistics.total_actions);
-        println!("    \"unique_actors\": {},", storyboard.statistics.unique_actors.len());
+        println!(
+            "    \"unique_actors\": {},",
+            storyboard.statistics.unique_actors.len()
+        );
         println!("  }},");
     }
-    
+
     println!("  \"parameters\": {{");
-    println!("    \"total\": {},", analysis.parameter_analysis.total_parameters);
-    println!("    \"names\": [{}],", 
-        analysis.parameter_analysis.parameter_names
+    println!(
+        "    \"total\": {},",
+        analysis.parameter_analysis.total_parameters
+    );
+    println!(
+        "    \"names\": [{}],",
+        analysis
+            .parameter_analysis
+            .parameter_names
             .iter()
             .map(|n| format!("\"{}\"", n))
             .collect::<Vec<_>>()
             .join(", ")
     );
-    println!("    \"expressions_found\": {},", analysis.parameter_analysis.expressions_found);
-    println!("    \"expressions_resolved\": {},", analysis.parameter_analysis.expressions_resolved);
-    println!("    \"expressions_failed\": {}", analysis.parameter_analysis.expressions_failed);
+    println!(
+        "    \"expressions_found\": {},",
+        analysis.parameter_analysis.expressions_found
+    );
+    println!(
+        "    \"expressions_resolved\": {},",
+        analysis.parameter_analysis.expressions_resolved
+    );
+    println!(
+        "    \"expressions_failed\": {}",
+        analysis.parameter_analysis.expressions_failed
+    );
     println!("  }},");
-    
+
     if let Some(param_var) = &analysis.parameter_variation_analysis {
         println!("  \"parameter_variation\": {{");
         println!("    \"total_parameters\": {},", param_var.total_parameters);
-        println!("    \"estimated_combinations\": {},", param_var.estimated_combinations);
-        
+        println!(
+            "    \"estimated_combinations\": {},",
+            param_var.estimated_combinations
+        );
+
         if let Some(ref_info) = &param_var.referenced_scenario_info {
             println!("    \"referenced_scenario\": {{");
             println!("      \"filepath\": \"{}\",", ref_info.filepath);
-            println!("      \"loaded_successfully\": {},", ref_info.loaded_successfully);
+            println!(
+                "      \"loaded_successfully\": {},",
+                ref_info.loaded_successfully
+            );
             println!("      \"entities_count\": {},", ref_info.entities_count);
-            println!("      \"template_parameters_count\": {}", ref_info.template_parameters.len());
+            println!(
+                "      \"template_parameters_count\": {}",
+                ref_info.template_parameters.len()
+            );
             println!("    }},");
         }
-        
+
         if let Some(det_analysis) = &param_var.deterministic_analysis {
             println!("    \"deterministic\": {{");
-            println!("      \"single_distributions\": {},", det_analysis.single_distributions.len());
-            println!("      \"multi_distributions\": {},", det_analysis.multi_distributions_count);
-            println!("      \"total_combinations\": {}", det_analysis.total_combinations);
+            println!(
+                "      \"single_distributions\": {},",
+                det_analysis.single_distributions.len()
+            );
+            println!(
+                "      \"multi_distributions\": {},",
+                det_analysis.multi_distributions_count
+            );
+            println!(
+                "      \"total_combinations\": {}",
+                det_analysis.total_combinations
+            );
             println!("    }},");
         }
-        
+
         if let Some(stoch_analysis) = &param_var.stochastic_analysis {
             println!("    \"stochastic\": {{");
-            println!("      \"distributions_count\": {}", stoch_analysis.distributions_count);
+            println!(
+                "      \"distributions_count\": {}",
+                stoch_analysis.distributions_count
+            );
             println!("    }}");
         } else {
             // Remove trailing comma if no stochastic section
             println!("    \"stochastic\": null");
         }
-        
+
         println!("  }},");
     }
-    
+
     println!("  \"catalogs\": {{");
-    println!("    \"has_locations\": {},", analysis.catalog_analysis.has_catalog_locations);
-    println!("    \"vehicle\": {},", analysis.catalog_analysis.vehicle_catalog);
-    println!("    \"pedestrian\": {},", analysis.catalog_analysis.pedestrian_catalog);
-    println!("    \"misc_object\": {},", analysis.catalog_analysis.misc_object_catalog);
-    println!("    \"controller\": {},", analysis.catalog_analysis.controller_catalog);
-    println!("    \"environment\": {},", analysis.catalog_analysis.environment_catalog);
-    println!("    \"maneuver\": {},", analysis.catalog_analysis.maneuver_catalog);
-    println!("    \"trajectory\": {},", analysis.catalog_analysis.trajectory_catalog);
-    println!("    \"route\": {},", analysis.catalog_analysis.route_catalog);
-    println!("    \"resolution_attempts\": {},", analysis.catalog_analysis.resolution_attempts);
-    println!("    \"resolution_successes\": {},", analysis.catalog_analysis.resolution_successes);
-    println!("    \"resolution_failures\": {}", analysis.catalog_analysis.resolution_failures);
+    println!(
+        "    \"has_locations\": {},",
+        analysis.catalog_analysis.has_catalog_locations
+    );
+    println!(
+        "    \"vehicle\": {},",
+        analysis.catalog_analysis.vehicle_catalog
+    );
+    println!(
+        "    \"pedestrian\": {},",
+        analysis.catalog_analysis.pedestrian_catalog
+    );
+    println!(
+        "    \"misc_object\": {},",
+        analysis.catalog_analysis.misc_object_catalog
+    );
+    println!(
+        "    \"controller\": {},",
+        analysis.catalog_analysis.controller_catalog
+    );
+    println!(
+        "    \"environment\": {},",
+        analysis.catalog_analysis.environment_catalog
+    );
+    println!(
+        "    \"maneuver\": {},",
+        analysis.catalog_analysis.maneuver_catalog
+    );
+    println!(
+        "    \"trajectory\": {},",
+        analysis.catalog_analysis.trajectory_catalog
+    );
+    println!(
+        "    \"route\": {},",
+        analysis.catalog_analysis.route_catalog
+    );
+    println!(
+        "    \"resolution_attempts\": {},",
+        analysis.catalog_analysis.resolution_attempts
+    );
+    println!(
+        "    \"resolution_successes\": {},",
+        analysis.catalog_analysis.resolution_successes
+    );
+    println!(
+        "    \"resolution_failures\": {}",
+        analysis.catalog_analysis.resolution_failures
+    );
     println!("  }}");
     println!("}}");
 
@@ -2104,11 +2634,13 @@ fn resolve_string_value(
             Ok(resolved) => {
                 result.expressions_resolved += 1;
                 if result.resolution_examples.len() < 5 {
-                    result.resolution_examples.push(ExpressionResolutionExample {
-                        original: format!("${{{}}}", expr),
-                        resolved: resolved.clone(),
-                        location: location.to_string(),
-                    });
+                    result
+                        .resolution_examples
+                        .push(ExpressionResolutionExample {
+                            original: format!("${{{}}}", expr),
+                            resolved: resolved.clone(),
+                            location: location.to_string(),
+                        });
                 }
                 true
             }
@@ -2135,11 +2667,13 @@ fn resolve_numeric_value(
             Ok(resolved) => {
                 result.expressions_resolved += 1;
                 if result.resolution_examples.len() < 5 {
-                    result.resolution_examples.push(ExpressionResolutionExample {
-                        original: format!("${{{}}}", expr),
-                        resolved: resolved.to_string(),
-                        location: location.to_string(),
-                    });
+                    result
+                        .resolution_examples
+                        .push(ExpressionResolutionExample {
+                            original: format!("${{{}}}", expr),
+                            resolved: resolved.to_string(),
+                            location: location.to_string(),
+                        });
                 }
                 true
             }
@@ -2169,7 +2703,12 @@ fn resolve_expressions_in_scenario(
     if let Some(param_decls) = &document.parameter_declarations {
         for param in &param_decls.parameter_declarations {
             let param_name = param.name.as_literal().map_or("Unknown", |v| v);
-            resolve_string_value(&param.value, &format!("Parameter '{}'", param_name), &mut result, parameters);
+            resolve_string_value(
+                &param.value,
+                &format!("Parameter '{}'", param_name),
+                &mut result,
+                parameters,
+            );
         }
     }
 
@@ -2177,24 +2716,54 @@ fn resolve_expressions_in_scenario(
     if let Some(entities) = &document.entities {
         for entity in &entities.scenario_objects {
             let entity_name = entity.name.as_literal().map_or("Unknown", |v| v);
-            
+
             // Resolve entity name if it's an expression
-            resolve_string_value(&entity.name, &format!("Entity '{}' name", entity_name), &mut result, parameters);
+            resolve_string_value(
+                &entity.name,
+                &format!("Entity '{}' name", entity_name),
+                &mut result,
+                parameters,
+            );
 
             // Process vehicle properties if present
             if let Some(vehicle) = &entity.vehicle {
-                resolve_string_value(&vehicle.name, &format!("Vehicle '{}' name", entity_name), &mut result, parameters);
-                
+                resolve_string_value(
+                    &vehicle.name,
+                    &format!("Vehicle '{}' name", entity_name),
+                    &mut result,
+                    parameters,
+                );
+
                 // Process performance values
                 let performance = &vehicle.performance;
-                resolve_numeric_value(&performance.max_speed, &format!("Vehicle '{}' max speed", entity_name), &mut result, parameters);
-                resolve_numeric_value(&performance.max_acceleration, &format!("Vehicle '{}' max acceleration", entity_name), &mut result, parameters);
-                resolve_numeric_value(&performance.max_deceleration, &format!("Vehicle '{}' max deceleration", entity_name), &mut result, parameters);
+                resolve_numeric_value(
+                    &performance.max_speed,
+                    &format!("Vehicle '{}' max speed", entity_name),
+                    &mut result,
+                    parameters,
+                );
+                resolve_numeric_value(
+                    &performance.max_acceleration,
+                    &format!("Vehicle '{}' max acceleration", entity_name),
+                    &mut result,
+                    parameters,
+                );
+                resolve_numeric_value(
+                    &performance.max_deceleration,
+                    &format!("Vehicle '{}' max deceleration", entity_name),
+                    &mut result,
+                    parameters,
+                );
             }
 
             // Process pedestrian properties if present
             if let Some(pedestrian) = &entity.pedestrian {
-                resolve_string_value(&pedestrian.name, &format!("Pedestrian '{}' name", entity_name), &mut result, parameters);
+                resolve_string_value(
+                    &pedestrian.name,
+                    &format!("Pedestrian '{}' name", entity_name),
+                    &mut result,
+                    parameters,
+                );
             }
         }
     }
@@ -2203,30 +2772,58 @@ fn resolve_expressions_in_scenario(
     if let Some(storyboard) = &document.storyboard {
         // Process private actions
         for private_action in &storyboard.init.actions.private_actions {
-            let entity_ref = private_action.entity_ref.as_literal().map_or("Unknown", |v| v);
-            
+            let entity_ref = private_action
+                .entity_ref
+                .as_literal()
+                .map_or("Unknown", |v| v);
+
             // Process position actions
             for action in &private_action.private_actions {
                 if let Some(teleport_action) = &action.teleport_action {
                     // Process position coordinates
                     if let Some(world_position) = &teleport_action.position.world_position {
-                        resolve_numeric_value(&world_position.x, &format!("Entity '{}' init position X", entity_ref), &mut result, parameters);
-                        resolve_numeric_value(&world_position.y, &format!("Entity '{}' init position Y", entity_ref), &mut result, parameters);
+                        resolve_numeric_value(
+                            &world_position.x,
+                            &format!("Entity '{}' init position X", entity_ref),
+                            &mut result,
+                            parameters,
+                        );
+                        resolve_numeric_value(
+                            &world_position.y,
+                            &format!("Entity '{}' init position Y", entity_ref),
+                            &mut result,
+                            parameters,
+                        );
                         if let Some(z_value) = &world_position.z {
-                            resolve_numeric_value(z_value, &format!("Entity '{}' init position Z", entity_ref), &mut result, parameters);
+                            resolve_numeric_value(
+                                z_value,
+                                &format!("Entity '{}' init position Z", entity_ref),
+                                &mut result,
+                                parameters,
+                            );
                         }
                         if let Some(h_value) = &world_position.h {
-                            resolve_numeric_value(h_value, &format!("Entity '{}' init heading", entity_ref), &mut result, parameters);
+                            resolve_numeric_value(
+                                h_value,
+                                &format!("Entity '{}' init heading", entity_ref),
+                                &mut result,
+                                parameters,
+                            );
                         }
                     }
                 }
-                
+
                 // Process speed actions
                 if let Some(speed_action) = &action.longitudinal_action {
                     if let Some(speed_action) = &speed_action.speed_action {
                         let target = &speed_action.speed_action_target;
                         if let Some(absolute_speed) = &target.absolute {
-                            resolve_numeric_value(&absolute_speed.value, &format!("Entity '{}' init speed", entity_ref), &mut result, parameters);
+                            resolve_numeric_value(
+                                &absolute_speed.value,
+                                &format!("Entity '{}' init speed", entity_ref),
+                                &mut result,
+                                parameters,
+                            );
                         }
                     }
                 }
@@ -2257,14 +2854,24 @@ fn resolve_catalog_references_in_scenario(
     // Process each entity in the scenario
     if let Some(entities) = &document.entities {
         for entity in &entities.scenario_objects {
-            let entity_name = entity.name.as_literal().map_or("Unknown", |v| v).to_string();
+            let entity_name = entity
+                .name
+                .as_literal()
+                .map_or("Unknown", |v| v)
+                .to_string();
 
             // Check if entity has a catalog reference
             if let Some(catalog_ref) = &entity.catalog_reference {
                 result.resolution_attempts += 1;
-                
-                let catalog_name = catalog_ref.catalog_name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                let entry_name = catalog_ref.entry_name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
+
+                let catalog_name = catalog_ref
+                    .catalog_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+                let entry_name = catalog_ref
+                    .entry_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
 
                 // Attempt to resolve the catalog reference
                 match resolve_catalog_reference_simple(
@@ -2315,9 +2922,15 @@ fn resolve_catalog_references_in_scenario(
             if let Some(object_controller) = &entity.object_controller {
                 if let Some(controller_ref) = &object_controller.catalog_reference {
                     result.resolution_attempts += 1;
-                    
-                    let catalog_name = controller_ref.catalog_name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
-                    let entry_name = controller_ref.entry_name.as_literal().map_or("Unknown".to_string(), |v| v.clone());
+
+                    let catalog_name = controller_ref
+                        .catalog_name
+                        .as_literal()
+                        .map_or("Unknown".to_string(), |v| v.clone());
+                    let entry_name = controller_ref
+                        .entry_name
+                        .as_literal()
+                        .map_or("Unknown".to_string(), |v| v.clone());
 
                     match resolve_catalog_reference_simple(
                         &controller_ref.catalog_name,
@@ -2402,11 +3015,15 @@ fn resolve_scenario_path(
     } else {
         base_dir.join(scenario_filepath)
     };
-    
+
     if scenario_path.exists() {
         Ok(scenario_path)
     } else {
-        Err(format!("Referenced scenario file not found: {}", scenario_path.display()).into())
+        Err(format!(
+            "Referenced scenario file not found: {}",
+            scenario_path.display()
+        )
+        .into())
     }
 }
 
@@ -2433,9 +3050,11 @@ fn _analyze_deterministic_distributions_original(
     };
 
     for dist in &deterministic.single_distributions {
-        let parameter_name = dist.parameter_name.as_literal()
+        let parameter_name = dist
+            .parameter_name
+            .as_literal()
             .map_or("Unknown".to_string(), |v| v.to_string());
-        
+
         let mut details = DistributionDetails {
             parameter_name: parameter_name.clone(),
             distribution_type: "Unknown".to_string(),
@@ -2447,24 +3066,37 @@ fn _analyze_deterministic_distributions_original(
         if let Some(set) = &dist.distribution_set {
             details.distribution_type = "Set".to_string();
             details.value_count = set.elements.len();
-            details.sample_values = set.elements
+            details.sample_values = set
+                .elements
                 .iter()
                 .take(5)
-                .map(|e| e.value.as_literal().map_or("Unknown".to_string(), |v| v.clone()))
+                .map(|e| {
+                    e.value
+                        .as_literal()
+                        .map_or("Unknown".to_string(), |v| v.clone())
+                })
                 .collect();
             analysis.total_combinations *= set.elements.len();
         }
 
         if let Some(dist_range) = &dist.distribution_range {
             details.distribution_type = "Range".to_string();
-            
-            let lower_str = dist_range.range.lower_limit.as_literal()
+
+            let lower_str = dist_range
+                .range
+                .lower_limit
+                .as_literal()
                 .map_or("Unknown".to_string(), |v| v.to_string());
-            let upper_str = dist_range.range.upper_limit.as_literal()
+            let upper_str = dist_range
+                .range
+                .upper_limit
+                .as_literal()
                 .map_or("Unknown".to_string(), |v| v.to_string());
-            let step_str = dist_range.step_width.as_literal()
+            let step_str = dist_range
+                .step_width
+                .as_literal()
                 .map_or("Unknown".to_string(), |v| v.to_string());
-            
+
             let mut calculated_count = 1;
             if let (Some(lower), Some(upper), Some(step_val)) = (
                 dist_range.range.lower_limit.as_literal(),
@@ -2479,7 +3111,7 @@ fn _analyze_deterministic_distributions_original(
                     }
                 }
             }
-            
+
             details.range_info = Some(RangeInfo {
                 lower_limit: lower_str,
                 upper_limit: upper_str,
@@ -2490,7 +3122,10 @@ fn _analyze_deterministic_distributions_original(
 
         if let Some(user_def) = &dist.user_defined_distribution {
             details.distribution_type = "User Defined".to_string();
-            details.sample_values.push(format!("{} (type: {})", user_def.content, user_def.distribution_type));
+            details.sample_values.push(format!(
+                "{} (type: {})",
+                user_def.content, user_def.distribution_type
+            ));
             details.value_count = 1; // Unknown count for user-defined
         }
 

@@ -444,7 +444,10 @@ impl ObjectController {
     }
 
     /// Creates an ObjectController with a name and catalog reference.
-    pub fn with_named_catalog_reference(name: String, catalog_reference: ControllerCatalogReference) -> Self {
+    pub fn with_named_catalog_reference(
+        name: String,
+        catalog_reference: ControllerCatalogReference,
+    ) -> Self {
         Self {
             name: Some(Value::Literal(name)),
             controller: None,
@@ -645,7 +648,10 @@ mod tests {
         let valid_catalog = ObjectController {
             name: None,
             controller: None,
-            catalog_reference: Some(ControllerCatalogReference::new("catalog".to_string(), "entry".to_string())),
+            catalog_reference: Some(ControllerCatalogReference::new(
+                "catalog".to_string(),
+                "entry".to_string(),
+            )),
         };
         assert!(valid_catalog.validate().is_ok());
 
@@ -663,16 +669,27 @@ mod tests {
         let invalid_both = ObjectController {
             name: None,
             controller: Some(Controller::default()),
-            catalog_reference: Some(ControllerCatalogReference::new("catalog".to_string(), "entry".to_string())),
+            catalog_reference: Some(ControllerCatalogReference::new(
+                "catalog".to_string(),
+                "entry".to_string(),
+            )),
         };
         assert!(invalid_both.validate().is_err());
 
         // Test named controller
         let named_controller = ObjectController::with_named_controller(
             "TestController".to_string(),
-            Controller::default()
+            Controller::default(),
         );
         assert!(named_controller.validate().is_ok());
-        assert_eq!(named_controller.name.as_ref().unwrap().as_literal().unwrap(), "TestController");
+        assert_eq!(
+            named_controller
+                .name
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap(),
+            "TestController"
+        );
     }
 }

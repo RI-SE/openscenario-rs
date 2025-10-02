@@ -23,7 +23,7 @@
 //! // Parse from XML string
 //! let xml_content = r#"<?xml version="1.0"?>
 //! <OpenSCENARIO>
-//!   <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" 
+//!   <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00"
 //!               author="Example" description="Basic scenario"/>
 //!   <!-- scenario content -->
 //! </OpenSCENARIO>"#;

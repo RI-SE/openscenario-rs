@@ -18,17 +18,20 @@ fn main() {
   </ParameterValueDistribution>"#;
 
     println!("🔍 Testing ParameterValueDistribution deserialization...");
-    
+
     match quick_xml::de::from_str::<ParameterValueDistribution>(xml) {
         Ok(dist) => {
             println!("✅ Success!");
             if let Some(det) = &dist.deterministic {
-                println!("📊 Single distributions: {}", det.single_distributions.len());
+                println!(
+                    "📊 Single distributions: {}",
+                    det.single_distributions.len()
+                );
                 println!("📊 Multi distributions: {}", det.multi_distributions.len());
             } else {
                 println!("❌ No deterministic found");
             }
-        },
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
         }

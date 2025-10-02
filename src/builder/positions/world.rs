@@ -1,9 +1,9 @@
 //! World position builder for absolute coordinate positions
 
+use super::PositionBuilder;
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Double;
 use crate::types::positions::{Position, WorldPosition};
-use super::PositionBuilder;
 
 /// Builder for world positions with absolute coordinates
 #[derive(Debug, Clone, Default)]

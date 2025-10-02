@@ -63,7 +63,7 @@ pub use parser::xml::{
 
 // Re-export choice group infrastructure
 pub use parser::choice_groups::{
-    ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup, parse_choice_group,
+    parse_choice_group, ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup,
 };
 
 // Re-export expression evaluation

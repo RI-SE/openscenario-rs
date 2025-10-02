@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add Ego vehicle (ALKS subject under test)
     scenario_with_entities = scenario_with_entities.add_vehicle("Ego", |vehicle| vehicle.car());
-    
+
     // Add Target vehicle (lead vehicle for following scenario)
     scenario_with_entities = scenario_with_entities.add_vehicle("Target", |vehicle| vehicle.car());
 

@@ -21,7 +21,7 @@ pub struct EntitySelection {
     /// Selection by object type
     #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<ByObjectType>,
-    
+
     /// Selection by entity name pattern
     #[serde(rename = "ByName", skip_serializing_if = "Option::is_none")]
     pub by_name: Option<ByName>,
@@ -49,7 +49,7 @@ pub struct EntityDistributionEntry {
     /// Reference to the entity
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    
+
     /// Probability weight for this entity
     #[serde(rename = "@weight")]
     pub weight: Double,
@@ -61,17 +61,20 @@ pub struct ScenarioObjectTemplate {
     /// Name of the template
     #[serde(rename = "@name")]
     pub name: OSString,
-    
+
     /// Object type for the template
     #[serde(rename = "@objectType")]
     pub object_type: ObjectType,
-    
+
     /// Template properties (optional)
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
     pub properties: Option<TemplateProperties>,
-    
+
     /// External object reference (optional)
-    #[serde(rename = "ExternalObjectReference", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ExternalObjectReference",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub external_object_reference: Option<ExternalObjectReference>,
 }
 
@@ -81,7 +84,7 @@ pub struct ExternalObjectReference {
     /// Path to the external object file
     #[serde(rename = "@file")]
     pub file: OSString,
-    
+
     /// Name of the object within the external file
     #[serde(rename = "@name")]
     pub name: OSString,
@@ -125,7 +128,7 @@ pub struct TemplateProperty {
     /// Property name
     #[serde(rename = "@name")]
     pub name: OSString,
-    
+
     /// Property value
     #[serde(rename = "@value")]
     pub value: OSString,
@@ -236,7 +239,7 @@ impl EntitySelection {
             by_name: None,
         }
     }
-    
+
     /// Create a new entity selection by name pattern
     pub fn by_name(name: impl Into<String>) -> Self {
         Self {
@@ -246,7 +249,7 @@ impl EntitySelection {
             }),
         }
     }
-    
+
     /// Create a new entity selection with both type and name criteria
     pub fn by_type_and_name(object_type: ObjectType, name: impl Into<String>) -> Self {
         Self {
@@ -265,7 +268,7 @@ impl SelectedEntities {
             entity_refs: Vec::new(),
         }
     }
-    
+
     /// Create selected entities from a list of entity names
     pub fn from_names(names: Vec<impl Into<String>>) -> Self {
         Self {
@@ -275,12 +278,12 @@ impl SelectedEntities {
                 .collect(),
         }
     }
-    
+
     /// Add an entity reference
     pub fn add_entity(&mut self, entity_name: impl Into<String>) {
         self.entity_refs.push(EntityRef::new(entity_name.into()));
     }
-    
+
     /// Get the number of selected entities
     pub fn count(&self) -> usize {
         self.entity_refs.len()
@@ -294,7 +297,7 @@ impl EntityDistribution {
             entries: Vec::new(),
         }
     }
-    
+
     /// Add a distribution entry
     pub fn add_entry(&mut self, entity_ref: impl Into<String>, weight: f64) {
         self.entries.push(EntityDistributionEntry {
@@ -302,7 +305,7 @@ impl EntityDistribution {
             weight: Double::literal(weight),
         });
     }
-    
+
     /// Create a uniform distribution from entity names
     pub fn uniform(entity_names: Vec<impl Into<String>>) -> Self {
         let weight = 1.0 / entity_names.len() as f64;
@@ -313,10 +316,10 @@ impl EntityDistribution {
                 weight: Double::literal(weight),
             })
             .collect();
-        
+
         Self { entries }
     }
-    
+
     /// Get the total weight of all entries
     pub fn total_weight(&self) -> f64 {
         self.entries
@@ -346,7 +349,7 @@ impl ScenarioObjectTemplate {
             external_object_reference: None,
         }
     }
-    
+
     /// Create a template with external object reference
     pub fn with_external_reference(
         name: impl Into<String>,
@@ -364,13 +367,13 @@ impl ScenarioObjectTemplate {
             }),
         }
     }
-    
+
     /// Add a property to the template
     pub fn add_property(&mut self, name: impl Into<String>, value: impl Into<String>) {
         if self.properties.is_none() {
             self.properties = Some(TemplateProperties::default());
         }
-        
+
         if let Some(ref mut props) = self.properties {
             props.properties.push(TemplateProperty {
                 name: OSString::literal(name.into()),
@@ -395,17 +398,17 @@ impl ByObjectType {
     pub fn new(object_type: ObjectType) -> Self {
         Self { object_type }
     }
-    
+
     /// Create a vehicle selector
     pub fn vehicle() -> Self {
         Self::new(ObjectType::Vehicle)
     }
-    
+
     /// Create a pedestrian selector
     pub fn pedestrian() -> Self {
         Self::new(ObjectType::Pedestrian)
     }
-    
+
     /// Create a miscellaneous object selector
     pub fn miscellaneous_object() -> Self {
         Self::new(ObjectType::MiscellaneousObject)
@@ -428,12 +431,12 @@ impl ByName {
             name: OSString::literal(name.into()),
         }
     }
-    
+
     /// Create a wildcard selector (matches all)
     pub fn wildcard() -> Self {
         Self::new("*")
     }
-    
+
     /// Create a prefix selector
     pub fn prefix(prefix: impl Into<String>) -> Self {
         Self::new(format!("{}*", prefix.into()))
@@ -466,7 +469,10 @@ mod tests {
         let selection = EntitySelection::by_type_and_name(ObjectType::Pedestrian, "Walker*");
         assert!(selection.by_type.is_some());
         assert!(selection.by_name.is_some());
-        assert_eq!(selection.by_type.unwrap().object_type, ObjectType::Pedestrian);
+        assert_eq!(
+            selection.by_type.unwrap().object_type,
+            ObjectType::Pedestrian
+        );
         assert_eq!(
             selection.by_name.unwrap().name.as_literal().unwrap(),
             "Walker*"

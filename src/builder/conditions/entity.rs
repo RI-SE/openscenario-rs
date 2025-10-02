@@ -2,14 +2,14 @@
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    conditions::entity::{
-            ByEntityCondition, AccelerationCondition, SpeedCondition, TraveledDistanceCondition,
-            EndOfRoadCondition, ReachPositionCondition, EntityCondition
-        },
     basic::{Double, OSString},
-    enums::{Rule, ConditionEdge, TriggeringEntitiesRule, DirectionalDimension},
+    conditions::entity::{
+        AccelerationCondition, ByEntityCondition, EndOfRoadCondition, EntityCondition,
+        ReachPositionCondition, SpeedCondition, TraveledDistanceCondition,
+    },
+    enums::{ConditionEdge, DirectionalDimension, Rule, TriggeringEntitiesRule},
     positions::Position,
-    scenario::triggers::{TriggeringEntities, Condition, EntityRef},
+    scenario::triggers::{Condition, EntityRef, TriggeringEntities},
 };
 
 /// Builder for acceleration conditions
@@ -37,55 +37,59 @@ impl AccelerationConditionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set target entity
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     /// Set acceleration threshold
     pub fn acceleration_above(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::GreaterThan;
         self
     }
-    
+
     /// Set acceleration threshold (below)
     pub fn acceleration_below(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::LessThan;
         self
     }
-    
+
     /// Set exact acceleration value
     pub fn acceleration_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::EqualTo;
         self
     }
-    
+
     /// Set direction for acceleration measurement
     pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
         self.direction = Some(direction);
         self
     }
-    
+
     /// Build the condition
     pub fn build(self) -> BuilderResult<Condition> {
         if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error("Entity reference is required"));
+            return Err(BuilderError::validation_error(
+                "Entity reference is required",
+            ));
         }
         if self.value.is_none() {
-            return Err(BuilderError::validation_error("Acceleration value is required"));
+            return Err(BuilderError::validation_error(
+                "Acceleration value is required",
+            ));
         }
-        
+
         let acceleration_condition = AccelerationCondition {
             value: Double::literal(self.value.unwrap()),
             rule: self.rule,
             direction: self.direction,
         };
-        
+
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
                 triggering_entities_rule: TriggeringEntitiesRule::Any,
@@ -95,7 +99,7 @@ impl AccelerationConditionBuilder {
             },
             entity_condition: EntityCondition::Acceleration(acceleration_condition),
         };
-        
+
         Ok(Condition {
             name: OSString::literal("AccelerationCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
@@ -129,50 +133,52 @@ impl EnhancedSpeedConditionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set target entity
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     /// Set speed threshold (above)
     pub fn speed_above(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::GreaterThan;
         self
     }
-    
+
     /// Set speed threshold (below)
     pub fn speed_below(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::LessThan;
         self
     }
-    
+
     /// Set exact speed value
     pub fn speed_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::EqualTo;
         self
     }
-    
+
     /// Build the condition
     pub fn build(self) -> BuilderResult<Condition> {
         if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error("Entity reference is required"));
+            return Err(BuilderError::validation_error(
+                "Entity reference is required",
+            ));
         }
         if self.value.is_none() {
             return Err(BuilderError::validation_error("Speed value is required"));
         }
-        
+
         let speed_condition = SpeedCondition {
             value: Double::literal(self.value.unwrap()),
             rule: self.rule,
             entity_ref: OSString::literal(self.entity_ref.clone().unwrap()),
             direction: None,
         };
-        
+
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
                 triggering_entities_rule: TriggeringEntitiesRule::Any,
@@ -182,7 +188,7 @@ impl EnhancedSpeedConditionBuilder {
             },
             entity_condition: EntityCondition::Speed(speed_condition),
         };
-        
+
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
@@ -216,47 +222,49 @@ impl TraveledDistanceConditionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set target entity
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     /// Set distance threshold (above)
     pub fn distance_above(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::GreaterThan;
         self
     }
-    
+
     /// Set distance threshold (below)
     pub fn distance_below(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::LessThan;
         self
     }
-    
+
     /// Set exact distance value
     pub fn distance_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
         self.rule = Rule::EqualTo;
         self
     }
-    
+
     /// Build the condition
     pub fn build(self) -> BuilderResult<Condition> {
         if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error("Entity reference is required"));
+            return Err(BuilderError::validation_error(
+                "Entity reference is required",
+            ));
         }
         if self.value.is_none() {
             return Err(BuilderError::validation_error("Distance value is required"));
         }
-        
+
         let traveled_distance_condition = TraveledDistanceCondition {
             value: Double::literal(self.value.unwrap()),
         };
-        
+
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
                 triggering_entities_rule: TriggeringEntitiesRule::Any,
@@ -266,7 +274,7 @@ impl TraveledDistanceConditionBuilder {
             },
             entity_condition: EntityCondition::TraveledDistance(traveled_distance_condition),
         };
-        
+
         Ok(Condition {
             name: OSString::literal("TraveledDistanceCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
@@ -290,39 +298,44 @@ impl ReachPositionConditionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set target entity
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     /// Set target position
     pub fn at_position(mut self, position: Position) -> Self {
         self.position = Some(position);
         self
     }
-    
+
     /// Set tolerance for position matching
     pub fn with_tolerance(mut self, tolerance: f64) -> Self {
         self.tolerance = Some(tolerance);
         self
     }
-    
+
     /// Build the condition
     pub fn build(self) -> BuilderResult<Condition> {
         if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error("Entity reference is required"));
+            return Err(BuilderError::validation_error(
+                "Entity reference is required",
+            ));
         }
         if self.position.is_none() {
             return Err(BuilderError::validation_error("Position is required"));
         }
-        
+
         let reach_position_condition = ReachPositionCondition {
             position: self.position.unwrap(),
-            tolerance: self.tolerance.map(Double::literal).unwrap_or(Double::literal(1.0)),
+            tolerance: self
+                .tolerance
+                .map(Double::literal)
+                .unwrap_or(Double::literal(1.0)),
         };
-        
+
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
                 triggering_entities_rule: TriggeringEntitiesRule::Any,
@@ -332,7 +345,7 @@ impl ReachPositionConditionBuilder {
             },
             entity_condition: EntityCondition::ReachPosition(reach_position_condition),
         };
-        
+
         Ok(Condition {
             name: OSString::literal("ReachPositionCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
@@ -355,29 +368,34 @@ impl EndOfRoadConditionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set target entity
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     /// Set duration threshold
     pub fn with_duration(mut self, duration: f64) -> Self {
         self.duration = Some(duration);
         self
     }
-    
+
     /// Build the condition
     pub fn build(self) -> BuilderResult<Condition> {
         if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error("Entity reference is required"));
+            return Err(BuilderError::validation_error(
+                "Entity reference is required",
+            ));
         }
-        
+
         let end_of_road_condition = EndOfRoadCondition {
-            duration: self.duration.map(Double::literal).unwrap_or(Double::literal(0.0)),
+            duration: self
+                .duration
+                .map(Double::literal)
+                .unwrap_or(Double::literal(0.0)),
         };
-        
+
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
                 triggering_entities_rule: TriggeringEntitiesRule::Any,
@@ -387,7 +405,7 @@ impl EndOfRoadConditionBuilder {
             },
             entity_condition: EntityCondition::EndOfRoad(end_of_road_condition),
         };
-        
+
         Ok(Condition {
             name: OSString::literal("EndOfRoadCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
@@ -409,7 +427,7 @@ mod tests {
             .acceleration_above(2.0)
             .build()
             .unwrap();
-            
+
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::Acceleration(acc_condition) = by_entity.entity_condition {
                 assert_eq!(*acc_condition.value.as_literal().unwrap(), 2.0);
@@ -429,7 +447,7 @@ mod tests {
             .speed_below(30.0)
             .build()
             .unwrap();
-            
+
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::Speed(speed_condition) = by_entity.entity_condition {
                 assert_eq!(*speed_condition.value.as_literal().unwrap(), 30.0);
@@ -449,9 +467,11 @@ mod tests {
             .distance_above(100.0)
             .build()
             .unwrap();
-            
+
         if let Some(by_entity) = condition.by_entity_condition {
-            if let EntityCondition::TraveledDistance(distance_condition) = by_entity.entity_condition {
+            if let EntityCondition::TraveledDistance(distance_condition) =
+                by_entity.entity_condition
+            {
                 assert_eq!(*distance_condition.value.as_literal().unwrap(), 100.0);
             } else {
                 panic!("Expected TraveledDistance condition");
@@ -463,9 +483,9 @@ mod tests {
 
     #[test]
     fn test_reach_position_condition_builder() {
-        use crate::types::positions::{Position, WorldPosition};
         use crate::types::basic::Double;
-        
+        use crate::types::positions::{Position, WorldPosition};
+
         let position = Position {
             world_position: Some(WorldPosition {
                 x: Double::literal(100.0),
@@ -484,14 +504,14 @@ mod tests {
             geographic_position: None,
             relative_object_position: None,
         };
-        
+
         let condition = ReachPositionConditionBuilder::new()
             .for_entity("ego")
             .at_position(position)
             .with_tolerance(2.0)
             .build()
             .unwrap();
-            
+
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::ReachPosition(reach_condition) = by_entity.entity_condition {
                 assert_eq!(*reach_condition.tolerance.as_literal().unwrap(), 2.0);
@@ -510,7 +530,7 @@ mod tests {
             .with_duration(1.0)
             .build()
             .unwrap();
-            
+
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::EndOfRoad(end_condition) = by_entity.entity_condition {
                 assert_eq!(*end_condition.duration.as_literal().unwrap(), 1.0);

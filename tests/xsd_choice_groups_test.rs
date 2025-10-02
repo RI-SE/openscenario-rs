@@ -5,7 +5,7 @@
 //! element reading functionality, and integration with simple XML examples.
 
 use openscenario_rs::parser::choice_groups::{
-    ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup, parse_choice_group,
+    parse_choice_group, ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup,
 };
 use openscenario_rs::{Error, Result};
 
@@ -28,39 +28,61 @@ impl XsdChoiceGroup for ComplexChoiceGroup {
     type Variant = ComplexVariant;
 
     fn choice_element_names() -> &'static [&'static str] {
-        &["SimpleElement", "ElementWithAttributes", "NestedElement", "EmptyElement"]
+        &[
+            "SimpleElement",
+            "ElementWithAttributes",
+            "NestedElement",
+            "EmptyElement",
+        ]
     }
 
     fn parse_choice_element(element_name: &str, xml: &str) -> Result<Self::Variant> {
         match element_name {
             "SimpleElement" => {
-                let start = xml.find('>').ok_or_else(|| Error::validation_error("xml", "Invalid SimpleElement"))?;
-                let end = xml.rfind('<').ok_or_else(|| Error::validation_error("xml", "Invalid SimpleElement"))?;
+                let start = xml
+                    .find('>')
+                    .ok_or_else(|| Error::validation_error("xml", "Invalid SimpleElement"))?;
+                let end = xml
+                    .rfind('<')
+                    .ok_or_else(|| Error::validation_error("xml", "Invalid SimpleElement"))?;
                 let content = &xml[start + 1..end];
                 Ok(ComplexVariant::SimpleElement(content.to_string()))
             }
             "ElementWithAttributes" => {
                 // Extract id attribute
-                let id_start = xml.find("id=\"").ok_or_else(|| Error::validation_error("xml", "Missing id attribute"))?;
+                let id_start = xml
+                    .find("id=\"")
+                    .ok_or_else(|| Error::validation_error("xml", "Missing id attribute"))?;
                 let id_value_start = id_start + 4;
-                let id_end = xml[id_value_start..].find('"').ok_or_else(|| Error::validation_error("xml", "Invalid id attribute"))?;
+                let id_end = xml[id_value_start..]
+                    .find('"')
+                    .ok_or_else(|| Error::validation_error("xml", "Invalid id attribute"))?;
                 let id = xml[id_value_start..id_value_start + id_end].to_string();
 
                 // Extract value attribute
-                let value_start = xml.find("value=\"").ok_or_else(|| Error::validation_error("xml", "Missing value attribute"))?;
+                let value_start = xml
+                    .find("value=\"")
+                    .ok_or_else(|| Error::validation_error("xml", "Missing value attribute"))?;
                 let value_value_start = value_start + 7;
-                let value_end = xml[value_value_start..].find('"').ok_or_else(|| Error::validation_error("xml", "Invalid value attribute"))?;
+                let value_end = xml[value_value_start..]
+                    .find('"')
+                    .ok_or_else(|| Error::validation_error("xml", "Invalid value attribute"))?;
                 let value_str = &xml[value_value_start..value_value_start + value_end];
-                let value = value_str.parse::<i32>()
-                    .map_err(|_| Error::validation_error("xml", "Invalid integer in value attribute"))?;
+                let value = value_str.parse::<i32>().map_err(|_| {
+                    Error::validation_error("xml", "Invalid integer in value attribute")
+                })?;
 
                 Ok(ComplexVariant::ElementWithAttributes { id, value })
             }
             "NestedElement" => {
                 // Extract name attribute
-                let name_start = xml.find("name=\"").ok_or_else(|| Error::validation_error("xml", "Missing name attribute"))?;
+                let name_start = xml
+                    .find("name=\"")
+                    .ok_or_else(|| Error::validation_error("xml", "Missing name attribute"))?;
                 let name_value_start = name_start + 6;
-                let name_end = xml[name_value_start..].find('"').ok_or_else(|| Error::validation_error("xml", "Invalid name attribute"))?;
+                let name_end = xml[name_value_start..]
+                    .find('"')
+                    .ok_or_else(|| Error::validation_error("xml", "Invalid name attribute"))?;
                 let name = xml[name_value_start..name_value_start + name_end].to_string();
 
                 // Extract child elements (simplified parsing)
@@ -79,9 +101,7 @@ impl XsdChoiceGroup for ComplexChoiceGroup {
 
                 Ok(ComplexVariant::NestedElement { name, children })
             }
-            "EmptyElement" => {
-                Ok(ComplexVariant::EmptyElement)
-            }
+            "EmptyElement" => Ok(ComplexVariant::EmptyElement),
             _ => Err(Error::choice_group_error("Unknown element")),
         }
     }
@@ -109,7 +129,7 @@ fn test_trait_system_compilation() {
 fn test_simple_element_parsing() {
     let xml = "<SimpleElement>Hello World</SimpleElement>";
     let variant = ComplexChoiceGroup::parse_choice_element("SimpleElement", xml).unwrap();
-    
+
     match variant {
         ComplexVariant::SimpleElement(content) => {
             assert_eq!(content, "Hello World");
@@ -122,7 +142,7 @@ fn test_simple_element_parsing() {
 fn test_element_with_attributes_parsing() {
     let xml = r#"<ElementWithAttributes id="test123" value="456">content</ElementWithAttributes>"#;
     let variant = ComplexChoiceGroup::parse_choice_element("ElementWithAttributes", xml).unwrap();
-    
+
     match variant {
         ComplexVariant::ElementWithAttributes { id, value } => {
             assert_eq!(id, "test123");
@@ -136,7 +156,7 @@ fn test_element_with_attributes_parsing() {
 fn test_nested_element_parsing() {
     let xml = r#"<NestedElement name="parent"><Child>child1</Child><Child>child2</Child></NestedElement>"#;
     let variant = ComplexChoiceGroup::parse_choice_element("NestedElement", xml).unwrap();
-    
+
     match variant {
         ComplexVariant::NestedElement { name, children } => {
             assert_eq!(name, "parent");
@@ -152,7 +172,7 @@ fn test_nested_element_parsing() {
 fn test_empty_element_parsing() {
     let xml = "<EmptyElement/>";
     let variant = ComplexChoiceGroup::parse_choice_element("EmptyElement", xml).unwrap();
-    
+
     match variant {
         ComplexVariant::EmptyElement => {
             // Success
@@ -166,13 +186,19 @@ fn test_variant_combination() {
     let variants = vec![
         ComplexVariant::SimpleElement("test".to_string()),
         ComplexVariant::EmptyElement,
-        ComplexVariant::ElementWithAttributes { id: "id1".to_string(), value: 100 },
+        ComplexVariant::ElementWithAttributes {
+            id: "id1".to_string(),
+            value: 100,
+        },
     ];
-    
+
     let choice_group = ComplexChoiceGroup::from_choice_variants(variants).unwrap();
     assert_eq!(choice_group.elements.len(), 3);
     assert!(choice_group.metadata.is_some());
-    assert_eq!(choice_group.metadata.unwrap(), "Parsed by choice group infrastructure");
+    assert_eq!(
+        choice_group.metadata.unwrap(),
+        "Parsed by choice group infrastructure"
+    );
 }
 
 #[test]
@@ -189,17 +215,17 @@ fn test_xml_event_parsing_basic() {
     let result: ComplexChoiceGroup = parser.parse_choice_group("Container").unwrap();
 
     assert_eq!(result.elements.len(), 3);
-    
+
     match &result.elements[0] {
         ComplexVariant::SimpleElement(content) => assert_eq!(content, "content1"),
         _ => panic!("Expected SimpleElement"),
     }
-    
+
     match &result.elements[1] {
-        ComplexVariant::EmptyElement => {},
+        ComplexVariant::EmptyElement => {}
         _ => panic!("Expected EmptyElement"),
     }
-    
+
     match &result.elements[2] {
         ComplexVariant::SimpleElement(content) => assert_eq!(content, "content2"),
         _ => panic!("Expected SimpleElement"),
@@ -223,7 +249,7 @@ fn test_xml_event_parsing_complex() {
     let result: ComplexChoiceGroup = parser.parse_choice_group("Container").unwrap();
 
     assert_eq!(result.elements.len(), 3);
-    
+
     match &result.elements[0] {
         ComplexVariant::ElementWithAttributes { id, value } => {
             assert_eq!(id, "first");
@@ -231,7 +257,7 @@ fn test_xml_event_parsing_complex() {
         }
         _ => panic!("Expected ElementWithAttributes"),
     }
-    
+
     match &result.elements[1] {
         ComplexVariant::NestedElement { name, children } => {
             assert_eq!(name, "nested");
@@ -241,7 +267,7 @@ fn test_xml_event_parsing_complex() {
         }
         _ => panic!("Expected NestedElement"),
     }
-    
+
     match &result.elements[2] {
         ComplexVariant::SimpleElement(content) => assert_eq!(content, "simple content"),
         _ => panic!("Expected SimpleElement"),
@@ -264,7 +290,7 @@ fn test_element_reading_functionality() {
     let result: ComplexChoiceGroup = parser.parse_choice_group("Container").unwrap();
 
     assert_eq!(result.elements.len(), 1);
-    
+
     match &result.elements[0] {
         ComplexVariant::NestedElement { name, children } => {
             assert_eq!(name, "test");
@@ -295,14 +321,26 @@ fn test_mixed_order_elements() {
     let result: ComplexChoiceGroup = parser.parse_choice_group("Container").unwrap();
 
     assert_eq!(result.elements.len(), 6);
-    
+
     // Verify order is preserved
     assert!(matches!(result.elements[0], ComplexVariant::EmptyElement));
-    assert!(matches!(result.elements[1], ComplexVariant::SimpleElement(_)));
-    assert!(matches!(result.elements[2], ComplexVariant::ElementWithAttributes { .. }));
-    assert!(matches!(result.elements[3], ComplexVariant::SimpleElement(_)));
+    assert!(matches!(
+        result.elements[1],
+        ComplexVariant::SimpleElement(_)
+    ));
+    assert!(matches!(
+        result.elements[2],
+        ComplexVariant::ElementWithAttributes { .. }
+    ));
+    assert!(matches!(
+        result.elements[3],
+        ComplexVariant::SimpleElement(_)
+    ));
     assert!(matches!(result.elements[4], ComplexVariant::EmptyElement));
-    assert!(matches!(result.elements[5], ComplexVariant::ElementWithAttributes { .. }));
+    assert!(matches!(
+        result.elements[5],
+        ComplexVariant::ElementWithAttributes { .. }
+    ));
 }
 
 #[test]
@@ -372,7 +410,10 @@ fn test_unknown_element_ignored() {
 
     // Should only parse known elements
     assert_eq!(result.elements.len(), 2);
-    assert!(matches!(result.elements[0], ComplexVariant::SimpleElement(_)));
+    assert!(matches!(
+        result.elements[0],
+        ComplexVariant::SimpleElement(_)
+    ));
     assert!(matches!(result.elements[1], ComplexVariant::EmptyElement));
 }
 
@@ -389,7 +430,10 @@ fn test_choice_group_registry() {
     let result: ComplexChoiceGroup = registry.parse("Container", xml).unwrap();
 
     assert_eq!(result.elements.len(), 2);
-    assert!(matches!(result.elements[0], ComplexVariant::SimpleElement(_)));
+    assert!(matches!(
+        result.elements[0],
+        ComplexVariant::SimpleElement(_)
+    ));
     assert!(matches!(result.elements[1], ComplexVariant::EmptyElement));
 }
 
@@ -405,7 +449,7 @@ fn test_global_registry_function() {
     let result: ComplexChoiceGroup = parse_choice_group("Container", xml).unwrap();
 
     assert_eq!(result.elements.len(), 2);
-    
+
     match &result.elements[0] {
         ComplexVariant::ElementWithAttributes { id, value } => {
             assert_eq!(id, "global");
@@ -413,7 +457,7 @@ fn test_global_registry_function() {
         }
         _ => panic!("Expected ElementWithAttributes"),
     }
-    
+
     match &result.elements[1] {
         ComplexVariant::SimpleElement(content) => assert_eq!(content, "global test"),
         _ => panic!("Expected SimpleElement"),
@@ -437,12 +481,12 @@ fn test_nested_containers_ignored() {
 
     // Should only parse direct children of Container
     assert_eq!(result.elements.len(), 2);
-    
+
     match &result.elements[0] {
         ComplexVariant::SimpleElement(content) => assert_eq!(content, "outer"),
         _ => panic!("Expected SimpleElement"),
     }
-    
+
     assert!(matches!(result.elements[1], ComplexVariant::EmptyElement));
 }
 
@@ -472,7 +516,7 @@ fn test_multiple_containers_first_match() {
 
     // Should only parse the first matching container
     assert_eq!(result.elements.len(), 1);
-    
+
     match &result.elements[0] {
         ComplexVariant::SimpleElement(content) => assert_eq!(content, "first container"),
         _ => panic!("Expected SimpleElement"),
@@ -512,16 +556,21 @@ fn test_integration_with_realistic_xml() {
 
     assert_eq!(result.elements.len(), 5);
     assert!(result.metadata.is_some());
-    
+
     // Verify all element types are parsed correctly
-    let element_types: Vec<_> = result.elements.iter().map(|e| {
-        match e {
+    let element_types: Vec<_> = result
+        .elements
+        .iter()
+        .map(|e| match e {
             ComplexVariant::SimpleElement(_) => "Simple",
             ComplexVariant::ElementWithAttributes { .. } => "WithAttributes",
             ComplexVariant::NestedElement { .. } => "Nested",
             ComplexVariant::EmptyElement => "Empty",
-        }
-    }).collect();
-    
-    assert_eq!(element_types, vec!["Simple", "WithAttributes", "Nested", "Empty", "Simple"]);
+        })
+        .collect();
+
+    assert_eq!(
+        element_types,
+        vec!["Simple", "WithAttributes", "Nested", "Empty", "Simple"]
+    );
 }

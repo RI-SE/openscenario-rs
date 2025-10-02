@@ -14,7 +14,8 @@
 
 use crate::types::actions::control::ActivateControllerAction;
 use crate::types::actions::movement::{
-    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction, TeleportAction,
+    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction,
+    TeleportAction,
 };
 use crate::types::basic::OSString;
 use crate::types::environment::Environment;
@@ -67,23 +68,45 @@ pub struct Private {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivateAction {
     /// Exactly one of these fields should be present (XML choice group)
-    #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "LongitudinalAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub longitudinal_action: Option<LongitudinalAction>,
-    #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "LateralAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
-    #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "TeleportAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub teleport_action: Option<TeleportAction>,
-    #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "RoutingAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub routing_action: Option<RoutingAction>,
-    #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "SynchronizeAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub synchronize_action: Option<SynchronizeAction>,
-    #[serde(rename = "ActivateControllerAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "ActivateControllerAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub activate_controller_action: Option<ActivateControllerAction>,
     // Note: Other action types like VisibilityAction, ControllerAction,
     // AppearanceAction, TrailerAction can be added when implemented
 }
-
-
 
 impl PrivateAction {
     /// Get the action type contained in this PrivateAction
@@ -114,12 +137,17 @@ impl PrivateAction {
             self.routing_action.is_some(),
             self.synchronize_action.is_some(),
             self.activate_controller_action.is_some(),
-        ].iter().filter(|&&x| x).count();
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
 
         match action_count {
             1 => Ok(()),
             0 => Err("PrivateAction must contain exactly one action type, found none".to_string()),
-            _ => Err("PrivateAction must contain exactly one action type, found multiple".to_string()),
+            _ => Err(
+                "PrivateAction must contain exactly one action type, found multiple".to_string(),
+            ),
         }
     }
 }
@@ -142,15 +170,25 @@ impl Default for PrivateAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
     /// Exactly one of these fields should be present (XML choice group)
-    #[serde(rename = "SpeedAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "SpeedAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub speed_action: Option<SpeedAction>,
-    #[serde(rename = "LongitudinalDistanceAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "LongitudinalDistanceAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub longitudinal_distance_action: Option<LongitudinalDistanceAction>,
-    #[serde(rename = "SpeedProfileAction", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "SpeedProfileAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub speed_profile_action: Option<SpeedProfileAction>,
 }
-
-
 
 impl LongitudinalAction {
     /// Get the action type contained in this LongitudinalAction
@@ -172,7 +210,10 @@ impl LongitudinalAction {
             self.speed_action.is_some(),
             self.longitudinal_distance_action.is_some(),
             self.speed_profile_action.is_some(),
-        ].iter().filter(|&&x| x).count();
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
 
         match action_count {
             1 => Ok(()),
@@ -216,10 +257,6 @@ impl Default for Private {
         }
     }
 }
-
-
-
-
 
 impl Private {
     /// Create a new Private action container for the specified entity

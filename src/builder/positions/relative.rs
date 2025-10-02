@@ -1,9 +1,9 @@
 //! Relative position builder for entity-relative positions
 
+use super::PositionBuilder;
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::{Double, Int, OSString};
-use crate::types::positions::{Position, RelativeWorldPosition, RelativeLanePosition};
-use super::PositionBuilder;
+use crate::types::positions::{Position, RelativeLanePosition, RelativeWorldPosition};
 
 /// Builder for relative positions
 #[derive(Debug, Clone, Default)]
@@ -91,18 +91,24 @@ impl PositionBuilder for RelativePositionBuilder {
 
     fn validate(&self) -> BuilderResult<()> {
         if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error("Entity reference is required"));
+            return Err(BuilderError::validation_error(
+                "Entity reference is required",
+            ));
         }
 
         match self.position_type {
             RelativePositionType::World => {
                 if self.dx.is_none() || self.dy.is_none() || self.dz.is_none() {
-                    return Err(BuilderError::validation_error("World offsets (dx, dy, dz) are required"));
+                    return Err(BuilderError::validation_error(
+                        "World offsets (dx, dy, dz) are required",
+                    ));
                 }
             }
             RelativePositionType::Lane => {
                 if self.ds.is_none() || self.offset.is_none() {
-                    return Err(BuilderError::validation_error("Lane offsets (ds, offset) are required"));
+                    return Err(BuilderError::validation_error(
+                        "Lane offsets (ds, offset) are required",
+                    ));
                 }
             }
         }

@@ -19,9 +19,9 @@ pub mod entity; // Entity-based conditions
 pub mod value; // Value-based conditions
 
 pub use entity::{
-    AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition,
-    CollisionTarget, DistanceCondition, EndOfRoadCondition, EntityCondition, OffRoadCondition,
-    OffroadCondition, ReachPositionCondition, RelativeAngleCondition, RelativeClearanceCondition,
+    AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition, CollisionTarget,
+    DistanceCondition, EndOfRoadCondition, EntityCondition, OffRoadCondition, OffroadCondition,
+    ReachPositionCondition, RelativeAngleCondition, RelativeClearanceCondition,
     RelativeDistanceCondition, RelativeLaneRange, RelativeSpeedCondition, SpeedCondition,
     StandStillCondition, TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
     TraveledDistanceCondition,

@@ -7,13 +7,13 @@ pub mod basic;
 
 pub use basic::BasicScenarioTemplate;
 
-use crate::builder::scenario::{ScenarioBuilder, HasEntities};
+use crate::builder::scenario::{HasEntities, ScenarioBuilder};
 
 /// Trait for scenario templates
 pub trait ScenarioTemplate {
     /// Create a pre-configured scenario builder
     fn create() -> ScenarioBuilder<HasEntities>;
-    
+
     /// Create with custom header information
     fn create_with_header(name: &str, author: &str) -> ScenarioBuilder<HasEntities>;
 }

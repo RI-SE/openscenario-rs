@@ -106,6 +106,9 @@ pub use control::{
     Gear,
     // Supporting types
     ManualGear,
+    // XSD compliant override action names
+    OverrideBrakeAction,
+    OverrideClutchAction,
     OverrideControllerValueAction,
     // Individual override actions (legacy names)
     OverrideControllerValueActionBrake,
@@ -114,9 +117,6 @@ pub use control::{
     OverrideControllerValueActionParkingBrake,
     OverrideControllerValueActionSteeringWheel,
     OverrideControllerValueActionThrottle,
-    // XSD compliant override action names
-    OverrideBrakeAction,
-    OverrideClutchAction,
     OverrideGearAction,
     OverrideParkingBrakeAction,
     OverrideSteeringWheelAction,
@@ -125,10 +125,6 @@ pub use control::{
 
 // Export wrapper types from the wrappers module
 pub use wrappers::*;
-
-
-
-
 
 use crate::types::ValidationContext;
 

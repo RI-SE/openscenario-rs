@@ -1,10 +1,10 @@
 //! Simple tests for ByValueCondition implementation
-//! 
+//!
 //! This test file validates that all the new ByValueCondition types
 //! compile and have correct defaults.
 
-use openscenario_rs::types::conditions::*;
 use openscenario_rs::types::basic::OSString;
+use openscenario_rs::types::conditions::*;
 use openscenario_rs::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
 
 #[test]
@@ -23,7 +23,10 @@ fn test_parameter_condition() {
 fn test_storyboard_element_state_condition() {
     let condition = StoryboardElementStateCondition::default();
     assert_eq!(condition.state, StoryboardElementState::RunningState);
-    assert_eq!(condition.storyboard_element_type, StoryboardElementType::Story);
+    assert_eq!(
+        condition.storyboard_element_type,
+        StoryboardElementType::Story
+    );
 }
 
 #[test]
@@ -63,10 +66,10 @@ fn test_variable_condition() {
 #[test]
 fn test_byvalue_condition_default() {
     let condition = ByValueCondition::default();
-    
+
     // Should have simulation time condition by default
     assert!(condition.simulation_time_condition.is_some());
-    
+
     // All others should be None by default
     assert!(condition.parameter_condition.is_none());
     assert!(condition.time_of_day_condition.is_none());
@@ -80,29 +83,29 @@ fn test_byvalue_condition_default() {
 #[test]
 fn test_byvalue_condition_with_specific_conditions() {
     let mut condition = ByValueCondition::default();
-    
+
     // Set a parameter condition
     condition.parameter_condition = Some(ParameterCondition {
         parameter_ref: OSString::literal("testParam".to_string()),
         rule: Rule::GreaterThan,
         value: OSString::literal("10".to_string()),
     });
-    
+
     // Set a variable condition
     condition.variable_condition = Some(VariableCondition {
         variable_ref: OSString::literal("testVar".to_string()),
         rule: Rule::LessThan,
         value: OSString::literal("5".to_string()),
     });
-    
+
     // Verify conditions are set correctly
     assert!(condition.parameter_condition.is_some());
     assert!(condition.variable_condition.is_some());
-    
+
     if let Some(param_cond) = &condition.parameter_condition {
         assert_eq!(param_cond.rule, Rule::GreaterThan);
     }
-    
+
     if let Some(var_cond) = &condition.variable_condition {
         assert_eq!(var_cond.rule, Rule::LessThan);
     }

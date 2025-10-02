@@ -13,27 +13,25 @@ pub struct Deterministic {
     pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
 }
 
-
-
 impl serde::Serialize for Deterministic {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         use serde::ser::SerializeMap;
-        
+
         let mut map = serializer.serialize_map(None)?;
-        
+
         // Serialize single distributions
         for dist in &self.single_distributions {
             map.serialize_entry("DeterministicSingleParameterDistribution", dist)?;
         }
-        
-        // Serialize multi distributions  
+
+        // Serialize multi distributions
         for dist in &self.multi_distributions {
             map.serialize_entry("DeterministicMultiParameterDistribution", dist)?;
         }
-        
+
         map.end()
     }
 }
@@ -66,7 +64,8 @@ impl<'de> serde::Deserialize<'de> for Deterministic {
                 while let Some(key) = map.next_key::<String>()? {
                     match key.as_str() {
                         "DeterministicSingleParameterDistribution" => {
-                            let dist: DeterministicSingleParameterDistribution = map.next_value()?;
+                            let dist: DeterministicSingleParameterDistribution =
+                                map.next_value()?;
                             single_distributions.push(dist);
                         }
                         "DeterministicMultiParameterDistribution" => {
@@ -96,29 +95,31 @@ impl Deterministic {
     pub fn is_empty(&self) -> bool {
         self.single_distributions.is_empty() && self.multi_distributions.is_empty()
     }
-    
+
     /// Add a single parameter distribution
     pub fn add_single(&mut self, distribution: DeterministicSingleParameterDistribution) {
         self.single_distributions.push(distribution);
     }
-    
+
     /// Add a multi parameter distribution
     pub fn add_multi(&mut self, distribution: DeterministicMultiParameterDistribution) {
         self.multi_distributions.push(distribution);
     }
-    
+
     /// Get single distributions
-    pub fn single_distributions(&self) -> impl Iterator<Item = &DeterministicSingleParameterDistribution> {
+    pub fn single_distributions(
+        &self,
+    ) -> impl Iterator<Item = &DeterministicSingleParameterDistribution> {
         self.single_distributions.iter()
     }
-    
+
     /// Get multi distributions
-    pub fn multi_distributions(&self) -> impl Iterator<Item = &DeterministicMultiParameterDistribution> {
+    pub fn multi_distributions(
+        &self,
+    ) -> impl Iterator<Item = &DeterministicMultiParameterDistribution> {
         self.multi_distributions.iter()
     }
 }
-
-
 
 /// Wrapper for deterministic parameter distributions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -288,16 +289,18 @@ impl Deterministic {
     pub fn total_count(&self) -> usize {
         self.single_distributions.len() + self.multi_distributions.len()
     }
-    
+
     /// Get unified iterator over all distributions
-    pub fn all_distributions(&self) -> impl Iterator<Item = DeterministicParameterDistribution> + '_ {
+    pub fn all_distributions(
+        &self,
+    ) -> impl Iterator<Item = DeterministicParameterDistribution> + '_ {
         self.single_distributions
             .iter()
             .map(|d| DeterministicParameterDistribution::Single(d.clone()))
             .chain(
                 self.multi_distributions
                     .iter()
-                    .map(|d| DeterministicParameterDistribution::Multi(d.clone()))
+                    .map(|d| DeterministicParameterDistribution::Multi(d.clone())),
             )
     }
 }
@@ -536,8 +539,6 @@ impl DistributionSampler for DistributionRange {
         true
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

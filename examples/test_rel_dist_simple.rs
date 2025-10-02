@@ -10,10 +10,13 @@ fn main() {
             println!("  entityRef: {}", condition.entity_ref);
             println!("  value: {}", condition.value);
             println!("  freespace: {}", condition.freespace);
-            println!("  relativeDistanceType: {:?}", condition.relative_distance_type);
+            println!(
+                "  relativeDistanceType: {:?}",
+                condition.relative_distance_type
+            );
             println!("  rule: {:?}", condition.rule);
             println!("  coordinateSystem: {:?}", condition.coordinate_system);
-        },
+        }
         Err(e) => {
             println!("❌ Failed to parse RelativeDistanceCondition: {}", e);
         }

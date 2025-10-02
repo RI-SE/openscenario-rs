@@ -94,10 +94,7 @@ impl ChoiceGroupParser {
     }
 
     /// Parse a choice group element by delegating to appropriate handlers
-    pub fn parse_choice_group<T: XsdChoiceGroup>(
-        &self,
-        container_element: &str,
-    ) -> Result<T> {
+    pub fn parse_choice_group<T: XsdChoiceGroup>(&self, container_element: &str) -> Result<T> {
         let choice_names = T::choice_element_names();
         let mut variants: Vec<(usize, T::Variant)> = Vec::new(); // Explicitly type the vector as containing tuples
 
@@ -114,36 +111,40 @@ impl ChoiceGroupParser {
 
         let start_pos = if let Some(pos) = self.xml.find(&container_start_tag) {
             // Find the end of the opening tag
-            let tag_end = self.xml[pos..].find('>').ok_or_else(|| {
-                Error::validation_error("xml", "Malformed container start tag")
-            })? + pos + 1;
+            let tag_end = self.xml[pos..]
+                .find('>')
+                .ok_or_else(|| Error::validation_error("xml", "Malformed container start tag"))?
+                + pos
+                + 1;
             tag_end
         } else {
             return Err(Error::validation_error(
                 "xml",
-                &format!("Container element '{}' not found", container_element)
+                &format!("Container element '{}' not found", container_element),
             ));
         };
 
         // Find the end tag position, or return error if not found
-        let end_pos = self.xml.find(&container_end_tag).ok_or_else(|| {
-            Error::validation_error("xml", "Container end tag not found")
-        })?;
+        let end_pos = self
+            .xml
+            .find(&container_end_tag)
+            .ok_or_else(|| Error::validation_error("xml", "Container end tag not found"))?;
 
         let content = &self.xml[start_pos..end_pos];
 
         // Parse each choice element in the content
         for &element_name in choice_names {
             let mut search_pos = 0;
-            
+
             loop {
                 let element_start_tag = format!("<{}", element_name);
                 let element_end_tag = format!("</{}>", element_name);
                 let element_self_closing = format!("<{}/>", element_name);
                 let element_self_closing_with_space = format!("<{} ", element_name);
-                
+
                 // Find the next occurrence of this element
-                let element_pos = if let Some(pos) = content[search_pos..].find(&element_start_tag) {
+                let element_pos = if let Some(pos) = content[search_pos..].find(&element_start_tag)
+                {
                     search_pos + pos
                 } else {
                     break; // No more occurrences of this element
@@ -164,7 +165,8 @@ impl ChoiceGroupParser {
                             } else {
                                 // Check if it's a self-closing tag
                                 if let Some(close_pos) = content_before[abs_open_pos..].find('>') {
-                                    let tag_content = &content_before[abs_open_pos..abs_open_pos + close_pos + 1];
+                                    let tag_content =
+                                        &content_before[abs_open_pos..abs_open_pos + close_pos + 1];
                                     if !tag_content.ends_with("/>") {
                                         depth_check += 1;
                                     }
@@ -176,7 +178,7 @@ impl ChoiceGroupParser {
                         break;
                     }
                 }
-                
+
                 // Skip this element if it's nested
                 if depth_check > 0 {
                     search_pos = element_pos + element_start_tag.len();
@@ -184,11 +186,11 @@ impl ChoiceGroupParser {
                 }
 
                 // Check if it's self-closing (either <element/> or <element .../>)
-                let is_self_closing = content[element_pos..].starts_with(&element_self_closing) ||
-                    (content[element_pos..].starts_with(&element_self_closing_with_space) &&
-                     content[element_pos..].find('>').map_or(false, |pos| {
-                         content[element_pos..element_pos + pos + 1].ends_with("/>")
-                     }));
+                let is_self_closing = content[element_pos..].starts_with(&element_self_closing)
+                    || (content[element_pos..].starts_with(&element_self_closing_with_space)
+                        && content[element_pos..].find('>').map_or(false, |pos| {
+                            content[element_pos..element_pos + pos + 1].ends_with("/>")
+                        }));
 
                 if is_self_closing {
                     let tag_end = content[element_pos..].find('>').unwrap() + element_pos + 1;
@@ -200,7 +202,8 @@ impl ChoiceGroupParser {
                     // Find the end of the opening tag
                     let tag_end_pos = content[element_pos..].find('>').ok_or_else(|| {
                         Error::validation_error("xml", "Malformed element start tag")
-                    })? + element_pos + 1;
+                    })? + element_pos
+                        + 1;
 
                     // Find the matching end tag
                     let mut depth = 1;
@@ -225,13 +228,17 @@ impl ChoiceGroupParser {
                             } else {
                                 depth -= 1;
                                 if depth == 0 {
-                                    if let Some(end_tag_pos) = content[current_pos..].find(&element_end_tag) {
-                                        element_end_pos = Some(current_pos + end_tag_pos + element_end_tag.len());
+                                    if let Some(end_tag_pos) =
+                                        content[current_pos..].find(&element_end_tag)
+                                    {
+                                        element_end_pos =
+                                            Some(current_pos + end_tag_pos + element_end_tag.len());
                                     }
                                 }
                                 break;
                             }
-                        } else if let Some(end_pos) = content[current_pos..].find(&element_end_tag) {
+                        } else if let Some(end_pos) = content[current_pos..].find(&element_end_tag)
+                        {
                             let abs_end_pos = current_pos + end_pos;
                             depth -= 1;
                             if depth == 0 {
@@ -251,7 +258,7 @@ impl ChoiceGroupParser {
                     } else {
                         return Err(Error::validation_error(
                             "xml",
-                            &format!("Unclosed element '{}'", element_name)
+                            &format!("Unclosed element '{}'", element_name),
                         ));
                     }
                 }
@@ -260,7 +267,8 @@ impl ChoiceGroupParser {
 
         // Sort variants by their position in the document to maintain order
         variants.sort_by_key(|(pos, _)| *pos);
-        let sorted_variants: Vec<T::Variant> = variants.into_iter().map(|(_, variant)| variant).collect();
+        let sorted_variants: Vec<T::Variant> =
+            variants.into_iter().map(|(_, variant)| variant).collect();
 
         T::from_choice_variants(sorted_variants)
     }
@@ -327,25 +335,39 @@ mod tests {
             match element_name {
                 "ElementA" => {
                     // Simple text extraction for testing
-                    let start = xml.find('>').ok_or_else(|| Error::validation_error("xml", "Invalid ElementA"))?;
-                    let end = xml.rfind('<').ok_or_else(|| Error::validation_error("xml", "Invalid ElementA"))?;
+                    let start = xml
+                        .find('>')
+                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementA"))?;
+                    let end = xml
+                        .rfind('<')
+                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementA"))?;
                     let content = &xml[start + 1..end];
                     Ok(TestVariant::ElementA(content.to_string()))
                 }
                 "ElementB" => {
-                    let start = xml.find('>').ok_or_else(|| Error::validation_error("xml", "Invalid ElementB"))?;
-                    let end = xml.rfind('<').ok_or_else(|| Error::validation_error("xml", "Invalid ElementB"))?;
+                    let start = xml
+                        .find('>')
+                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementB"))?;
+                    let end = xml
+                        .rfind('<')
+                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementB"))?;
                     let content = &xml[start + 1..end];
-                    let value = content.parse::<i32>()
-                        .map_err(|_| Error::validation_error("xml", "Invalid integer in ElementB"))?;
+                    let value = content.parse::<i32>().map_err(|_| {
+                        Error::validation_error("xml", "Invalid integer in ElementB")
+                    })?;
                     Ok(TestVariant::ElementB(value))
                 }
                 "ElementC" => {
-                    let start = xml.find('>').ok_or_else(|| Error::validation_error("xml", "Invalid ElementC"))?;
-                    let end = xml.rfind('<').ok_or_else(|| Error::validation_error("xml", "Invalid ElementC"))?;
+                    let start = xml
+                        .find('>')
+                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementC"))?;
+                    let end = xml
+                        .rfind('<')
+                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementC"))?;
                     let content = &xml[start + 1..end];
-                    let value = content.parse::<bool>()
-                        .map_err(|_| Error::validation_error("xml", "Invalid boolean in ElementC"))?;
+                    let value = content.parse::<bool>().map_err(|_| {
+                        Error::validation_error("xml", "Invalid boolean in ElementC")
+                    })?;
                     Ok(TestVariant::ElementC(value))
                 }
                 _ => Err(Error::validation_error("choice_group", "Unknown element")),
@@ -360,16 +382,22 @@ mod tests {
     #[test]
     fn test_choice_group_trait_system() {
         // Test that the trait system compiles and provides correct interfaces
-        assert_eq!(TestChoiceGroup::choice_element_names(), &["ElementA", "ElementB", "ElementC"]);
+        assert_eq!(
+            TestChoiceGroup::choice_element_names(),
+            &["ElementA", "ElementB", "ElementC"]
+        );
 
         // Test individual element parsing
-        let variant_a = TestChoiceGroup::parse_choice_element("ElementA", "<ElementA>test</ElementA>").unwrap();
+        let variant_a =
+            TestChoiceGroup::parse_choice_element("ElementA", "<ElementA>test</ElementA>").unwrap();
         assert_eq!(variant_a, TestVariant::ElementA("test".to_string()));
 
-        let variant_b = TestChoiceGroup::parse_choice_element("ElementB", "<ElementB>42</ElementB>").unwrap();
+        let variant_b =
+            TestChoiceGroup::parse_choice_element("ElementB", "<ElementB>42</ElementB>").unwrap();
         assert_eq!(variant_b, TestVariant::ElementB(42));
 
-        let variant_c = TestChoiceGroup::parse_choice_element("ElementC", "<ElementC>true</ElementC>").unwrap();
+        let variant_c =
+            TestChoiceGroup::parse_choice_element("ElementC", "<ElementC>true</ElementC>").unwrap();
         assert_eq!(variant_c, TestVariant::ElementC(true));
 
         // Test variant combination
@@ -392,7 +420,10 @@ mod tests {
         let result: TestChoiceGroup = parser.parse_choice_group("Container").unwrap();
 
         assert_eq!(result.elements.len(), 3);
-        assert_eq!(result.elements[0], TestVariant::ElementA("hello".to_string()));
+        assert_eq!(
+            result.elements[0],
+            TestVariant::ElementA("hello".to_string())
+        );
         assert_eq!(result.elements[1], TestVariant::ElementB(123));
         assert_eq!(result.elements[2], TestVariant::ElementC(false));
     }
@@ -413,9 +444,15 @@ mod tests {
 
         assert_eq!(result.elements.len(), 4);
         assert_eq!(result.elements[0], TestVariant::ElementC(true));
-        assert_eq!(result.elements[1], TestVariant::ElementA("world".to_string()));
+        assert_eq!(
+            result.elements[1],
+            TestVariant::ElementA("world".to_string())
+        );
         assert_eq!(result.elements[2], TestVariant::ElementB(456));
-        assert_eq!(result.elements[3], TestVariant::ElementA("again".to_string()));
+        assert_eq!(
+            result.elements[3],
+            TestVariant::ElementA("again".to_string())
+        );
     }
 
     #[test]
@@ -446,7 +483,10 @@ mod tests {
         let result: Result<TestChoiceGroup> = parser.parse_choice_group("Container");
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Container element 'Container' not found"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Container element 'Container' not found"));
     }
 
     #[test]
@@ -461,7 +501,10 @@ mod tests {
         let result: TestChoiceGroup = parse_choice_group("Container", xml).unwrap();
 
         assert_eq!(result.elements.len(), 2);
-        assert_eq!(result.elements[0], TestVariant::ElementA("registry_test".to_string()));
+        assert_eq!(
+            result.elements[0],
+            TestVariant::ElementA("registry_test".to_string())
+        );
         assert_eq!(result.elements[1], TestVariant::ElementB(999));
     }
 

@@ -16,15 +16,16 @@ fn main() {
     match fs::read_to_string(file_path) {
         Ok(content) => {
             println!("✅ File read successfully, {} bytes", content.len());
-            
+
             // Look for ParameterValueDistribution section
             if content.contains("ParameterValueDistribution") {
                 println!("🎯 Found ParameterValueDistribution in XML");
-                
+
                 // Extract just the relevant section for debugging
                 if let Some(start_pos) = content.find("<ParameterValueDistribution") {
                     if let Some(end_pos) = content.find("</ParameterValueDistribution>") {
-                        let section = &content[start_pos..end_pos + "</ParameterValueDistribution>".len()];
+                        let section =
+                            &content[start_pos..end_pos + "</ParameterValueDistribution>".len()];
                         println!("📋 ParameterValueDistribution section:");
                         println!("{}", section);
                     }
@@ -48,7 +49,7 @@ fn main() {
         Err(e) => {
             println!("❌ PARSING ERROR: {}", e);
             println!("📝 Error details: {:?}", e);
-            
+
             // Try to give more context about where the error occurred
             let error_string = format!("{:?}", e);
             if error_string.contains("ParameterValueDistribution") {

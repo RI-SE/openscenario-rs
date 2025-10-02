@@ -95,4 +95,3 @@ pub(crate) fn validate_road_id(road_id: &str) -> BuilderResult<()> {
     }
     Ok(())
 }
-

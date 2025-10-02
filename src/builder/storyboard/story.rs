@@ -73,7 +73,6 @@ impl StoryboardBuilder {
     /// Stop scenario after specified time
     pub fn stop_after_time(self, time: f64) -> BuilderResult<Self> {
         use crate::builder::conditions::{TimeConditionBuilder, TriggerBuilder};
-        
 
         let time_condition = TimeConditionBuilder::new().at_time(time).build()?;
 
@@ -93,7 +92,6 @@ impl StoryboardBuilder {
         position: crate::types::positions::Position,
     ) -> BuilderResult<Self> {
         use crate::builder::conditions::{ReachPositionConditionBuilder, TriggerBuilder};
-        
 
         let reach_condition = ReachPositionConditionBuilder::new()
             .for_entity(entity)
@@ -115,7 +113,6 @@ impl StoryboardBuilder {
         condition: crate::types::scenario::triggers::Condition,
     ) -> BuilderResult<Self> {
         use crate::builder::conditions::TriggerBuilder;
-        
 
         let trigger = TriggerBuilder::new()
             .add_condition_group()
@@ -615,4 +612,3 @@ mod tests {
         assert_eq!(story_builder.acts.len(), 0);
     }
 }
-

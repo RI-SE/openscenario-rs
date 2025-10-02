@@ -3,9 +3,7 @@
 use super::actions::InitActionBuilder;
 use crate::builder::BuilderResult;
 use crate::types::{
-    actions::movement::{
-        SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics,
-    },
+    actions::movement::{SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics},
     basic::{Double, Value},
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
@@ -267,4 +265,3 @@ mod tests {
         assert_eq!(target_private.private_actions.len(), 1);
     }
 }
-

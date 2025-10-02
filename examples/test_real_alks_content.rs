@@ -45,13 +45,16 @@ fn main() {
 </OpenSCENARIO>"#;
 
     println!("🔍 Testing real ALKS content with parse_from_str...");
-    
+
     match parse_from_str(xml) {
         Ok(scenario) => {
             println!("✅ Success!");
             if let Some(pvd) = &scenario.parameter_value_distribution {
                 if let Some(det) = &pvd.deterministic {
-                    println!("📊 Single distributions: {}", det.single_distributions.len());
+                    println!(
+                        "📊 Single distributions: {}",
+                        det.single_distributions.len()
+                    );
                     println!("📊 Multi distributions: {}", det.multi_distributions.len());
                 } else {
                     println!("❌ No deterministic found");
@@ -59,7 +62,7 @@ fn main() {
             } else {
                 println!("❌ No parameter value distribution found");
             }
-        },
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
         }

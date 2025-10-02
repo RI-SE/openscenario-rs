@@ -11,7 +11,6 @@ use openscenario_rs::types::positions::{
     Orientation, Position, RelativeLanePosition, RelativeRoadPosition,
 };
 
-
 #[test]
 fn test_relative_road_position_xml_roundtrip() {
     let original = RelativeRoadPosition::new("EgoVehicle".to_string(), 10.0, -2.5);

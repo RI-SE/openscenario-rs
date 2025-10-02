@@ -361,4 +361,3 @@ fn main() {
         "Builder feature not enabled. Run with --features builder to test Phase 2 functionality."
     );
 }
-

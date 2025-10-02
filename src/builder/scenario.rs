@@ -38,15 +38,15 @@
 //!     .unwrap();
 //! ```
 
-use crate::types::{
-    basic::{OSString, UnsignedShort, ParameterDeclarations, ParameterDeclaration},
-    scenario::storyboard::{OpenScenario, FileHeader, Storyboard},
-    entities::Entities,
-    catalogs::locations::CatalogLocations,
-    road::RoadNetwork,
-    enums::ParameterType,
-};
 use super::{BuilderError, BuilderResult};
+use crate::types::{
+    basic::{OSString, ParameterDeclaration, ParameterDeclarations, UnsignedShort},
+    catalogs::locations::CatalogLocations,
+    entities::Entities,
+    enums::ParameterType,
+    road::RoadNetwork,
+    scenario::storyboard::{FileHeader, OpenScenario, Storyboard},
+};
 use std::marker::PhantomData;
 
 /// Initial state - scenario builder has just been created
@@ -54,7 +54,7 @@ use std::marker::PhantomData;
 pub struct Empty;
 
 /// Header has been set - can now add optional components like catalogs and parameters
-#[derive(Debug)] 
+#[derive(Debug)]
 pub struct HasHeader;
 
 /// Entities have been initialized - can now add entities and build storyboard
@@ -94,7 +94,7 @@ pub(crate) struct PartialScenarioData {
     pub(crate) file_header: Option<FileHeader>,
     pub(crate) parameter_declarations: Option<ParameterDeclarations>,
     pub(crate) catalog_locations: Option<CatalogLocations>,
-    pub(crate) road_network: Option<RoadNetwork>, 
+    pub(crate) road_network: Option<RoadNetwork>,
     pub(crate) entities: Option<Entities>,
     pub(crate) storyboard: Option<Storyboard>,
 }
@@ -121,7 +121,7 @@ impl ScenarioBuilder<Empty> {
             data: PartialScenarioData::default(),
         }
     }
-    
+
     /// Set file header information and transition to HasHeader state
     ///
     /// The file header contains essential metadata about the scenario including
@@ -152,15 +152,15 @@ impl ScenarioBuilder<Empty> {
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
         #[cfg(not(feature = "chrono"))]
         let now = "2024-01-01T00:00:00".to_string();
-        
+
         self.data.file_header = Some(FileHeader {
             rev_major: UnsignedShort::literal(1),
-            rev_minor: UnsignedShort::literal(0), 
+            rev_minor: UnsignedShort::literal(0),
             date: OSString::literal(now),
             description: OSString::literal(description.to_string()),
             author: OSString::literal(author.to_string()),
         });
-        
+
         ScenarioBuilder {
             _state: PhantomData,
             data: self.data,
@@ -193,7 +193,7 @@ impl ScenarioBuilder<HasHeader> {
         self.data.parameter_declarations = Some(params);
         self
     }
-    
+
     /// Add a single parameter declaration (convenience method)
     ///
     /// This is a convenience method for adding individual parameters without
@@ -218,30 +218,30 @@ impl ScenarioBuilder<HasHeader> {
     /// ```
     pub fn add_parameter(mut self, name: &str, param_type: ParameterType, value: &str) -> Self {
         let mut params = self.data.parameter_declarations.take().unwrap_or_default();
-        
+
         params.parameter_declarations.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
             parameter_type: param_type,
             value: OSString::literal(value.to_string()),
             constraint_groups: Vec::new(),
         });
-        
+
         self.data.parameter_declarations = Some(params);
         self
     }
-    
+
     /// Add catalog locations (optional)
     pub fn with_catalog_locations(mut self, locations: CatalogLocations) -> Self {
         self.data.catalog_locations = Some(locations);
         self
     }
-    
+
     /// Add road network (optional for minimal scenarios)
     pub fn with_road_network(mut self, network: RoadNetwork) -> Self {
         self.data.road_network = Some(network);
         self
     }
-    
+
     /// Set road network from OpenDRIVE file
     pub fn with_road_file(mut self, file_path: &str) -> Self {
         self.data.road_network = Some(RoadNetwork {
@@ -252,11 +252,11 @@ impl ScenarioBuilder<HasHeader> {
         });
         self
     }
-    
+
     /// Initialize entities and progress to HasEntities state
     pub fn with_entities(mut self) -> ScenarioBuilder<HasEntities> {
         self.data.entities = Some(Entities::new());
-        
+
         ScenarioBuilder {
             _state: PhantomData,
             data: self.data,
@@ -264,75 +264,92 @@ impl ScenarioBuilder<HasHeader> {
     }
 }
 
-// Implementation for HasEntities state  
+// Implementation for HasEntities state
 impl ScenarioBuilder<HasEntities> {
     /// Add a vehicle entity using closure-based configuration
-    pub fn add_vehicle<F>(mut self, name: &str, config: F) -> Self 
-    where 
-        F: FnOnce(crate::builder::entities::DetachedVehicleBuilder) -> crate::builder::entities::DetachedVehicleBuilder
+    pub fn add_vehicle<F>(mut self, name: &str, config: F) -> Self
+    where
+        F: FnOnce(
+            crate::builder::entities::DetachedVehicleBuilder,
+        ) -> crate::builder::entities::DetachedVehicleBuilder,
     {
         let vehicle_builder = crate::builder::entities::DetachedVehicleBuilder::new(name);
         let configured_builder = config(vehicle_builder);
         let vehicle_object = configured_builder.build();
-        
+
         // Add to entities
         if let Some(ref mut entities) = self.data.entities {
             entities.add_object(vehicle_object);
         }
-        
+
         self
     }
-    
+
     /// Add a vehicle entity (legacy method for backward compatibility)
     pub fn add_vehicle_mut(&mut self, name: &str) -> crate::builder::entities::VehicleBuilder<'_> {
         crate::builder::entities::VehicleBuilder::new(self, name)
     }
-    
+
     /// Add a vehicle from catalog
-    pub fn add_catalog_vehicle(&mut self, name: &str) -> crate::builder::entities::catalog::CatalogVehicleBuilder<'_> {
+    pub fn add_catalog_vehicle(
+        &mut self,
+        name: &str,
+    ) -> crate::builder::entities::catalog::CatalogVehicleBuilder<'_> {
         crate::builder::entities::catalog::CatalogVehicleBuilder::new(self, name)
     }
-    
+
     /// Add a pedestrian from catalog
-    pub fn add_catalog_pedestrian(&mut self, name: &str) -> crate::builder::entities::catalog::CatalogPedestrianBuilder<'_> {
+    pub fn add_catalog_pedestrian(
+        &mut self,
+        name: &str,
+    ) -> crate::builder::entities::catalog::CatalogPedestrianBuilder<'_> {
         crate::builder::entities::catalog::CatalogPedestrianBuilder::new(self, name)
     }
-    
+
     /// Configure storyboard using closure-based pattern
     pub fn with_storyboard<F>(self, config: F) -> ScenarioBuilder<Complete>
-    where 
-        F: FnOnce(crate::builder::storyboard::StoryboardBuilder) -> crate::builder::storyboard::StoryboardBuilder
+    where
+        F: FnOnce(
+            crate::builder::storyboard::StoryboardBuilder,
+        ) -> crate::builder::storyboard::StoryboardBuilder,
     {
         let storyboard_builder = crate::builder::storyboard::StoryboardBuilder::new(self);
         let configured_builder = config(storyboard_builder);
         configured_builder.finish()
     }
-    
+
     /// Start building the storyboard (legacy method)
     pub fn with_storyboard_mut(self) -> crate::builder::storyboard::StoryboardBuilder {
         crate::builder::storyboard::StoryboardBuilder::new(self)
     }
-    
+
     /// Create a storyboard builder (alias for with_storyboard_mut)
     pub fn create_storyboard(self) -> crate::builder::storyboard::StoryboardBuilder {
         crate::builder::storyboard::StoryboardBuilder::new(self)
     }
-    
+
     /// Build the final OpenScenario document
     pub fn build(self) -> BuilderResult<OpenScenario> {
-        let file_header = self.data.file_header
+        let file_header = self
+            .data
+            .file_header
             .ok_or_else(|| BuilderError::missing_field("file_header", ".with_header()"))?;
-            
-        let entities = self.data.entities
+
+        let entities = self
+            .data
+            .entities
             .ok_or_else(|| BuilderError::missing_field("entities", ".with_entities()"))?;
-        
+
         // Use defaults for optional fields
-        let storyboard = self.data.storyboard.unwrap_or_else(|| Storyboard::default());
-        
+        let storyboard = self
+            .data
+            .storyboard
+            .unwrap_or_else(|| Storyboard::default());
+
         Ok(OpenScenario {
             file_header,
             parameter_declarations: self.data.parameter_declarations,
-            variable_declarations: None, 
+            variable_declarations: None,
             monitor_declarations: None,
             catalog_locations: self.data.catalog_locations,
             road_network: self.data.road_network,
@@ -353,18 +370,24 @@ impl ScenarioBuilder<Complete> {
             data,
         }
     }
-    
+
     /// Build the final scenario (same as HasEntities but with Complete state)
     pub fn build(self) -> BuilderResult<OpenScenario> {
-        let file_header = self.data.file_header
+        let file_header = self
+            .data
+            .file_header
             .ok_or_else(|| BuilderError::missing_field("file_header", ".with_header()"))?;
-            
-        let entities = self.data.entities
+
+        let entities = self
+            .data
+            .entities
             .ok_or_else(|| BuilderError::missing_field("entities", ".with_entities()"))?;
-            
-        let storyboard = self.data.storyboard
+
+        let storyboard = self
+            .data
+            .storyboard
             .ok_or_else(|| BuilderError::missing_field("storyboard", ".with_storyboard()"))?;
-        
+
         Ok(OpenScenario {
             file_header,
             parameter_declarations: self.data.parameter_declarations,
@@ -389,7 +412,7 @@ impl Default for ScenarioBuilder<Empty> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_minimal_scenario_builder() {
         let scenario = ScenarioBuilder::new()
@@ -397,14 +420,14 @@ mod tests {
             .with_entities()
             .build()
             .unwrap();
-            
+
         // Verify basic structure
         if let crate::types::basic::Value::Literal(desc) = &scenario.file_header.description {
             assert_eq!(desc, "Test Scenario");
         } else {
             panic!("Description should be literal");
         }
-        
+
         assert!(scenario.entities.is_some());
         assert!(scenario.storyboard.is_some());
     }

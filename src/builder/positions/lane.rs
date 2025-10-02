@@ -1,9 +1,9 @@
 //! Lane position builder for road-relative positions
 
+use super::PositionBuilder;
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::{Double, OSString};
-use crate::types::positions::{Position, LanePosition};
-use super::PositionBuilder;
+use crate::types::positions::{LanePosition, Position};
 
 /// Builder for lane positions
 #[derive(Debug, Clone, Default)]

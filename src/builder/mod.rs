@@ -26,7 +26,7 @@
 //!         .add_vehicle("ego_vehicle")
 //!             .car()
 //!             .finish()
-//!         .add_vehicle("target_vehicle") 
+//!         .add_vehicle("target_vehicle")
 //!             .truck()
 //!             .finish()
 //!     .with_storyboard()
@@ -200,39 +200,45 @@ mod error;
 pub use error::{BuilderError, BuilderResult};
 
 // Existing modules
-pub mod positions;
-pub mod scenario; 
 pub mod fluent;
+pub mod positions;
+pub mod scenario;
 
 // New modules (Sprint 1+)
-pub mod entities;   // Sprint 1
-pub mod actions;    // Sprint 2
-pub mod storyboard; // Sprint 3
+pub mod actions; // Sprint 2
+pub mod catalog; // Sprint 5
 pub mod conditions; // Sprint 4
-pub mod init;       // Phase 1 - Critical for executable scenarios
-pub mod templates;  // Phase 1 - Common scenario patterns
-pub mod catalog;    // Sprint 5
+pub mod entities; // Sprint 1
+pub mod init; // Phase 1 - Critical for executable scenarios
 pub mod parameters; // Sprint 5
+pub mod storyboard; // Sprint 3
+pub mod templates; // Phase 1 - Common scenario patterns
 pub mod validation; // Sprint 5
 
 // Export main builders
-pub use scenario::ScenarioBuilder;
-pub use entities::{VehicleBuilder, DetachedVehicleBuilder};
 pub use actions::{
-    SpeedActionBuilder, TeleportActionBuilder, EnvironmentActionBuilder,
-    LaneChangeActionBuilder, LateralDistanceActionBuilder, LaneOffsetActionBuilder,
-    ActivateControllerActionBuilder, OverrideControllerValueActionBuilder,
-    EntityActionBuilder, VariableActionBuilder
+    ActivateControllerActionBuilder, EntityActionBuilder, EnvironmentActionBuilder,
+    LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder,
+    OverrideControllerValueActionBuilder, SpeedActionBuilder, TeleportActionBuilder,
+    VariableActionBuilder,
 };
-pub use storyboard::{StoryboardBuilder, StoryBuilder, ActBuilder, ManeuverBuilder, DetachedActBuilder, DetachedStoryBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder};
+pub use catalog::{
+    CatalogEntityBuilder, CatalogLocationsBuilder, PedestrianCatalogReferenceBuilder,
+    VehicleCatalogReferenceBuilder,
+};
 pub use conditions::{
-    TriggerBuilder, TimeConditionBuilder, SpeedConditionBuilder, ValueSpeedConditionBuilder,
-    ParameterConditionBuilder, VariableConditionBuilder, AccelerationConditionBuilder,
-    TraveledDistanceConditionBuilder, ReachPositionConditionBuilder, RelativeDistanceConditionBuilder,
-    CollisionConditionBuilder
+    AccelerationConditionBuilder, CollisionConditionBuilder, ParameterConditionBuilder,
+    ReachPositionConditionBuilder, RelativeDistanceConditionBuilder, SpeedConditionBuilder,
+    TimeConditionBuilder, TraveledDistanceConditionBuilder, TriggerBuilder,
+    ValueSpeedConditionBuilder, VariableConditionBuilder,
 };
-pub use init::{InitActionBuilder, PrivateActionBuilder, GlobalActionBuilder};
+pub use entities::{DetachedVehicleBuilder, VehicleBuilder};
+pub use init::{GlobalActionBuilder, InitActionBuilder, PrivateActionBuilder};
+pub use parameters::{ParameterContext, ParameterDeclarationsBuilder, ParameterizedValueBuilder};
+pub use scenario::ScenarioBuilder;
+pub use storyboard::{
+    ActBuilder, DetachedActBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
+    DetachedStoryBuilder, ManeuverBuilder, StoryBuilder, StoryboardBuilder,
+};
 pub use templates::{BasicScenarioTemplate, ScenarioTemplate};
-pub use catalog::{CatalogLocationsBuilder, CatalogEntityBuilder, VehicleCatalogReferenceBuilder, PedestrianCatalogReferenceBuilder};
-pub use parameters::{ParameterDeclarationsBuilder, ParameterizedValueBuilder, ParameterContext};
-pub use validation::{BuilderValidationContext, ValidationContextBuilder, BuilderValidatable};
+pub use validation::{BuilderValidatable, BuilderValidationContext, ValidationContextBuilder};

@@ -86,7 +86,7 @@
 //! match parse_from_file("scenario.xosc") {
 //!     Ok(scenario) => {
 //!         // Process valid scenario
-//!         println!("Loaded scenario with {} entities", 
+//!         println!("Loaded scenario with {} entities",
 //!                  scenario.entities.as_ref().map_or(0, |e| e.scenario_objects.len()));
 //!     }
 //!     Err(e) => {

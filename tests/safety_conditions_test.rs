@@ -4,7 +4,7 @@ use openscenario_rs::types::{
     basic::{Double, OSString},
     conditions::{
         ByEntityCondition, CollisionCondition, CollisionTarget, EndOfRoadCondition,
-        OffRoadCondition, EntityCondition,
+        EntityCondition, OffRoadCondition,
     },
     positions::Position,
     scenario::triggers::TriggeringEntities,
@@ -105,8 +105,10 @@ fn test_end_of_road_condition_default() {
 #[test]
 fn test_by_entity_condition_collision_variants() {
     let triggering_entities = TriggeringEntities::default();
-    let collision_target = ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-    let collision_type = ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+    let collision_target =
+        ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
+    let collision_type =
+        ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
     let collision_any = ByEntityCondition::collision(triggering_entities);
 
     match collision_target.entity_condition {
@@ -136,7 +138,8 @@ fn test_by_entity_condition_collision_variants() {
 fn test_by_entity_condition_collision_at_position() {
     let triggering_entities = TriggeringEntities::default();
     let position = Position::default();
-    let collision_pos = ByEntityCondition::collision_at_position(triggering_entities, position.clone());
+    let collision_pos =
+        ByEntityCondition::collision_at_position(triggering_entities, position.clone());
 
     match collision_pos.entity_condition {
         EntityCondition::Collision(condition) => {
@@ -225,20 +228,37 @@ fn test_by_entity_condition_enum_completeness() {
 #[test]
 fn test_by_entity_condition_safety_integration() {
     let triggering_entities = TriggeringEntities::default();
-    
+
     // Test collision conditions
-    let collision_target = ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-    let collision_type = ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+    let collision_target =
+        ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
+    let collision_type =
+        ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
     let collision_any = ByEntityCondition::collision(triggering_entities.clone());
-    
+
     // Test safety conditions
     let off_road = ByEntityCondition::off_road(triggering_entities.clone(), 2.0);
     let end_of_road = ByEntityCondition::end_of_road(triggering_entities, 3.0);
 
     // Verify all conditions are created successfully
-    assert!(matches!(collision_target.entity_condition, EntityCondition::Collision(_)));
-    assert!(matches!(collision_type.entity_condition, EntityCondition::Collision(_)));
-    assert!(matches!(collision_any.entity_condition, EntityCondition::Collision(_)));
-    assert!(matches!(off_road.entity_condition, EntityCondition::EndOfRoad(_)));
-    assert!(matches!(end_of_road.entity_condition, EntityCondition::EndOfRoad(_)));
+    assert!(matches!(
+        collision_target.entity_condition,
+        EntityCondition::Collision(_)
+    ));
+    assert!(matches!(
+        collision_type.entity_condition,
+        EntityCondition::Collision(_)
+    ));
+    assert!(matches!(
+        collision_any.entity_condition,
+        EntityCondition::Collision(_)
+    ));
+    assert!(matches!(
+        off_road.entity_condition,
+        EntityCondition::EndOfRoad(_)
+    ));
+    assert!(matches!(
+        end_of_road.entity_condition,
+        EntityCondition::EndOfRoad(_)
+    ));
 }

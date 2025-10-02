@@ -1,12 +1,12 @@
 //! Entity builders for programmatic scenario construction
 
-pub mod vehicle;
 pub mod catalog;
+pub mod vehicle;
 
-pub use vehicle::{VehicleBuilder, DetachedVehicleBuilder};
-pub use catalog::{CatalogVehicleBuilder, CatalogPedestrianBuilder};
+pub use catalog::{CatalogPedestrianBuilder, CatalogVehicleBuilder};
+pub use vehicle::{DetachedVehicleBuilder, VehicleBuilder};
 
-use crate::types::entities::{ScenarioObject, Entities};
+use crate::types::entities::{Entities, ScenarioObject};
 
 /// Collection of entity builders for scenario construction
 #[derive(Debug, Default)]
@@ -19,19 +19,19 @@ impl EntityCollection {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add a scenario object to the collection
     pub fn add_object(&mut self, object: ScenarioObject) {
         self.objects.push(object);
     }
-    
+
     /// Convert to Entities structure
     pub fn into_entities(self) -> Entities {
         Entities {
             scenario_objects: self.objects,
         }
     }
-    
+
     /// Get all objects
     pub fn objects(&self) -> &[ScenarioObject] {
         &self.objects

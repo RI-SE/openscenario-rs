@@ -2,7 +2,7 @@ use openscenario_rs::types::distributions::deterministic::Deterministic;
 
 fn main() {
     println!("🔍 Testing mixed single and multi distributions...");
-    
+
     // Test 1: Just 3 single distributions
     let xml_single_only = r#"<Deterministic>
   <DeterministicSingleParameterDistribution parameterName="Road">
@@ -24,10 +24,14 @@ fn main() {
 
     println!("\nTest 1: 3 single distributions");
     match quick_xml::de::from_str::<Deterministic>(xml_single_only) {
-        Ok(d) => println!("✅ Success: {} single, {} multi", d.single_distributions.len(), d.multi_distributions.len()),
+        Ok(d) => println!(
+            "✅ Success: {} single, {} multi",
+            d.single_distributions.len(),
+            d.multi_distributions.len()
+        ),
         Err(e) => println!("❌ Error: {:?}", e),
     }
-    
+
     // Test 2: Mixed order exactly like ALKS
     let xml_mixed = r#"<Deterministic>
   <DeterministicSingleParameterDistribution parameterName="Road">
@@ -57,7 +61,11 @@ fn main() {
 
     println!("\nTest 2: Mixed order like ALKS");
     match quick_xml::de::from_str::<Deterministic>(xml_mixed) {
-        Ok(d) => println!("✅ Success: {} single, {} multi", d.single_distributions.len(), d.multi_distributions.len()),
+        Ok(d) => println!(
+            "✅ Success: {} single, {} multi",
+            d.single_distributions.len(),
+            d.multi_distributions.len()
+        ),
         Err(e) => println!("❌ Error: {:?}", e),
     }
 }

@@ -12,48 +12,48 @@ fn main() {
 
     // Demonstrate CoreAction with PrivateAction
     demonstrate_private_actions();
-    
+
     // Demonstrate CoreAction with GlobalAction
     demonstrate_global_actions();
-    
+
     // Demonstrate individual Override actions
     demonstrate_override_actions();
-    
+
     // Demonstrate Entity actions
     demonstrate_entity_actions();
-    
+
     // Demonstrate Traffic actions
     demonstrate_traffic_actions();
 }
 
 fn demonstrate_private_actions() {
     println!("1. Private Actions:");
-    
+
     // Create a TeleportAction wrapped in PrivateAction
     let teleport_action = TeleportAction::default();
     let private_action = CorePrivateAction::TeleportAction(teleport_action);
     let core_action = CoreAction::PrivateAction(private_action);
-    
+
     println!("   - Created TeleportAction wrapped in PrivateAction");
-    
+
     // Create a LongitudinalAction wrapped in PrivateAction
     let longitudinal_action = LongitudinalAction::default();
     let private_action = CorePrivateAction::LongitudinalAction(longitudinal_action);
     let core_action = CoreAction::PrivateAction(private_action);
-    
+
     println!("   - Created LongitudinalAction wrapped in PrivateAction");
-    
+
     // Create a ControllerAction wrapped in PrivateAction
     let controller_action = ControllerAction::default();
     let private_action = CorePrivateAction::ControllerAction(controller_action);
     let core_action = CoreAction::PrivateAction(private_action);
-    
+
     println!("   - Created ControllerAction wrapped in PrivateAction\n");
 }
 
 fn demonstrate_global_actions() {
     println!("2. Global Actions:");
-    
+
     // Create a TrafficAction wrapped in GlobalAction
     let traffic_action = CoreTrafficAction {
         traffic_name: Some(Value::Literal("highway_traffic".to_string())),
@@ -61,9 +61,9 @@ fn demonstrate_global_actions() {
     };
     let global_action = CoreGlobalAction::TrafficAction(traffic_action);
     let core_action = CoreAction::GlobalAction(global_action);
-    
+
     println!("   - Created TrafficSourceAction wrapped in GlobalAction");
-    
+
     // Create an EntityAction wrapped in GlobalAction
     let entity_action = CoreEntityAction {
         entity_ref: Value::Literal("vehicle_001".to_string()),
@@ -71,76 +71,88 @@ fn demonstrate_global_actions() {
     };
     let global_action = CoreGlobalAction::EntityAction(entity_action);
     let core_action = CoreAction::GlobalAction(global_action);
-    
+
     println!("   - Created EntityAction wrapped in GlobalAction");
-    
+
     // Create an InfrastructureAction wrapped in GlobalAction
     let infra_action = CoreInfrastructureAction {
         traffic_signal_action: TrafficSignalAction::default(),
     };
     let global_action = CoreGlobalAction::InfrastructureAction(infra_action);
     let core_action = CoreAction::GlobalAction(global_action);
-    
+
     println!("   - Created InfrastructureAction wrapped in GlobalAction\n");
 }
 
 fn demonstrate_override_actions() {
     println!("3. Override Actions (XSD compliant names):");
-    
+
     // Create individual override actions
     let brake_override = OverrideBrakeAction {
         active: Value::Literal(true),
         value: Some(Value::Literal(0.8)),
         brake_input: None,
     };
-    println!("   - Created OverrideBrakeAction (active: {}, value: {:?})", 
-             brake_override.active, brake_override.value);
-    
+    println!(
+        "   - Created OverrideBrakeAction (active: {}, value: {:?})",
+        brake_override.active, brake_override.value
+    );
+
     let throttle_override = OverrideThrottleAction {
         active: Value::Literal(true),
         value: Value::Literal(0.6),
         max_rate: Some(Value::Literal(2.0)),
     };
-    println!("   - Created OverrideThrottleAction (active: {}, value: {}, max_rate: {:?})", 
-             throttle_override.active, throttle_override.value, throttle_override.max_rate);
-    
+    println!(
+        "   - Created OverrideThrottleAction (active: {}, value: {}, max_rate: {:?})",
+        throttle_override.active, throttle_override.value, throttle_override.max_rate
+    );
+
     let steering_override = OverrideSteeringWheelAction {
         active: Value::Literal(true),
         value: Value::Literal(0.3),
         max_rate: Some(Value::Literal(1.5)),
         max_torque: Some(Value::Literal(150.0)),
     };
-    println!("   - Created OverrideSteeringWheelAction (active: {}, value: {}, max_torque: {:?})", 
-             steering_override.active, steering_override.value, steering_override.max_torque);
-    
+    println!(
+        "   - Created OverrideSteeringWheelAction (active: {}, value: {}, max_torque: {:?})",
+        steering_override.active, steering_override.value, steering_override.max_torque
+    );
+
     let gear_override = OverrideGearAction {
         active: Value::Literal(true),
         number: Some(Value::Literal(3.0)),
         gear: None,
     };
-    println!("   - Created OverrideGearAction (active: {}, number: {:?})", 
-             gear_override.active, gear_override.number);
-    
+    println!(
+        "   - Created OverrideGearAction (active: {}, number: {:?})",
+        gear_override.active, gear_override.number
+    );
+
     let parking_brake_override = OverrideParkingBrakeAction {
         active: Value::Literal(true),
         value: Some(Value::Literal(1.0)),
         brake_input: None,
     };
-    println!("   - Created OverrideParkingBrakeAction (active: {}, value: {:?})", 
-             parking_brake_override.active, parking_brake_override.value);
-    
+    println!(
+        "   - Created OverrideParkingBrakeAction (active: {}, value: {:?})",
+        parking_brake_override.active, parking_brake_override.value
+    );
+
     let clutch_override = OverrideClutchAction {
         active: Value::Literal(true),
         value: Value::Literal(0.9),
         max_rate: Some(Value::Literal(3.0)),
     };
-    println!("   - Created OverrideClutchAction (active: {}, value: {}, max_rate: {:?})\n", 
-             clutch_override.active, clutch_override.value, clutch_override.max_rate);
+    println!(
+        "   - Created OverrideClutchAction (active: {}, value: {}, max_rate: {:?})\n",
+        clutch_override.active, clutch_override.value, clutch_override.max_rate
+    );
 }
 
 fn demonstrate_entity_actions() {
     println!("4. Entity Actions:");
-    
+
     // Create AddEntityAction
     let add_entity = CoreAddEntityAction {
         position: Position::default(),
@@ -149,52 +161,70 @@ fn demonstrate_entity_actions() {
         entity_ref: Value::Literal("new_vehicle".to_string()),
         action: CoreEntityActionChoice::AddEntityAction(add_entity),
     };
-    println!("   - Created AddEntityAction for entity: {}", entity_action.entity_ref);
-    
+    println!(
+        "   - Created AddEntityAction for entity: {}",
+        entity_action.entity_ref
+    );
+
     // Create DeleteEntityAction
     let delete_entity = CoreDeleteEntityAction::default();
     let entity_action = CoreEntityAction {
         entity_ref: Value::Literal("old_vehicle".to_string()),
         action: CoreEntityActionChoice::DeleteEntityAction(delete_entity),
     };
-    println!("   - Created DeleteEntityAction for entity: {}\n", entity_action.entity_ref);
+    println!(
+        "   - Created DeleteEntityAction for entity: {}\n",
+        entity_action.entity_ref
+    );
 }
 
 fn demonstrate_traffic_actions() {
     println!("5. Traffic Actions:");
-    
+
     // Create TrafficSourceAction
     let traffic_action = CoreTrafficAction {
         traffic_name: Some(Value::Literal("city_traffic".to_string())),
         action: CoreTrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
     };
-    println!("   - Created TrafficSourceAction with name: {:?}", traffic_action.traffic_name);
-    
+    println!(
+        "   - Created TrafficSourceAction with name: {:?}",
+        traffic_action.traffic_name
+    );
+
     // Create TrafficSinkAction
     let traffic_action = CoreTrafficAction {
         traffic_name: None,
         action: CoreTrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
     };
     println!("   - Created TrafficSinkAction with no name");
-    
+
     // Create TrafficSwarmAction
     let traffic_action = CoreTrafficAction {
         traffic_name: Some(Value::Literal("swarm_traffic".to_string())),
         action: CoreTrafficActionChoice::TrafficSwarmAction(TrafficSwarmAction::default()),
     };
-    println!("   - Created TrafficSwarmAction with name: {:?}", traffic_action.traffic_name);
-    
+    println!(
+        "   - Created TrafficSwarmAction with name: {:?}",
+        traffic_action.traffic_name
+    );
+
     // Create TrafficAreaAction
     let traffic_action = CoreTrafficAction {
         traffic_name: Some(Value::Literal("area_traffic".to_string())),
         action: CoreTrafficActionChoice::TrafficAreaAction(TrafficAreaAction::default()),
     };
-    println!("   - Created TrafficAreaAction with name: {:?}", traffic_action.traffic_name);
-    
+    println!(
+        "   - Created TrafficAreaAction with name: {:?}",
+        traffic_action.traffic_name
+    );
+
     // Create TrafficStopAction
     let traffic_action = CoreTrafficAction {
         traffic_name: Some(Value::Literal("stop_traffic".to_string())),
         action: CoreTrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
     };
-    println!("   - Created TrafficStopAction with name: {:?}\n", traffic_action.traffic_name);
+    println!(
+        "   - Created TrafficStopAction with name: {:?}\n",
+        traffic_action.traffic_name
+    );
 }

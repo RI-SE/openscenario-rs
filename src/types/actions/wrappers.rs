@@ -3,16 +3,16 @@
 //! This module contains the main wrapper types that organize individual actions
 //! according to the OpenSCENARIO specification hierarchy.
 
-use serde::{Deserialize, Serialize};
-use crate::types::basic::{OSString, Double, Boolean, UnsignedInt};
+use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
 use crate::types::positions::Position;
+use serde::{Deserialize, Serialize};
 
 // Import individual action types
 use super::{
     ActivateControllerAction, AppearanceAction, ControllerAction, LateralAction,
-    LongitudinalAction, RoutingAction, SynchronizeAction, TeleportAction, TrailerAction,
-    TrafficAreaAction, TrafficSignalAction, TrafficSinkAction, TrafficSourceAction,
-    TrafficStopAction, TrafficSwarmAction, VisibilityAction,
+    LongitudinalAction, RoutingAction, SynchronizeAction, TeleportAction, TrafficAreaAction,
+    TrafficSignalAction, TrafficSinkAction, TrafficSourceAction, TrafficStopAction,
+    TrafficSwarmAction, TrailerAction, VisibilityAction,
 };
 
 // Main Action wrapper type matching XSD schema
@@ -248,7 +248,7 @@ pub struct PrivateAction {
 // EntityAction wrapper type (already exists as CoreEntityAction)
 pub type EntityAction = CoreEntityAction;
 
-// InfrastructureAction wrapper type (already exists as CoreInfrastructureAction)  
+// InfrastructureAction wrapper type (already exists as CoreInfrastructureAction)
 pub type InfrastructureAction = CoreInfrastructureAction;
 
 // UserDefinedAction wrapper type (already exists as CoreUserDefinedAction)

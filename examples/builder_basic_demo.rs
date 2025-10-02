@@ -66,4 +66,3 @@ fn main() {
     println!("This example requires the 'builder' feature.");
     println!("Run with: cargo run --example builder_basic_demo --features builder");
 }
-

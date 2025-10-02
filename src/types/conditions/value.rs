@@ -15,9 +15,9 @@
 //! - Facilitating infrastructure integration through signal state monitoring
 //! - Enabling custom condition logic through extensible user-defined types
 
-use crate::types::basic::{Double, OSString};
 #[cfg(feature = "chrono")]
 use crate::types::basic::DateTime;
+use crate::types::basic::{Double, OSString};
 use crate::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
 use serde::{Deserialize, Serialize};
 
@@ -124,23 +124,38 @@ pub struct ByValueCondition {
     pub time_of_day_condition: Option<TimeOfDayCondition>,
 
     /// Simulation time-based condition
-    #[serde(rename = "SimulationTimeCondition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "SimulationTimeCondition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub simulation_time_condition: Option<SimulationTimeCondition>,
 
     /// Storyboard element state condition
-    #[serde(rename = "StoryboardElementStateCondition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "StoryboardElementStateCondition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub storyboard_element_state_condition: Option<StoryboardElementStateCondition>,
 
     /// User-defined condition
-    #[serde(rename = "UserDefinedValueCondition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "UserDefinedValueCondition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub user_defined_value_condition: Option<UserDefinedValueCondition>,
 
     /// Traffic signal condition
-    #[serde(rename = "TrafficSignalCondition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficSignalCondition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_signal_condition: Option<TrafficSignalCondition>,
 
     /// Traffic signal controller condition
-    #[serde(rename = "TrafficSignalControllerCondition", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficSignalControllerCondition",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_signal_controller_condition: Option<TrafficSignalControllerCondition>,
 
     /// Variable condition

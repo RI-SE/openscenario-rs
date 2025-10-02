@@ -1,4 +1,6 @@
-use openscenario_rs::types::actions::movement::{LaneChangeAction, LaneChangeTarget, TransitionDynamics};
+use openscenario_rs::types::actions::movement::{
+    LaneChangeAction, LaneChangeTarget, TransitionDynamics,
+};
 use openscenario_rs::types::basic::Double;
 use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
 
@@ -23,7 +25,9 @@ fn main() {
             if xml.contains("targetLaneOffset=\"\"") {
                 println!("❌ ERROR: Contains empty targetLaneOffset attribute!");
             } else if xml.contains("targetLaneOffset") {
-                println!("❌ ERROR: Contains targetLaneOffset attribute when it should be omitted!");
+                println!(
+                    "❌ ERROR: Contains targetLaneOffset attribute when it should be omitted!"
+                );
             } else {
                 println!("✅ GOOD: No targetLaneOffset attribute present");
             }
@@ -57,7 +61,10 @@ fn main() {
             println!();
         }
         Err(e) => {
-            println!("❌ LaneChangeAction with offset serialization failed: {}", e);
+            println!(
+                "❌ LaneChangeAction with offset serialization failed: {}",
+                e
+            );
         }
     }
 

@@ -18,7 +18,6 @@ use openscenario_rs::types::controllers::{Controller, ObjectController};
 use openscenario_rs::types::enums::FollowingMode;
 use openscenario_rs::types::scenario::init::{LongitudinalAction, PrivateAction};
 
-
 #[test]
 fn test_longitudinal_action_all_types() {
     // Test SpeedAction
@@ -37,7 +36,10 @@ fn test_longitudinal_action_all_types() {
         speed_profile_action: None,
     };
     assert!(distance_action.validate().is_ok());
-    assert_eq!(distance_action.get_action_type(), Some("LongitudinalDistanceAction"));
+    assert_eq!(
+        distance_action.get_action_type(),
+        Some("LongitudinalDistanceAction")
+    );
 
     // Test SpeedProfileAction
     let profile_action = LongitudinalAction {
@@ -116,9 +118,9 @@ fn test_empty_attribute_handling() {
     </LaneChangeAction>"#;
 
     // This should succeed by treating empty targetLaneOffset as None
-    let result: Result<openscenario_rs::types::actions::movement::LaneChangeAction, _> = 
+    let result: Result<openscenario_rs::types::actions::movement::LaneChangeAction, _> =
         quick_xml::de::from_str(xml_with_empty_double);
-    
+
     // The parsing should succeed with targetLaneOffset as None
     assert!(result.is_ok());
     let action = result.unwrap();
@@ -127,9 +129,11 @@ fn test_empty_attribute_handling() {
 
 #[test]
 fn test_lane_change_action_serialization_fixes() {
-    use openscenario_rs::types::actions::movement::{LaneChangeAction, LaneChangeTarget, TransitionDynamics};
+    use openscenario_rs::types::actions::movement::{
+        LaneChangeAction, LaneChangeTarget, TransitionDynamics,
+    };
     use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
-    
+
     // Test 1: LaneChangeAction with None for target_lane_offset (should omit attribute completely)
     let lane_change_none = LaneChangeAction {
         target_lane_offset: None,
@@ -231,7 +235,10 @@ fn test_object_controller_deserialization() {
     // Test empty ObjectController (should succeed for backward compatibility)
     let empty_xml = r#"<ObjectController />"#;
     let result: Result<ObjectController, _> = quick_xml::de::from_str(empty_xml);
-    assert!(result.is_ok(), "Empty ObjectController should succeed for backward compatibility");
+    assert!(
+        result.is_ok(),
+        "Empty ObjectController should succeed for backward compatibility"
+    );
     let obj_controller = result.unwrap();
     assert!(obj_controller.controller.is_none());
     assert!(obj_controller.catalog_reference.is_none());
@@ -243,7 +250,10 @@ fn test_object_controller_deserialization() {
         <Controller name="TestController" />
     </ObjectController>"#;
     let result: Result<ObjectController, _> = quick_xml::de::from_str(controller_xml);
-    assert!(result.is_ok(), "ObjectController with Controller should succeed");
+    assert!(
+        result.is_ok(),
+        "ObjectController with Controller should succeed"
+    );
     let obj_controller = result.unwrap();
     assert!(obj_controller.controller.is_some());
     assert!(obj_controller.catalog_reference.is_none());
@@ -253,7 +263,10 @@ fn test_object_controller_deserialization() {
         <CatalogReference catalogName="ControllerCatalog" entryName="DefaultController" />
     </ObjectController>"#;
     let result: Result<ObjectController, _> = quick_xml::de::from_str(catalog_xml);
-    assert!(result.is_ok(), "ObjectController with CatalogReference should succeed");
+    assert!(
+        result.is_ok(),
+        "ObjectController with CatalogReference should succeed"
+    );
     let obj_controller = result.unwrap();
     assert!(obj_controller.controller.is_none());
     assert!(obj_controller.catalog_reference.is_some());
@@ -264,7 +277,10 @@ fn test_object_controller_deserialization() {
         <CatalogReference catalogName="ControllerCatalog" entryName="DefaultController" />
     </ObjectController>"#;
     let result: Result<ObjectController, _> = quick_xml::de::from_str(both_xml);
-    assert!(result.is_err(), "ObjectController with both should fail deserialization");
+    assert!(
+        result.is_err(),
+        "ObjectController with both should fail deserialization"
+    );
 
     // Test ObjectController with name attribute
     let named_xml = r#"<ObjectController name="MyController">
@@ -274,7 +290,10 @@ fn test_object_controller_deserialization() {
     assert!(result.is_ok(), "ObjectController with name should succeed");
     let obj_controller = result.unwrap();
     assert!(obj_controller.name.is_some());
-    assert_eq!(obj_controller.name.unwrap().as_literal().unwrap(), "MyController");
+    assert_eq!(
+        obj_controller.name.unwrap().as_literal().unwrap(),
+        "MyController"
+    );
 }
 
 #[test]
@@ -331,7 +350,7 @@ fn test_validation_error_messages() {
         longitudinal_distance_action: None,
         speed_profile_action: None,
     };
-    
+
     let error = empty_longitudinal.validate().unwrap_err();
     assert!(error.contains("exactly one action type"));
     assert!(error.contains("found none"));
@@ -341,7 +360,7 @@ fn test_validation_error_messages() {
         longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
         speed_profile_action: None,
     };
-    
+
     let error = multiple_longitudinal.validate().unwrap_err();
     assert!(error.contains("exactly one action type"));
     assert!(error.contains("found multiple"));

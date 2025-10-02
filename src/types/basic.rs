@@ -133,7 +133,7 @@ where
         // Handle empty strings for Double type - return error for invalid empty values
         if s.is_empty() && std::any::type_name::<T>().contains("f64") {
             return Err(serde::de::Error::custom(
-                "Empty string is not a valid value for Double type"
+                "Empty string is not a valid value for Double type",
             ));
         }
 

@@ -8,7 +8,7 @@ fn main() {
         Ok(condition) => {
             println!("✅ Successfully parsed EntityCondition:");
             println!("  condition: {:?}", condition);
-        },
+        }
         Err(e) => {
             println!("❌ Failed to parse EntityCondition: {}", e);
         }

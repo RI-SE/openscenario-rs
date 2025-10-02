@@ -1,8 +1,8 @@
 #[cfg(feature = "builder")]
 mod builder_tests {
-    use openscenario_rs::ScenarioBuilder;
-    use openscenario_rs::types::enums::ParameterType;
     use openscenario_rs::types::basic::Value;
+    use openscenario_rs::types::enums::ParameterType;
+    use openscenario_rs::ScenarioBuilder;
 
     #[test]
     fn test_minimal_scenario_creation() {
@@ -11,7 +11,7 @@ mod builder_tests {
             .with_entities()
             .build()
             .unwrap();
-            
+
         assert!(scenario.entities.is_some());
         assert!(scenario.storyboard.is_some());
     }
@@ -25,11 +25,11 @@ mod builder_tests {
             .with_entities()
             .build()
             .unwrap();
-            
+
         assert!(scenario.parameter_declarations.is_some());
         let params = scenario.parameter_declarations.unwrap();
         assert_eq!(params.parameter_declarations.len(), 2);
-        
+
         // Check first parameter
         let speed_param = &params.parameter_declarations[0];
         if let Value::Literal(name) = &speed_param.name {

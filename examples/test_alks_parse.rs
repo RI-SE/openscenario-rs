@@ -35,7 +35,10 @@ fn main() {
                             "  {}. Multi Parameter Distribution",
                             deterministic.single_distributions.len() + i + 1
                         );
-                        println!("     📋 Value sets: {}", multi.distribution_type.parameter_value_sets.len());
+                        println!(
+                            "     📋 Value sets: {}",
+                            multi.distribution_type.parameter_value_sets.len()
+                        );
                     }
                 }
             }

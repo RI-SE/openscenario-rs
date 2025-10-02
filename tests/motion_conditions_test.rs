@@ -4,7 +4,7 @@
 
 use openscenario_rs::types::basic::Double;
 use openscenario_rs::types::conditions::entity::{
-    AccelerationCondition, ByEntityCondition, StandStillCondition, EntityCondition,
+    AccelerationCondition, ByEntityCondition, EntityCondition, StandStillCondition,
 };
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
 use openscenario_rs::types::scenario::triggers::TriggeringEntities;
@@ -69,7 +69,8 @@ fn test_standstill_condition_with_duration() {
 #[test]
 fn test_by_entity_condition_acceleration_variants() {
     let triggering_entities = TriggeringEntities::default();
-    let simple = ByEntityCondition::acceleration(triggering_entities.clone(), 3.0, Rule::GreaterThan);
+    let simple =
+        ByEntityCondition::acceleration(triggering_entities.clone(), 3.0, Rule::GreaterThan);
     match simple.entity_condition {
         EntityCondition::Acceleration(acc) => {
             assert_eq!(acc.value, Double::literal(3.0));

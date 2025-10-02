@@ -70,7 +70,7 @@ fn main() {
         Ok(scenario) => {
             println!("✅ Successfully parsed scenario with RelativeDistanceCondition");
             println!("Document type: {:?}", scenario.document_type());
-        },
+        }
         Err(e) => {
             println!("❌ Failed to parse: {}", e);
         }

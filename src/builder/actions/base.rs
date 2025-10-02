@@ -8,7 +8,7 @@ use crate::types::scenario::init::GlobalAction;
 pub trait ActionBuilder {
     /// Build the action into a PrivateAction
     fn build_action(self) -> BuilderResult<PrivateAction>;
-    
+
     /// Validate the action configuration
     fn validate(&self) -> BuilderResult<()>;
 }
@@ -23,7 +23,7 @@ pub trait ManeuverAction: ActionBuilder {
 pub trait GlobalActionBuilder {
     /// Build the action into a GlobalAction
     fn build_global_action(self) -> BuilderResult<GlobalAction>;
-    
+
     /// Validate the action configuration
     fn validate(&self) -> BuilderResult<()>;
 }

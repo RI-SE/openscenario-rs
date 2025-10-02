@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use openscenario_rs::types::basic::Value;
+use serde::{Deserialize, Serialize};
 
 // Let's test progressively more complex structures to isolate the issue
 
@@ -56,7 +56,7 @@ fn main() {
           <Element value="./road_networks/alks_road_straight.xodr" />
           <Element value="./road_networks/alks_road_left_radius_250m.xodr" />
         </DistributionSet>"#;
-    
+
     match quick_xml::de::from_str::<TestDistributionSet>(simple_elements_xml) {
         Ok(result) => println!("✅ Success: {} elements", result.elements.len()),
         Err(e) => println!("❌ Error: {:?}", e),
@@ -67,9 +67,12 @@ fn main() {
     let range_xml = r#"<DistributionRange stepWidth="5.0">
           <Range lowerLimit="5.0" upperLimit="60.0" />
         </DistributionRange>"#;
-    
+
     match quick_xml::de::from_str::<TestDistributionRange>(range_xml) {
-        Ok(result) => println!("✅ Success: stepWidth={}, range={}-{}", result.step_width, result.range.lower_limit, result.range.upper_limit),
+        Ok(result) => println!(
+            "✅ Success: stepWidth={}, range={}-{}",
+            result.step_width, result.range.lower_limit, result.range.upper_limit
+        ),
         Err(e) => println!("❌ Error: {:?}", e),
     }
 
@@ -81,14 +84,14 @@ fn main() {
           <Element value="./road_networks/alks_road_left_radius_250m.xodr" />
         </DistributionSet>
       </DeterministicSingleParameterDistribution>"#;
-    
+
     match quick_xml::de::from_str::<TestSingleWithChildren>(single_with_set_xml) {
         Ok(result) => {
             println!("✅ Success: parameter={}", result.parameter_name);
             if let Some(set) = &result.distribution_set {
                 println!("   DistributionSet with {} elements", set.elements.len());
             }
-        },
+        }
         Err(e) => println!("❌ Error: {:?}", e),
     }
 
@@ -99,14 +102,17 @@ fn main() {
           <Range lowerLimit="5.0" upperLimit="60.0" />
         </DistributionRange>
       </DeterministicSingleParameterDistribution>"#;
-    
+
     match quick_xml::de::from_str::<TestSingleWithChildren>(single_with_range_xml) {
         Ok(result) => {
             println!("✅ Success: parameter={}", result.parameter_name);
             if let Some(range) = &result.distribution_range {
-                println!("   DistributionRange: step={}, range={}-{}", range.step_width, range.range.lower_limit, range.range.upper_limit);
+                println!(
+                    "   DistributionRange: step={}, range={}-{}",
+                    range.step_width, range.range.lower_limit, range.range.upper_limit
+                );
             }
-        },
+        }
         Err(e) => println!("❌ Error: {:?}", e),
     }
 
@@ -125,23 +131,26 @@ fn main() {
         </DistributionRange>
       </DeterministicSingleParameterDistribution>
     </Deterministic>"#;
-    
+
     match quick_xml::de::from_str::<TestDeterministicWithChildren>(full_deterministic_xml) {
         Ok(result) => {
-            println!("✅ Success: {} single distributions", result.single_distributions.len());
+            println!(
+                "✅ Success: {} single distributions",
+                result.single_distributions.len()
+            );
             for (i, dist) in result.single_distributions.iter().enumerate() {
-                println!("   {}. parameter={}", i+1, dist.parameter_name);
+                println!("   {}. parameter={}", i + 1, dist.parameter_name);
             }
-        },
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
             println!("🔍 This is likely where the issue occurs!");
-        },
+        }
     }
 
     // Test 6: Now test with Value<String> instead of String
     println!("\nTest 6: Testing with Value<String> (like our actual implementation)");
-    
+
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct TestSingleWithValue {
         #[serde(rename = "@parameterName")]
@@ -158,11 +167,14 @@ fn main() {
 
     match quick_xml::de::from_str::<TestDeterministicWithValue>(full_deterministic_xml) {
         Ok(result) => {
-            println!("✅ Success: {} single distributions", result.single_distributions.len());
-        },
+            println!(
+                "✅ Success: {} single distributions",
+                result.single_distributions.len()
+            );
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
             println!("🔍 Value<String> might be causing issues!");
-        },
+        }
     }
 }

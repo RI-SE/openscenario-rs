@@ -144,7 +144,7 @@
 //! };
 //!
 //! let mut validator = ScenarioValidator::with_config(config);
-//! 
+//!
 //! // Validate multiple scenarios efficiently
 //! for scenario_file in scenario_files {
 //!     let scenario = parse_from_file(scenario_file)?;
@@ -162,11 +162,11 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse and validate in one step
 //! let scenario = xml::parse_from_file_validated("scenario.xosc")?;
-//! 
+//!
 //! // Then do domain-specific validation
 //! let mut validator = validation::ScenarioValidator::new();
 //! let validation_result = validator.validate_scenario(&scenario);
-//! 
+//!
 //! // Check both parsing and validation results
 //! if validation_result.is_clean() {
 //!     println!("Scenario is fully valid and clean");
@@ -1066,7 +1066,7 @@ mod tests {
 
         let mut scenario = OpenScenario::default();
         scenario.entities = Some(entities);
-        
+
         let result = validator.validate_scenario(&scenario);
 
         // In strict mode with entities, should have validation metrics

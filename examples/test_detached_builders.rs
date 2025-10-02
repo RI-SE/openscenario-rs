@@ -4,14 +4,16 @@
 #[cfg(feature = "builder")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use openscenario_rs::ScenarioBuilder;
-    
+
     // ✅ Test that ScenarioBuilder is accessible
     let _scenario_builder = ScenarioBuilder::new();
     println!("✅ ScenarioBuilder creation works!");
-    
+
     println!("🎉 Detached Builder Pattern implementation SUCCESS!");
-    println!("🎉 NEW: create_*() methods available for perfect fluent API without lifetime constraints!");
-    
+    println!(
+        "🎉 NEW: create_*() methods available for perfect fluent API without lifetime constraints!"
+    );
+
     Ok(())
 }
 

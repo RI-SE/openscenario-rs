@@ -4,7 +4,7 @@
 //! for motion-based scenario triggering in OpenSCENARIO files.
 
 use openscenario_rs::types::conditions::entity::{
-    AccelerationCondition, ByEntityCondition, StandStillCondition, EntityCondition,
+    AccelerationCondition, ByEntityCondition, EntityCondition, StandStillCondition,
 };
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
 use openscenario_rs::types::scenario::triggers::TriggeringEntities;

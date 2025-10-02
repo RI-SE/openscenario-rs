@@ -32,9 +32,8 @@ pub use trajectories::TrajectoryCatalog;
 
 // Catalog entity types (from entities module - these are the primary definitions)
 pub use entities::{
-    CatalogEntity, CatalogVehicle, CatalogPedestrian, 
-    CatalogMiscObject, CatalogManeuver,
-    CatalogPerformance, CatalogAxles, CatalogFrontAxle, CatalogRearAxle, ParameterDefinition,
+    CatalogAxles, CatalogEntity, CatalogFrontAxle, CatalogManeuver, CatalogMiscObject,
+    CatalogPedestrian, CatalogPerformance, CatalogRearAxle, CatalogVehicle, ParameterDefinition,
 };
 
 // Qualified re-exports to avoid conflicts - use entities module as primary
@@ -44,17 +43,25 @@ pub use entities::CatalogRoute;
 pub use entities::CatalogTrajectory;
 
 // Supporting types from specialized modules
-pub use environments::{CatalogTimeOfDay, CatalogWeather, CatalogSun, CatalogFog, CatalogPrecipitation, CatalogRoadCondition};
-pub use trajectories::{CatalogPolyline, CatalogVertex, CatalogClothoid, CatalogNurbs, CatalogTrajectoryShape};
+pub use environments::{
+    CatalogFog, CatalogPrecipitation, CatalogRoadCondition, CatalogSun, CatalogTimeOfDay,
+    CatalogWeather,
+};
+pub use trajectories::{
+    CatalogClothoid, CatalogNurbs, CatalogPolyline, CatalogTrajectoryShape, CatalogVertex,
+};
 
 // File and location types
-pub use files::{CatalogFile, CatalogContent};
+pub use files::{CatalogContent, CatalogFile};
 pub use locations::{
-    VehicleCatalogLocation, ControllerCatalogLocation, PedestrianCatalogLocation,
-    MiscObjectCatalogLocation, EnvironmentCatalogLocation, ManeuverCatalogLocation,
-    TrajectoryCatalogLocation, RouteCatalogLocation, CatalogLocations,
+    CatalogLocations, ControllerCatalogLocation, EnvironmentCatalogLocation,
+    ManeuverCatalogLocation, MiscObjectCatalogLocation, PedestrianCatalogLocation,
+    RouteCatalogLocation, TrajectoryCatalogLocation, VehicleCatalogLocation,
 };
-pub use references::{CatalogReference, VehicleCatalogReference, ControllerCatalogReference, PedestrianCatalogReference, ParameterAssignment};
+pub use references::{
+    CatalogReference, ControllerCatalogReference, ParameterAssignment, PedestrianCatalogReference,
+    VehicleCatalogReference,
+};
 
 // Import necessary types for catalog groups
 use serde::{Deserialize, Serialize};

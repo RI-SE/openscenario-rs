@@ -26,18 +26,27 @@
 //!     .build()?;
 //! ```
 
-pub mod value;
-pub mod spatial;
 pub mod entity;
+pub mod spatial;
+pub mod value;
 
-pub use value::{TimeConditionBuilder, SpeedConditionBuilder, SpeedConditionBuilder as ValueSpeedConditionBuilder, ParameterConditionBuilder, VariableConditionBuilder, StoryboardElementStateConditionBuilder};
-pub use spatial::{DistanceConditionBuilder, RelativeDistanceConditionBuilder, CollisionConditionBuilder};
-pub use entity::{AccelerationConditionBuilder, EnhancedSpeedConditionBuilder, TraveledDistanceConditionBuilder, ReachPositionConditionBuilder, EndOfRoadConditionBuilder};
+pub use entity::{
+    AccelerationConditionBuilder, EndOfRoadConditionBuilder, EnhancedSpeedConditionBuilder,
+    ReachPositionConditionBuilder, TraveledDistanceConditionBuilder,
+};
+pub use spatial::{
+    CollisionConditionBuilder, DistanceConditionBuilder, RelativeDistanceConditionBuilder,
+};
+pub use value::{
+    ParameterConditionBuilder, SpeedConditionBuilder,
+    SpeedConditionBuilder as ValueSpeedConditionBuilder, StoryboardElementStateConditionBuilder,
+    TimeConditionBuilder, VariableConditionBuilder,
+};
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    scenario::triggers::{Trigger, ConditionGroup},
     scenario::triggers::Condition,
+    scenario::triggers::{ConditionGroup, Trigger},
 };
 
 /// Builder for event triggers with condition groups
@@ -55,12 +64,12 @@ impl TriggerBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add a condition group (OR logic between groups)
     pub fn add_condition_group(self) -> ConditionGroupBuilder {
         ConditionGroupBuilder::new(self)
     }
-    
+
     /// Add a single condition as its own group (convenience method)
     pub fn add_condition(mut self, condition: Condition) -> Self {
         let group = ConditionGroup {
@@ -69,18 +78,20 @@ impl TriggerBuilder {
         self.condition_groups.push(group);
         self
     }
-    
+
     /// Build the trigger
     pub fn build(self) -> BuilderResult<Trigger> {
         if self.condition_groups.is_empty() {
-            return Err(BuilderError::validation_error("At least one condition is required"));
+            return Err(BuilderError::validation_error(
+                "At least one condition is required",
+            ));
         }
-        
+
         Ok(Trigger {
             condition_groups: self.condition_groups,
         })
     }
-    
+
     /// Internal method to add condition group
     pub(crate) fn add_group(mut self, group: ConditionGroup) -> Self {
         self.condition_groups.push(group);
@@ -104,23 +115,23 @@ impl ConditionGroupBuilder {
             conditions: Vec::new(),
         }
     }
-    
+
     /// Add condition to this group
     pub fn add_condition(mut self, condition: Condition) -> Self {
         self.conditions.push(condition);
         self
     }
-    
+
     /// Add time condition
     pub fn time_condition(self) -> TimeConditionGroupBuilder {
         TimeConditionGroupBuilder::new(self)
     }
-    
+
     /// Add speed condition
     pub fn speed_condition(self) -> SpeedConditionGroupBuilder {
         SpeedConditionGroupBuilder::new(self)
     }
-    
+
     /// Finish this group and return to trigger builder
     pub fn finish_group(self) -> TriggerBuilder {
         if !self.conditions.is_empty() {
@@ -152,12 +163,12 @@ impl TimeConditionGroupBuilder {
             builder: TimeConditionBuilder::new(),
         }
     }
-    
+
     pub fn at_time(mut self, time: f64) -> Self {
         self.builder = self.builder.at_time(time);
         self
     }
-    
+
     pub fn finish(self) -> BuilderResult<ConditionGroupBuilder> {
         let condition = self.builder.build()?;
         Ok(self.parent.add_condition(condition))
@@ -177,17 +188,17 @@ impl SpeedConditionGroupBuilder {
             builder: ValueSpeedConditionBuilder::new(),
         }
     }
-    
+
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.builder = self.builder.for_entity(entity_ref);
         self
     }
-    
+
     pub fn speed_above(mut self, speed: f64) -> Self {
         self.builder = self.builder.speed_above(speed);
         self
     }
-    
+
     pub fn finish(self) -> BuilderResult<ConditionGroupBuilder> {
         let condition = self.builder.build()?;
         Ok(self.parent.add_condition(condition))
@@ -201,41 +212,35 @@ mod tests {
 
     #[test]
     fn test_trigger_builder_basic() {
-        let time_condition = TimeConditionBuilder::new()
-            .at_time(3.0)
-            .build()
-            .unwrap();
-            
+        let time_condition = TimeConditionBuilder::new().at_time(3.0).build().unwrap();
+
         let trigger = TriggerBuilder::new()
             .add_condition(time_condition)
             .build()
             .unwrap();
-            
+
         assert_eq!(trigger.condition_groups.len(), 1);
         assert_eq!(trigger.condition_groups[0].conditions.len(), 1);
     }
 
     #[test]
     fn test_condition_group_builder() {
-        let time_condition = TimeConditionBuilder::new()
-            .at_time(5.0)
-            .build()
-            .unwrap();
+        let time_condition = TimeConditionBuilder::new().at_time(5.0).build().unwrap();
 
         let speed_condition = ValueSpeedConditionBuilder::new()
             .for_entity("ego")
             .speed_above(30.0)
             .build()
             .unwrap();
-            
+
         let trigger = TriggerBuilder::new()
             .add_condition_group()
-                .add_condition(time_condition)
-                .add_condition(speed_condition)
-                .finish_group()
+            .add_condition(time_condition)
+            .add_condition(speed_condition)
+            .finish_group()
             .build()
             .unwrap();
-            
+
         assert_eq!(trigger.condition_groups.len(), 1);
         assert_eq!(trigger.condition_groups[0].conditions.len(), 2);
     }

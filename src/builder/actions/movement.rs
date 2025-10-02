@@ -24,12 +24,15 @@
 //!     .to_world_position(100.0, 200.0, 0.0);
 //! ```
 
-use crate::builder::{BuilderError, BuilderResult};
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::positions::PositionBuilder;
+use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    actions::movement::{SpeedAction, SpeedActionTarget, AbsoluteTargetSpeed, TeleportAction, TransitionDynamics, LongitudinalAction, LongitudinalActionChoice},
-    actions::wrappers::{PrivateAction, CorePrivateAction},
+    actions::movement::{
+        AbsoluteTargetSpeed, LongitudinalAction, LongitudinalActionChoice, SpeedAction,
+        SpeedActionTarget, TeleportAction, TransitionDynamics,
+    },
+    actions::wrappers::{CorePrivateAction, PrivateAction},
     basic::Double,
     enums::{DynamicsDimension, DynamicsShape},
     positions::Position,
@@ -47,19 +50,19 @@ impl SpeedActionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set target entity for this action
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     /// Set absolute target speed
     pub fn to_speed(mut self, speed: f64) -> Self {
         self.target_speed = Some(speed);
         self
     }
-    
+
     /// Set relative speed change
     pub fn change_by(mut self, delta: f64) -> Self {
         self.target_speed = Some(delta);
@@ -70,7 +73,7 @@ impl SpeedActionBuilder {
 impl ActionBuilder for SpeedActionBuilder {
     fn build_action(self) -> BuilderResult<PrivateAction> {
         self.validate()?;
-        
+
         let speed_action = SpeedAction {
             speed_action_dynamics: TransitionDynamics {
                 dynamics_dimension: DynamicsDimension::Time,
@@ -84,16 +87,14 @@ impl ActionBuilder for SpeedActionBuilder {
                 relative: None,
             },
         };
-        
+
         Ok(PrivateAction {
-            action: CorePrivateAction::LongitudinalAction(
-                LongitudinalAction {
-                    longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(speed_action),
-                }
-            ),
+            action: CorePrivateAction::LongitudinalAction(LongitudinalAction {
+                longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(speed_action),
+            }),
         })
     }
-    
+
     fn validate(&self) -> BuilderResult<()> {
         if self.target_speed.is_none() {
             return Err(BuilderError::validation_error("Target speed is required"));
@@ -119,17 +120,17 @@ impl TeleportActionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
         self
     }
-    
+
     pub fn to_position(mut self, position: Position) -> Self {
         self.position = Some(position);
         self
     }
-    
+
     /// Start position configuration (integrate with existing position builders)
     pub fn to(self) -> TeleportPositionBuilder {
         TeleportPositionBuilder::new(self)
@@ -139,19 +140,21 @@ impl TeleportActionBuilder {
 impl ActionBuilder for TeleportActionBuilder {
     fn build_action(self) -> BuilderResult<PrivateAction> {
         self.validate()?;
-        
+
         let teleport_action = TeleportAction {
             position: self.position.unwrap(),
         };
-        
+
         Ok(PrivateAction {
             action: CorePrivateAction::TeleportAction(teleport_action),
         })
     }
-    
+
     fn validate(&self) -> BuilderResult<()> {
         if self.position.is_none() {
-            return Err(BuilderError::validation_error("Position is required for teleport action"));
+            return Err(BuilderError::validation_error(
+                "Position is required for teleport action",
+            ));
         }
         Ok(())
     }
@@ -172,7 +175,7 @@ impl TeleportPositionBuilder {
     fn new(parent: TeleportActionBuilder) -> Self {
         Self { parent }
     }
-    
+
     /// Use world coordinates
     pub fn world_position(mut self, x: f64, y: f64, z: f64) -> TeleportActionBuilder {
         // Use existing position builders
@@ -182,11 +185,11 @@ impl TeleportPositionBuilder {
             .z(z)
             .finish()
             .unwrap(); // TODO: Better error handling
-            
+
         self.parent.position = Some(position);
         self.parent
     }
-    
+
     /// Use lane coordinates
     pub fn lane_position(mut self, road_id: &str, lane_id: &str, s: f64) -> TeleportActionBuilder {
         let position = crate::builder::positions::LanePositionBuilder::new()
@@ -196,7 +199,7 @@ impl TeleportPositionBuilder {
             .offset(0.0)
             .finish()
             .unwrap(); // TODO: Better error handling
-            
+
         self.parent.position = Some(position);
         self.parent
     }

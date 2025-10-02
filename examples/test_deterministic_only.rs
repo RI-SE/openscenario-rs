@@ -15,13 +15,19 @@ fn main() {
 </Deterministic>"#;
 
     println!("🔍 Testing direct Deterministic deserialization...");
-    
+
     match quick_xml::de::from_str::<Deterministic>(xml) {
         Ok(deterministic) => {
             println!("✅ Success!");
-            println!("📊 Single distributions: {}", deterministic.single_distributions.len());
-            println!("📊 Multi distributions: {}", deterministic.multi_distributions.len());
-        },
+            println!(
+                "📊 Single distributions: {}",
+                deterministic.single_distributions.len()
+            );
+            println!(
+                "📊 Multi distributions: {}",
+                deterministic.multi_distributions.len()
+            );
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
         }

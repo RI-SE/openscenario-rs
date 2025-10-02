@@ -52,11 +52,14 @@ fn main() {
     println!("Test 1: Single multi-parameter distribution");
     match quick_xml::de::from_str::<TestMultiParameterDistribution>(multi_xml) {
         Ok(result) => {
-            println!("✅ Success: {} parameter value sets", result.distribution_type.parameter_value_sets.len());
-        },
+            println!(
+                "✅ Success: {} parameter value sets",
+                result.distribution_type.parameter_value_sets.len()
+            );
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
-        },
+        }
     }
 
     // Test multiple multi-parameter distributions in a container
@@ -74,12 +77,15 @@ fn main() {
     println!("\nTest 2: Container with multi-parameter distribution");
     match quick_xml::de::from_str::<TestDeterministicWithMulti>(multi_container_xml) {
         Ok(result) => {
-            println!("✅ Success: {} multi distributions", result.multi_distributions.len());
-        },
+            println!(
+                "✅ Success: {} multi distributions",
+                result.multi_distributions.len()
+            );
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
             println!("🔍 This might be where the issue is!");
-        },
+        }
     }
 
     // Test mixed single and multi distributions
@@ -113,11 +119,15 @@ fn main() {
     println!("\nTest 3: Mixed single and multi distributions");
     match quick_xml::de::from_str::<TestDeterministicMixed>(mixed_xml) {
         Ok(result) => {
-            println!("✅ Success: {} single, {} multi", result.single_distributions.len(), result.multi_distributions.len());
-        },
+            println!(
+                "✅ Success: {} single, {} multi",
+                result.single_distributions.len(),
+                result.multi_distributions.len()
+            );
+        }
         Err(e) => {
             println!("❌ Error: {:?}", e);
             println!("🔍 Mixed distributions might be the issue!");
-        },
+        }
     }
 }
