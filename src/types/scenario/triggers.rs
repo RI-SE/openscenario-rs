@@ -23,10 +23,11 @@ use serde::{Deserialize, Serialize};
 ///
 /// A Trigger represents a logical OR of condition groups - the trigger fires
 /// when any of its condition groups evaluates to true.
+/// Empty triggers (no condition groups) are allowed for optional triggers.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Trigger {
     /// Condition groups that make up this trigger (OR logic between groups)
-    #[serde(rename = "ConditionGroup")]
+    #[serde(rename = "ConditionGroup", default)]
     pub condition_groups: Vec<ConditionGroup>,
 }
 
