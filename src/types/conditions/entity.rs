@@ -48,6 +48,7 @@ pub struct SpeedCondition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ReachPositionCondition {
     /// Target position to reach
+    #[serde(rename = "Position")]
     pub position: Position,
 
     /// Distance tolerance for considering position reached
@@ -59,6 +60,7 @@ pub struct ReachPositionCondition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DistanceCondition {
     /// Reference position for distance measurement
+    #[serde(rename = "Position")]
     pub position: Position,
 
     /// Distance value to compare against
