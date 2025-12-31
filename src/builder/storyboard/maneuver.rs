@@ -1,7 +1,7 @@
 //! Maneuver builders for entity behavior sequences
 
 use crate::builder::{
-    actions::{ActionBuilder, SpeedActionBuilder, TeleportActionBuilder},
+    actions::{ActionBuilder, FollowTrajectoryActionBuilder, SpeedActionBuilder, TeleportActionBuilder},
     BuilderError, BuilderResult,
 };
 use crate::types::{
@@ -89,6 +89,11 @@ impl<'parent> ManeuverBuilder<'parent> {
     /// Create a detached teleport action builder (no lifetime constraints)
     pub fn create_teleport_action(&self) -> DetachedTeleportActionBuilder {
         DetachedTeleportActionBuilder::new(&self.entity_ref)
+    }
+
+    /// Create a detached follow trajectory action builder (no lifetime constraints)
+    pub fn create_follow_trajectory_action(&self) -> DetachedFollowTrajectoryActionBuilder {
+        DetachedFollowTrajectoryActionBuilder::new(&self.entity_ref)
     }
 
     /// Finish this maneuver
@@ -435,6 +440,11 @@ impl DetachedManeuverBuilder {
     /// Create a detached teleport action builder
     pub fn create_teleport_action(&self) -> DetachedTeleportActionBuilder {
         DetachedTeleportActionBuilder::new(&self.entity_ref)
+    }
+
+    /// Create a detached follow trajectory action builder
+    pub fn create_follow_trajectory_action(&self) -> DetachedFollowTrajectoryActionBuilder {
+        DetachedFollowTrajectoryActionBuilder::new(&self.entity_ref)
     }
 
     /// Add a completed event to this maneuver
@@ -928,6 +938,248 @@ impl DetachedTeleportPositionBuilder {
     pub fn world_position(mut self, x: f64, y: f64, z: f64) -> DetachedTeleportActionBuilder {
         self.parent.action_builder = self.parent.action_builder.to().world_position(x, y, z);
         self.parent
+    }
+}
+
+/// Detached builder for follow trajectory action events (no lifetime constraints)
+pub struct DetachedFollowTrajectoryActionBuilder {
+    entity_ref: String,
+    action_builder: FollowTrajectoryActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedFollowTrajectoryActionBuilder {
+    /// Create a new detached follow trajectory action builder
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: FollowTrajectoryActionBuilder::new().for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+
+    /// Set event name
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+
+    /// Set the trajectory to follow
+    pub fn with_trajectory(
+        mut self,
+        trajectory: crate::types::actions::movement::Trajectory,
+    ) -> Self {
+        self.action_builder = self.action_builder.with_trajectory(trajectory);
+        self
+    }
+
+    /// Set following mode to "follow"
+    pub fn following_mode_follow(mut self) -> Self {
+        self.action_builder = self.action_builder.following_mode_follow();
+        self
+    }
+
+    /// Set following mode to "position"
+    pub fn following_mode_position(mut self) -> Self {
+        self.action_builder = self.action_builder.following_mode_position();
+        self
+    }
+
+    /// Set initial distance offset
+    pub fn initial_distance_offset(mut self, offset: f64) -> Self {
+        self.action_builder = self.action_builder.initial_distance_offset(offset);
+        self
+    }
+
+    /// Set custom start trigger for this event
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+
+    /// Add a time-based trigger (convenience method)
+    pub fn with_time_trigger(mut self, time: f64) -> BuilderResult<Self> {
+        let trigger = crate::builder::conditions::TriggerBuilder::new()
+            .add_condition(
+                crate::builder::conditions::TimeConditionBuilder::new()
+                    .at_time(time)
+                    .build()?,
+            )
+            .build()?;
+        self.start_trigger = Some(trigger);
+        Ok(self)
+    }
+
+    /// Start immediately (time = 0.0)
+    pub fn start_immediately(self) -> BuilderResult<Self> {
+        self.with_time_trigger(0.0)
+    }
+
+    /// Attach this follow trajectory action to a maneuver builder
+    pub fn attach_to(self, maneuver: &mut ManeuverBuilder<'_>) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::RoutingAction(routing_action) => {
+                StoryPrivateAction {
+                    longitudinal_action: None,
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: None,
+                    routing_action: Some(routing_action),
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            }
+            _ => {
+                return Err(BuilderError::validation_error(
+                    "Expected RoutingAction for trajectory following",
+                ));
+            }
+        };
+
+        let event = Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "FollowTrajectoryEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap(),
+                    )
+                    .build()
+                    .ok()
+            }),
+            actions: vec![StoryAction {
+                name: OSString::literal("FollowTrajectoryAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        };
+
+        maneuver.events.push(event);
+        Ok(())
+    }
+
+    /// Attach this follow trajectory action to a detached maneuver builder
+    pub fn attach_to_detached(
+        self,
+        maneuver: &mut DetachedManeuverBuilder,
+    ) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::RoutingAction(routing_action) => {
+                StoryPrivateAction {
+                    longitudinal_action: None,
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: None,
+                    routing_action: Some(routing_action),
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            }
+            _ => {
+                return Err(BuilderError::validation_error(
+                    "Expected RoutingAction for trajectory following",
+                ));
+            }
+        };
+
+        let event = Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "FollowTrajectoryEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap(),
+                    )
+                    .build()
+                    .ok()
+            }),
+            actions: vec![StoryAction {
+                name: OSString::literal("FollowTrajectoryAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        };
+
+        maneuver.events.push(event);
+        Ok(())
+    }
+
+    /// Build the final Event object
+    pub fn build(self) -> BuilderResult<Event> {
+        let private_action = self.action_builder.build_action()?;
+
+        // Convert PrivateAction to StoryPrivateAction
+        let story_private_action = match private_action.action {
+            crate::types::actions::wrappers::CorePrivateAction::RoutingAction(routing_action) => {
+                StoryPrivateAction {
+                    longitudinal_action: None,
+                    lateral_action: None,
+                    visibility_action: None,
+                    synchronize_action: None,
+                    controller_action: None,
+                    teleport_action: None,
+                    routing_action: Some(routing_action),
+                    appearance_action: None,
+                    trailer_action: None,
+                }
+            }
+            _ => {
+                return Err(BuilderError::validation_error(
+                    "Expected RoutingAction for trajectory following",
+                ));
+            }
+        };
+
+        Ok(Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "FollowTrajectoryEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(|| {
+                // Provide default immediate trigger
+                crate::builder::conditions::TriggerBuilder::new()
+                    .add_condition(
+                        crate::builder::conditions::TimeConditionBuilder::new()
+                            .at_time(0.0)
+                            .build()
+                            .unwrap(),
+                    )
+                    .build()
+                    .ok()
+            }),
+            actions: vec![StoryAction {
+                name: OSString::literal("FollowTrajectoryAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        })
     }
 }
 

@@ -4,8 +4,9 @@ pub mod maneuver;
 pub mod story;
 
 pub use maneuver::{
-    DetachedManeuverBuilder, DetachedSpeedActionBuilder, DetachedTeleportActionBuilder,
-    ManeuverBuilder, SpeedActionEventBuilder, TeleportActionEventBuilder,
+    DetachedFollowTrajectoryActionBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
+    DetachedTeleportActionBuilder, ManeuverBuilder, SpeedActionEventBuilder,
+    TeleportActionEventBuilder,
 };
 pub use story::{
     ActBuilder, DetachedActBuilder, DetachedStoryBuilder, StoryBuilder, StoryboardBuilder,

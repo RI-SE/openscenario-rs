@@ -61,6 +61,7 @@ pub mod controller;
 pub mod global;
 pub mod lateral;
 pub mod movement;
+pub mod trajectory;
 
 pub use base::{ActionBuilder, ManeuverAction};
 pub use controller::{
@@ -70,6 +71,9 @@ pub use controller::{
 pub use global::{EntityActionBuilder, EnvironmentActionBuilder, VariableActionBuilder};
 pub use lateral::{LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder};
 pub use movement::{SpeedActionBuilder, TeleportActionBuilder};
+pub use trajectory::{
+    FollowTrajectoryActionBuilder, PolylineBuilder, TrajectoryBuilder, VertexBuilder,
+};
 
 use crate::builder::BuilderResult;
 use crate::types::actions::wrappers::PrivateAction;

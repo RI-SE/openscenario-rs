@@ -218,9 +218,10 @@ pub mod validation; // Sprint 5
 // Export main builders
 pub use actions::{
     ActivateControllerActionBuilder, EntityActionBuilder, EnvironmentActionBuilder,
-    LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder,
-    OverrideControllerValueActionBuilder, SpeedActionBuilder, TeleportActionBuilder,
-    VariableActionBuilder,
+    FollowTrajectoryActionBuilder, LaneChangeActionBuilder, LaneOffsetActionBuilder,
+    LateralDistanceActionBuilder, OverrideControllerValueActionBuilder, PolylineBuilder,
+    SpeedActionBuilder, TeleportActionBuilder, TrajectoryBuilder, VariableActionBuilder,
+    VertexBuilder,
 };
 pub use catalog::{
     CatalogEntityBuilder, CatalogLocationsBuilder, PedestrianCatalogReferenceBuilder,
@@ -237,8 +238,9 @@ pub use init::{GlobalActionBuilder, InitActionBuilder, PrivateActionBuilder};
 pub use parameters::{ParameterContext, ParameterDeclarationsBuilder, ParameterizedValueBuilder};
 pub use scenario::ScenarioBuilder;
 pub use storyboard::{
-    ActBuilder, DetachedActBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
-    DetachedStoryBuilder, ManeuverBuilder, StoryBuilder, StoryboardBuilder,
+    ActBuilder, DetachedActBuilder, DetachedFollowTrajectoryActionBuilder,
+    DetachedManeuverBuilder, DetachedSpeedActionBuilder, DetachedStoryBuilder, ManeuverBuilder,
+    StoryBuilder, StoryboardBuilder,
 };
 pub use templates::{BasicScenarioTemplate, ScenarioTemplate};
 pub use validation::{BuilderValidatable, BuilderValidationContext, ValidationContextBuilder};
