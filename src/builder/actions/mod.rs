@@ -63,7 +63,9 @@ pub mod lateral;
 pub mod longitudinal;
 pub mod movement;
 pub mod routing;
+pub mod synchronize;
 pub mod trajectory;
+pub mod visibility;
 
 pub use base::{ActionBuilder, ManeuverAction};
 pub use controller::{
@@ -75,9 +77,11 @@ pub use lateral::{LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDista
 pub use longitudinal::{LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder};
 pub use movement::{SpeedActionBuilder, TeleportActionBuilder};
 pub use routing::{AssignRouteActionBuilder, FollowRouteActionBuilder};
+pub use synchronize::SynchronizeActionBuilder;
 pub use trajectory::{
     FollowTrajectoryActionBuilder, PolylineBuilder, TrajectoryBuilder, VertexBuilder,
 };
+pub use visibility::VisibilityActionBuilder;
 
 use crate::builder::BuilderResult;
 use crate::types::actions::wrappers::PrivateAction;
