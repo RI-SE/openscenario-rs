@@ -12,7 +12,8 @@
 //! - Providing entity-specific private actions (speed, teleport, etc.)
 //! - Facilitating integration between initialization and story phases
 
-use crate::types::actions::control::ActivateControllerAction;
+use crate::types::actions::appearance::VisibilityAction;
+use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{
     LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction,
     TeleportAction,
@@ -104,8 +105,19 @@ pub struct PrivateAction {
         default
     )]
     pub activate_controller_action: Option<ActivateControllerAction>,
-    // Note: Other action types like VisibilityAction, ControllerAction,
-    // AppearanceAction, TrailerAction can be added when implemented
+    #[serde(
+        rename = "VisibilityAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub visibility_action: Option<VisibilityAction>,
+    #[serde(
+        rename = "ControllerAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub controller_action: Option<ControllerAction>,
+    // Note: Other action types like AppearanceAction, TrailerAction can be added when implemented
 }
 
 impl PrivateAction {
@@ -123,6 +135,10 @@ impl PrivateAction {
             Some("SynchronizeAction")
         } else if self.activate_controller_action.is_some() {
             Some("ActivateControllerAction")
+        } else if self.visibility_action.is_some() {
+            Some("VisibilityAction")
+        } else if self.controller_action.is_some() {
+            Some("ControllerAction")
         } else {
             None
         }
@@ -137,6 +153,8 @@ impl PrivateAction {
             self.routing_action.is_some(),
             self.synchronize_action.is_some(),
             self.activate_controller_action.is_some(),
+            self.visibility_action.is_some(),
+            self.controller_action.is_some(),
         ]
         .iter()
         .filter(|&&x| x)
@@ -161,6 +179,8 @@ impl Default for PrivateAction {
             routing_action: None,
             synchronize_action: None,
             activate_controller_action: None,
+            visibility_action: None,
+            controller_action: None,
         }
     }
 }
@@ -318,6 +338,8 @@ mod tests {
                 routing_action: None,
                 synchronize_action: None,
                 activate_controller_action: None,
+                visibility_action: None,
+                controller_action: None,
             })
             .add_action(PrivateAction {
                 longitudinal_action: None,
@@ -326,6 +348,8 @@ mod tests {
                 routing_action: None,
                 synchronize_action: None,
                 activate_controller_action: None,
+                visibility_action: None,
+                controller_action: None,
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
@@ -435,6 +459,8 @@ mod tests {
             routing_action: None,
             synchronize_action: None,
             activate_controller_action: None,
+            visibility_action: None,
+            controller_action: None,
         };
         assert!(valid_longitudinal.validate().is_ok());
 
@@ -451,6 +477,8 @@ mod tests {
             routing_action: None,
             synchronize_action: None,
             activate_controller_action: None,
+            visibility_action: None,
+            controller_action: None,
         };
         assert!(invalid_multiple.validate().is_err());
     }

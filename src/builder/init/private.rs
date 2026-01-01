@@ -1,13 +1,25 @@
 //! Private and global action builders for entity-specific initialization
 
 use super::actions::InitActionBuilder;
+use crate::builder::actions::{
+    AssignRouteActionBuilder, FollowRouteActionBuilder, FollowTrajectoryActionBuilder,
+    LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder, SynchronizeActionBuilder,
+    VisibilityActionBuilder,
+};
+use crate::builder::actions::ActionBuilder as ActionBuilderTrait;
 use crate::builder::BuilderResult;
 use crate::types::{
-    actions::movement::{SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics},
+    actions::appearance::VisibilityAction,
+    actions::movement::{
+        LateralAction, LongitudinalAction as LongitudinalActionType, RoutingAction, SpeedAction,
+        SpeedActionTarget, SynchronizeAction, TeleportAction, TransitionDynamics,
+    },
+    actions::wrappers::CorePrivateAction,
     basic::{Double, Value},
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
     positions::Position,
+    routing::{Route, RouteRef},
     scenario::init::{EnvironmentAction, GlobalAction, LongitudinalAction, Private, PrivateAction},
 };
 
@@ -69,6 +81,180 @@ impl PrivateActionBuilder {
     pub fn add_action(mut self, action: PrivateAction) -> Self {
         self.actions.push(action);
         self
+    }
+
+    // ========== LONGITUDINAL ACTIONS ==========
+
+    /// Add longitudinal distance action (convenience)
+    pub fn add_longitudinal_distance_action(
+        mut self,
+        target_entity: &str,
+        distance: f64,
+    ) -> Self {
+        let builder_action = LongitudinalDistanceActionBuilder::new()
+            .from_entity(target_entity)
+            .at_distance(distance)
+            .build_action()
+            .unwrap();
+
+        self.actions.push(self.convert_to_init_action(builder_action));
+        self
+    }
+
+    /// Add speed profile action with direct entries (convenience)
+    pub fn add_speed_profile_action_direct(
+        mut self,
+        entries: Vec<(f64, f64)>,
+    ) -> Self {
+        let mut builder = SpeedProfileActionBuilder::new();
+        for (time, speed) in entries {
+            builder = builder.add_entry_direct(time, speed);
+        }
+
+        if let Ok(builder_action) = builder.build_action() {
+            self.actions.push(self.convert_to_init_action(builder_action));
+        }
+        self
+    }
+
+    // ========== ROUTING ACTIONS ==========
+
+    /// Add assign route action with direct route (convenience)
+    pub fn add_assign_route_action(mut self, route: Route) -> Self {
+        let builder_action = AssignRouteActionBuilder::new()
+            .with_direct_route(route)
+            .build_action()
+            .unwrap();
+
+        self.actions.push(self.convert_to_init_action(builder_action));
+        self
+    }
+
+    /// Add assign route action with catalog reference (convenience)
+    pub fn add_assign_route_catalog(
+        mut self,
+        catalog_name: impl Into<String>,
+        entry_name: impl Into<String>,
+    ) -> Self {
+        let builder_action = AssignRouteActionBuilder::new()
+            .with_catalog_route(catalog_name, entry_name)
+            .build_action()
+            .unwrap();
+
+        self.actions.push(self.convert_to_init_action(builder_action));
+        self
+    }
+
+    /// Add follow route action (convenience)
+    pub fn add_follow_route_action(mut self, route_ref: RouteRef) -> Self {
+        let builder_action = FollowRouteActionBuilder::new()
+            .with_route_ref(route_ref)
+            .build_action()
+            .unwrap();
+
+        self.actions.push(self.convert_to_init_action(builder_action));
+        self
+    }
+
+    // ========== SYNCHRONIZATION & VISIBILITY ==========
+
+    /// Add synchronize action (convenience)
+    pub fn add_synchronize_action(
+        mut self,
+        master_entity: &str,
+        master_position: Position,
+        entity_position: Position,
+    ) -> Self {
+        let builder_action = SynchronizeActionBuilder::new()
+            .with_master(master_entity)
+            .master_position(master_position)
+            .entity_position(entity_position)
+            .build_action()
+            .unwrap();
+
+        self.actions.push(self.convert_to_init_action(builder_action));
+        self
+    }
+
+    /// Add visibility action (convenience)
+    pub fn add_visibility_action(
+        mut self,
+        graphics: bool,
+        sensors: bool,
+        traffic: bool,
+    ) -> Self {
+        let builder_action = VisibilityActionBuilder::new()
+            .graphics(graphics)
+            .sensors(sensors)
+            .traffic(traffic)
+            .build_action()
+            .unwrap();
+
+        self.actions.push(self.convert_to_init_action(builder_action));
+        self
+    }
+
+    /// Make entity visible (convenience)
+    pub fn make_visible(self) -> Self {
+        self.add_visibility_action(true, true, true)
+    }
+
+    /// Make entity invisible (convenience)
+    pub fn make_invisible(self) -> Self {
+        self.add_visibility_action(false, false, false)
+    }
+
+    // ========== INTERNAL HELPER ==========
+
+    /// Convert from builder PrivateAction to init PrivateAction
+    fn convert_to_init_action(
+        &self,
+        action: crate::types::actions::wrappers::PrivateAction,
+    ) -> PrivateAction {
+        match action.action {
+            CorePrivateAction::LongitudinalAction(long_action) => PrivateAction {
+                longitudinal_action: Some(LongitudinalAction {
+                    speed_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => Some(a.clone()),
+                        _ => None,
+                    },
+                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(a) => Some(a.clone()),
+                        _ => None,
+                    },
+                    speed_profile_action: match &long_action.longitudinal_action_choice {
+                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(a) => Some(a.clone()),
+                        _ => None,
+                    },
+                }),
+                ..Default::default()
+            },
+            CorePrivateAction::LateralAction(lateral_action) => PrivateAction {
+                lateral_action: Some(lateral_action),
+                ..Default::default()
+            },
+            CorePrivateAction::RoutingAction(routing_action) => PrivateAction {
+                routing_action: Some(routing_action),
+                ..Default::default()
+            },
+            CorePrivateAction::VisibilityAction(visibility_action) => PrivateAction {
+                visibility_action: Some(visibility_action),
+                ..Default::default()
+            },
+            CorePrivateAction::SynchronizeAction(sync_action) => PrivateAction {
+                synchronize_action: Some(sync_action),
+                ..Default::default()
+            },
+            CorePrivateAction::TeleportAction(teleport_action) => PrivateAction {
+                teleport_action: Some(teleport_action),
+                ..Default::default()
+            },
+            CorePrivateAction::ControllerAction(controller_action) => PrivateAction {
+                controller_action: Some(controller_action),
+                ..Default::default()
+            },
+            _ => PrivateAction::default(),
+        }
     }
 
     /// Finish building and return to parent
