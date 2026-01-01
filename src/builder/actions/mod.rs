@@ -60,6 +60,7 @@ pub mod base;
 pub mod controller;
 pub mod global;
 pub mod lateral;
+pub mod longitudinal;
 pub mod movement;
 pub mod trajectory;
 
@@ -70,6 +71,7 @@ pub use controller::{
 };
 pub use global::{EntityActionBuilder, EnvironmentActionBuilder, VariableActionBuilder};
 pub use lateral::{LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder};
+pub use longitudinal::{LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder};
 pub use movement::{SpeedActionBuilder, TeleportActionBuilder};
 pub use trajectory::{
     FollowTrajectoryActionBuilder, PolylineBuilder, TrajectoryBuilder, VertexBuilder,
