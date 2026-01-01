@@ -7,6 +7,7 @@ use crate::builder::{
 use crate::types::{
     basic::OSString,
     enums::Priority,
+    positions::Position,
     scenario::{
         story::{Event, Maneuver, StoryAction, StoryPrivateAction},
         triggers::{ConditionGroup, Trigger},
@@ -1180,6 +1181,436 @@ impl DetachedFollowTrajectoryActionBuilder {
                 private_action: Some(story_private_action),
             }],
         })
+    }
+}
+
+// ==================== NEW DETACHED BUILDERS FOR ADDITIONAL ACTIONS ====================
+
+/// Detached builder for longitudinal distance action
+pub struct DetachedLongitudinalDistanceActionBuilder {
+    entity_ref: String,
+    action_builder: crate::builder::actions::LongitudinalDistanceActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedLongitudinalDistanceActionBuilder {
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: crate::builder::actions::LongitudinalDistanceActionBuilder::new()
+                .for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+
+    pub fn from_entity(mut self, target: &str) -> Self {
+        self.action_builder = self.action_builder.from_entity(target);
+        self
+    }
+
+    pub fn at_distance(mut self, distance: f64) -> Self {
+        self.action_builder = self.action_builder.at_distance(distance);
+        self
+    }
+
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        let story_private_action = convert_private_action_to_story(private_action);
+
+        maneuver.add_event(Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "LongitudinalDistanceEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(default_trigger),
+            actions: vec![StoryAction {
+                name: OSString::literal("LongitudinalDistanceAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        });
+        Ok(())
+    }
+}
+
+/// Detached builder for speed profile action
+pub struct DetachedSpeedProfileActionBuilder {
+    entity_ref: String,
+    action_builder: crate::builder::actions::SpeedProfileActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedSpeedProfileActionBuilder {
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: crate::builder::actions::SpeedProfileActionBuilder::new()
+                .for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+
+    pub fn add_entry_direct(mut self, time: f64, speed: f64) -> Self {
+        self.action_builder = self.action_builder.add_entry_direct(time, speed);
+        self
+    }
+
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        let story_private_action = convert_private_action_to_story(private_action);
+
+        maneuver.add_event(Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "SpeedProfileEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(default_trigger),
+            actions: vec![StoryAction {
+                name: OSString::literal("SpeedProfileAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        });
+        Ok(())
+    }
+}
+
+/// Detached builder for assign route action
+pub struct DetachedAssignRouteActionBuilder {
+    entity_ref: String,
+    action_builder: crate::builder::actions::AssignRouteActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedAssignRouteActionBuilder {
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: crate::builder::actions::AssignRouteActionBuilder::new()
+                .for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+
+    pub fn with_catalog_route(
+        mut self,
+        catalog_name: impl Into<String>,
+        entry_name: impl Into<String>,
+    ) -> Self {
+        self.action_builder = self
+            .action_builder
+            .with_catalog_route(catalog_name, entry_name);
+        self
+    }
+
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        let story_private_action = convert_private_action_to_story(private_action);
+
+        maneuver.add_event(Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "AssignRouteEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(default_trigger),
+            actions: vec![StoryAction {
+                name: OSString::literal("AssignRouteAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        });
+        Ok(())
+    }
+}
+
+/// Detached builder for synchronize action
+pub struct DetachedSynchronizeActionBuilder {
+    entity_ref: String,
+    action_builder: crate::builder::actions::SynchronizeActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedSynchronizeActionBuilder {
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: crate::builder::actions::SynchronizeActionBuilder::new()
+                .for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+
+    pub fn with_master(mut self, master: &str) -> Self {
+        self.action_builder = self.action_builder.with_master(master);
+        self
+    }
+
+    pub fn master_position(mut self, position: Position) -> Self {
+        self.action_builder = self.action_builder.master_position(position);
+        self
+    }
+
+    pub fn entity_position(mut self, position: Position) -> Self {
+        self.action_builder = self.action_builder.entity_position(position);
+        self
+    }
+
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        let story_private_action = convert_private_action_to_story(private_action);
+
+        maneuver.add_event(Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "SynchronizeEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(default_trigger),
+            actions: vec![StoryAction {
+                name: OSString::literal("SynchronizeAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        });
+        Ok(())
+    }
+}
+
+/// Detached builder for visibility action
+pub struct DetachedVisibilityActionBuilder {
+    entity_ref: String,
+    action_builder: crate::builder::actions::VisibilityActionBuilder,
+    event_name: Option<String>,
+    start_trigger: Option<Trigger>,
+}
+
+impl DetachedVisibilityActionBuilder {
+    pub fn new(entity_ref: &str) -> Self {
+        Self {
+            action_builder: crate::builder::actions::VisibilityActionBuilder::new()
+                .for_entity(entity_ref),
+            entity_ref: entity_ref.to_string(),
+            event_name: None,
+            start_trigger: None,
+        }
+    }
+
+    pub fn named(mut self, name: &str) -> Self {
+        self.event_name = Some(name.to_string());
+        self
+    }
+
+    pub fn visible(mut self) -> Self {
+        self.action_builder = self.action_builder.visible();
+        self
+    }
+
+    pub fn invisible(mut self) -> Self {
+        self.action_builder = self.action_builder.invisible();
+        self
+    }
+
+    pub fn graphics(mut self, visible: bool) -> Self {
+        self.action_builder = self.action_builder.graphics(visible);
+        self
+    }
+
+    pub fn with_trigger(mut self, trigger: Trigger) -> Self {
+        self.start_trigger = Some(trigger);
+        self
+    }
+
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
+        let private_action = self.action_builder.build_action()?;
+        let story_private_action = convert_private_action_to_story(private_action);
+
+        maneuver.add_event(Event {
+            name: OSString::literal(
+                self.event_name
+                    .unwrap_or_else(|| "VisibilityEvent".to_string()),
+            ),
+            maximum_execution_count: None,
+            priority: Some(Priority::Override),
+            start_trigger: self.start_trigger.or_else(default_trigger),
+            actions: vec![StoryAction {
+                name: OSString::literal("VisibilityAction".to_string()),
+                private_action: Some(story_private_action),
+            }],
+        });
+        Ok(())
+    }
+}
+
+// Helper function for default trigger
+fn default_trigger() -> Option<Trigger> {
+    crate::builder::conditions::TriggerBuilder::new()
+        .add_condition(
+            crate::builder::conditions::TimeConditionBuilder::new()
+                .at_time(0.0)
+                .build()
+                .ok()?,
+        )
+        .build()
+        .ok()
+}
+
+// Helper function for converting builder PrivateAction to story PrivateAction
+fn convert_private_action_to_story(
+    action: crate::types::actions::wrappers::PrivateAction,
+) -> StoryPrivateAction {
+    use crate::types::actions::wrappers::CorePrivateAction;
+
+    match action.action {
+        CorePrivateAction::LongitudinalAction(long_action) => {
+            let init_long_action = crate::types::scenario::init::LongitudinalAction {
+                speed_action: match &long_action.longitudinal_action_choice {
+                    crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => {
+                        Some(a.clone())
+                    }
+                    _ => None,
+                },
+                longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                    crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(a) => {
+                        Some(a.clone())
+                    }
+                    _ => None,
+                },
+                speed_profile_action: match &long_action.longitudinal_action_choice {
+                    crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(
+                        a,
+                    ) => Some(a.clone()),
+                    _ => None,
+                },
+            };
+            StoryPrivateAction {
+                longitudinal_action: Some(init_long_action),
+                lateral_action: None,
+                visibility_action: None,
+                synchronize_action: None,
+                teleport_action: None,
+                routing_action: None,
+                controller_action: None,
+                appearance_action: None,
+                    trailer_action: None,
+            }
+        }
+        CorePrivateAction::LateralAction(lat_action) => StoryPrivateAction {
+            longitudinal_action: None,
+            lateral_action: Some(lat_action),
+            visibility_action: None,
+            synchronize_action: None,
+            teleport_action: None,
+            routing_action: None,
+            controller_action: None,
+            appearance_action: None,
+                    trailer_action: None,
+        },
+        CorePrivateAction::VisibilityAction(vis_action) => StoryPrivateAction {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: Some(vis_action),
+            synchronize_action: None,
+            teleport_action: None,
+            routing_action: None,
+            controller_action: None,
+            appearance_action: None,
+                    trailer_action: None,
+        },
+        CorePrivateAction::SynchronizeAction(sync_action) => StoryPrivateAction {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: None,
+            synchronize_action: Some(sync_action),
+            teleport_action: None,
+            routing_action: None,
+            controller_action: None,
+            appearance_action: None,
+                    trailer_action: None,
+        },
+        CorePrivateAction::TeleportAction(teleport_action) => StoryPrivateAction {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: None,
+            synchronize_action: None,
+            teleport_action: Some(teleport_action),
+            routing_action: None,
+            controller_action: None,
+            appearance_action: None,
+                    trailer_action: None,
+        },
+        CorePrivateAction::RoutingAction(routing_action) => StoryPrivateAction {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: None,
+            synchronize_action: None,
+            teleport_action: None,
+            routing_action: Some(routing_action),
+            controller_action: None,
+            appearance_action: None,
+                    trailer_action: None,
+        },
+        _ => StoryPrivateAction {
+            longitudinal_action: None,
+            lateral_action: None,
+            visibility_action: None,
+            synchronize_action: None,
+            teleport_action: None,
+            routing_action: None,
+            controller_action: None,
+            appearance_action: None,
+                    trailer_action: None,
+        },
     }
 }
 

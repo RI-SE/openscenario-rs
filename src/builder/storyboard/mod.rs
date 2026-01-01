@@ -4,8 +4,11 @@ pub mod maneuver;
 pub mod story;
 
 pub use maneuver::{
-    DetachedFollowTrajectoryActionBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
-    DetachedTeleportActionBuilder, ManeuverBuilder, SpeedActionEventBuilder,
+    DetachedAssignRouteActionBuilder, DetachedFollowTrajectoryActionBuilder,
+    DetachedLongitudinalDistanceActionBuilder, DetachedManeuverBuilder,
+    DetachedSpeedActionBuilder, DetachedSpeedProfileActionBuilder,
+    DetachedSynchronizeActionBuilder, DetachedTeleportActionBuilder,
+    DetachedVisibilityActionBuilder, ManeuverBuilder, SpeedActionEventBuilder,
     TeleportActionEventBuilder,
 };
 pub use story::{
