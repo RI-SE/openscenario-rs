@@ -302,6 +302,7 @@ impl<'parent> ActBuilder<'parent> {
     pub(crate) fn add_maneuver_to_group(
         &mut self,
         maneuver: crate::types::scenario::story::Maneuver,
+        entity_ref: &str,
     ) {
         // Find or create maneuver group
         if self.maneuver_groups.is_empty() {
@@ -310,11 +311,30 @@ impl<'parent> ActBuilder<'parent> {
                 maximum_execution_count: Some(UnsignedInt::literal(1)),
                 actors: Actors {
                     select_triggering_entities: Some(false),
-                    entity_refs: Vec::new(),
+                    entity_refs: vec![
+                        crate::types::scenario::story::EntityRef {
+                            entity_ref: crate::types::basic::Value::literal(entity_ref.to_string())
+                        }
+                    ],
                 },
                 catalog_reference: None,
                 maneuvers: Vec::new(),
             });
+        } else {
+            // Add entity_ref if not already present
+            let entity_ref_val = crate::types::scenario::story::EntityRef {
+                entity_ref: crate::types::basic::Value::literal(entity_ref.to_string())
+            };
+            let actors = &mut self.maneuver_groups[0].actors;
+
+            // Check if entity already exists
+            let already_exists = actors.entity_refs.iter().any(|e| {
+                e.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref
+            });
+
+            if !already_exists {
+                actors.entity_refs.push(entity_ref_val);
+            }
         }
 
         self.maneuver_groups[0].maneuvers.push(maneuver);
@@ -387,11 +407,30 @@ impl DetachedActBuilder {
                 maximum_execution_count: Some(UnsignedInt::literal(1)),
                 actors: Actors {
                     select_triggering_entities: Some(false),
-                    entity_refs: Vec::new(),
+                    entity_refs: vec![
+                        crate::types::scenario::story::EntityRef {
+                            entity_ref: crate::types::basic::Value::literal(entity_ref.to_string())
+                        }
+                    ],
                 },
                 catalog_reference: None,
                 maneuvers: Vec::new(),
             });
+        } else {
+            // Add entity_ref if not already present
+            let entity_ref_val = crate::types::scenario::story::EntityRef {
+                entity_ref: crate::types::basic::Value::literal(entity_ref.to_string())
+            };
+            let actors = &mut self.maneuver_groups[0].actors;
+
+            // Check if entity already exists
+            let already_exists = actors.entity_refs.iter().any(|e| {
+                e.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref
+            });
+
+            if !already_exists {
+                actors.entity_refs.push(entity_ref_val);
+            }
         }
 
         self.maneuver_groups[0].maneuvers.push(maneuver);
@@ -408,7 +447,11 @@ impl DetachedActBuilder {
     }
 
     /// Add a completed maneuver to this act
-    pub fn add_completed_maneuver(&mut self, maneuver: crate::types::scenario::story::Maneuver) {
+    pub fn add_completed_maneuver(
+        &mut self,
+        maneuver: crate::types::scenario::story::Maneuver,
+        entity_ref: &str,
+    ) {
         // Find or create maneuver group
         if self.maneuver_groups.is_empty() {
             self.maneuver_groups.push(ManeuverGroup {
@@ -416,11 +459,30 @@ impl DetachedActBuilder {
                 maximum_execution_count: Some(UnsignedInt::literal(1)),
                 actors: Actors {
                     select_triggering_entities: Some(false),
-                    entity_refs: Vec::new(),
+                    entity_refs: vec![
+                        crate::types::scenario::story::EntityRef {
+                            entity_ref: crate::types::basic::Value::literal(entity_ref.to_string())
+                        }
+                    ],
                 },
                 catalog_reference: None,
                 maneuvers: Vec::new(),
             });
+        } else {
+            // Add entity_ref if not already present
+            let entity_ref_val = crate::types::scenario::story::EntityRef {
+                entity_ref: crate::types::basic::Value::literal(entity_ref.to_string())
+            };
+            let actors = &mut self.maneuver_groups[0].actors;
+
+            // Check if entity already exists
+            let already_exists = actors.entity_refs.iter().any(|e| {
+                e.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref
+            });
+
+            if !already_exists {
+                actors.entity_refs.push(entity_ref_val);
+            }
         }
 
         self.maneuver_groups[0].maneuvers.push(maneuver);
@@ -610,5 +672,84 @@ mod tests {
 
         assert_eq!(story_builder.name, "TestStory");
         assert_eq!(story_builder.acts.len(), 0);
+    }
+
+    #[test]
+    fn test_maneuver_group_has_actors() {
+        let mut act = DetachedActBuilder::new("test_act");
+
+        // Create a simple maneuver
+        let maneuver = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(
+            "test_maneuver",
+            "ego"
+        ).build();
+
+        act.add_completed_maneuver(maneuver, "ego");
+
+        // Verify ManeuverGroup has the entity_ref
+        assert_eq!(act.maneuver_groups.len(), 1);
+        let actors = &act.maneuver_groups[0].actors;
+        assert_eq!(actors.entity_refs.len(), 1);
+        assert_eq!(
+            actors.entity_refs[0].entity_ref.as_literal().unwrap(),
+            "ego"
+        );
+    }
+
+    #[test]
+    fn test_maneuver_group_multiple_actors() {
+        let mut act = DetachedActBuilder::new("test_act");
+
+        // Add two maneuvers with different actors
+        let maneuver1 = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(
+            "maneuver1",
+            "ego"
+        ).build();
+
+        let maneuver2 = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(
+            "maneuver2",
+            "npc"
+        ).build();
+
+        act.add_completed_maneuver(maneuver1, "ego");
+        act.add_completed_maneuver(maneuver2, "npc");
+
+        // Verify ManeuverGroup has both entity_refs
+        assert_eq!(act.maneuver_groups.len(), 1);
+        let actors = &act.maneuver_groups[0].actors;
+        assert_eq!(actors.entity_refs.len(), 2);
+
+        let refs: Vec<&str> = actors.entity_refs
+            .iter()
+            .map(|v| v.entity_ref.as_literal().unwrap().as_str())
+            .collect();
+
+        assert!(refs.contains(&"ego"));
+        assert!(refs.contains(&"npc"));
+    }
+
+    #[test]
+    fn test_maneuver_group_deduplicates_actors() {
+        let mut act = DetachedActBuilder::new("test_act");
+
+        // Add two maneuvers with same actor
+        let maneuver1 = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(
+            "maneuver1",
+            "ego"
+        ).build();
+
+        let maneuver2 = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(
+            "maneuver2",
+            "ego"
+        ).build();
+
+        act.add_completed_maneuver(maneuver1, "ego");
+        act.add_completed_maneuver(maneuver2, "ego");
+
+        // Verify ManeuverGroup has only one entity_ref (deduplicated)
+        assert_eq!(act.maneuver_groups.len(), 1);
+        let actors = &act.maneuver_groups[0].actors;
+        assert_eq!(actors.entity_refs.len(), 1);
+        assert_eq!(actors.entity_refs[0].entity_ref.as_literal().unwrap(), "ego");
     }
 }

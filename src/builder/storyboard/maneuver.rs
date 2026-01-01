@@ -105,7 +105,7 @@ impl<'parent> ManeuverBuilder<'parent> {
             parameter_declarations: None,
         };
 
-        self.parent.add_maneuver_to_group(maneuver);
+        self.parent.add_maneuver_to_group(maneuver, &self.entity_ref);
         self.parent
     }
 }
@@ -460,7 +460,7 @@ impl DetachedManeuverBuilder {
             events: self.events,
             parameter_declarations: None,
         };
-        act.add_maneuver_to_group(maneuver);
+        act.add_maneuver_to_group(maneuver, &self.entity_ref);
     }
 
     /// Attach this maneuver to a detached act builder
@@ -470,7 +470,7 @@ impl DetachedManeuverBuilder {
             events: self.events,
             parameter_declarations: None,
         };
-        act.add_completed_maneuver(maneuver);
+        act.add_completed_maneuver(maneuver, &self.entity_ref);
     }
 
     /// Build the final Maneuver object
