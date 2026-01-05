@@ -27,14 +27,13 @@ openscenario-rs = "0.1.0"
 # Optional features
 [dependencies.openscenario-rs]
 version = "0.1.0"
-features = ["builder", "validation", "streaming"]
+features = ["builder", "validation"]
 ```
 
 ### Available Features
 
 - **`builder`** - Enables programmatic scenario construction
 - **`validation`** - Adds comprehensive validation capabilities
-- **`streaming`** - Enables memory-efficient parsing for large files
 
 ## Basic Concepts
 
@@ -135,24 +134,6 @@ for vehicle in &catalog.catalog.vehicles {
 // Parse catalog from string
 let catalog_xml = std::fs::read_to_string("catalog.xosc")?;
 let catalog = parse_catalog_str(&catalog_xml)?;
-```
-
-### Streaming Large Files
-
-For large OpenSCENARIO files, use streaming parsing:
-
-```rust
-use openscenario_rs::parser::streaming::StreamingParser;
-use std::fs::File;
-
-let file = File::open("large_scenario.xosc")?;
-let mut parser = StreamingParser::new(file);
-
-// Process entities as they're parsed
-while let Some(entity) = parser.next_entity()? {
-    println!("Processing entity: {}", entity.name.as_literal().unwrap());
-    // Process entity without loading entire file into memory
-}
 ```
 
 ## Type System
@@ -851,18 +832,7 @@ let error = Error::validation_error("speed", "Invalid speed value")
 
 ### Memory Usage
 
-```rust
-// For large files, use streaming parsing
-use openscenario_rs::parser::streaming::StreamingParser;
-
-let mut parser = StreamingParser::new(std::fs::File::open("large_scenario.xosc")?);
-
-// Process entities one at a time without loading entire file
-while let Some(entity) = parser.next_entity()? {
-    process_entity(&entity);
-    // Entity is dropped after processing, keeping memory usage low
-}
-```
+The parser uses zero-copy deserialization for efficient memory usage.
 
 ### Caching Catalogs
 
@@ -909,9 +879,8 @@ let owned_name = entity.name.as_literal().unwrap().clone(); // String
 2. **Handle Errors Properly**: Always check `Result` return values
 3. **Cache Catalogs**: Reuse `CatalogManager` instances for multiple scenarios
 4. **Validate Early**: Use validation APIs to catch errors early
-5. **Stream Large Files**: Use streaming APIs for memory efficiency
-6. **Parameter Management**: Extract and manage parameters systematically
-7. **Type Safety**: Leverage the `Value<T>` system for parameter support
+5. **Parameter Management**: Extract and manage parameters systematically
+6. **Type Safety**: Leverage the `Value<T>` system for parameter support
 
 ## Next Steps
 
