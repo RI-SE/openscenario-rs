@@ -520,30 +520,6 @@ fn convert_from_json(json_file: &str, xosc_file: &str) -> Result<(), Box<dyn std
 
 ## Performance & Optimization
 
-### Streaming Large Files
-
-```rust
-#[cfg(feature = "streaming")]
-use openscenario_rs::parser::streaming::StreamingParser;
-
-#[cfg(feature = "streaming")]
-fn process_large_scenario_streaming(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut parser = StreamingParser::new();
-    
-    parser.on_entity(|entity| {
-        println!("Found entity: {}", entity.name.as_literal().unwrap());
-    });
-    
-    parser.on_action(|action| {
-        println!("Processing action...");
-    });
-    
-    parser.parse_file(file_path)?;
-    
-    Ok(())
-}
-```
-
 ### Memory-Efficient Parsing
 
 ```rust
