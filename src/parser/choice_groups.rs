@@ -51,7 +51,6 @@
 //! # Performance Considerations
 //!
 //! - The parser uses string manipulation for simplicity but is optimized for typical use cases
-//! - For very large choice groups (>1000 elements), consider streaming approaches
 //! - Element order detection adds minimal overhead (~5% for typical scenarios)
 //! - Use the registry for repeated parsing to avoid setup costs
 
