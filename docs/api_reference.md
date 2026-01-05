@@ -932,14 +932,13 @@ The library supports optional features that can be enabled in your `Cargo.toml`:
 ```toml
 [dependencies.openscenario-rs]
 version = "0.1.0"
-features = ["builder", "validation", "streaming"]
+features = ["builder", "validation"]
 ```
 
 ### Available Features
 
 - **`builder`** - Enables the fluent builder API for programmatic scenario construction
 - **`validation`** - Adds comprehensive validation capabilities beyond basic parsing
-- **`streaming`** - Enables memory-efficient streaming parsing for large files
 
 ## Thread Safety
 
@@ -951,7 +950,6 @@ The library is designed for efficient memory usage:
 
 - **Zero-copy parsing** where possible
 - **Lazy evaluation** of catalog resolution
-- **Streaming support** for large files
 - **Value<T> optimization** to minimize allocations
 
 ## Compatibility
