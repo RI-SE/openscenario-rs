@@ -77,9 +77,7 @@
 //!
 //! ## Performance Considerations
 //!
-//! - Use `parse_from_file_validated` for comprehensive validation
-//! - Use `parse_from_file` for faster parsing without validation
-//! - Consider streaming parsing for very large files (>100MB)
+//! - Parsing is optimized for speed with zero-copy deserialization
 //! - Enable validation caching for repeated validation operations
 
 pub mod choice_groups;
