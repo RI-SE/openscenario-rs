@@ -914,23 +914,23 @@ fn handle_parsing_errors(path: &str) {
 
 ```rust
 // Problem: High memory usage with large scenarios
-// Solution: Use streaming or chunked processing
+// Solution: Process efficiently with buffered writing
 
 use openscenario_rs::{parse_file, serialize_to_writer};
 use std::fs::File;
 use std::io::BufWriter;
 
-fn process_large_scenario_streaming(input_path: &str, output_path: &str) 
+fn process_large_scenario(input_path: &str, output_path: &str)
     -> Result<(), Box<dyn std::error::Error>> {
     // Parse scenario
     let scenario = parse_file(input_path)?;
-    
-    // Process in chunks or stream to output
+
+    // Process with buffered output
     let output_file = File::create(output_path)?;
     let writer = BufWriter::new(output_file);
-    
+
     serialize_to_writer(writer, &scenario)?;
-    
+
     // Scenario is dropped here, freeing memory
     Ok(())
 }
