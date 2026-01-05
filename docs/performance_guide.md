@@ -29,7 +29,7 @@ graph TD
     A --> F[Serialization Speed]
     
     B --> B1[Zero-Copy Parsing]
-    B --> B2[Streaming Support]
+    B --> B2[Efficient XML Handling]
     B --> B3[Incremental Parsing]
     
     C --> C1[Value&lt;T&gt; Optimization]
@@ -45,7 +45,7 @@ graph TD
     E --> E3[Dependency Optimization]
     
     F --> F1[Efficient XML Generation]
-    F --> F2[Streaming Serialization]
+    F --> F2[Buffered Writing]
     F --> F3[Format Optimization]
 ```
 
@@ -186,44 +186,6 @@ impl ScenarioPool {
 ```
 
 ## Parsing Optimization
-
-### Streaming Parser for Large Files
-
-Use streaming parsing for memory-constrained environments:
-
-```rust
-use openscenario_rs::parser::streaming::StreamingParser;
-use std::fs::File;
-
-// Stream large scenario files
-pub fn process_large_scenario(path: &str) -> Result<()> {
-    let file = File::open(path)?;
-    let mut parser = StreamingParser::new(file);
-    
-    // Process entities as they're parsed
-    while let Some(entity) = parser.next_entity()? {
-        process_entity(&entity);
-        // Entity is dropped after processing, keeping memory low
-    }
-    
-    // Process actions incrementally
-    while let Some(action) = parser.next_action()? {
-        process_action(&action);
-    }
-    
-    Ok(())
-}
-
-fn process_entity(entity: &ScenarioObject) {
-    // Process entity without keeping it in memory
-    println!("Processing entity: {}", entity.name.as_literal().unwrap());
-}
-
-fn process_action(action: &Action) {
-    // Process action without accumulating memory
-    println!("Processing action");
-}
-```
 
 ### Incremental Parsing
 
@@ -938,119 +900,6 @@ impl OptimizedXmlSerializer {
 }
 ```
 
-### Streaming Serialization
-
-Implement streaming serialization for large scenarios:
-
-```rust
-pub struct StreamingSerializer<W: Write> {
-    writer: Writer<BufWriter<W>>,
-    state: SerializationState,
-}
-
-enum SerializationState {
-    Initial,
-    Header,
-    Entities,
-    Storyboard,
-    Complete,
-}
-
-impl<W: Write> StreamingSerializer<W> {
-    pub fn new(writer: W) -> Self {
-        let buf_writer = BufWriter::with_capacity(64 * 1024, writer);
-        let xml_writer = Writer::new(buf_writer);
-        
-        Self {
-            writer: xml_writer,
-            state: SerializationState::Initial,
-        }
-    }
-    
-    pub fn start_document(&mut self) -> Result<()> {
-        match self.state {
-            SerializationState::Initial => {
-                self.writer.write_event(quick_xml::events::Event::Decl(
-                    quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None)
-                ))?;
-                
-                let mut root = quick_xml::events::BytesStart::new("OpenSCENARIO");
-                root.push_attribute(("xmlns", "http://www.openscenario.org/OpenSCENARIO"));
-                self.writer.write_event(quick_xml::events::Event::Start(root))?;
-                
-                self.state = SerializationState::Header;
-                Ok(())
-            }
-            _ => Err(Error::validation_error("serialization", "Document already started")),
-        }
-    }
-    
-    pub fn write_header(&mut self, header: &FileHeader) -> Result<()> {
-        match self.state {
-            SerializationState::Header => {
-                self.serialize_header(header)?;
-                self.state = SerializationState::Entities;
-                Ok(())
-            }
-            _ => Err(Error::validation_error("serialization", "Invalid state for header")),
-        }
-    }
-    
-    pub fn write_entity(&mut self, entity: &ScenarioObject) -> Result<()> {
-        match self.state {
-            SerializationState::Entities => {
-                self.serialize_entity(entity)?;
-                Ok(())
-            }
-            _ => Err(Error::validation_error("serialization", "Invalid state for entity")),
-        }
-    }
-    
-    pub fn finish_document(mut self) -> Result<W> {
-        match self.state {
-            SerializationState::Complete => {},
-            _ => {
-                self.writer.write_event(quick_xml::events::Event::End(
-                    quick_xml::events::BytesEnd::new("OpenSCENARIO")
-                ))?;
-                self.state = SerializationState::Complete;
-            }
-        }
-        
-        // Extract the underlying writer
-        let buf_writer = self.writer.into_inner();
-        Ok(buf_writer.into_inner().map_err(|e| e.into_error())?)
-    }
-    
-    fn serialize_header(&mut self, header: &FileHeader) -> Result<()> {
-        // Implementation for header serialization
-        todo!()
-    }
-    
-    fn serialize_entity(&mut self, entity: &ScenarioObject) -> Result<()> {
-        // Implementation for entity serialization
-        todo!()
-    }
-}
-
-// Usage example
-fn stream_large_scenario(scenario: &OpenScenario, output: File) -> Result<()> {
-    let mut serializer = StreamingSerializer::new(output);
-    
-    serializer.start_document()?;
-    serializer.write_header(&scenario.file_header)?;
-    
-    if let Some(entities) = &scenario.entities {
-        for entity in &entities.scenario_objects {
-            serializer.write_entity(entity)?;
-        }
-    }
-    
-    serializer.finish_document()?;
-    Ok(())
-}
-```
-
 ## Scaling Strategies
 
 ### Horizontal Scaling
@@ -1188,14 +1037,14 @@ impl LowMemoryProcessor {
     
     fn process_single_with_memory_tracking(&self, path: &str) -> Result<()> {
         let _memory_guard = MemoryGuard::new(Arc::clone(&self.current_usage));
-        
-        // Use streaming parser to minimize memory usage
-        let file = File::open(path)?;
-        let mut parser = StreamingParser::new(file);
-        
-        // Process incrementally
-        while let Some(element) = parser.next_element()? {
-            self.process_element(element)?;
+
+        // Parse and process scenario
+        let scenario = parse_from_file(path)?;
+
+        // Process elements with memory tracking
+        if let Some(entities) = &scenario.entities {
+            for entity in &entities.scenario_objects {
+                self.process_entity(entity)?;
             
             // Check memory periodically
             if _memory_guard.current_usage() > self.memory_limit {
