@@ -59,7 +59,7 @@ docs/
 ## 🔍 Key Features Covered
 
 ### Core Functionality
-- **Complete OpenSCENARIO Support** - All 347+ types from the specification
+- **Complete OpenSCENARIO Support** - All 418+ types from the specification
 - **Type-Safe Parsing** - Rust's type system prevents runtime errors
 - **Parameter Resolution** - Full `${parameter}` reference support
 - **Catalog Management** - Automatic loading and resolution
@@ -67,7 +67,7 @@ docs/
 
 ### Advanced Capabilities
 - **Custom Extensions** - Add domain-specific types and validation
-- **Performance Optimization** - Zero-copy parsing and streaming support
+- **Performance Optimization** - Zero-copy parsing for efficiency
 - **Validation System** - Comprehensive error checking and reporting
 - **Integration APIs** - Connect with simulation engines and pipelines
 
@@ -79,7 +79,7 @@ docs/
 | **Validate scenarios** | [Validation Guide](validation_guide.md) | Built-in validation, custom rules |
 | **Build scenarios programmatically** | [API Reference](api_reference.md) | Builder patterns, fluent APIs |
 | **Handle catalogs** | [User Guide](user_guide.md) | Catalog resolution, caching |
-| **Optimize performance** | [Performance Guide](performance_guide.md) | Memory management, streaming |
+| **Optimize performance** | [Performance Guide](performance_guide.md) | Memory management, efficient parsing |
 | **Add custom functionality** | [Extension Guide](extension_guide.md) | Custom types, actions, validators |
 | **Integrate with systems** | [Extension Guide](extension_guide.md) | Simulation bridges, data pipelines |
 | **Fix XSD validation issues** | [XSD Validation Fixes](xsd_validation_fixes.md) | Serialization patterns, compliance fixes |
@@ -95,7 +95,7 @@ let scenario = parse_file("scenario.xosc")?;
 // Access entities
 if let Some(entities) = &scenario.entities {
     for entity in &entities.scenario_objects {
-        println!("Entity: {}", entity.name.as_literal().unwrap());
+        println!("Entity: {}", entity.name.as_ref().unwrap().as_literal().unwrap());
     }
 }
 ```
@@ -109,13 +109,6 @@ impl Validate for MyCustomType {
         // Custom validation logic
         Ok(())
     }
-}
-
-// Performance optimization
-use openscenario_rs::parser::streaming::StreamingParser;
-let mut parser = StreamingParser::new(file);
-while let Some(entity) = parser.next_entity()? {
-    process_entity(&entity);
 }
 ```
 
