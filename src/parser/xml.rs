@@ -16,7 +16,7 @@
 //! ## Parsing Scenarios
 //!
 //! ```rust,no_run
-//! use openscenario_rs::parser::xml::{parse_from_file, parse_from_str};
+//! use openscenario_rs::{parse_from_file, parse_from_str};
 //!
 //! // Parse from file with automatic error context
 //! let scenario = parse_from_file("my_scenario.xosc")?;
@@ -34,22 +34,10 @@
 //! let scenario = parse_from_str(xml)?;
 //! ```
 //!
-//! ## Validation During Parsing
-//!
-//! ```rust,no_run
-//! use openscenario_rs::parser::xml::{parse_from_file_validated, validate_xml_structure};
-//!
-//! // Validate structure before full parsing
-//! validate_xml_structure(&xml_content)?;
-//!
-//! // Parse with built-in validation
-//! let scenario = parse_from_file_validated("scenario.xosc")?;
-//! ```
-//!
 //! ## Serialization
 //!
 //! ```rust,no_run
-//! use openscenario_rs::parser::xml::{serialize_to_string, serialize_to_file};
+//! use openscenario_rs::{serialize_to_string, serialize_to_file};
 //!
 //! // Serialize to formatted XML string
 //! let xml_output = serialize_to_string(&scenario)?;
@@ -122,7 +110,6 @@ pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
 /// Parse an OpenSCENARIO document from a file
 ///
 /// Reads the file into memory and then parses it as a string.
-/// For very large files, consider using the streaming parser (when available).
 pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
