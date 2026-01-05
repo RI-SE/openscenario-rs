@@ -9,7 +9,6 @@
 //! - **Parameter support** - Handle `${parameter}` references with resolution
 //! - **Validation** - Schema validation and semantic checks (with `validation` feature)
 //! - **Builder pattern** - Programmatic scenario construction (with `builder` feature)
-//! - **Streaming** - Memory-efficient parsing for large files (with `streaming` feature)
 //!
 //! # Quick Start
 //!
