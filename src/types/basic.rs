@@ -85,6 +85,7 @@ where
     }
 
     /// Get the literal value if this is a literal, otherwise None
+    #[inline]
     pub fn as_literal(&self) -> Option<&T> {
         match self {
             Value::Literal(value) => Some(value),
@@ -94,6 +95,7 @@ where
     }
 
     /// Get the parameter name if this is a parameter, otherwise None
+    #[inline]
     pub fn as_parameter(&self) -> Option<&str> {
         match self {
             Value::Literal(_) => None,
@@ -103,6 +105,7 @@ where
     }
 
     /// Get the expression if this is an expression, otherwise None
+    #[inline]
     pub fn as_expression(&self) -> Option<&str> {
         match self {
             Value::Literal(_) => None,
@@ -114,16 +117,19 @@ where
 
 impl<T: Clone> Value<T> {
     /// Create a literal value
+    #[inline]
     pub fn literal(value: T) -> Self {
         Value::Literal(value)
     }
 
     /// Create a parameter reference
+    #[inline]
     pub fn parameter(name: std::string::String) -> Self {
         Value::Parameter(name)
     }
 
     /// Create an expression
+    #[inline]
     pub fn expression(expr: std::string::String) -> Self {
         Value::Expression(expr)
     }
@@ -248,6 +254,7 @@ pub fn parse_parameter_reference(s: &str) -> Option<std::string::String> {
 }
 
 /// Check if a string is an expression (contains mathematical operators)
+#[inline]
 pub fn is_expression(s: &str) -> bool {
     s.contains(|c| "+-*/%()".contains(c))
 }

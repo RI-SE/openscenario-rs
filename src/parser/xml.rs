@@ -98,6 +98,9 @@ use markup_fmt::{config::FormatOptions, format_text, Language};
 use std::fs;
 use std::path::Path;
 
+/// Maximum file size for parsing (100 MB)
+const MAX_FILE_SIZE: u64 = 100 * 1024 * 1024;
+
 /// Remove BOM (Byte Order Mark) if present
 fn remove_bom(content: &str) -> &str {
     // UTF-8 BOM: EF BB BF (represented as \u{FEFF} in decoded string)
@@ -112,7 +115,8 @@ fn remove_bom(content: &str) -> &str {
 /// Parse an OpenSCENARIO document from a string
 ///
 /// This function uses quick-xml's serde integration to deserialize
-/// the XML into our Rust type system.
+/// XML into our Rust type system.
+#[must_use = "parsing result should be handled"]
 pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
     quick_xml::de::from_str(xml)
         .map_err(Error::from)
@@ -121,8 +125,23 @@ pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
 
 /// Parse an OpenSCENARIO document from a file
 ///
-/// Reads the file into memory and then parses it as a string.
+/// Reads file into memory and then parses it as a string.
+#[must_use = "parsing result should be handled"]
 pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
+    let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to read file metadata: {}",
+            path.as_ref().display()
+        ))
+    })?;
+
+    if metadata.len() > MAX_FILE_SIZE {
+        return Err(Error::validation_error(
+            "file_size",
+            &format!("File exceeds maximum size of {} bytes", MAX_FILE_SIZE),
+        ));
+    }
+
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
         .map_err(|e| {
@@ -143,6 +162,7 @@ pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
 ///
 /// This function uses quick-xml's serde integration to serialize
 /// our Rust types back to XML format.
+#[must_use = "serialization result should be handled"]
 pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
     let mut xml = String::from(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     xml.push('\n');
@@ -164,6 +184,7 @@ pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
 /// Serialize an OpenSCENARIO document to a file
 ///
 /// Serializes the scenario to XML and writes it to the specified file.
+#[must_use = "serialization result should be handled"]
 pub fn serialize_to_file<P: AsRef<Path>>(scenario: &OpenScenario, path: P) -> Result<()> {
     let xml = serialize_to_string(scenario)?;
 
@@ -237,6 +258,7 @@ pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario
 ///
 /// This function uses quick-xml's serde integration to deserialize
 /// catalog XML into our catalog file structure.
+#[must_use = "parsing result should be handled"]
 pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile> {
     quick_xml::de::from_str(xml)
         .map_err(Error::from)
@@ -246,7 +268,22 @@ pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile> {
 /// Parse a catalog file from a file path
 ///
 /// Reads the catalog file into memory and then parses it as a string.
+#[must_use = "parsing result should be handled"]
 pub fn parse_catalog_from_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile> {
+    let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to read catalog file metadata: {}",
+            path.as_ref().display()
+        ))
+    })?;
+
+    if metadata.len() > MAX_FILE_SIZE {
+        return Err(Error::validation_error(
+            "file_size",
+            &format!("File exceeds maximum size of {} bytes", MAX_FILE_SIZE),
+        ));
+    }
+
     let xml_content = fs::read_to_string(&path)
         .map_err(Error::from)
         .map_err(|e| {
