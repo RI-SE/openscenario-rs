@@ -97,6 +97,18 @@ use crate::types::scenario::storyboard::OpenScenario;
 use markup_fmt::{config::FormatOptions, format_text, Language};
 use std::fs;
 use std::path::Path;
+
+/// Remove BOM (Byte Order Mark) if present
+fn remove_bom(content: &str) -> &str {
+    // UTF-8 BOM: EF BB BF (represented as \u{FEFF} in decoded string)
+    if content.starts_with('\u{FEFF}') {
+        // The character is 3 bytes in UTF-8, but as a char it's 1 character
+        &content['\u{FEFF}'.len_utf8()..]
+    } else {
+        content
+    }
+}
+
 /// Parse an OpenSCENARIO document from a string
 ///
 /// This function uses quick-xml's serde integration to deserialize
@@ -117,12 +129,7 @@ pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
             e.with_context(&format!("Failed to read file: {}", path.as_ref().display()))
         })?;
 
-    // Remove UTF-8 BOM if present
-    let cleaned_content = if xml_content.starts_with('\u{FEFF}') {
-        &xml_content[3..]
-    } else {
-        &xml_content
-    };
+    let cleaned_content = remove_bom(&xml_content);
 
     parse_from_str(cleaned_content).map_err(|e| {
         e.with_context(&format!(
@@ -249,7 +256,9 @@ pub fn parse_catalog_from_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile> {
             ))
         })?;
 
-    parse_catalog_from_str(&xml_content).map_err(|e| {
+    let cleaned_content = remove_bom(&xml_content);
+
+    parse_catalog_from_str(cleaned_content).map_err(|e| {
         e.with_context(&format!(
             "Failed to parse catalog file: {}",
             path.as_ref().display()

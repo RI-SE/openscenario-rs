@@ -340,11 +340,10 @@ impl ScenarioBuilder<HasEntities> {
             .entities
             .ok_or_else(|| BuilderError::missing_field("entities", ".with_entities()"))?;
 
-        // Use defaults for optional fields
         let storyboard = self
             .data
             .storyboard
-            .unwrap_or_else(|| Storyboard::default());
+            .ok_or_else(|| BuilderError::missing_field("storyboard", ".with_storyboard()"))?;
 
         Ok(OpenScenario {
             file_header,
