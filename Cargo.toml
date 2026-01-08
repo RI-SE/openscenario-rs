@@ -2,12 +2,13 @@
 name = "openscenario-rs"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.70"
 authors = ["Ashfaq Farooqui"]
 description = "Rust library for parsing and manipulating OpenSCENARIO files"
 license = "GPLv3"
 repository = "https://github.com/ashfaqfarooqui/openscenario-rs"
 keywords = ["openscenario", "xml", "automotive", "simulation", "asam"]
-categories = [""]
+categories = ["parsing", "simulation", "science::robotics"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -28,11 +29,17 @@ default = ["chrono"]
 chrono = ["dep:chrono"]
 builder = []
 
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+todo = "warn"
+
 [dev-dependencies]
 proptest = "1.0"
 criterion = "0.7"
 tempfile = "3.0"
-serde_json = "1.0.143"
 
 [[bin]]
 name = "xosc-validate"
