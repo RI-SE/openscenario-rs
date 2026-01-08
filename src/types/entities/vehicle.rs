@@ -74,7 +74,7 @@ impl Default for Performance {
     fn default() -> Self {
         Self {
             max_speed: Double::literal(200.0),
-            max_acceleration: Double::literal(200.0),
+            max_acceleration: Double::literal(10.0),
             max_deceleration: Double::literal(10.0),
         }
     }

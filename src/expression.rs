@@ -274,6 +274,13 @@ impl ExpressionParser {
             }
         }
 
+        if identifier.is_empty() {
+            return Err(Error::validation_error(
+                "identifier",
+                "Expected identifier but found empty string",
+            ));
+        }
+
         Ok(identifier)
     }
 
