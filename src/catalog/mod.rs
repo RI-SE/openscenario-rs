@@ -499,11 +499,6 @@ pub fn resolve_catalog_reference_simple(
     let resolved_catalog_name = catalog_name.resolve(scenario_parameters)?;
     let resolved_entry_name = entry_name.resolve(scenario_parameters)?;
 
-    println!(
-        "  Resolving: catalog='{}', entry='{}'",
-        resolved_catalog_name, resolved_entry_name
-    );
-
     // Step 2: Determine catalog file path based on catalog type
     let (catalog_dir, filename) = match resolved_catalog_name.as_str() {
         "vehicle_catalog" => {
@@ -575,7 +570,6 @@ pub fn resolve_catalog_reference_simple(
     };
 
     let catalog_file_path = base_path.join(catalog_dir).join(filename);
-    println!("  Catalog file path: {:?}", catalog_file_path);
 
     // Step 3: Load catalog file using existing parser
     if !catalog_file_path.exists() {
@@ -585,15 +579,9 @@ pub fn resolve_catalog_reference_simple(
         )));
     }
 
-    println!("  Loading catalog file: {}", catalog_file_path.display());
     let catalog_file = parse_catalog_from_file(&catalog_file_path)?;
 
     // Step 4: Find the requested entry in the catalog
-    println!(
-        "  Searching for entry '{}' in catalog '{}'",
-        resolved_entry_name,
-        catalog_file.catalog.name.to_string()
-    );
 
     let catalog_content = &catalog_file.catalog;
 
@@ -604,10 +592,8 @@ pub fn resolve_catalog_reference_simple(
             .iter()
             .any(|v| v.name.to_string() == resolved_entry_name);
         if found {
-            println!("  ✓ Found vehicle entry: {}", resolved_entry_name);
             return Ok(true);
         }
-        println!("  Checked {} vehicles", catalog_content.vehicles.len());
     }
 
     // Check pedestrians
@@ -617,21 +603,8 @@ pub fn resolve_catalog_reference_simple(
             .iter()
             .any(|p| p.name.to_string() == resolved_entry_name);
         if found {
-            println!("  ✓ Found pedestrian entry: {}", resolved_entry_name);
             return Ok(true);
         }
-        println!(
-            "  Checked {} pedestrians",
-            catalog_content.pedestrians.len()
-        );
-        println!(
-            "  Available pedestrians: {:?}",
-            catalog_content
-                .pedestrians
-                .iter()
-                .map(|p| p.name.to_string())
-                .collect::<Vec<_>>()
-        );
     }
 
     // Check controllers
@@ -641,13 +614,8 @@ pub fn resolve_catalog_reference_simple(
             .iter()
             .any(|c| c.name.to_string() == resolved_entry_name);
         if found {
-            println!("  ✓ Found controller entry: {}", resolved_entry_name);
             return Ok(true);
         }
-        println!(
-            "  Checked {} controllers",
-            catalog_content.controllers.len()
-        );
     }
 
     // Check misc objects
@@ -657,18 +625,9 @@ pub fn resolve_catalog_reference_simple(
             .iter()
             .any(|m| m.name.to_string() == resolved_entry_name);
         if found {
-            println!("  ✓ Found misc object entry: {}", resolved_entry_name);
             return Ok(true);
         }
-        println!(
-            "  Checked {} misc objects",
-            catalog_content.misc_objects.len()
-        );
     }
 
-    println!(
-        "  ✗ Entry '{}' not found in any catalog category",
-        resolved_entry_name
-    );
     Ok(false)
 }

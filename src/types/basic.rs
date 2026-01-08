@@ -25,6 +25,17 @@ use std::str::FromStr;
 // OpenSCENARIO supports parameter references using ${parameterName} syntax and
 // mathematical expressions using ${expression} syntax.
 // This enum allows us to represent both compile-time literals and runtime parameters/expressions.
+//
+// # Type Parameters
+//
+// * `T` - The type of the literal value. Must implement `Clone` for the `resolve()` method to work.
+//
+// # Note
+//
+// While the `Value<T>` enum itself doesn't require `T: Clone` at the struct level,
+// the `resolve()` method and other utility methods require `T: Clone`. Attempting to
+// call `resolve()` on a `Value<T>` where `T` doesn't implement `Clone` will result in
+// a compilation error.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Value<T> {
     /// A literal value known at parse time
@@ -904,10 +915,28 @@ impl ValueConstraint {
 // Helper methods for Range
 impl Range {
     /// Create a new range with the given limits
+    ///
+    /// # Panics
+    /// Panics if lower > upper when both are literals
     pub fn new(lower: f64, upper: f64) -> Self {
+        debug_assert!(lower <= upper, "Range lower limit must be <= upper limit");
         Self {
             lower_limit: Double::literal(lower),
             upper_limit: Double::literal(upper),
         }
+    }
+
+    /// Create a new range with validation
+    pub fn try_new(lower: f64, upper: f64) -> Result<Self> {
+        if lower > upper {
+            return Err(Error::validation_error(
+                "Range",
+                "Range lower limit must be <= upper limit",
+            ));
+        }
+        Ok(Self {
+            lower_limit: Double::literal(lower),
+            upper_limit: Double::literal(upper),
+        })
     }
 }
