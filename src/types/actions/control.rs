@@ -24,12 +24,44 @@ pub struct ControllerAction {
     )]
     pub assign_controller_action: Option<AssignControllerAction>,
 
-    /// Override controller values
+    /// Override throttle action
     #[serde(
-        rename = "OverrideControllerValueAction",
+        rename = "OverrideThrottleAction",
         skip_serializing_if = "Option::is_none"
     )]
-    pub override_controller_value_action: Option<OverrideControllerValueAction>,
+    pub override_throttle_action: Option<OverrideThrottleAction>,
+
+    /// Override brake action
+    #[serde(
+        rename = "OverrideBrakeAction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub override_brake_action: Option<OverrideBrakeAction>,
+
+    /// Override clutch action
+    #[serde(
+        rename = "OverrideClutchAction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub override_clutch_action: Option<OverrideClutchAction>,
+
+    /// Override parking brake action
+    #[serde(
+        rename = "OverrideParkingBrakeAction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub override_parking_brake_action: Option<OverrideParkingBrakeAction>,
+
+    /// Override steering wheel action
+    #[serde(
+        rename = "OverrideSteeringWheelAction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub override_steering_wheel_action: Option<OverrideSteeringWheelAction>,
+
+    /// Override gear action
+    #[serde(rename = "OverrideGearAction", skip_serializing_if = "Option::is_none")]
+    pub override_gear_action: Option<OverrideGearAction>,
 
     /// Activate controller (deprecated but still supported)
     #[serde(
@@ -59,79 +91,6 @@ pub struct ActivateControllerAction {
     pub lighting: Option<Boolean>,
     #[serde(rename = "@animation", skip_serializing_if = "Option::is_none")]
     pub animation: Option<Boolean>,
-}
-
-/// Override controller value action - composite override action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueAction {
-    #[serde(rename = "Throttle")]
-    pub throttle: Option<OverrideControllerValueActionThrottle>,
-    #[serde(rename = "Brake")]
-    pub brake: Option<OverrideControllerValueActionBrake>,
-    #[serde(rename = "Clutch")]
-    pub clutch: Option<OverrideControllerValueActionClutch>,
-    #[serde(rename = "ParkingBrake")]
-    pub parking_brake: Option<OverrideControllerValueActionParkingBrake>,
-    #[serde(rename = "SteeringWheel")]
-    pub steering_wheel: Option<OverrideControllerValueActionSteeringWheel>,
-    #[serde(rename = "Gear")]
-    pub gear: Option<OverrideControllerValueActionGear>,
-}
-
-/// Override brake action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueActionBrake {
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-    #[serde(rename = "@value")]
-    pub value: Double,
-}
-
-/// Override throttle action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueActionThrottle {
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-    #[serde(rename = "@value")]
-    pub value: Double,
-}
-
-/// Override steering wheel action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueActionSteeringWheel {
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-    #[serde(rename = "@value")]
-    pub value: Double,
-}
-
-/// Override gear action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueActionGear {
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-    #[serde(rename = "ManualGear")]
-    pub manual_gear: Option<ManualGear>,
-    #[serde(rename = "AutomaticGear")]
-    pub automatic_gear: Option<AutomaticGear>,
-}
-
-/// Override parking brake action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueActionParkingBrake {
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-    #[serde(rename = "@force")]
-    pub force: Option<f64>,
-}
-
-/// Override clutch action
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct OverrideControllerValueActionClutch {
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-    #[serde(rename = "@value")]
-    pub value: Double,
 }
 
 // Individual Override Actions matching XSD schema names
@@ -273,7 +232,12 @@ impl Default for ControllerAction {
     fn default() -> Self {
         Self {
             assign_controller_action: None,
-            override_controller_value_action: None,
+            override_throttle_action: None,
+            override_brake_action: None,
+            override_clutch_action: None,
+            override_parking_brake_action: None,
+            override_steering_wheel_action: None,
+            override_gear_action: None,
             activate_controller_action: None,
         }
     }
@@ -286,74 +250,6 @@ impl Default for ActivateControllerAction {
             lateral: Some(Boolean::literal(true)),
             lighting: Some(Boolean::literal(false)),
             animation: Some(Boolean::literal(false)),
-        }
-    }
-}
-
-impl Default for OverrideControllerValueAction {
-    fn default() -> Self {
-        Self {
-            throttle: None,
-            brake: None,
-            clutch: None,
-            parking_brake: None,
-            steering_wheel: None,
-            gear: None,
-        }
-    }
-}
-
-impl Default for OverrideControllerValueActionBrake {
-    fn default() -> Self {
-        Self {
-            active: Boolean::literal(true),
-            value: Double::literal(0.0),
-        }
-    }
-}
-
-impl Default for OverrideControllerValueActionThrottle {
-    fn default() -> Self {
-        Self {
-            active: Boolean::literal(true),
-            value: Double::literal(0.0),
-        }
-    }
-}
-
-impl Default for OverrideControllerValueActionSteeringWheel {
-    fn default() -> Self {
-        Self {
-            active: Boolean::literal(true),
-            value: Double::literal(0.0),
-        }
-    }
-}
-
-impl Default for OverrideControllerValueActionGear {
-    fn default() -> Self {
-        Self {
-            active: Boolean::literal(true),
-            manual_gear: Some(ManualGear::default()),
-            automatic_gear: None,
-        }
-    }
-}
-
-impl Default for OverrideControllerValueActionParkingBrake {
-    fn default() -> Self {
-        Self {
-            active: Boolean::literal(false),
-            force: Some(0.0),
-        }
-    }
-}
-
-impl Default for OverrideControllerValueActionClutch {
-    fn default() -> Self {
-        Self {
-            active: Boolean::literal(true),
-            value: Double::literal(0.0),
         }
     }
 }
@@ -438,53 +334,6 @@ impl ActivateControllerAction {
             lateral: Some(Boolean::literal(true)),
             lighting: None,
             animation: None,
-        }
-    }
-}
-
-impl OverrideControllerValueAction {
-    /// Create brake override
-    pub fn brake_override(active: bool, value: f64) -> Self {
-        Self {
-            brake: Some(OverrideControllerValueActionBrake {
-                active: Boolean::literal(active),
-                value: Double::literal(value),
-            }),
-            throttle: None,
-            clutch: None,
-            parking_brake: None,
-            steering_wheel: None,
-            gear: None,
-        }
-    }
-
-    /// Create throttle override
-    pub fn throttle_override(active: bool, value: f64) -> Self {
-        Self {
-            throttle: Some(OverrideControllerValueActionThrottle {
-                active: Boolean::literal(active),
-                value: Double::literal(value),
-            }),
-            brake: None,
-            clutch: None,
-            parking_brake: None,
-            steering_wheel: None,
-            gear: None,
-        }
-    }
-
-    /// Create steering override
-    pub fn steering_override(active: bool, value: f64) -> Self {
-        Self {
-            steering_wheel: Some(OverrideControllerValueActionSteeringWheel {
-                active: Boolean::literal(active),
-                value: Double::literal(value),
-            }),
-            brake: None,
-            throttle: None,
-            clutch: None,
-            parking_brake: None,
-            gear: None,
         }
     }
 }
@@ -687,39 +536,6 @@ mod tests {
     }
 
     #[test]
-    fn test_override_controller_brake() {
-        let action = OverrideControllerValueAction::brake_override(true, 0.7);
-
-        assert!(action.brake.is_some());
-        let brake = action.brake.unwrap();
-        assert_eq!(brake.active.as_literal(), Some(&true));
-        assert_eq!(brake.value.as_literal().unwrap(), &0.7);
-
-        assert!(action.throttle.is_none());
-        assert!(action.steering_wheel.is_none());
-    }
-
-    #[test]
-    fn test_override_controller_throttle() {
-        let action = OverrideControllerValueAction::throttle_override(true, 0.5);
-
-        assert!(action.throttle.is_some());
-        let throttle = action.throttle.unwrap();
-        assert_eq!(throttle.active.as_literal(), Some(&true));
-        assert_eq!(throttle.value.as_literal().unwrap(), &0.5);
-    }
-
-    #[test]
-    fn test_override_controller_steering() {
-        let action = OverrideControllerValueAction::steering_override(true, 0.2);
-
-        assert!(action.steering_wheel.is_some());
-        let steering = action.steering_wheel.unwrap();
-        assert_eq!(steering.active.as_literal(), Some(&true));
-        assert_eq!(steering.value.as_literal().unwrap(), &0.2);
-    }
-
-    #[test]
     fn test_manual_gear_creation() {
         let first_gear = ManualGear::first();
         assert_eq!(first_gear.gear.as_literal().unwrap(), &1);
@@ -747,45 +563,6 @@ mod tests {
     }
 
     #[test]
-    fn test_gear_override_action() {
-        let gear_action = OverrideControllerValueActionGear {
-            active: Boolean::literal(true),
-            manual_gear: Some(ManualGear::first()),
-            automatic_gear: None,
-        };
-
-        assert_eq!(gear_action.active.as_literal(), Some(&true));
-        assert!(gear_action.manual_gear.is_some());
-        assert!(gear_action.automatic_gear.is_none());
-        assert_eq!(
-            gear_action.manual_gear.unwrap().gear.as_literal().unwrap(),
-            &1
-        );
-    }
-
-    #[test]
-    fn test_parking_brake_action() {
-        let parking_brake = OverrideControllerValueActionParkingBrake {
-            active: Boolean::literal(true),
-            force: Some(1.0),
-        };
-
-        assert_eq!(parking_brake.active.as_literal(), Some(&true));
-        assert_eq!(parking_brake.force, Some(1.0));
-    }
-
-    #[test]
-    fn test_clutch_action() {
-        let clutch = OverrideControllerValueActionClutch {
-            active: Boolean::literal(true),
-            value: Double::literal(0.5),
-        };
-
-        assert_eq!(clutch.active.as_literal(), Some(&true));
-        assert_eq!(clutch.value.as_literal().unwrap(), &0.5);
-    }
-
-    #[test]
     fn test_controller_action_defaults() {
         let assign = AssignControllerAction::default();
         assert!(assign.controller.is_some());
@@ -794,9 +571,10 @@ mod tests {
         assert_eq!(activate.longitudinal.unwrap().as_literal(), Some(&true));
         assert_eq!(activate.lateral.unwrap().as_literal(), Some(&true));
 
-        let override_action = OverrideControllerValueAction::default();
-        assert!(override_action.brake.is_none());
-        assert!(override_action.throttle.is_none());
+        let controller_action = ControllerAction::default();
+        assert!(controller_action.assign_controller_action.is_none());
+        assert!(controller_action.override_brake_action.is_none());
+        assert!(controller_action.override_throttle_action.is_none());
     }
 
     // Tests for new group types

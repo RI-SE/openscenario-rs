@@ -102,14 +102,6 @@ pub use control::{
     // XSD compliant override action names
     OverrideBrakeAction,
     OverrideClutchAction,
-    OverrideControllerValueAction,
-    // Individual override actions (legacy names)
-    OverrideControllerValueActionBrake,
-    OverrideControllerValueActionClutch,
-    OverrideControllerValueActionGear,
-    OverrideControllerValueActionParkingBrake,
-    OverrideControllerValueActionSteeringWheel,
-    OverrideControllerValueActionThrottle,
     OverrideGearAction,
     OverrideParkingBrakeAction,
     OverrideSteeringWheelAction,
