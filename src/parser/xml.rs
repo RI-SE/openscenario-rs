@@ -215,7 +215,6 @@ pub fn validate_xml_structure(xml: &str) -> Result<()> {
         ));
     }
 
-    // Check for basic OpenSCENARIO root element
     if !trimmed.contains("OpenSCENARIO") {
         return Err(Error::validation_error(
             "xml",
@@ -323,7 +322,6 @@ pub fn validate_catalog_xml_structure(xml: &str) -> Result<()> {
         ));
     }
 
-    // Check for OpenSCENARIO root element
     if !trimmed.contains("OpenSCENARIO") {
         return Err(Error::validation_error(
             "xml",
@@ -331,7 +329,6 @@ pub fn validate_catalog_xml_structure(xml: &str) -> Result<()> {
         ));
     }
 
-    // Check for Catalog element
     if !trimmed.contains("Catalog") {
         return Err(Error::validation_error(
             "xml",

@@ -6,10 +6,3 @@
 //! - Method overloading simulation through trait implementations
 //! - Builder state transitions ensuring valid construction sequences
 //! - Integration with IDE tooling for autocomplete and type hints
-//!
-//! Contributes to project by:
-//! - Providing ergonomic, readable scenario construction APIs
-//! - Reducing boilerplate and improving developer experience
-//! - Supporting natural language-like scenario building patterns
-//! - Enabling rapid prototyping and iterative scenario development
-//! - Facilitating adoption through intuitive API design

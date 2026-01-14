@@ -6,12 +6,6 @@
 //! - Private actions for entity-specific initialization
 //! - Integration with existing action and environment systems
 //!
-//! Contributes to project by:
-//! - Enabling complete scenario initialization parsing from XOSC files
-//! - Supporting environment setup through EnvironmentAction
-//! - Providing entity-specific private actions (speed, teleport, etc.)
-//! - Facilitating integration between initialization and story phases
-
 use crate::types::actions::appearance::VisibilityAction;
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{

@@ -7,13 +7,6 @@
 //! - TriggeringEntities for entity-based condition evaluation
 //! - Event priority and execution order management
 //!
-//! Contributes to project by:
-//! - Enabling event-driven scenario execution and timing control
-//! - Supporting complex trigger logic through condition combinations
-//! - Providing precise event timing through edge detection
-//! - Facilitating entity-aware trigger conditions and responses
-//! - Supporting deterministic event ordering and priority handling
-
 use crate::types::basic::{Double, OSString};
 use crate::types::conditions::{ByEntityCondition, ByValueCondition};
 use crate::types::enums::{ConditionEdge, TriggeringEntitiesRule};

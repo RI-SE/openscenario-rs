@@ -1,12 +1,12 @@
 //! Private and global action builders for entity-specific initialization
 
 use super::actions::InitActionBuilder;
+use crate::builder::actions::ActionBuilder as ActionBuilderTrait;
 use crate::builder::actions::{
     AssignRouteActionBuilder, FollowRouteActionBuilder, FollowTrajectoryActionBuilder,
     LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder, SynchronizeActionBuilder,
     VisibilityActionBuilder,
 };
-use crate::builder::actions::ActionBuilder as ActionBuilderTrait;
 use crate::builder::BuilderResult;
 use crate::types::{
     actions::appearance::VisibilityAction,
@@ -86,33 +86,28 @@ impl PrivateActionBuilder {
     // ========== LONGITUDINAL ACTIONS ==========
 
     /// Add longitudinal distance action (convenience)
-    pub fn add_longitudinal_distance_action(
-        mut self,
-        target_entity: &str,
-        distance: f64,
-    ) -> Self {
+    pub fn add_longitudinal_distance_action(mut self, target_entity: &str, distance: f64) -> Self {
         let builder_action = LongitudinalDistanceActionBuilder::new()
             .from_entity(target_entity)
             .at_distance(distance)
             .build_action()
             .unwrap();
 
-        self.actions.push(self.convert_to_init_action(builder_action));
+        self.actions
+            .push(self.convert_to_init_action(builder_action));
         self
     }
 
     /// Add speed profile action with direct entries (convenience)
-    pub fn add_speed_profile_action_direct(
-        mut self,
-        entries: Vec<(f64, f64)>,
-    ) -> Self {
+    pub fn add_speed_profile_action_direct(mut self, entries: Vec<(f64, f64)>) -> Self {
         let mut builder = SpeedProfileActionBuilder::new();
         for (time, speed) in entries {
             builder = builder.add_entry_direct(time, speed);
         }
 
         if let Ok(builder_action) = builder.build_action() {
-            self.actions.push(self.convert_to_init_action(builder_action));
+            self.actions
+                .push(self.convert_to_init_action(builder_action));
         }
         self
     }
@@ -126,7 +121,8 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions.push(self.convert_to_init_action(builder_action));
+        self.actions
+            .push(self.convert_to_init_action(builder_action));
         self
     }
 
@@ -141,7 +137,8 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions.push(self.convert_to_init_action(builder_action));
+        self.actions
+            .push(self.convert_to_init_action(builder_action));
         self
     }
 
@@ -152,7 +149,8 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions.push(self.convert_to_init_action(builder_action));
+        self.actions
+            .push(self.convert_to_init_action(builder_action));
         self
     }
 
@@ -172,17 +170,13 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions.push(self.convert_to_init_action(builder_action));
+        self.actions
+            .push(self.convert_to_init_action(builder_action));
         self
     }
 
     /// Add visibility action (convenience)
-    pub fn add_visibility_action(
-        mut self,
-        graphics: bool,
-        sensors: bool,
-        traffic: bool,
-    ) -> Self {
+    pub fn add_visibility_action(mut self, graphics: bool, sensors: bool, traffic: bool) -> Self {
         let builder_action = VisibilityActionBuilder::new()
             .graphics(graphics)
             .sensors(sensors)
@@ -190,7 +184,8 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions.push(self.convert_to_init_action(builder_action));
+        self.actions
+            .push(self.convert_to_init_action(builder_action));
         self
     }
 

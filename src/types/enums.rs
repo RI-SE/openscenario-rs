@@ -7,13 +7,6 @@
 //! - Default implementations where appropriate
 //! - String conversion helpers for debugging and display
 //!
-//! Contributes to project by:
-//! - Ensuring type safety for all predefined value sets in OpenSCENARIO
-//! - Preventing invalid enum values at compile time
-//! - Providing clear mapping between Rust types and XML values
-//! - Supporting evolution of the specification through deprecation handling
-//! - Enabling exhaustive pattern matching for robust code
-
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;

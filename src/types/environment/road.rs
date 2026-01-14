@@ -4,12 +4,6 @@
 //! - RoadCondition with friction scale factors for surface properties
 //! - Road surface properties affecting vehicle dynamics
 //!
-//! Contributes to project by:
-//! - Supporting realistic road surface simulation and vehicle dynamics
-//! - Enabling friction-dependent scenario validation
-//! - Providing road condition setup for OpenSCENARIO scenarios
-//! - Supporting variable road conditions for weather-dependent testing
-
 use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 

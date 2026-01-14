@@ -8,14 +8,6 @@
 //! - Custom user-defined animation support
 //! - Visibility actions for entity appearance control
 //!
-//! Contributes to project by:
-//! - Enabling realistic visual representation of scenario entities
-//! - Supporting complex animation sequences for pedestrians and vehicles
-//! - Providing lighting control for realistic day/night scenarios
-//! - Enabling custom animations through extensible user-defined types
-//! - Facilitating visual simulation output and rendering integration
-//! - Controlling entity visibility for graphics, sensors, and traffic
-
 use crate::types::basic::{Boolean, OSString};
 use serde::{Deserialize, Serialize};
 

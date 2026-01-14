@@ -177,9 +177,9 @@ impl ExpressionParser {
                 }
                 '$' => {
                     // Parameter reference: ${paramName} or $paramName
-                    chars.next(); // consume '$'
+                    chars.next();
                     if chars.peek() == Some(&'{') {
-                        chars.next(); // consume '{'
+                        chars.next();
                         let param_name = Self::read_until_char(&mut chars, '}')?;
                         if chars.next() != Some('}') {
                             return Err(Error::validation_error(

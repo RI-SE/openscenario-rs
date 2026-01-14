@@ -7,13 +7,6 @@
 //! - Position validation and constraint checking
 //! - Spatial relationship calculations and utilities
 //!
-//! Contributes to project by:
-//! - Organizing 15+ position types into logical coordinate system categories
-//! - Providing consistent interface for all positioning methods
-//! - Enabling seamless conversion between different coordinate systems
-//! - Supporting both absolute and relative positioning strategies
-//! - Facilitating spatial calculations and geometric operations
-
 use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 

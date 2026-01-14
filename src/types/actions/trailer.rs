@@ -4,10 +4,6 @@
 //! - Trailer connection and disconnection actions
 //! - Trailer reference management
 //!
-//! Contributes to project by:
-//! - Enabling dynamic trailer coupling/uncoupling during scenario execution
-//! - Supporting complex multi-vehicle scenarios with trailers
-//! - Following OpenSCENARIO specification for trailer operations
 
 use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};

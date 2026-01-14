@@ -183,7 +183,10 @@ impl ActionBuilder for SpeedProfileActionBuilder {
         self.validate()?;
 
         let action = SpeedProfileAction {
-            entity_ref: self.entity_ref.as_ref().map(|s| OSString::literal(s.clone())),
+            entity_ref: self
+                .entity_ref
+                .as_ref()
+                .map(|s| OSString::literal(s.clone())),
             entries: self.entries,
             dynamic_constraints: None,
         };
@@ -289,10 +292,7 @@ mod tests {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::LongitudinalDistanceAction(ref dist) => {
                         assert_eq!(dist.distance.as_ref().unwrap().as_literal(), Some(&10.0));
-                        assert_eq!(
-                            dist.entity_ref.as_literal(),
-                            Some(&"lead".to_string())
-                        );
+                        assert_eq!(dist.entity_ref.as_literal(), Some(&"lead".to_string()));
                     }
                     _ => panic!("Expected LongitudinalDistanceAction"),
                 }

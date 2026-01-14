@@ -6,12 +6,6 @@
 //! - Fog conditions with visibility parameters
 //! - Precipitation types (rain, snow, dry) with intensity specifications
 //!
-//! Contributes to project by:
-//! - Enabling complete weather setup for OpenSCENARIO scenarios
-//! - Supporting realistic lighting and atmospheric conditions
-//! - Providing weather-dependent scenario validation
-//! - Facilitating integration with weather simulation systems
-
 use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 

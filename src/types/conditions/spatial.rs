@@ -7,13 +7,6 @@
 //! - Coordinate system and routing algorithm support
 //! - Distance measurement type configurations
 //!
-//! Contributes to project by:
-//! - Enabling realistic spatial triggering in autonomous driving scenarios
-//! - Supporting safety-critical distance monitoring and collision avoidance
-//! - Providing flexible coordinate system and measurement options
-//! - Facilitating complex multi-entity spatial relationship detection
-//! - Supporting both freespace and reference point distance calculations
-
 use crate::types::basic::{Boolean, Double, OSString};
 use crate::types::enums::{CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule};
 use crate::types::positions::Position;

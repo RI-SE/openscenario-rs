@@ -5,11 +5,10 @@ pub mod story;
 
 pub use maneuver::{
     DetachedAssignRouteActionBuilder, DetachedFollowTrajectoryActionBuilder,
-    DetachedLongitudinalDistanceActionBuilder, DetachedManeuverBuilder,
-    DetachedSpeedActionBuilder, DetachedSpeedProfileActionBuilder,
-    DetachedSynchronizeActionBuilder, DetachedTeleportActionBuilder,
-    DetachedVisibilityActionBuilder, ManeuverBuilder, SpeedActionEventBuilder,
-    TeleportActionEventBuilder,
+    DetachedLongitudinalDistanceActionBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
+    DetachedSpeedProfileActionBuilder, DetachedSynchronizeActionBuilder,
+    DetachedTeleportActionBuilder, DetachedVisibilityActionBuilder, ManeuverBuilder,
+    SpeedActionEventBuilder, TeleportActionEventBuilder,
 };
 pub use story::{
     ActBuilder, DetachedActBuilder, DetachedStoryBuilder, StoryBuilder, StoryboardBuilder,

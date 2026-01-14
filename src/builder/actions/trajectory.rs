@@ -125,7 +125,9 @@ impl TrajectoryBuilder {
 
     fn validate(&self) -> BuilderResult<()> {
         if self.name.is_none() {
-            return Err(BuilderError::validation_error("Trajectory name is required"));
+            return Err(BuilderError::validation_error(
+                "Trajectory name is required",
+            ));
         }
         if self.shape.is_none() {
             return Err(BuilderError::validation_error(
@@ -298,9 +300,7 @@ impl VertexBuilder {
 
     fn validate(&self) -> BuilderResult<()> {
         if self.time.is_none() {
-            return Err(BuilderError::validation_error(
-                "Vertex time is required",
-            ));
+            return Err(BuilderError::validation_error("Vertex time is required"));
         }
         if self.position.is_none() {
             return Err(BuilderError::validation_error(
@@ -410,9 +410,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             trajectory_following_mode: TrajectoryFollowingMode {
                 following_mode: self.following_mode.unwrap(),
             },
-            initial_distance_offset: self
-                .initial_distance_offset
-                .map(|v| Double::literal(v)),
+            initial_distance_offset: self.initial_distance_offset.map(|v| Double::literal(v)),
         };
 
         Ok(PrivateAction {
@@ -475,7 +473,10 @@ mod tests {
         );
         assert_eq!(trajectory.closed.as_literal(), Some(&false));
         assert!(trajectory.shape.polyline.is_some());
-        assert_eq!(trajectory.shape.polyline.as_ref().unwrap().vertices.len(), 2);
+        assert_eq!(
+            trajectory.shape.polyline.as_ref().unwrap().vertices.len(),
+            2
+        );
     }
 
     #[test]
@@ -708,7 +709,11 @@ mod tests {
             CorePrivateAction::RoutingAction(ref routing) => {
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert_eq!(
-                    follow_action.initial_distance_offset.as_ref().unwrap().as_literal(),
+                    follow_action
+                        .initial_distance_offset
+                        .as_ref()
+                        .unwrap()
+                        .as_literal(),
                     Some(&10.0)
                 );
             }

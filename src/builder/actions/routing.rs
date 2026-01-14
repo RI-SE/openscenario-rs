@@ -246,7 +246,9 @@ mod tests {
 
     #[test]
     fn test_assign_route_validation_requires_route() {
-        let result = AssignRouteActionBuilder::new().for_entity("ego").build_action();
+        let result = AssignRouteActionBuilder::new()
+            .for_entity("ego")
+            .build_action();
 
         assert!(result.is_err());
         assert!(result
@@ -297,7 +299,9 @@ mod tests {
 
     #[test]
     fn test_follow_route_validation_requires_route() {
-        let result = FollowRouteActionBuilder::new().for_entity("ego").build_action();
+        let result = FollowRouteActionBuilder::new()
+            .for_entity("ego")
+            .build_action();
 
         assert!(result.is_err());
         assert!(result

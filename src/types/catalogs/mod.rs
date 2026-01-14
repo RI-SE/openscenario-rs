@@ -7,13 +7,6 @@
 //! - Cross-catalog reference handling and circular dependency detection
 //! - Catalog versioning and compatibility management
 //!
-//! Contributes to project by:
-//! - Organizing catalog system into logical component categories
-//! - Providing consistent framework for catalog reference resolution
-//! - Supporting modular scenario design through reusable components
-//! - Enabling catalog validation and dependency management
-//! - Facilitating catalog evolution and version compatibility
-
 pub mod controllers;
 pub mod entities;
 pub mod environments;

@@ -1,7 +1,9 @@
 //! Maneuver builders for entity behavior sequences
 
 use crate::builder::{
-    actions::{ActionBuilder, FollowTrajectoryActionBuilder, SpeedActionBuilder, TeleportActionBuilder},
+    actions::{
+        ActionBuilder, FollowTrajectoryActionBuilder, SpeedActionBuilder, TeleportActionBuilder,
+    },
     BuilderError, BuilderResult,
 };
 use crate::types::{
@@ -105,7 +107,8 @@ impl<'parent> ManeuverBuilder<'parent> {
             parameter_declarations: None,
         };
 
-        self.parent.add_maneuver_to_group(maneuver, &self.entity_ref);
+        self.parent
+            .add_maneuver_to_group(maneuver, &self.entity_ref);
         self.parent
     }
 }
@@ -1074,10 +1077,7 @@ impl DetachedFollowTrajectoryActionBuilder {
     }
 
     /// Attach this follow trajectory action to a detached maneuver builder
-    pub fn attach_to_detached(
-        self,
-        maneuver: &mut DetachedManeuverBuilder,
-    ) -> BuilderResult<()> {
+    pub fn attach_to_detached(self, maneuver: &mut DetachedManeuverBuilder) -> BuilderResult<()> {
         let private_action = self.action_builder.build_action()?;
 
         // Convert PrivateAction to StoryPrivateAction
@@ -1542,7 +1542,7 @@ fn convert_private_action_to_story(
                 routing_action: None,
                 controller_action: None,
                 appearance_action: None,
-                    trailer_action: None,
+                trailer_action: None,
             }
         }
         CorePrivateAction::LateralAction(lat_action) => StoryPrivateAction {
@@ -1554,7 +1554,7 @@ fn convert_private_action_to_story(
             routing_action: None,
             controller_action: None,
             appearance_action: None,
-                    trailer_action: None,
+            trailer_action: None,
         },
         CorePrivateAction::VisibilityAction(vis_action) => StoryPrivateAction {
             longitudinal_action: None,
@@ -1565,7 +1565,7 @@ fn convert_private_action_to_story(
             routing_action: None,
             controller_action: None,
             appearance_action: None,
-                    trailer_action: None,
+            trailer_action: None,
         },
         CorePrivateAction::SynchronizeAction(sync_action) => StoryPrivateAction {
             longitudinal_action: None,
@@ -1576,7 +1576,7 @@ fn convert_private_action_to_story(
             routing_action: None,
             controller_action: None,
             appearance_action: None,
-                    trailer_action: None,
+            trailer_action: None,
         },
         CorePrivateAction::TeleportAction(teleport_action) => StoryPrivateAction {
             longitudinal_action: None,
@@ -1587,7 +1587,7 @@ fn convert_private_action_to_story(
             routing_action: None,
             controller_action: None,
             appearance_action: None,
-                    trailer_action: None,
+            trailer_action: None,
         },
         CorePrivateAction::RoutingAction(routing_action) => StoryPrivateAction {
             longitudinal_action: None,
@@ -1598,7 +1598,7 @@ fn convert_private_action_to_story(
             routing_action: Some(routing_action),
             controller_action: None,
             appearance_action: None,
-                    trailer_action: None,
+            trailer_action: None,
         },
         _ => StoryPrivateAction {
             longitudinal_action: None,
@@ -1609,7 +1609,7 @@ fn convert_private_action_to_story(
             routing_action: None,
             controller_action: None,
             appearance_action: None,
-                    trailer_action: None,
+            trailer_action: None,
         },
     }
 }

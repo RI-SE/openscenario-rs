@@ -7,13 +7,6 @@
 //! - Maneuver definitions with event sequences and timing
 //! - Actor selection and entity assignment to maneuvers
 //!
-//! Contributes to project by:
-//! - Organizing scenario execution into logical narrative sequences
-//! - Supporting parallel and sequential execution patterns
-//! - Enabling entity coordination through maneuver groups
-//! - Providing flexible actor assignment and role management
-//! - Facilitating scenario reuse through parameterized stories
-
 use crate::types::basic::{OSString, UnsignedInt};
 use crate::types::enums::Priority;
 use serde::{Deserialize, Serialize};

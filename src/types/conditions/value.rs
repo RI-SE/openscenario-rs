@@ -8,13 +8,6 @@
 //! - Traffic signal conditions for infrastructure interaction
 //! - User-defined custom condition support
 //!
-//! Contributes to project by:
-//! - Enabling scenario control through parameter and variable monitoring
-//! - Supporting time-based scenario progression and scheduling
-//! - Providing execution flow control through storyboard state tracking
-//! - Facilitating infrastructure integration through signal state monitoring
-//! - Enabling custom condition logic through extensible user-defined types
-
 #[cfg(feature = "chrono")]
 use crate::types::basic::DateTime;
 use crate::types::basic::{Double, OSString};

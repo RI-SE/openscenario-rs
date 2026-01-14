@@ -6,12 +6,6 @@
 //! - Controller configuration and parameter setting per OpenSCENARIO XSD schema
 //! - Gear control types (manual/automatic) and supporting enumerations
 //!
-//! Contributes to project by:
-//! - Enabling realistic vehicle control through AI controllers and manual overrides
-//! - Supporting simulation of different driver behaviors and capabilities
-//! - Providing fine-grained control over vehicle dynamics and responses
-//! - Following complete OpenSCENARIO action specification for controller management
-
 use crate::types::basic::{Boolean, Double, Int};
 use crate::types::catalogs::entities::CatalogController;
 use crate::types::catalogs::references::CatalogReference;

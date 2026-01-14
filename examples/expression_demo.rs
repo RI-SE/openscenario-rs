@@ -5,12 +5,6 @@
 //! - Parameter references (${param})
 //! - Mathematical expressions (${expr})
 //!
-//! Contributes to project by:
-//! - Demonstrating the complete expression system functionality
-//! - Showing real-world usage patterns for parameter and expression handling
-//! - Supporting integration testing of expression resolution workflows
-//! - Providing usage examples for developers
-
 use openscenario_rs::types::basic::Double;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

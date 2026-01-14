@@ -129,11 +129,9 @@ impl CatalogManager {
                 if controller.name == entry_name {
                     let resolved_controller =
                         if !params.is_empty() || !self.parameter_resolver.context().is_empty() {
-                            // Apply parameter substitution if needed
                             let _param_engine = self
                                 .parameter_resolver
                                 .with_additional_context(params.clone());
-                            // For now, return the original controller
                             controller.clone()
                         } else {
                             controller.clone()

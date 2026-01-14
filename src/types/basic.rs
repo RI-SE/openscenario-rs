@@ -7,13 +7,6 @@
 //! - Serde serialization/deserialization for XML attributes
 //! - Validation helpers for parameter names and expression syntax
 //!
-//! Contributes to project by:
-//! - Providing the foundation for all other types in the system
-//! - Implementing OpenSCENARIO's parameter and expression system
-//! - Ensuring type safety while supporting dynamic parameter resolution
-//! - Enabling lazy evaluation of expressions with proper error handling
-//! - Supporting both compile-time and runtime type checking
-
 use crate::error::{Error, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;

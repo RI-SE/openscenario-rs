@@ -8,9 +8,3 @@ use crate::types::basic::{OSString, Double, Int, Boolean, UnsignedInt, UnsignedS
 //! - Performance utilities and optimization helpers
 //! - Debug and introspection utilities for development
 //!
-//! Contributes to project by:
-//! - Providing centralized access to all utility functionality
-//! - Reducing code duplication through shared utility functions
-//! - Supporting integration with external systems and libraries
-//! - Facilitating debugging and development workflows
-//! - Enabling performance optimization through specialized utilities

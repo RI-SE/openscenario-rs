@@ -7,13 +7,6 @@
 //! - Spatial relationship actions (distance keeping, synchronization)
 //! - Trajectory following and path planning actions
 //!
-//! Contributes to project by:
-//! - Implementing the core movement capabilities for scenario entities
-//! - Providing smooth, realistic motion through transition dynamics
-//! - Supporting both simple positioning and complex trajectory following
-//! - Enabling entity coordination through synchronization actions
-//! - Offering flexible target specification (absolute vs. relative positioning)
-
 use crate::types::basic::{Boolean, Double, Int, OSString};
 use crate::types::catalogs::entities::CatalogTrajectory;
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};

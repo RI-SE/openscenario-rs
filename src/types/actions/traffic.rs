@@ -7,13 +7,6 @@
 //! - Traffic signal control actions for intersection management
 //! - Background traffic definition and distribution specifications
 //!
-//! Contributes to project by:
-//! - Enabling realistic traffic environments for scenario testing
-//! - Providing dynamic traffic generation and removal capabilities
-//! - Supporting complex traffic patterns and density variations
-//! - Facilitating intersection and traffic signal simulation
-//! - Following complete OpenSCENARIO specification for traffic management
-
 use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};

@@ -7,13 +7,6 @@
 //! - Integration with existing position and action systems
 //! - Support for parameterizable routes and waypoints
 //!
-//! Contributes to project by:
-//! - Implementing complete routing system for autonomous driving scenarios
-//! - Enabling mission planning and navigation scenario testing
-//! - Supporting both simple point-to-point and complex multi-waypoint routes
-//! - Providing route analytics for distance calculation and validation
-//! - Facilitating route reuse through catalog integration
-
 use crate::types::basic::{Boolean, Double, OSString};
 use crate::types::enums::RouteStrategy;
 use crate::types::positions::Position;

@@ -195,27 +195,22 @@
 //! - Use parameter references instead of literal values for flexibility
 //! - Validate during construction rather than after building
 
-// Import from new error module
 mod error;
 pub use error::{BuilderError, BuilderResult};
 
-// Existing modules
+pub mod actions;
+pub mod catalog;
+pub mod conditions;
+pub mod entities;
 pub mod fluent;
+pub mod init;
+pub mod parameters;
 pub mod positions;
 pub mod scenario;
+pub mod storyboard;
+pub mod templates;
+pub mod validation;
 
-// New modules (Sprint 1+)
-pub mod actions; // Sprint 2
-pub mod catalog; // Sprint 5
-pub mod conditions; // Sprint 4
-pub mod entities; // Sprint 1
-pub mod init; // Phase 1 - Critical for executable scenarios
-pub mod parameters; // Sprint 5
-pub mod storyboard; // Sprint 3
-pub mod templates; // Phase 1 - Common scenario patterns
-pub mod validation; // Sprint 5
-
-// Export main builders
 pub use actions::{
     ActivateControllerActionBuilder, EntityActionBuilder, EnvironmentActionBuilder,
     FollowTrajectoryActionBuilder, LaneChangeActionBuilder, LaneOffsetActionBuilder,
@@ -238,9 +233,9 @@ pub use init::{GlobalActionBuilder, InitActionBuilder, PrivateActionBuilder};
 pub use parameters::{ParameterContext, ParameterDeclarationsBuilder, ParameterizedValueBuilder};
 pub use scenario::ScenarioBuilder;
 pub use storyboard::{
-    ActBuilder, DetachedActBuilder, DetachedFollowTrajectoryActionBuilder,
-    DetachedManeuverBuilder, DetachedSpeedActionBuilder, DetachedStoryBuilder, ManeuverBuilder,
-    StoryBuilder, StoryboardBuilder,
+    ActBuilder, DetachedActBuilder, DetachedFollowTrajectoryActionBuilder, DetachedManeuverBuilder,
+    DetachedSpeedActionBuilder, DetachedStoryBuilder, ManeuverBuilder, StoryBuilder,
+    StoryboardBuilder,
 };
 pub use templates::{BasicScenarioTemplate, ScenarioTemplate};
 pub use validation::{BuilderValidatable, BuilderValidationContext, ValidationContextBuilder};

@@ -40,7 +40,6 @@ impl CatalogLoader {
 
     /// Discover all .xosc files in a directory
     pub fn discover_catalog_files(&self, directory: &Directory) -> Result<Vec<PathBuf>> {
-        // For now, assume we have a literal path. Parameter resolution will be handled later.
         let path_str = directory.path.as_literal().ok_or_else(|| {
             Error::catalog_error("Cannot discover files with parameterized paths")
         })?;
@@ -76,7 +75,6 @@ impl CatalogLoader {
 
             let path = entry.path();
 
-            // Check if it's a .xosc file
             if path.is_file() {
                 if let Some(extension) = path.extension() {
                     if extension == "xosc" {
@@ -325,7 +323,6 @@ impl CatalogLoader {
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            // Try to parse as controller catalog
             if let Ok(catalog) = self.load_controller_catalog(&file_path) {
                 let catalog_name = file_path
                     .file_stem()
@@ -350,7 +347,6 @@ impl CatalogLoader {
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            // Try to parse as trajectory catalog
             if let Ok(catalog) = self.load_trajectory_catalog(&file_path) {
                 let catalog_name = file_path
                     .file_stem()
@@ -374,7 +370,6 @@ impl CatalogLoader {
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            // Try to parse as route catalog
             if let Ok(catalog) = self.load_route_catalog(&file_path) {
                 let catalog_name = file_path
                     .file_stem()
@@ -399,7 +394,6 @@ impl CatalogLoader {
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            // Try to parse as environment catalog
             if let Ok(catalog) = self.load_environment_catalog(&file_path) {
                 let catalog_name = file_path
                     .file_stem()

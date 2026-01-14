@@ -7,12 +7,6 @@
 //! - Condition group logic (AND/OR combinations)
 //! - Condition validation and constraint checking
 //!
-//! Contributes to project by:
-//! - Organizing 21+ condition types into logical categories
-//! - Providing consistent evaluation framework for all condition types
-//! - Supporting complex trigger logic through condition combinations
-//! - Enabling event-driven scenario execution and timing control
-//! - Facilitating condition debugging and state introspection
 use crate::types::enums::ConditionEdge;
 
 pub mod entity; // Entity-based conditions

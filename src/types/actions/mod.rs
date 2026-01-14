@@ -7,13 +7,6 @@
 //! - Action execution context and state management
 //! - Cross-cutting action concerns (timing, priority, conditions)
 //!
-//! Contributes to project by:
-//! - Organizing 48+ action types into logical, manageable categories
-//! - Providing consistent interface for all action types
-//! - Enabling polymorphic action handling and execution
-//! - Supporting action composition and complex scenario building
-//! - Facilitating action validation and constraint enforcement
-
 pub mod appearance; // Appearance and visibility actions
 pub mod control; // Controller actions
 pub mod movement; // Movement actions (SpeedAction, TeleportAction, etc.)

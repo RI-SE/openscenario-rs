@@ -7,12 +7,6 @@
 //! - Road conditions with friction and surface properties
 //! - Integration with rendering and physics systems
 //!
-//! Contributes to project by:
-//! - Enabling complete environmental setup for OpenSCENARIO scenarios
-//! - Supporting realistic weather and lighting conditions
-//! - Providing integration with external environment systems
-//! - Facilitating environment-dependent scenario validation
-
 use crate::types::basic::{Boolean, OSString};
 use serde::{Deserialize, Serialize};
 
