@@ -34,9 +34,9 @@ pub enum Value<T> {
     /// A literal value known at parse time
     Literal(T),
     /// A parameter reference that will be resolved at runtime
-    Parameter(std::string::String),
+    Parameter(String),
     /// A mathematical expression that will be evaluated at runtime
-    Expression(std::string::String),
+    Expression(String),
 }
 
 impl<T> Value<T>
@@ -45,7 +45,7 @@ where
     T::Err: std::fmt::Display,
 {
     /// Resolve this value using the provided parameter map
-    pub fn resolve(&self, params: &HashMap<std::string::String, std::string::String>) -> Result<T> {
+    pub fn resolve(&self, params: &HashMap<String, String>) -> Result<T> {
         match self {
             Value::Literal(value) => Ok(value.clone()),
             Value::Parameter(param_name) => {
@@ -117,13 +117,13 @@ impl<T: Clone> Value<T> {
 
     /// Create a parameter reference
     #[inline]
-    pub fn parameter(name: std::string::String) -> Self {
+    pub fn parameter(name: String) -> Self {
         Value::Parameter(name)
     }
 
     /// Create an expression
     #[inline]
-    pub fn expression(expr: std::string::String) -> Self {
+    pub fn expression(expr: String) -> Self {
         Value::Expression(expr)
     }
 }
@@ -216,7 +216,7 @@ where
 }
 
 // OpenSCENARIO basic type aliases
-pub type OSString = Value<std::string::String>;
+pub type OSString = Value<String>;
 pub type Double = Value<f64>;
 pub type Int = Value<i32>;
 pub type UnsignedInt = Value<u32>;
@@ -233,7 +233,7 @@ pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
 /// Parse a parameter reference from a string
 ///
 /// Returns the parameter name if the string matches ${paramName} pattern
-pub fn parse_parameter_reference(s: &str) -> Option<std::string::String> {
+pub fn parse_parameter_reference(s: &str) -> Option<String> {
     if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
         let param_name = &s[2..s.len() - 1];
         if is_valid_parameter_name(param_name) {
@@ -264,10 +264,7 @@ pub fn is_valid_parameter_name(name: &str) -> bool {
 /// Resolve a mathematical expression by parsing and evaluating it
 ///
 /// This implementation uses the full expression parser and evaluator
-fn resolve_expression<T: FromStr>(
-    expr: &str,
-    params: &HashMap<std::string::String, std::string::String>,
-) -> Result<String>
+fn resolve_expression<T: FromStr>(expr: &str, params: &HashMap<String, String>) -> Result<String>
 where
     T::Err: std::fmt::Display,
 {
@@ -847,10 +844,7 @@ impl Directory {
     }
 
     /// Get the resolved path string
-    pub fn resolve_path(
-        &self,
-        params: &HashMap<std::string::String, std::string::String>,
-    ) -> Result<std::string::String> {
+    pub fn resolve_path(&self, params: &HashMap<String, String>) -> Result<String> {
         self.path.resolve(params)
     }
 

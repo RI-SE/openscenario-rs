@@ -139,9 +139,9 @@ pub trait Resolve<T> {
 #[derive(Debug, Default)]
 pub struct ValidationContext {
     /// Registry of all entities in the scenario for reference validation
-    pub entities: HashMap<std::string::String, EntityRef>,
+    pub entities: HashMap<String, EntityRef>,
     /// Available catalog entries for catalog reference validation  
-    pub catalogs: HashMap<std::string::String, CatalogRef>,
+    pub catalogs: HashMap<String, CatalogRef>,
     /// Validation settings and options
     pub strict_mode: bool,
 }
@@ -159,7 +159,7 @@ impl ValidationContext {
     }
 
     /// Add an entity to the validation registry
-    pub fn add_entity(&mut self, name: std::string::String, entity_ref: EntityRef) {
+    pub fn add_entity(&mut self, name: String, entity_ref: EntityRef) {
         self.entities.insert(name, entity_ref);
     }
 }
@@ -171,9 +171,9 @@ impl ValidationContext {
 #[derive(Debug, Default)]
 pub struct ParameterContext {
     /// Current parameter values by name
-    pub parameters: HashMap<std::string::String, std::string::String>,
+    pub parameters: HashMap<String, String>,
     /// Parameter declaration scope (for nested parameter sets)
-    pub scope: Vec<std::string::String>,
+    pub scope: Vec<String>,
 }
 
 impl ParameterContext {
@@ -183,7 +183,7 @@ impl ParameterContext {
     }
 
     /// Add a parameter value
-    pub fn with_parameter(mut self, name: std::string::String, value: std::string::String) -> Self {
+    pub fn with_parameter(mut self, name: String, value: String) -> Self {
         self.parameters.insert(name, value);
         self
     }
@@ -198,7 +198,7 @@ impl ParameterContext {
 #[derive(Debug, Clone)]
 pub struct EntityRef {
     /// Entity name
-    pub name: std::string::String,
+    pub name: String,
     /// Entity type
     pub object_type: ObjectType,
 }
@@ -207,9 +207,9 @@ pub struct EntityRef {
 #[derive(Debug, Clone)]
 pub struct CatalogRef {
     /// Catalog name
-    pub catalog: std::string::String,
+    pub catalog: String,
     /// Entry name within the catalog
-    pub entry: std::string::String,
+    pub entry: String,
 }
 
 // Default implementations for basic types
