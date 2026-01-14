@@ -10,13 +10,17 @@
 use crate::types::enums::ConditionEdge;
 
 pub mod entity; // Entity-based conditions
+pub mod spatial; // Spatial conditions
 pub mod value; // Value-based conditions
 
+// Re-export spatial conditions for convenience
+pub use spatial::{DistanceCondition, ReachPositionCondition, RelativeDistanceCondition};
+
+// Keep entity-specific re-exports
 pub use entity::{
     AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition, CollisionTarget,
-    DistanceCondition, EndOfRoadCondition, EntityCondition, OffRoadCondition, OffroadCondition,
-    ReachPositionCondition, RelativeAngleCondition, RelativeClearanceCondition,
-    RelativeDistanceCondition, RelativeLaneRange, RelativeSpeedCondition, SpeedCondition,
+    EndOfRoadCondition, EntityCondition, OffroadCondition, RelativeAngleCondition,
+    RelativeClearanceCondition, RelativeLaneRange, RelativeSpeedCondition, SpeedCondition,
     StandStillCondition, TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
     TraveledDistanceCondition,
 };

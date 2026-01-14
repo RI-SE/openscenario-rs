@@ -20,7 +20,7 @@ pub struct ReachPositionCondition {
     /// Target position to reach
     #[serde(rename = "Position")]
     pub position: Position,
-    
+
     /// Distance tolerance for considering position reached
     #[serde(rename = "@tolerance")]
     pub tolerance: Double,
@@ -33,31 +33,34 @@ pub struct DistanceCondition {
     /// Reference position for distance measurement
     #[serde(rename = "Position")]
     pub position: Position,
-    
+
     /// Distance value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Whether to use freespace (true) or reference point (false) distance
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
-    
+
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Whether to measure distance along route (deprecated)
     #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
     pub along_route: Option<Boolean>,
-    
+
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    
+
     /// Type of relative distance measurement
-    #[serde(rename = "@relativeDistanceType", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@relativeDistanceType",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub relative_distance_type: Option<RelativeDistanceType>,
-    
+
     /// Algorithm for route-based distance calculation
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
@@ -70,27 +73,27 @@ pub struct RelativeDistanceCondition {
     /// Reference entity for distance measurement
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    
+
     /// Distance value to compare against
     #[serde(rename = "@value")]
     pub value: Double,
-    
+
     /// Whether to use freespace (true) or reference point (false) distance
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
-    
+
     /// Type of relative distance measurement
     #[serde(rename = "@relativeDistanceType")]
     pub relative_distance_type: RelativeDistanceType,
-    
+
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
     pub rule: Rule,
-    
+
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    
+
     /// Algorithm for route-based distance calculation
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
@@ -105,11 +108,11 @@ impl ReachPositionCondition {
             tolerance: Double::literal(tolerance),
         }
     }
-    
+
     /// Create with world position
     pub fn at_world_position(x: f64, y: f64, z: f64, h: f64, tolerance: f64) -> Self {
         use crate::types::positions::WorldPosition;
-        
+
         let world_pos = WorldPosition {
             x: Double::literal(x),
             y: Double::literal(y),
@@ -123,19 +126,14 @@ impl ReachPositionCondition {
         position.relative_world_position = None;
         position.road_position = None;
         position.lane_position = None;
-        
+
         Self::new(position, tolerance)
     }
 }
 
 impl DistanceCondition {
     /// Create a new distance condition
-    pub fn new(
-        position: Position,
-        value: f64,
-        freespace: bool,
-        rule: Rule,
-    ) -> Self {
+    pub fn new(position: Position, value: f64, freespace: bool, rule: Rule) -> Self {
         Self {
             position,
             value: Double::literal(value),
@@ -147,30 +145,30 @@ impl DistanceCondition {
             routing_algorithm: None,
         }
     }
-    
+
     /// Set coordinate system for distance measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
         self.coordinate_system = Some(system);
         self
     }
-    
+
     /// Set distance measurement type
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
         self.relative_distance_type = Some(distance_type);
         self
     }
-    
+
     /// Set routing algorithm for route-based distance
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
         self.routing_algorithm = Some(algorithm);
         self
     }
-    
+
     /// Create condition for distance less than threshold
     pub fn less_than(position: Position, distance: f64, freespace: bool) -> Self {
         Self::new(position, distance, freespace, Rule::LessThan)
     }
-    
+
     /// Create condition for distance greater than threshold
     pub fn greater_than(position: Position, distance: f64, freespace: bool) -> Self {
         Self::new(position, distance, freespace, Rule::GreaterThan)
@@ -196,19 +194,19 @@ impl RelativeDistanceCondition {
             routing_algorithm: None,
         }
     }
-    
+
     /// Set coordinate system for distance measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
         self.coordinate_system = Some(system);
         self
     }
-    
+
     /// Set routing algorithm for route-based distance
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
         self.routing_algorithm = Some(algorithm);
         self
     }
-    
+
     /// Create longitudinal distance condition
     pub fn longitudinal(
         entity_ref: impl Into<OSString>,
@@ -216,9 +214,15 @@ impl RelativeDistanceCondition {
         freespace: bool,
         rule: Rule,
     ) -> Self {
-        Self::new(entity_ref, distance, freespace, RelativeDistanceType::Longitudinal, rule)
+        Self::new(
+            entity_ref,
+            distance,
+            freespace,
+            RelativeDistanceType::Longitudinal,
+            rule,
+        )
     }
-    
+
     /// Create lateral distance condition
     pub fn lateral(
         entity_ref: impl Into<OSString>,
@@ -226,9 +230,15 @@ impl RelativeDistanceCondition {
         freespace: bool,
         rule: Rule,
     ) -> Self {
-        Self::new(entity_ref, distance, freespace, RelativeDistanceType::Lateral, rule)
+        Self::new(
+            entity_ref,
+            distance,
+            freespace,
+            RelativeDistanceType::Lateral,
+            rule,
+        )
     }
-    
+
     /// Create cartesian distance condition
     pub fn cartesian(
         entity_ref: impl Into<OSString>,
@@ -236,7 +246,13 @@ impl RelativeDistanceCondition {
         freespace: bool,
         rule: Rule,
     ) -> Self {
-        Self::new(entity_ref, distance, freespace, RelativeDistanceType::Cartesian, rule)
+        Self::new(
+            entity_ref,
+            distance,
+            freespace,
+            RelativeDistanceType::Cartesian,
+            rule,
+        )
     }
 }
 
@@ -287,10 +303,10 @@ mod tests {
     #[test]
     fn test_reach_position_condition_creation() {
         let condition = ReachPositionCondition::at_world_position(100.0, 200.0, 0.0, 1.57, 2.0);
-        
+
         assert_eq!(condition.tolerance, Double::literal(2.0));
         assert!(condition.position.world_position.is_some());
-        
+
         let world_pos = condition.position.world_position.unwrap();
         assert_eq!(world_pos.x, Double::literal(100.0));
         assert_eq!(world_pos.y, Double::literal(200.0));
@@ -302,45 +318,84 @@ mod tests {
         let condition = DistanceCondition::less_than(position, 50.0, true)
             .with_coordinate_system(CoordinateSystem::Entity)
             .with_distance_type(RelativeDistanceType::Cartesian);
-        
+
         assert_eq!(condition.value, Double::literal(50.0));
         assert_eq!(condition.freespace, Boolean::literal(true));
         assert_eq!(condition.rule, Rule::LessThan);
         assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Entity));
-        assert_eq!(condition.relative_distance_type, Some(RelativeDistanceType::Cartesian));
+        assert_eq!(
+            condition.relative_distance_type,
+            Some(RelativeDistanceType::Cartesian)
+        );
     }
 
     #[test]
     fn test_relative_distance_condition_types() {
-        let longitudinal = RelativeDistanceCondition::longitudinal("vehicle1", 20.0, false, Rule::GreaterThan);
-        assert_eq!(longitudinal.relative_distance_type, RelativeDistanceType::Longitudinal);
-        
-        let lateral = RelativeDistanceCondition::lateral("vehicle2", 5.0, true, Rule::LessThan);
-        assert_eq!(lateral.relative_distance_type, RelativeDistanceType::Lateral);
-        
-        let cartesian = RelativeDistanceCondition::cartesian("vehicle3", 15.0, true, Rule::EqualTo);
-        assert_eq!(cartesian.relative_distance_type, RelativeDistanceType::Cartesian);
+        use crate::types::basic::OSString;
+
+        let longitudinal = RelativeDistanceCondition::longitudinal(
+            OSString::literal("vehicle1".to_string()),
+            20.0,
+            false,
+            Rule::GreaterThan,
+        );
+        assert_eq!(
+            longitudinal.relative_distance_type,
+            RelativeDistanceType::Longitudinal
+        );
+
+        let lateral = RelativeDistanceCondition::lateral(
+            OSString::literal("vehicle2".to_string()),
+            5.0,
+            true,
+            Rule::LessThan,
+        );
+        assert_eq!(
+            lateral.relative_distance_type,
+            RelativeDistanceType::Lateral
+        );
+
+        let cartesian = RelativeDistanceCondition::cartesian(
+            OSString::literal("vehicle3".to_string()),
+            15.0,
+            true,
+            Rule::EqualTo,
+        );
+        assert_eq!(
+            cartesian.relative_distance_type,
+            RelativeDistanceType::Cartesian
+        );
     }
 
     #[test]
     fn test_spatial_condition_defaults() {
         let reach_pos = ReachPositionCondition::default();
         assert_eq!(reach_pos.tolerance, Double::literal(1.0));
-        
+
         let distance = DistanceCondition::default();
         assert_eq!(distance.value, Double::literal(10.0));
         assert_eq!(distance.rule, Rule::LessThan);
-        
+
         let relative_distance = RelativeDistanceCondition::default();
-        assert_eq!(relative_distance.relative_distance_type, RelativeDistanceType::Cartesian);
+        assert_eq!(
+            relative_distance.relative_distance_type,
+            RelativeDistanceType::Cartesian
+        );
         assert_eq!(relative_distance.rule, Rule::LessThan);
     }
 
     #[test]
     fn test_xml_serialization() {
-        let condition = RelativeDistanceCondition::cartesian("ego_vehicle", 25.0, true, Rule::GreaterThan)
-            .with_coordinate_system(CoordinateSystem::Road);
-        
+        use crate::types::basic::OSString;
+
+        let condition = RelativeDistanceCondition::cartesian(
+            OSString::literal("ego_vehicle".to_string()),
+            25.0,
+            true,
+            Rule::GreaterThan,
+        )
+        .with_coordinate_system(CoordinateSystem::Road);
+
         let xml = quick_xml::se::to_string(&condition).expect("Failed to serialize");
         assert!(xml.contains("entityRef=\"ego_vehicle\""));
         assert!(xml.contains("value=\"25\""));
