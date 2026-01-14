@@ -9,6 +9,7 @@
 //! - Real-world autonomous driving scenario examples
 
 use openscenario_rs::types::{
+    basic::OSString,
     conditions::{DistanceCondition, ReachPositionCondition, RelativeDistanceCondition},
     enums::{CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule},
     positions::Position,
@@ -64,7 +65,7 @@ fn main() {
     println!("-------------------------------------------");
 
     let following_condition = RelativeDistanceCondition::longitudinal(
-        "lead_vehicle",
+        OSString::literal("lead_vehicle".to_string()),
         20.0,
         true, // freespace distance
         Rule::GreaterThan,
@@ -82,7 +83,7 @@ fn main() {
     println!("-----------------------------------------");
 
     let lane_change_condition = RelativeDistanceCondition::lateral(
-        "adjacent_vehicle",
+        OSString::literal("adjacent_vehicle".to_string()),
         3.0,
         true, // freespace
         Rule::GreaterThan,
@@ -106,9 +107,13 @@ fn main() {
     let merge_approach = ReachPositionCondition::at_world_position(2000.0, 500.0, 0.0, 0.0, 5.0);
 
     // Condition 2: Safe gap in traffic
-    let gap_condition =
-        RelativeDistanceCondition::longitudinal("highway_traffic", 30.0, true, Rule::GreaterThan)
-            .with_coordinate_system(CoordinateSystem::Road);
+    let gap_condition = RelativeDistanceCondition::longitudinal(
+        OSString::literal("highway_traffic".to_string()),
+        30.0,
+        true,
+        Rule::GreaterThan,
+    )
+    .with_coordinate_system(CoordinateSystem::Road);
 
     // Condition 3: Minimum speed for merge
     // (This would use SpeedCondition, but we'll describe it)
@@ -124,7 +129,7 @@ fn main() {
     println!("----------------------------");
 
     let demo_condition = RelativeDistanceCondition::cartesian(
-        "ego_vehicle",
+        OSString::literal("ego_vehicle".to_string()),
         15.0,
         false, // reference point distance
         Rule::LessOrEqual,
@@ -159,10 +164,18 @@ mod tests {
         // Verify all demo conditions can be created without panics
         let _waypoint = ReachPositionCondition::at_world_position(1250.0, 850.0, 0.0, 1.57, 2.0);
         let _intersection = DistanceCondition::less_than(Position::default(), 50.0, true);
-        let _following =
-            RelativeDistanceCondition::longitudinal("lead", 20.0, true, Rule::GreaterThan);
-        let _lane_change =
-            RelativeDistanceCondition::lateral("adjacent", 3.0, true, Rule::GreaterThan);
+        let _following = RelativeDistanceCondition::longitudinal(
+            OSString::literal("lead".to_string()),
+            20.0,
+            true,
+            Rule::GreaterThan,
+        );
+        let _lane_change = RelativeDistanceCondition::lateral(
+            OSString::literal("adjacent".to_string()),
+            3.0,
+            true,
+            Rule::GreaterThan,
+        );
 
         // If we get here, all conditions compiled successfully
         assert!(true);

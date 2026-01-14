@@ -10,10 +10,10 @@ use openscenario_rs::types::positions::*;
 fn main() {
     println!("=== OpenSCENARIO Action Wrapper Types Demo ===\n");
 
-    // Demonstrate CoreAction with PrivateAction
+    // Demonstrate Action with PrivateAction
     demonstrate_private_actions();
 
-    // Demonstrate CoreAction with GlobalAction
+    // Demonstrate Action with GlobalAction
     demonstrate_global_actions();
 
     // Demonstrate individual Override actions
@@ -31,22 +31,22 @@ fn demonstrate_private_actions() {
 
     // Create a TeleportAction wrapped in PrivateAction
     let teleport_action = TeleportAction::default();
-    let private_action = CorePrivateAction::TeleportAction(teleport_action);
-    let core_action = CoreAction::PrivateAction(private_action);
+    let private_action = PrivateAction::TeleportAction(teleport_action);
+    let core_action = Action::PrivateAction(private_action);
 
     println!("   - Created TeleportAction wrapped in PrivateAction");
 
     // Create a LongitudinalAction wrapped in PrivateAction
     let longitudinal_action = LongitudinalAction::default();
-    let private_action = CorePrivateAction::LongitudinalAction(longitudinal_action);
-    let core_action = CoreAction::PrivateAction(private_action);
+    let private_action = PrivateAction::LongitudinalAction(longitudinal_action);
+    let core_action = Action::PrivateAction(private_action);
 
     println!("   - Created LongitudinalAction wrapped in PrivateAction");
 
     // Create a ControllerAction wrapped in PrivateAction
     let controller_action = ControllerAction::default();
-    let private_action = CorePrivateAction::ControllerAction(controller_action);
-    let core_action = CoreAction::PrivateAction(private_action);
+    let private_action = PrivateAction::ControllerAction(controller_action);
+    let core_action = Action::PrivateAction(private_action);
 
     println!("   - Created ControllerAction wrapped in PrivateAction\n");
 }
@@ -55,31 +55,31 @@ fn demonstrate_global_actions() {
     println!("2. Global Actions:");
 
     // Create a TrafficAction wrapped in GlobalAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("highway_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
     };
-    let global_action = CoreGlobalAction::TrafficAction(traffic_action);
-    let core_action = CoreAction::GlobalAction(global_action);
+    let global_action = GlobalAction::TrafficAction(traffic_action);
+    let action = Action::GlobalAction(global_action);
 
     println!("   - Created TrafficSourceAction wrapped in GlobalAction");
 
     // Create an EntityAction wrapped in GlobalAction
-    let entity_action = CoreEntityAction {
+    let entity_action = EntityAction {
         entity_ref: Value::Literal("vehicle_001".to_string()),
-        action: CoreEntityActionChoice::DeleteEntityAction(CoreDeleteEntityAction::default()),
+        action: EntityActionChoice::DeleteEntityAction(DeleteEntityAction::default()),
     };
-    let global_action = CoreGlobalAction::EntityAction(entity_action);
-    let core_action = CoreAction::GlobalAction(global_action);
+    let global_action = GlobalAction::EntityAction(entity_action);
+    let core_action = Action::GlobalAction(global_action);
 
     println!("   - Created EntityAction wrapped in GlobalAction");
 
     // Create an InfrastructureAction wrapped in GlobalAction
-    let infra_action = CoreInfrastructureAction {
+    let infra_action = InfrastructureAction {
         traffic_signal_action: TrafficSignalAction::default(),
     };
-    let global_action = CoreGlobalAction::InfrastructureAction(infra_action);
-    let core_action = CoreAction::GlobalAction(global_action);
+    let global_action = GlobalAction::InfrastructureAction(infra_action);
+    let core_action = Action::GlobalAction(global_action);
 
     println!("   - Created InfrastructureAction wrapped in GlobalAction\n");
 }
@@ -154,12 +154,12 @@ fn demonstrate_entity_actions() {
     println!("4. Entity Actions:");
 
     // Create AddEntityAction
-    let add_entity = CoreAddEntityAction {
+    let add_entity = AddEntityAction {
         position: Position::default(),
     };
-    let entity_action = CoreEntityAction {
+    let entity_action = EntityAction {
         entity_ref: Value::Literal("new_vehicle".to_string()),
-        action: CoreEntityActionChoice::AddEntityAction(add_entity),
+        action: EntityActionChoice::AddEntityAction(add_entity),
     };
     println!(
         "   - Created AddEntityAction for entity: {}",
@@ -167,10 +167,10 @@ fn demonstrate_entity_actions() {
     );
 
     // Create DeleteEntityAction
-    let delete_entity = CoreDeleteEntityAction::default();
-    let entity_action = CoreEntityAction {
+    let delete_entity = DeleteEntityAction::default();
+    let entity_action = EntityAction {
         entity_ref: Value::Literal("old_vehicle".to_string()),
-        action: CoreEntityActionChoice::DeleteEntityAction(delete_entity),
+        action: EntityActionChoice::DeleteEntityAction(delete_entity),
     };
     println!(
         "   - Created DeleteEntityAction for entity: {}\n",
@@ -182,9 +182,9 @@ fn demonstrate_traffic_actions() {
     println!("5. Traffic Actions:");
 
     // Create TrafficSourceAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("city_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
     };
     println!(
         "   - Created TrafficSourceAction with name: {:?}",
@@ -192,16 +192,16 @@ fn demonstrate_traffic_actions() {
     );
 
     // Create TrafficSinkAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: None,
-        action: CoreTrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
+        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
     };
     println!("   - Created TrafficSinkAction with no name");
 
     // Create TrafficSwarmAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("swarm_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficSwarmAction(TrafficSwarmAction::default()),
+        action: TrafficActionChoice::TrafficSwarmAction(TrafficSwarmAction::default()),
     };
     println!(
         "   - Created TrafficSwarmAction with name: {:?}",
@@ -209,9 +209,9 @@ fn demonstrate_traffic_actions() {
     );
 
     // Create TrafficAreaAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("area_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficAreaAction(TrafficAreaAction::default()),
+        action: TrafficActionChoice::TrafficAreaAction(TrafficAreaAction::default()),
     };
     println!(
         "   - Created TrafficAreaAction with name: {:?}",
@@ -219,9 +219,9 @@ fn demonstrate_traffic_actions() {
     );
 
     // Create TrafficStopAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("stop_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+        action: TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
     };
     println!(
         "   - Created TrafficStopAction with name: {:?}\n",
