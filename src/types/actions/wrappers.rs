@@ -18,30 +18,30 @@ use super::{
 // Main Action wrapper type matching XSD schema
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub enum CoreAction {
-    GlobalAction(CoreGlobalAction),
-    UserDefinedAction(CoreUserDefinedAction),
-    PrivateAction(CorePrivateAction),
+pub enum Action {
+    GlobalAction(GlobalAction),
+    UserDefinedAction(UserDefinedAction),
+    PrivateAction(PrivateAction),
 }
 
 // GlobalAction wrapper type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub enum CoreGlobalAction {
-    EnvironmentAction(CoreEnvironmentAction),
-    EntityAction(CoreEntityAction),
-    InfrastructureAction(CoreInfrastructureAction),
-    SetMonitorAction(CoreSetMonitorAction),
+pub enum GlobalAction {
+    EnvironmentAction(EnvironmentAction),
+    EntityAction(EntityAction),
+    InfrastructureAction(InfrastructureAction),
+    SetMonitorAction(SetMonitorAction),
     #[serde(rename = "ParameterAction")]
-    ParameterAction(CoreParameterAction), // deprecated
-    TrafficAction(CoreTrafficAction),
-    VariableAction(CoreVariableAction),
+    ParameterAction(ParameterAction), // deprecated
+    TrafficAction(TrafficAction),
+    VariableAction(VariableAction),
 }
 
 // PrivateAction wrapper type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub enum CorePrivateAction {
+pub enum PrivateAction {
     LongitudinalAction(LongitudinalAction),
     LateralAction(LateralAction),
     VisibilityAction(VisibilityAction),
@@ -56,32 +56,32 @@ pub enum CorePrivateAction {
 
 // EntityAction wrapper type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CoreEntityAction {
+pub struct EntityAction {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(flatten)]
-    pub action: CoreEntityActionChoice,
+    pub action: EntityActionChoice,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub enum CoreEntityActionChoice {
-    AddEntityAction(CoreAddEntityAction),
-    DeleteEntityAction(CoreDeleteEntityAction),
+pub enum EntityActionChoice {
+    AddEntityAction(AddEntityAction),
+    DeleteEntityAction(DeleteEntityAction),
 }
 
 // TrafficAction wrapper type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CoreTrafficAction {
+pub struct TrafficAction {
     #[serde(rename = "@trafficName", skip_serializing_if = "Option::is_none")]
     pub traffic_name: Option<OSString>,
     #[serde(flatten)]
-    pub action: CoreTrafficActionChoice,
+    pub action: TrafficActionChoice,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub enum CoreTrafficActionChoice {
+pub enum TrafficActionChoice {
     TrafficSourceAction(TrafficSourceAction),
     TrafficSinkAction(TrafficSinkAction),
     TrafficSwarmAction(TrafficSwarmAction),
@@ -92,43 +92,43 @@ pub enum CoreTrafficActionChoice {
 // InfrastructureAction wrapper type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub struct CoreInfrastructureAction {
+pub struct InfrastructureAction {
     pub traffic_signal_action: TrafficSignalAction,
 }
 
 // AddEntityAction type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-pub struct CoreAddEntityAction {
+pub struct AddEntityAction {
     pub position: Position,
 }
 
 // DeleteEntityAction type (empty per XSD)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct CoreDeleteEntityAction {}
+pub struct DeleteEntityAction {}
 
 // UserDefinedAction placeholder
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CoreUserDefinedAction {
+pub struct UserDefinedAction {
     #[serde(rename = "CustomCommandAction")]
-    pub custom_command_action: CoreCustomCommandAction,
+    pub custom_command_action: CustomCommandAction,
 }
 
 // CustomCommandAction placeholder
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct CoreCustomCommandAction {
+pub struct CustomCommandAction {
     // Implementation depends on specific use case
 }
 
 // Environment Action (placeholder for now)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct CoreEnvironmentAction {
+pub struct EnvironmentAction {
     // Will be implemented when environment types are available
 }
 
 // Monitor Action - Set monitor state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CoreSetMonitorAction {
+pub struct SetMonitorAction {
     #[serde(rename = "@enable")]
     pub enable: Boolean,
     #[serde(rename = "@monitorName", skip_serializing_if = "Option::is_none")]
@@ -137,7 +137,7 @@ pub struct CoreSetMonitorAction {
 
 // Variable Action System
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CoreVariableAction {
+pub struct VariableAction {
     #[serde(rename = "@variableRef")]
     pub variable_ref: OSString,
     #[serde(flatten)]
@@ -184,7 +184,7 @@ pub struct VariableMultiplyByValueRule {
 
 // Parameter Action System (deprecated but needed for compatibility)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CoreParameterAction {
+pub struct ParameterAction {
     #[serde(rename = "@parameterRef")]
     pub parameter_ref: OSString,
     #[serde(flatten)]
@@ -229,42 +229,14 @@ pub struct ParameterMultiplyByValueRule {
     pub value: Double,
 }
 
-// Main Action wrapper type matching XSD schema
+// Named Action wrapper type matching XSD schema
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Action {
+pub struct NamedAction {
     #[serde(rename = "@name")]
     pub name: OSString,
     #[serde(flatten)]
-    pub action: CoreAction,
+    pub action: Action,
 }
-
-// PrivateAction wrapper type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PrivateAction {
-    #[serde(flatten)]
-    pub action: CorePrivateAction,
-}
-
-// EntityAction wrapper type (already exists as CoreEntityAction)
-pub type EntityAction = CoreEntityAction;
-
-// InfrastructureAction wrapper type (already exists as CoreInfrastructureAction)
-pub type InfrastructureAction = CoreInfrastructureAction;
-
-// UserDefinedAction wrapper type (already exists as CoreUserDefinedAction)
-pub type UserDefinedAction = CoreUserDefinedAction;
-
-// VariableAction wrapper type (already exists as CoreVariableAction)
-pub type VariableAction = CoreVariableAction;
-
-// ParameterAction wrapper type (already exists as CoreParameterAction)
-pub type ParameterAction = CoreParameterAction;
-
-// SetMonitorAction wrapper type (already exists as CoreSetMonitorAction)
-pub type SetMonitorAction = CoreSetMonitorAction;
-
-// TrafficAction wrapper type (already exists as CoreTrafficAction)
-pub type TrafficAction = CoreTrafficAction;
 
 // Additional action types for completeness
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -275,114 +247,88 @@ pub struct RandomRouteAction {
     pub random_seed: Option<UnsignedInt>,
 }
 
-// Define Action wrapper with common attributes (legacy name for compatibility)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoreActionWrapper {
-    #[serde(rename = "@name")]
-    pub name: OSString,
-    #[serde(flatten)]
-    pub action: CoreAction,
-}
-
 // Default implementations
-impl Default for CoreAction {
-    fn default() -> Self {
-        CoreAction::PrivateAction(CorePrivateAction::TeleportAction(TeleportAction::default()))
-    }
-}
-
-impl Default for CoreGlobalAction {
-    fn default() -> Self {
-        CoreGlobalAction::TrafficAction(CoreTrafficAction::default())
-    }
-}
-
-impl Default for CorePrivateAction {
-    fn default() -> Self {
-        CorePrivateAction::TeleportAction(TeleportAction::default())
-    }
-}
-
-impl Default for CoreEntityAction {
-    fn default() -> Self {
-        CoreEntityAction {
-            entity_ref: OSString::literal("defaultEntity".to_string()),
-            action: CoreEntityActionChoice::DeleteEntityAction(CoreDeleteEntityAction::default()),
-        }
-    }
-}
-
-impl Default for CoreTrafficAction {
-    fn default() -> Self {
-        CoreTrafficAction {
-            traffic_name: None,
-            action: CoreTrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
-        }
-    }
-}
-
-impl Default for CoreInfrastructureAction {
-    fn default() -> Self {
-        CoreInfrastructureAction {
-            traffic_signal_action: TrafficSignalAction::default(),
-        }
-    }
-}
-
-impl Default for CoreAddEntityAction {
-    fn default() -> Self {
-        CoreAddEntityAction {
-            position: Position::default(),
-        }
-    }
-}
-
-impl Default for CoreUserDefinedAction {
-    fn default() -> Self {
-        CoreUserDefinedAction {
-            custom_command_action: CoreCustomCommandAction::default(),
-        }
-    }
-}
-
-impl Default for CoreActionWrapper {
-    fn default() -> Self {
-        CoreActionWrapper {
-            name: OSString::literal("defaultTraffic".to_string()),
-            action: CoreAction::default(),
-        }
-    }
-}
-
 impl Default for Action {
     fn default() -> Self {
-        Action {
-            name: OSString::literal("defaultAction".to_string()),
-            action: CoreAction::default(),
-        }
+        Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default()))
+    }
+}
+
+impl Default for GlobalAction {
+    fn default() -> Self {
+        GlobalAction::TrafficAction(TrafficAction::default())
     }
 }
 
 impl Default for PrivateAction {
     fn default() -> Self {
-        PrivateAction {
-            action: CorePrivateAction::default(),
+        PrivateAction::TeleportAction(TeleportAction::default())
+    }
+}
+
+impl Default for EntityAction {
+    fn default() -> Self {
+        EntityAction {
+            entity_ref: OSString::literal("defaultEntity".to_string()),
+            action: EntityActionChoice::DeleteEntityAction(DeleteEntityAction::default()),
         }
     }
 }
 
-impl Default for CoreSetMonitorAction {
+impl Default for TrafficAction {
     fn default() -> Self {
-        CoreSetMonitorAction {
+        TrafficAction {
+            traffic_name: None,
+            action: TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+        }
+    }
+}
+
+impl Default for InfrastructureAction {
+    fn default() -> Self {
+        InfrastructureAction {
+            traffic_signal_action: TrafficSignalAction::default(),
+        }
+    }
+}
+
+impl Default for AddEntityAction {
+    fn default() -> Self {
+        AddEntityAction {
+            position: Position::default(),
+        }
+    }
+}
+
+impl Default for UserDefinedAction {
+    fn default() -> Self {
+        UserDefinedAction {
+            custom_command_action: CustomCommandAction::default(),
+        }
+    }
+}
+
+impl Default for NamedAction {
+    fn default() -> Self {
+        NamedAction {
+            name: OSString::literal("defaultTraffic".to_string()),
+            action: Action::default(),
+        }
+    }
+}
+
+impl Default for SetMonitorAction {
+    fn default() -> Self {
+        SetMonitorAction {
             enable: Boolean::literal(true),
             monitor_name: None,
         }
     }
 }
 
-impl Default for CoreVariableAction {
+impl Default for VariableAction {
     fn default() -> Self {
-        CoreVariableAction {
+        VariableAction {
             variable_ref: OSString::literal("defaultVariable".to_string()),
             action: VariableActionChoice::VariableSetAction(VariableSetAction::default()),
         }
@@ -421,9 +367,9 @@ impl Default for VariableMultiplyByValueRule {
     }
 }
 
-impl Default for CoreParameterAction {
+impl Default for ParameterAction {
     fn default() -> Self {
-        CoreParameterAction {
+        ParameterAction {
             parameter_ref: OSString::literal("defaultParameter".to_string()),
             action: ParameterActionChoice::ParameterSetAction(ParameterSetAction::default()),
         }
