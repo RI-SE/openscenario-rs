@@ -19,6 +19,7 @@
 //! use openscenario_rs::parser::validation::ScenarioValidator;
 //! use openscenario_rs::parser::xml::parse_from_file;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse and validate a scenario
 //! let scenario = parse_from_file("scenario.xosc")?;
 //! let mut validator = ScenarioValidator::new();
@@ -43,13 +44,18 @@
 //!         println!("  - {}: {}", warning.location, warning.message);
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Custom Validation Configuration
 //!
 //! ```rust,no_run
 //! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
+//! use openscenario_rs::parse_from_file;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let scenario = parse_from_file("scenario.xosc")?;
 //! let config = ValidationConfig {
 //!     strict_mode: true,           // Treat warnings as errors
 //!     validate_references: true,   // Check entity/catalog references
@@ -64,6 +70,8 @@
 //!
 //! println!("Validation completed in {}ms", result.metrics.duration_ms);
 //! println!("Validated {} elements", result.metrics.elements_validated);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Validation Categories
@@ -101,6 +109,7 @@
 //! ```rust
 //! use openscenario_rs::parser::validation::ValidationErrorCategory;
 //!
+//! # let result = openscenario_rs::parser::validation::ValidationResult::new();
 //! for error in &result.errors {
 //!     match error.category {
 //!         ValidationErrorCategory::MissingRequired => {
@@ -135,7 +144,12 @@
 //!
 //! For large scenarios or repeated validations:
 //!
-//! ```rust
+//! ```rust,no_run
+//! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
+//! use openscenario_rs::parser::xml::parse_from_file;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let scenario_files = vec!["scenario1.xosc", "scenario2.xosc"];
 //! let config = ValidationConfig {
 //!     use_cache: true,         // Enable validation caching
 //!     max_errors: 20,          // Stop early to save time
@@ -149,9 +163,11 @@
 //! for scenario_file in scenario_files {
 //!     let scenario = parse_from_file(scenario_file)?;
 //!     let result = validator.validate_scenario(&scenario);
-//!     
+//!
 //!     println!("Cache hit ratio: {:.1}%", result.metrics.cache_hit_ratio * 100.0);
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Integration with Parsing

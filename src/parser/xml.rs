@@ -18,6 +18,7 @@
 //! ```rust,no_run
 //! use openscenario_rs::{parse_from_file, parse_from_str};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse from file with automatic error context
 //! let scenario = parse_from_file("my_scenario.xosc")?;
 //! println!("Scenario author: {}", scenario.file_header.author);
@@ -32,6 +33,8 @@
 //!   </ScenarioDefinition>
 //! </OpenSCENARIO>"#;
 //! let scenario = parse_from_str(xml)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Serialization
@@ -39,12 +42,16 @@
 //! ```rust,no_run
 //! use openscenario_rs::{serialize_to_string, serialize_to_file};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let scenario = openscenario_rs::parse_from_file("scenario.xosc")?;
 //! // Serialize to formatted XML string
 //! let xml_output = serialize_to_string(&scenario)?;
 //! println!("{}", xml_output);
 //!
 //! // Write directly to file
 //! serialize_to_file(&scenario, "output.xosc")?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Catalog File Operations
@@ -55,14 +62,18 @@
 //!     parse_catalog_from_str_validated
 //! };
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse vehicle catalog
 //! let catalog = parse_catalog_from_file("vehicles.xosc")?;
 //!
 //! // Validate catalog structure
+//! let catalog_xml = openscenario_rs::serialize_catalog_to_string(&catalog)?;
 //! let validated_catalog = parse_catalog_from_str_validated(&catalog_xml)?;
 //!
 //! // Export modified catalog
 //! serialize_catalog_to_file(&catalog, "updated_vehicles.xosc")?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Error Handling

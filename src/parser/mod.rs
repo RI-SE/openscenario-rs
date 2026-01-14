@@ -13,10 +13,11 @@
 //!
 //! # Basic Usage
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::xml::{parse_from_file, parse_from_str};
 //! use openscenario_rs::parser::validation::ScenarioValidator;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse a scenario file
 //! let scenario = parse_from_file("scenario.xosc")?;
 //!
@@ -39,15 +40,19 @@
 //!         println!("Error: {}", error.message);
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Advanced Features
 //!
 //! ## Custom Validation Configuration
 //!
-//! ```rust
+//! ```rust,no_run
 //! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let scenario = openscenario_rs::parse_from_file("scenario.xosc")?;
 //! let config = ValidationConfig {
 //!     strict_mode: true,
 //!     validate_references: true,
@@ -58,19 +63,6 @@
 //!
 //! let mut validator = ScenarioValidator::with_config(config);
 //! let result = validator.validate_scenario(&scenario);
-//! ```
-//!
-//! ## Catalog File Parsing
-//!
-//! ```rust,no_run
-//! use openscenario_rs::parser::xml::{parse_catalog_from_file, serialize_catalog_to_file};
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Parse a catalog file
-//! let catalog = parse_catalog_from_file("vehicles.xosc")?;
-//!
-//! // Serialize back to file
-//! serialize_catalog_to_file(&catalog, "output_catalog.xosc")?;
 //! # Ok(())
 //! # }
 //! ```
