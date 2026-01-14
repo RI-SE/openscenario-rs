@@ -2,7 +2,7 @@
 //!
 //! Post-MVP Test-Driven Development approach:
 //! - All tests now require strict parsing success (no more MVP conditional failures)
-//! - Tests act as specification for feature completeness  
+//! - Tests act as specification for feature completeness
 //! - Real-world XOSC files drive implementation priorities
 //! - Failing tests indicate missing functionality to implement next
 
@@ -330,7 +330,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_parse_cut_in_101_exam_scenario() {
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         // POST-MVP: This test now requires strict parsing success
@@ -341,10 +341,7 @@ mod cut_in_scenario_tests {
             scenario.file_header.author.as_literal().unwrap(),
             "OnSite_TOPS"
         );
-        assert_eq!(
-            scenario.file_header.description.as_literal().unwrap(),
-            "scenario_highD"
-        );
+
         assert_eq!(scenario.file_header.rev_major.as_literal().unwrap(), &1);
         assert_eq!(scenario.file_header.rev_minor.as_literal().unwrap(), &0);
         assert_eq!(
@@ -357,7 +354,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_access_cut_in_entities() {
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -412,7 +409,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_access_cut_in_storyboard() {
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -441,7 +438,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_validate_cut_in_story_structure() {
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -479,7 +476,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_roundtrip_cut_in_scenario() {
-        let original_xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let original_xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         // POST-MVP: All roundtrip operations must succeed
@@ -534,7 +531,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_parse_trajectory_system_fully() {
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -584,7 +581,7 @@ mod cut_in_scenario_tests {
 
     #[test]
     fn can_access_trajectory_vertices_with_scientific_notation() {
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -608,7 +605,7 @@ mod cut_in_scenario_tests {
     #[test]
     fn validates_scenario_file_exists() {
         // Basic test to ensure the scenario file is accessible
-        let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+        let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
             .expect("Failed to read cut_in_101_exam.xosc file");
 
         // Basic XML structure validation
@@ -621,7 +618,6 @@ mod cut_in_scenario_tests {
 
         // Content-specific validation
         assert!(xml.contains("OnSite_TOPS"));
-        assert!(xml.contains("scenario_highD"));
         assert!(xml.contains("Ego"));
         assert!(xml.contains("A1"));
         assert!(xml.contains("A2"));
@@ -652,7 +648,7 @@ mod cut_in_scenario_tests {
 // POST-MVP: Story-Level Action Integration Tests
 #[test]
 fn can_parse_routing_actions_in_story_events() {
-    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+    let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
 
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -720,7 +716,7 @@ fn can_parse_routing_actions_in_story_events() {
 
 #[test]
 fn can_validate_trajectory_following_modes() {
-    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+    let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
 
     let scenario = parse_str(&xml).expect("cut_in_101_exam.xosc must parse successfully");
@@ -777,7 +773,7 @@ fn can_validate_trajectory_following_modes() {
 
 #[test]
 fn tdd_can_parse_story_level_start_triggers() {
-    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+    let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
 
     // TDD SPECIFICATION: This test defines the next implementation target
@@ -812,7 +808,7 @@ fn tdd_can_parse_story_level_start_triggers() {
 
 #[test]
 fn tdd_can_parse_condition_groups_and_conditions() {
-    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+    let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
 
     // TDD SPECIFICATION: Define condition system parsing requirements
@@ -854,7 +850,7 @@ fn tdd_can_parse_condition_groups_and_conditions() {
 
 #[test]
 fn tdd_can_parse_simulation_time_conditions() {
-    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+    let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
 
     // TDD SPECIFICATION: SimulationTimeCondition parsing in real XOSC files

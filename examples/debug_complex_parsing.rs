@@ -2,7 +2,7 @@ use openscenario_rs::types::OpenScenarioDocumentType;
 use std::fs;
 
 fn main() {
-    let xml = fs::read_to_string("xosc/cut_in_101_exam.xosc")
+    let xml = fs::read_to_string("tests/data/cut_in_101_exam.xosc")
         .expect("Failed to read cut_in_101_exam.xosc file");
 
     // Try parsing just the root element

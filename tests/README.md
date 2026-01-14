@@ -28,7 +28,7 @@ Comprehensive tests specifically for the `cut_in_101_exam.xosc` scenario file:
 ## Test Data
 
 ### `cut_in_101_exam.xosc`
-A complex OpenSCENARIO file located at `xosc/cut_in_101_exam.xosc` containing:
+A complex OpenSCENARIO file located at `tests/data/cut_in_101_exam.xosc` containing:
 
 - **Entities**: 3 vehicles (Ego, A1, A2) with detailed specifications
 - **File Header**: Metadata including author, date, and version information

@@ -306,6 +306,8 @@ fn test_private_action_choice_group() {
         routing_action: None,
         synchronize_action: None,
         activate_controller_action: None,
+        visibility_action: None,
+        controller_action: None,
     };
     assert!(valid_private.validate().is_ok());
 
@@ -317,6 +319,8 @@ fn test_private_action_choice_group() {
         routing_action: None,
         synchronize_action: None,
         activate_controller_action: None,
+        visibility_action: None,
+        controller_action: None,
     };
     assert!(invalid_private.validate().is_err());
 }
