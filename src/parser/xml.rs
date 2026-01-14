@@ -123,22 +123,8 @@ fn remove_bom(content: &str) -> &str {
     }
 }
 
-/// Parse an OpenSCENARIO document from a string
-///
-/// This function uses quick-xml's serde integration to deserialize
-/// XML into our Rust type system.
-#[must_use = "parsing result should be handled"]
-pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
-    quick_xml::de::from_str(xml)
-        .map_err(Error::from)
-        .map_err(|e| e.with_context("Failed to parse OpenSCENARIO XML"))
-}
-
-/// Parse an OpenSCENARIO document from a file
-///
-/// Reads file into memory and then parses it as a string.
-#[must_use = "parsing result should be handled"]
-pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
+/// Internal helper to parse OpenSCENARIO from file
+fn parse_from_file_internal<P: AsRef<Path>>(path: P, validate_xml: bool) -> Result<OpenScenario> {
     let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
         e.with_context(&format!(
             "Failed to read file metadata: {}",
@@ -161,12 +147,87 @@ pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
 
     let cleaned_content = remove_bom(&xml_content);
 
+    if validate_xml {
+        validate_xml_structure(&cleaned_content).map_err(|e| {
+            e.with_context(&format!(
+                "XML validation failed for file: {}",
+                path.as_ref().display()
+            ))
+        })?;
+    }
+
     parse_from_str(cleaned_content).map_err(|e| {
         e.with_context(&format!(
             "Failed to parse file: {}",
             path.as_ref().display()
         ))
     })
+}
+
+/// Internal helper to parse catalog from file
+fn parse_catalog_from_file_internal<P: AsRef<Path>>(
+    path: P,
+    validate_xml: bool,
+) -> Result<CatalogFile> {
+    let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to read catalog file metadata: {}",
+            path.as_ref().display()
+        ))
+    })?;
+
+    if metadata.len() > MAX_FILE_SIZE {
+        return Err(Error::validation_error(
+            "file_size",
+            &format!("File exceeds maximum size of {} bytes", MAX_FILE_SIZE),
+        ));
+    }
+
+    let xml_content = fs::read_to_string(&path)
+        .map_err(Error::from)
+        .map_err(|e| {
+            e.with_context(&format!(
+                "Failed to read catalog file: {}",
+                path.as_ref().display()
+            ))
+        })?;
+
+    let cleaned_content = remove_bom(&xml_content);
+
+    if validate_xml {
+        validate_catalog_xml_structure(&cleaned_content).map_err(|e| {
+            e.with_context(&format!(
+                "XML validation failed for catalog file: {}",
+                path.as_ref().display()
+            ))
+        })?;
+    }
+
+    parse_catalog_from_str(cleaned_content).map_err(|e| {
+        e.with_context(&format!(
+            "Failed to parse catalog file: {}",
+            path.as_ref().display()
+        ))
+    })
+}
+
+/// Parse an OpenSCENARIO document from a string
+///
+/// This function uses quick-xml's serde integration to deserialize
+/// XML into our Rust type system.
+#[must_use = "parsing result should be handled"]
+pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
+    quick_xml::de::from_str(xml)
+        .map_err(Error::from)
+        .map_err(|e| e.with_context("Failed to parse OpenSCENARIO XML"))
+}
+
+/// Parse an OpenSCENARIO document from a file
+///
+/// Reads file into memory and then parses it as a string.
+#[must_use = "parsing result should be handled"]
+pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
+    parse_from_file_internal(path, false)
 }
 
 /// Serialize an OpenSCENARIO document to XML string
@@ -239,6 +300,7 @@ pub fn validate_xml_structure(xml: &str) -> Result<()> {
 /// Parse with validation
 ///
 /// Validates the XML structure before attempting to parse it.
+#[must_use = "parsing result should be handled"]
 pub fn parse_from_str_validated(xml: &str) -> Result<OpenScenario> {
     validate_xml_structure(xml)?;
     parse_from_str(xml)
@@ -247,19 +309,9 @@ pub fn parse_from_str_validated(xml: &str) -> Result<OpenScenario> {
 /// Parse file with validation
 ///
 /// Validates the XML structure before attempting to parse it.
+#[must_use = "parsing result should be handled"]
 pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
-    let xml_content = fs::read_to_string(&path)
-        .map_err(Error::from)
-        .map_err(|e| {
-            e.with_context(&format!("Failed to read file: {}", path.as_ref().display()))
-        })?;
-
-    parse_from_str_validated(&xml_content).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to parse file: {}",
-            path.as_ref().display()
-        ))
-    })
+    parse_from_file_internal(path, true)
 }
 
 // Catalog parsing functions
@@ -280,37 +332,7 @@ pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile> {
 /// Reads the catalog file into memory and then parses it as a string.
 #[must_use = "parsing result should be handled"]
 pub fn parse_catalog_from_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile> {
-    let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to read catalog file metadata: {}",
-            path.as_ref().display()
-        ))
-    })?;
-
-    if metadata.len() > MAX_FILE_SIZE {
-        return Err(Error::validation_error(
-            "file_size",
-            &format!("File exceeds maximum size of {} bytes", MAX_FILE_SIZE),
-        ));
-    }
-
-    let xml_content = fs::read_to_string(&path)
-        .map_err(Error::from)
-        .map_err(|e| {
-            e.with_context(&format!(
-                "Failed to read catalog file: {}",
-                path.as_ref().display()
-            ))
-        })?;
-
-    let cleaned_content = remove_bom(&xml_content);
-
-    parse_catalog_from_str(cleaned_content).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to parse catalog file: {}",
-            path.as_ref().display()
-        ))
-    })
+    parse_catalog_from_file_internal(path, false)
 }
 
 /// Validate catalog XML structure before parsing
@@ -353,6 +375,7 @@ pub fn validate_catalog_xml_structure(xml: &str) -> Result<()> {
 /// Parse catalog with validation
 ///
 /// Validates the XML structure before attempting to parse it.
+#[must_use = "parsing result should be handled"]
 pub fn parse_catalog_from_str_validated(xml: &str) -> Result<CatalogFile> {
     validate_catalog_xml_structure(xml)?;
     parse_catalog_from_str(xml)
@@ -361,22 +384,9 @@ pub fn parse_catalog_from_str_validated(xml: &str) -> Result<CatalogFile> {
 /// Parse catalog file with validation
 ///
 /// Validates the XML structure before attempting to parse it.
+#[must_use = "parsing result should be handled"]
 pub fn parse_catalog_from_file_validated<P: AsRef<Path>>(path: P) -> Result<CatalogFile> {
-    let xml_content = fs::read_to_string(&path)
-        .map_err(Error::from)
-        .map_err(|e| {
-            e.with_context(&format!(
-                "Failed to read catalog file: {}",
-                path.as_ref().display()
-            ))
-        })?;
-
-    parse_catalog_from_str_validated(&xml_content).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to parse catalog file: {}",
-            path.as_ref().display()
-        ))
-    })
+    parse_catalog_from_file_internal(path, true)
 }
 
 /// Serialize a catalog file to XML string
