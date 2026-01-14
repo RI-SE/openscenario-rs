@@ -38,7 +38,7 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     actions::movement::{AssignRouteAction, FollowRouteAction, RoutingAction},
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     routing::{Route, RouteRef},
 };
 
@@ -93,7 +93,7 @@ impl ActionBuilder for AssignRouteActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::RoutingAction(RoutingAction {
+            action: PrivateAction::RoutingAction(RoutingAction {
                 assign_route_action: Some(action),
                 follow_trajectory_action: None,
                 follow_route_action: None,
@@ -168,7 +168,7 @@ impl ActionBuilder for FollowRouteActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::RoutingAction(RoutingAction {
+            action: PrivateAction::RoutingAction(RoutingAction {
                 assign_route_action: None,
                 follow_trajectory_action: None,
                 follow_route_action: Some(action),
@@ -215,7 +215,7 @@ mod tests {
 
         // Verify structure
         match builder.action {
-            CorePrivateAction::RoutingAction(ref action) => {
+            PrivateAction::RoutingAction(ref action) => {
                 assert!(action.assign_route_action.is_some());
                 assert!(action.follow_route_action.is_none());
                 assert!(action.follow_trajectory_action.is_none());
@@ -236,7 +236,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::RoutingAction(ref action) => {
+            PrivateAction::RoutingAction(ref action) => {
                 let assign_action = action.assign_route_action.as_ref().unwrap();
                 assert!(matches!(assign_action.route, RouteRef::Catalog(_)));
             }
@@ -268,7 +268,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::RoutingAction(ref action) => {
+            PrivateAction::RoutingAction(ref action) => {
                 assert!(action.follow_route_action.is_some());
                 assert!(action.assign_route_action.is_none());
                 assert!(action.follow_trajectory_action.is_none());
@@ -289,7 +289,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::RoutingAction(ref action) => {
+            PrivateAction::RoutingAction(ref action) => {
                 let follow_action = action.follow_route_action.as_ref().unwrap();
                 assert!(matches!(follow_action.route_ref, RouteRef::Catalog(_)));
             }

@@ -214,9 +214,8 @@ pub mod validation;
 pub use actions::{
     ActivateControllerActionBuilder, EntityActionBuilder, EnvironmentActionBuilder,
     FollowTrajectoryActionBuilder, LaneChangeActionBuilder, LaneOffsetActionBuilder,
-    LateralDistanceActionBuilder, OverrideControllerValueActionBuilder, PolylineBuilder,
-    SpeedActionBuilder, TeleportActionBuilder, TrajectoryBuilder, VariableActionBuilder,
-    VertexBuilder,
+    LateralDistanceActionBuilder, PolylineBuilder, SpeedActionBuilder, TeleportActionBuilder,
+    TrajectoryBuilder, VariableActionBuilder, VertexBuilder,
 };
 pub use catalog::{
     CatalogEntityBuilder, CatalogLocationsBuilder, PedestrianCatalogReferenceBuilder,

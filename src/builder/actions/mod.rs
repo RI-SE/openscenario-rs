@@ -17,7 +17,6 @@
 //!
 //! ## Controller Actions
 //! - [`ActivateControllerActionBuilder`] - Activate entity controllers
-//! - [`OverrideControllerValueActionBuilder`] - Override controller parameters
 //! - [`AssignControllerActionBuilder`] - Assign controllers to entities
 //!
 //! ## Global Actions
@@ -68,10 +67,7 @@ pub mod trajectory;
 pub mod visibility;
 
 pub use base::{ActionBuilder, ManeuverAction};
-pub use controller::{
-    ActivateControllerActionBuilder, AssignControllerActionBuilder,
-    OverrideControllerValueActionBuilder,
-};
+pub use controller::{ActivateControllerActionBuilder, AssignControllerActionBuilder};
 pub use global::{EntityActionBuilder, EnvironmentActionBuilder, VariableActionBuilder};
 pub use lateral::{LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder};
 pub use longitudinal::{LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder};

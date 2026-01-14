@@ -37,7 +37,7 @@ use crate::types::{
         LongitudinalAction, LongitudinalActionChoice, LongitudinalDistanceAction,
         SpeedProfileAction, SpeedProfileEntry,
     },
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     basic::{Boolean, Double, OSString},
 };
 
@@ -113,7 +113,7 @@ impl ActionBuilder for LongitudinalDistanceActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::LongitudinalAction(LongitudinalAction {
+            action: PrivateAction::LongitudinalAction(LongitudinalAction {
                 longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
                     action,
                 ),
@@ -192,7 +192,7 @@ impl ActionBuilder for SpeedProfileActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::LongitudinalAction(LongitudinalAction {
+            action: PrivateAction::LongitudinalAction(LongitudinalAction {
                 longitudinal_action_choice: LongitudinalActionChoice::SpeedProfileAction(action),
             }),
         })
@@ -288,7 +288,7 @@ mod tests {
 
         // Verify structure
         match builder.action {
-            CorePrivateAction::LongitudinalAction(ref action) => {
+            PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::LongitudinalDistanceAction(ref dist) => {
                         assert_eq!(dist.distance.as_ref().unwrap().as_literal(), Some(&10.0));
@@ -311,7 +311,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::LongitudinalAction(ref action) => {
+            PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::LongitudinalDistanceAction(ref dist) => {
                         assert_eq!(dist.time_gap.as_ref().unwrap().as_literal(), Some(&2.5));
@@ -358,7 +358,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::LongitudinalAction(ref action) => {
+            PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {
                         assert_eq!(profile.entries.len(), 3);
@@ -392,7 +392,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::LongitudinalAction(ref action) => {
+            PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {
                         assert_eq!(profile.entries.len(), 2);

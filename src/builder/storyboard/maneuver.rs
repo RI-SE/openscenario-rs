@@ -160,7 +160,7 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
                     speed_action: match &long_action.longitudinal_action_choice {
@@ -188,7 +188,7 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
                     trailer_action: None,
                 }
             }
-            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -292,7 +292,7 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
                     speed_action: match &long_action.longitudinal_action_choice {
@@ -320,7 +320,7 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
                     trailer_action: None,
                 }
             }
-            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -547,7 +547,7 @@ impl DetachedSpeedActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
                     speed_action: match &long_action.longitudinal_action_choice {
@@ -612,7 +612,7 @@ impl DetachedSpeedActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
                     speed_action: match &long_action.longitudinal_action_choice {
@@ -677,7 +677,7 @@ impl DetachedSpeedActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+            crate::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 // Convert movement::LongitudinalAction to init::LongitudinalAction
                 let init_long_action = crate::types::scenario::init::LongitudinalAction {
                     speed_action: match &long_action.longitudinal_action_choice {
@@ -776,7 +776,7 @@ impl DetachedTeleportActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -829,7 +829,7 @@ impl DetachedTeleportActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -882,7 +882,7 @@ impl DetachedTeleportActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::TeleportAction(teleport_action) => {
+            crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -1027,7 +1027,7 @@ impl DetachedFollowTrajectoryActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::RoutingAction(routing_action) => {
+            crate::types::actions::wrappers::PrivateAction::RoutingAction(routing_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -1082,7 +1082,7 @@ impl DetachedFollowTrajectoryActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::RoutingAction(routing_action) => {
+            crate::types::actions::wrappers::PrivateAction::RoutingAction(routing_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -1137,7 +1137,7 @@ impl DetachedFollowTrajectoryActionBuilder {
 
         // Convert PrivateAction to StoryPrivateAction
         let story_private_action = match private_action.action {
-            crate::types::actions::wrappers::CorePrivateAction::RoutingAction(routing_action) => {
+            crate::types::actions::wrappers::PrivateAction::RoutingAction(routing_action) => {
                 StoryPrivateAction {
                     longitudinal_action: None,
                     lateral_action: None,
@@ -1509,10 +1509,10 @@ fn default_trigger() -> Option<Trigger> {
 fn convert_private_action_to_story(
     action: crate::types::actions::wrappers::PrivateAction,
 ) -> StoryPrivateAction {
-    use crate::types::actions::wrappers::CorePrivateAction;
+    use crate::types::actions::wrappers::PrivateAction;
 
     match action.action {
-        CorePrivateAction::LongitudinalAction(long_action) => {
+        PrivateAction::LongitudinalAction(long_action) => {
             let init_long_action = crate::types::scenario::init::LongitudinalAction {
                 speed_action: match &long_action.longitudinal_action_choice {
                     crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => {
@@ -1545,7 +1545,7 @@ fn convert_private_action_to_story(
                 trailer_action: None,
             }
         }
-        CorePrivateAction::LateralAction(lat_action) => StoryPrivateAction {
+        PrivateAction::LateralAction(lat_action) => StoryPrivateAction {
             longitudinal_action: None,
             lateral_action: Some(lat_action),
             visibility_action: None,
@@ -1556,7 +1556,7 @@ fn convert_private_action_to_story(
             appearance_action: None,
             trailer_action: None,
         },
-        CorePrivateAction::VisibilityAction(vis_action) => StoryPrivateAction {
+        PrivateAction::VisibilityAction(vis_action) => StoryPrivateAction {
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: Some(vis_action),
@@ -1567,7 +1567,7 @@ fn convert_private_action_to_story(
             appearance_action: None,
             trailer_action: None,
         },
-        CorePrivateAction::SynchronizeAction(sync_action) => StoryPrivateAction {
+        PrivateAction::SynchronizeAction(sync_action) => StoryPrivateAction {
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
@@ -1578,7 +1578,7 @@ fn convert_private_action_to_story(
             appearance_action: None,
             trailer_action: None,
         },
-        CorePrivateAction::TeleportAction(teleport_action) => StoryPrivateAction {
+        PrivateAction::TeleportAction(teleport_action) => StoryPrivateAction {
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
@@ -1589,7 +1589,7 @@ fn convert_private_action_to_story(
             appearance_action: None,
             trailer_action: None,
         },
-        CorePrivateAction::RoutingAction(routing_action) => StoryPrivateAction {
+        PrivateAction::RoutingAction(routing_action) => StoryPrivateAction {
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,

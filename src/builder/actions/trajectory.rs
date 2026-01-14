@@ -49,7 +49,7 @@ use crate::types::{
         FollowTrajectoryAction, RoutingAction, TimeReference, Timing, Trajectory,
         TrajectoryFollowingMode,
     },
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     basic::{Boolean, Double, OSString},
     enums::FollowingMode,
     geometry::shapes::{Polyline, Shape, Vertex},
@@ -414,7 +414,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::RoutingAction(RoutingAction {
+            action: PrivateAction::RoutingAction(RoutingAction {
                 assign_route_action: None,
                 follow_trajectory_action: Some(follow_trajectory_action),
                 follow_route_action: None,
@@ -639,7 +639,7 @@ mod tests {
 
         // Verify action structure
         match action.action {
-            CorePrivateAction::RoutingAction(ref routing) => {
+            PrivateAction::RoutingAction(ref routing) => {
                 assert!(routing.follow_trajectory_action.is_some());
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert!(follow_action.trajectory.is_some());
@@ -673,7 +673,7 @@ mod tests {
             .unwrap();
 
         match action.action {
-            CorePrivateAction::RoutingAction(ref routing) => {
+            PrivateAction::RoutingAction(ref routing) => {
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert_eq!(
                     follow_action.trajectory_following_mode.following_mode,
@@ -706,7 +706,7 @@ mod tests {
             .unwrap();
 
         match action.action {
-            CorePrivateAction::RoutingAction(ref routing) => {
+            PrivateAction::RoutingAction(ref routing) => {
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert_eq!(
                     follow_action

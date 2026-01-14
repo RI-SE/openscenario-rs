@@ -24,7 +24,7 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     actions::movement::SynchronizeAction,
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     basic::OSString,
     positions::Position,
 };
@@ -83,7 +83,7 @@ impl ActionBuilder for SynchronizeActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::SynchronizeAction(action),
+            action: PrivateAction::SynchronizeAction(action),
         })
     }
 
@@ -131,7 +131,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::SynchronizeAction(ref action) => {
+            PrivateAction::SynchronizeAction(ref action) => {
                 assert_eq!(
                     action.master_entity_ref.as_literal(),
                     Some(&"lead".to_string())

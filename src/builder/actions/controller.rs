@@ -1,16 +1,14 @@
-//! Controller action builders (ActivateControllerAction, OverrideControllerValueAction, AssignControllerAction)
+//! Controller action builders (ActivateControllerAction, AssignControllerAction)
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     actions::control::{
         ActivateControllerAction, AssignControllerAction, ControllerAction, ManualGear,
-        OverrideControllerValueAction, OverrideControllerValueActionBrake,
-        OverrideControllerValueActionClutch, OverrideControllerValueActionGear,
-        OverrideControllerValueActionParkingBrake, OverrideControllerValueActionSteeringWheel,
-        OverrideControllerValueActionThrottle,
+        OverrideBrakeAction, OverrideClutchAction, OverrideGearAction, OverrideParkingBrakeAction,
+        OverrideSteeringWheelAction, OverrideThrottleAction,
     },
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     basic::{Boolean, Double, Int, Value},
     controllers::Controller,
     enums::ControllerType,
@@ -91,9 +89,14 @@ impl ActionBuilder for ActivateControllerActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::ControllerAction(ControllerAction {
+            action: PrivateAction::ControllerAction(ControllerAction {
                 assign_controller_action: None,
-                override_controller_value_action: None,
+                override_throttle_action: None,
+                override_brake_action: None,
+                override_clutch_action: None,
+                override_parking_brake_action: None,
+                override_steering_wheel_action: None,
+                override_gear_action: None,
                 activate_controller_action: Some(activate_action),
             }),
         })
@@ -106,144 +109,6 @@ impl ActionBuilder for ActivateControllerActionBuilder {
 }
 
 impl ManeuverAction for ActivateControllerActionBuilder {
-    fn entity_ref(&self) -> Option<&str> {
-        self.entity_ref.as_deref()
-    }
-}
-
-/// Builder for override controller value actions
-#[derive(Debug, Default)]
-pub struct OverrideControllerValueActionBuilder {
-    entity_ref: Option<String>,
-    throttle: Option<(bool, f64)>,
-    brake: Option<(bool, f64)>,
-    steering: Option<(bool, f64)>,
-    gear: Option<(bool, f64)>,
-    parking_brake: Option<(bool, f64)>,
-    clutch: Option<(bool, f64)>,
-}
-
-impl OverrideControllerValueActionBuilder {
-    /// Create new override controller value action builder
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Set target entity for this action
-    pub fn for_entity(mut self, entity_ref: &str) -> Self {
-        self.entity_ref = Some(entity_ref.to_string());
-        self
-    }
-
-    /// Override throttle control
-    pub fn throttle(mut self, active: bool, value: f64) -> Self {
-        self.throttle = Some((active, value));
-        self
-    }
-
-    /// Override brake control
-    pub fn brake(mut self, active: bool, value: f64) -> Self {
-        self.brake = Some((active, value));
-        self
-    }
-
-    /// Override steering control
-    pub fn steering(mut self, active: bool, value: f64) -> Self {
-        self.steering = Some((active, value));
-        self
-    }
-
-    /// Override gear control
-    pub fn gear(mut self, active: bool, value: f64) -> Self {
-        self.gear = Some((active, value));
-        self
-    }
-
-    /// Override parking brake control
-    pub fn parking_brake(mut self, active: bool, value: f64) -> Self {
-        self.parking_brake = Some((active, value));
-        self
-    }
-
-    /// Override clutch control
-    pub fn clutch(mut self, active: bool, value: f64) -> Self {
-        self.clutch = Some((active, value));
-        self
-    }
-}
-
-impl ActionBuilder for OverrideControllerValueActionBuilder {
-    fn build_action(self) -> BuilderResult<PrivateAction> {
-        self.validate()?;
-
-        let override_action = OverrideControllerValueAction {
-            throttle: self
-                .throttle
-                .map(|(active, value)| OverrideControllerValueActionThrottle {
-                    active: Boolean::literal(active),
-                    value: Double::literal(value),
-                }),
-            brake: self
-                .brake
-                .map(|(active, value)| OverrideControllerValueActionBrake {
-                    active: Boolean::literal(active),
-                    value: Double::literal(value),
-                }),
-            steering_wheel: self.steering.map(|(active, value)| {
-                OverrideControllerValueActionSteeringWheel {
-                    active: Boolean::literal(active),
-                    value: Double::literal(value),
-                }
-            }),
-            gear: self
-                .gear
-                .map(|(active, value)| OverrideControllerValueActionGear {
-                    active: Boolean::literal(active),
-                    manual_gear: Some(ManualGear {
-                        gear: Int::literal(value as i32),
-                    }),
-                    automatic_gear: None,
-                }),
-            parking_brake: self.parking_brake.map(|(active, value)| {
-                OverrideControllerValueActionParkingBrake {
-                    active: Boolean::literal(active),
-                    force: Some(value),
-                }
-            }),
-            clutch: self
-                .clutch
-                .map(|(active, value)| OverrideControllerValueActionClutch {
-                    active: Boolean::literal(active),
-                    value: Double::literal(value),
-                }),
-        };
-
-        Ok(PrivateAction {
-            action: CorePrivateAction::ControllerAction(ControllerAction {
-                assign_controller_action: None,
-                override_controller_value_action: Some(override_action),
-                activate_controller_action: None,
-            }),
-        })
-    }
-
-    fn validate(&self) -> BuilderResult<()> {
-        if self.throttle.is_none()
-            && self.brake.is_none()
-            && self.steering.is_none()
-            && self.gear.is_none()
-            && self.parking_brake.is_none()
-            && self.clutch.is_none()
-        {
-            return Err(BuilderError::validation_error(
-                "At least one control override must be specified",
-            ));
-        }
-        Ok(())
-    }
-}
-
-impl ManeuverAction for OverrideControllerValueActionBuilder {
     fn entity_ref(&self) -> Option<&str> {
         self.entity_ref.as_deref()
     }
@@ -296,9 +161,14 @@ impl ActionBuilder for AssignControllerActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::ControllerAction(ControllerAction {
+            action: PrivateAction::ControllerAction(ControllerAction {
                 assign_controller_action: Some(assign_action),
-                override_controller_value_action: None,
+                override_throttle_action: None,
+                override_brake_action: None,
+                override_clutch_action: None,
+                override_parking_brake_action: None,
+                override_steering_wheel_action: None,
+                override_gear_action: None,
                 activate_controller_action: None,
             }),
         })
@@ -333,42 +203,12 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let CorePrivateAction::ControllerAction(controller_action) = action.action {
+        if let PrivateAction::ControllerAction(controller_action) = action.action {
             let activate = controller_action.activate_controller_action.unwrap();
             assert!(*activate.lateral.unwrap().as_literal().unwrap());
             assert!(*activate.longitudinal.unwrap().as_literal().unwrap());
             assert!(!*activate.lighting.unwrap().as_literal().unwrap());
             assert!(!*activate.animation.unwrap().as_literal().unwrap());
-        } else {
-            panic!("Expected ControllerAction");
-        }
-    }
-
-    #[test]
-    fn test_override_controller_value_action_builder() {
-        let action = OverrideControllerValueActionBuilder::new()
-            .for_entity("ego")
-            .throttle(true, 0.8)
-            .brake(false, 0.0)
-            .steering(true, 0.2)
-            .build_action()
-            .unwrap();
-
-        // Verify the action was built correctly
-        if let CorePrivateAction::ControllerAction(controller_action) = action.action {
-            let override_action = controller_action.override_controller_value_action.unwrap();
-
-            let throttle = override_action.throttle.unwrap();
-            assert!(*throttle.active.as_literal().unwrap());
-            assert_eq!(*throttle.value.as_literal().unwrap(), 0.8);
-
-            let brake = override_action.brake.unwrap();
-            assert!(!*brake.active.as_literal().unwrap());
-            assert_eq!(*brake.value.as_literal().unwrap(), 0.0);
-
-            let steering = override_action.steering_wheel.unwrap();
-            assert!(*steering.active.as_literal().unwrap());
-            assert_eq!(*steering.value.as_literal().unwrap(), 0.2);
         } else {
             panic!("Expected ControllerAction");
         }
@@ -390,7 +230,7 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let CorePrivateAction::ControllerAction(controller_action) = action.action {
+        if let PrivateAction::ControllerAction(controller_action) = action.action {
             let assign = controller_action.assign_controller_action.unwrap();
             assert_eq!(
                 assign.controller.unwrap().name.as_literal().unwrap(),

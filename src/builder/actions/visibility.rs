@@ -30,7 +30,7 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::BuilderResult;
 use crate::types::{
     actions::appearance::VisibilityAction,
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     basic::Boolean,
 };
 
@@ -111,7 +111,7 @@ impl ActionBuilder for VisibilityActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::VisibilityAction(action),
+            action: PrivateAction::VisibilityAction(action),
         })
     }
 
@@ -139,7 +139,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::VisibilityAction(ref action) => {
+            PrivateAction::VisibilityAction(ref action) => {
                 assert_eq!(action.graphics.as_literal(), Some(&true));
                 assert_eq!(action.sensors.as_literal(), Some(&true));
                 assert_eq!(action.traffic.as_literal(), Some(&true));
@@ -157,7 +157,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::VisibilityAction(ref action) => {
+            PrivateAction::VisibilityAction(ref action) => {
                 assert_eq!(action.graphics.as_literal(), Some(&false));
                 assert_eq!(action.sensors.as_literal(), Some(&false));
                 assert_eq!(action.traffic.as_literal(), Some(&false));
@@ -177,7 +177,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::VisibilityAction(ref action) => {
+            PrivateAction::VisibilityAction(ref action) => {
                 assert_eq!(action.graphics.as_literal(), Some(&true));
                 assert_eq!(action.sensors.as_literal(), Some(&false));
                 assert_eq!(action.traffic.as_literal(), Some(&true));
@@ -194,7 +194,7 @@ mod tests {
             .unwrap();
 
         match builder.action {
-            CorePrivateAction::VisibilityAction(ref action) => {
+            PrivateAction::VisibilityAction(ref action) => {
                 // Default is all visible
                 assert_eq!(action.graphics.as_literal(), Some(&true));
                 assert_eq!(action.sensors.as_literal(), Some(&true));

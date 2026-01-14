@@ -14,7 +14,7 @@ use crate::types::{
         LateralAction, LongitudinalAction as LongitudinalActionType, RoutingAction, SpeedAction,
         SpeedActionTarget, SynchronizeAction, TeleportAction, TransitionDynamics,
     },
-    actions::wrappers::CorePrivateAction,
+    actions::wrappers::PrivateAction,
     basic::{Double, Value},
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
@@ -207,7 +207,7 @@ impl PrivateActionBuilder {
         action: crate::types::actions::wrappers::PrivateAction,
     ) -> PrivateAction {
         match action.action {
-            CorePrivateAction::LongitudinalAction(long_action) => PrivateAction {
+            PrivateAction::LongitudinalAction(long_action) => PrivateAction {
                 longitudinal_action: Some(LongitudinalAction {
                     speed_action: match &long_action.longitudinal_action_choice {
                         crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => Some(a.clone()),
@@ -224,27 +224,27 @@ impl PrivateActionBuilder {
                 }),
                 ..Default::default()
             },
-            CorePrivateAction::LateralAction(lateral_action) => PrivateAction {
+            PrivateAction::LateralAction(lateral_action) => PrivateAction {
                 lateral_action: Some(lateral_action),
                 ..Default::default()
             },
-            CorePrivateAction::RoutingAction(routing_action) => PrivateAction {
+            PrivateAction::RoutingAction(routing_action) => PrivateAction {
                 routing_action: Some(routing_action),
                 ..Default::default()
             },
-            CorePrivateAction::VisibilityAction(visibility_action) => PrivateAction {
+            PrivateAction::VisibilityAction(visibility_action) => PrivateAction {
                 visibility_action: Some(visibility_action),
                 ..Default::default()
             },
-            CorePrivateAction::SynchronizeAction(sync_action) => PrivateAction {
+            PrivateAction::SynchronizeAction(sync_action) => PrivateAction {
                 synchronize_action: Some(sync_action),
                 ..Default::default()
             },
-            CorePrivateAction::TeleportAction(teleport_action) => PrivateAction {
+            PrivateAction::TeleportAction(teleport_action) => PrivateAction {
                 teleport_action: Some(teleport_action),
                 ..Default::default()
             },
-            CorePrivateAction::ControllerAction(controller_action) => PrivateAction {
+            PrivateAction::ControllerAction(controller_action) => PrivateAction {
                 controller_action: Some(controller_action),
                 ..Default::default()
             },

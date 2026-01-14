@@ -9,7 +9,7 @@ use crate::types::{
         LaneOffsetTarget, LaneOffsetTargetChoice, LateralAction, LateralDistanceAction,
         RelativeTargetLane, RelativeTargetLaneOffset, TransitionDynamics,
     },
-    actions::wrappers::{CorePrivateAction, PrivateAction},
+    actions::wrappers::{PrivateAction, PrivateAction},
     basic::{Boolean, Double, Int, OSString},
     enums::{DynamicsDimension, DynamicsShape},
 };
@@ -96,9 +96,7 @@ impl ActionBuilder for LaneChangeActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::LateralAction(LateralAction::lane_change(
-                lane_change_action,
-            )),
+            action: PrivateAction::LateralAction(LateralAction::lane_change(lane_change_action)),
         })
     }
 
@@ -185,7 +183,7 @@ impl ActionBuilder for LateralDistanceActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::LateralAction(LateralAction::lateral_distance(
+            action: PrivateAction::LateralAction(LateralAction::lateral_distance(
                 lateral_distance_action,
             )),
         })
@@ -291,9 +289,7 @@ impl ActionBuilder for LaneOffsetActionBuilder {
         };
 
         Ok(PrivateAction {
-            action: CorePrivateAction::LateralAction(LateralAction::lane_offset(
-                lane_offset_action,
-            )),
+            action: PrivateAction::LateralAction(LateralAction::lane_offset(lane_offset_action)),
         })
     }
 
@@ -329,7 +325,7 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let CorePrivateAction::LateralAction(lateral_action) = action.action {
+        if let PrivateAction::LateralAction(lateral_action) = action.action {
             if let crate::types::actions::movement::LateralActionChoice::LaneChangeAction(
                 lane_change,
             ) = lateral_action.lateral_choice
@@ -370,7 +366,7 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let CorePrivateAction::LateralAction(lateral_action) = action.action {
+        if let PrivateAction::LateralAction(lateral_action) = action.action {
             if let crate::types::actions::movement::LateralActionChoice::LateralDistanceAction(
                 distance_action,
             ) = lateral_action.lateral_choice
@@ -401,7 +397,7 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let CorePrivateAction::LateralAction(lateral_action) = action.action {
+        if let PrivateAction::LateralAction(lateral_action) = action.action {
             if let crate::types::actions::movement::LateralActionChoice::LaneOffsetAction(
                 offset_action,
             ) = lateral_action.lateral_choice
