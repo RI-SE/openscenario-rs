@@ -14,6 +14,16 @@ use serde::{Deserialize, Serialize};
 // PHASE 4C: Core Traffic Management Actions
 
 /// Traffic source action for traffic generation with rate and position
+///
+/// This action generates traffic vehicles at a specified position with a given rate.
+/// Used to create dynamic traffic scenarios where vehicles enter the simulation over time.
+///
+/// # Fields
+///
+/// * `rate` - Rate of vehicle generation (vehicles per minute)
+/// * `velocity` - Optional velocity for generated vehicles (meters/second)
+/// * `position` - Position where vehicles are generated
+/// * `traffic_definition` - Definition of traffic properties for generated vehicles
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSourceAction {
     #[serde(rename = "@rate")]
@@ -27,6 +37,16 @@ pub struct TrafficSourceAction {
 }
 
 /// Traffic sink action for traffic removal with radius control
+///
+/// This action removes vehicles that enter a specified radius around a position.
+/// Used to prevent traffic accumulation and manage vehicle lifecycle in simulations.
+///
+/// # Fields
+///
+/// * `rate` - Rate of vehicle removal (vehicles per minute)
+/// * `radius` - Radius around position for vehicle removal (meters)
+/// * `position` - Center position for removal area
+/// * `traffic_definition` - Optional traffic definition to filter which vehicles are removed
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSinkAction {
     #[serde(rename = "@rate")]
@@ -40,6 +60,40 @@ pub struct TrafficSinkAction {
 }
 
 /// Traffic swarm action for swarm behavior around central object
+///
+/// This action creates a swarm of vehicles positioned in an elliptical pattern
+/// around a central object. The swarm can be used to simulate traffic
+/// density and complex interaction scenarios.
+///
+/// # Fields
+///
+/// * `inner_radius` - Inner radius of the elliptical swarm area (meters)
+/// * `number_of_vehicles` - Number of vehicles to generate
+/// * `offset` - Offset from central object (meters)
+/// * `semi_major_axis` - Length of semi-major axis (meters)
+/// * `semi_minor_axis` - Length of semi-minor axis (meters)
+/// * `velocity` - Optional velocity for swarm vehicles
+/// * `central_object` - Reference to central object
+/// * `traffic_definition` - Optional traffic definition for generated vehicles
+///
+/// # Example
+///
+/// ```rust
+/// use openscenario_rs::types::actions::{TrafficSwarmAction, CentralSwarmObject};
+/// use openscenario_rs::types::basic::{Double, UnsignedInt};
+/// use openscenario_rs::types::positions::Position;
+///
+/// let swarm = TrafficSwarmAction {
+///     inner_radius: Double::literal(5.0),
+///     number_of_vehicles: UnsignedInt::literal(10),
+///     offset: Double::literal(0.0),
+///     semi_major_axis: Double::literal(20.0),
+///     semi_minor_axis: Double::literal(15.0),
+///     velocity: Some(Double::literal(30.0)),
+///     central_object: CentralSwarmObject { /* ... */ },
+///     traffic_definition: None,
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSwarmAction {
     #[serde(rename = "@innerRadius")]
@@ -154,6 +208,14 @@ pub struct TrafficStopAction {
 // PHASE 4C: Supporting Types for Traffic Management
 
 /// Traffic definition for vehicle category and controller distribution
+///
+/// Defines the properties of traffic that should be generated, including
+/// vehicle types and their probabilities, as well as controller behavior profiles.
+///
+/// # Fields
+///
+/// * `vehicle_category_distribution` - Distribution of vehicle categories (cars, trucks, etc.)
+/// * `controller_distribution` - Distribution of controller behaviors
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficDefinition {
     #[serde(rename = "VehicleCategoryDistribution")]
