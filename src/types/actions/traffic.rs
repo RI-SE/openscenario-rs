@@ -90,7 +90,7 @@ pub struct TrafficSinkAction {
 ///     semi_major_axis: Double::literal(20.0),
 ///     semi_minor_axis: Double::literal(15.0),
 ///     velocity: Some(Double::literal(30.0)),
-///     central_object: CentralSwarmObject { /* ... */ },
+///     central_object: CentralSwarmObject::new("CentralEntity"),
 ///     traffic_definition: None,
 /// };
 /// ```
