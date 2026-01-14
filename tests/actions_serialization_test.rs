@@ -11,35 +11,35 @@ use serde_json;
 #[test]
 fn test_core_action_serialization() {
     // Test PrivateAction serialization
-    let private_action = CorePrivateAction::TeleportAction(TeleportAction::default());
-    let core_action = CoreAction::PrivateAction(private_action);
+    let private_action = PrivateAction::TeleportAction(TeleportAction::default());
+    let core_action = Action::PrivateAction(private_action);
 
     let serialized = serde_json::to_string(&core_action).unwrap();
     assert!(serialized.contains("PrivateAction"));
 
     // Test deserialization
-    let deserialized: CoreAction = serde_json::from_str(&serialized).unwrap();
+    let deserialized: Action = serde_json::from_str(&serialized).unwrap();
     assert_eq!(core_action, deserialized);
 }
 
 #[test]
 fn test_global_action_variants() {
     // Test TrafficAction variant
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(OSString::literal("test_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+        action: TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
     };
-    let global_action = CoreGlobalAction::TrafficAction(traffic_action);
+    let global_action = GlobalAction::TrafficAction(traffic_action);
 
     let serialized = serde_json::to_string(&global_action).unwrap();
     assert!(serialized.contains("TrafficAction"));
 
     // Test EntityAction variant
-    let entity_action = CoreEntityAction {
+    let entity_action = EntityAction {
         entity_ref: OSString::literal("test_entity".to_string()),
-        action: CoreEntityActionChoice::DeleteEntityAction(CoreDeleteEntityAction::default()),
+        action: EntityActionChoice::DeleteEntityAction(DeleteEntityAction::default()),
     };
-    let global_action = CoreGlobalAction::EntityAction(entity_action);
+    let global_action = GlobalAction::EntityAction(entity_action);
 
     let serialized = serde_json::to_string(&global_action).unwrap();
     assert!(serialized.contains("EntityAction"));
@@ -48,12 +48,12 @@ fn test_global_action_variants() {
 #[test]
 fn test_entity_action_types() {
     // Test AddEntityAction
-    let add_action = CoreAddEntityAction {
+    let add_action = AddEntityAction {
         position: Position::default(),
     };
-    let entity_action = CoreEntityAction {
+    let entity_action = EntityAction {
         entity_ref: OSString::literal("new_entity".to_string()),
-        action: CoreEntityActionChoice::AddEntityAction(add_action),
+        action: EntityActionChoice::AddEntityAction(add_action),
     };
 
     let serialized = serde_json::to_string(&entity_action).unwrap();
@@ -61,10 +61,10 @@ fn test_entity_action_types() {
     assert!(serialized.contains("new_entity"));
 
     // Test DeleteEntityAction
-    let delete_action = CoreDeleteEntityAction::default();
-    let entity_action = CoreEntityAction {
+    let delete_action = DeleteEntityAction::default();
+    let entity_action = EntityAction {
         entity_ref: OSString::literal("old_entity".to_string()),
-        action: CoreEntityActionChoice::DeleteEntityAction(delete_action),
+        action: EntityActionChoice::DeleteEntityAction(delete_action),
     };
 
     let serialized = serde_json::to_string(&entity_action).unwrap();
@@ -75,9 +75,9 @@ fn test_entity_action_types() {
 #[test]
 fn test_traffic_action_variants() {
     // Test TrafficSourceAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: Some(OSString::literal("source_traffic".to_string())),
-        action: CoreTrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
     };
 
     let serialized = serde_json::to_string(&traffic_action).unwrap();
@@ -85,9 +85,9 @@ fn test_traffic_action_variants() {
     assert!(serialized.contains("source_traffic"));
 
     // Test TrafficSinkAction
-    let traffic_action = CoreTrafficAction {
+    let traffic_action = TrafficAction {
         traffic_name: None,
-        action: CoreTrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
+        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
     };
 
     let serialized = serde_json::to_string(&traffic_action).unwrap();
@@ -97,7 +97,7 @@ fn test_traffic_action_variants() {
 
 #[test]
 fn test_infrastructure_action() {
-    let infra_action = CoreInfrastructureAction {
+    let infra_action = InfrastructureAction {
         traffic_signal_action: TrafficSignalAction::default(),
     };
 
@@ -108,22 +108,22 @@ fn test_infrastructure_action() {
 #[test]
 fn test_private_action_variants() {
     // Test LongitudinalAction
-    let private_action = CorePrivateAction::LongitudinalAction(LongitudinalAction::default());
+    let private_action = PrivateAction::LongitudinalAction(LongitudinalAction::default());
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LongitudinalAction"));
 
     // Test LateralAction
-    let private_action = CorePrivateAction::LateralAction(LateralAction::default());
+    let private_action = PrivateAction::LateralAction(LateralAction::default());
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LateralAction"));
 
     // Test VisibilityAction
-    let private_action = CorePrivateAction::VisibilityAction(VisibilityAction::default());
+    let private_action = PrivateAction::VisibilityAction(VisibilityAction::default());
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("VisibilityAction"));
 
     // Test ControllerAction
-    let private_action = CorePrivateAction::ControllerAction(ControllerAction::default());
+    let private_action = PrivateAction::ControllerAction(ControllerAction::default());
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("ControllerAction"));
 }
@@ -177,11 +177,9 @@ fn test_override_actions() {
 
 #[test]
 fn test_action_wrapper() {
-    let action_wrapper = CoreActionWrapper {
+    let action_wrapper = NamedAction {
         name: OSString::literal("test_action".to_string()),
-        action: CoreAction::PrivateAction(CorePrivateAction::TeleportAction(
-            TeleportAction::default(),
-        )),
+        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
     };
 
     let serialized = serde_json::to_string(&action_wrapper).unwrap();
@@ -191,33 +189,31 @@ fn test_action_wrapper() {
 
 #[test]
 fn test_user_defined_action() {
-    let user_action = CoreUserDefinedAction {
-        custom_command_action: CoreCustomCommandAction::default(),
+    let user_action = UserDefinedAction {
+        custom_command_action: CustomCommandAction::default(),
     };
 
-    let core_action = CoreAction::UserDefinedAction(user_action);
+    let core_action = Action::UserDefinedAction(user_action);
     let serialized = serde_json::to_string(&core_action).unwrap();
     assert!(serialized.contains("UserDefinedAction"));
 }
 
 #[test]
 fn test_new_action_wrapper_types() {
-    // Test main Action wrapper
-    let action = Action {
+    // Test main NamedAction wrapper
+    let action = NamedAction {
         name: OSString::literal("testAction".to_string()),
-        action: CoreAction::PrivateAction(CorePrivateAction::TeleportAction(
-            TeleportAction::default(),
-        )),
+        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
     };
 
     let serialized = serde_json::to_string(&action).unwrap();
     assert!(serialized.contains("testAction"));
     assert!(serialized.contains("PrivateAction"));
 
-    // Test PrivateAction wrapper
-    let private_action = PrivateAction {
-        action: CorePrivateAction::LongitudinalAction(LongitudinalAction::default()),
-    };
+    // Test PrivateAction wrapper (wrapper struct is now just the enum variant)
+    let private_action = Action::PrivateAction(PrivateAction::LongitudinalAction(
+        LongitudinalAction::default(),
+    ));
 
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LongitudinalAction"));
@@ -230,7 +226,7 @@ fn test_variable_action_system() {
         value: OSString::literal("42".to_string()),
     };
 
-    let var_action = CoreVariableAction {
+    let var_action = VariableAction {
         variable_ref: OSString::literal("testVar".to_string()),
         action: VariableActionChoice::VariableSetAction(var_set),
     };
@@ -248,7 +244,7 @@ fn test_variable_action_system() {
         rule: VariableModifyRule::VariableAddValueRule(add_rule),
     };
 
-    let var_action = CoreVariableAction {
+    let var_action = VariableAction {
         variable_ref: OSString::literal("modifyVar".to_string()),
         action: VariableActionChoice::VariableModifyAction(var_modify),
     };
@@ -266,7 +262,7 @@ fn test_variable_action_system() {
         rule: VariableModifyRule::VariableMultiplyByValueRule(multiply_rule),
     };
 
-    let var_action = CoreVariableAction {
+    let var_action = VariableAction {
         variable_ref: OSString::literal("multiplyVar".to_string()),
         action: VariableActionChoice::VariableModifyAction(var_modify),
     };
@@ -283,7 +279,7 @@ fn test_parameter_action_system() {
         value: OSString::literal("100".to_string()),
     };
 
-    let param_action = CoreParameterAction {
+    let param_action = ParameterAction {
         parameter_ref: OSString::literal("testParam".to_string()),
         action: ParameterActionChoice::ParameterSetAction(param_set),
     };
@@ -301,7 +297,7 @@ fn test_parameter_action_system() {
         rule: ModifyRule::ParameterAddValueRule(add_rule),
     };
 
-    let param_action = CoreParameterAction {
+    let param_action = ParameterAction {
         parameter_ref: OSString::literal("modifyParam".to_string()),
         action: ParameterActionChoice::ParameterModifyAction(param_modify),
     };
@@ -319,7 +315,7 @@ fn test_parameter_action_system() {
         rule: ModifyRule::ParameterMultiplyByValueRule(multiply_rule),
     };
 
-    let param_action = CoreParameterAction {
+    let param_action = ParameterAction {
         parameter_ref: OSString::literal("multiplyParam".to_string()),
         action: ParameterActionChoice::ParameterModifyAction(param_modify),
     };
@@ -332,7 +328,7 @@ fn test_parameter_action_system() {
 #[test]
 fn test_set_monitor_action() {
     // Test SetMonitorAction with monitor name
-    let monitor_action = CoreSetMonitorAction {
+    let monitor_action = SetMonitorAction {
         enable: Boolean::literal(true),
         monitor_name: Some(OSString::literal("testMonitor".to_string())),
     };
@@ -342,7 +338,7 @@ fn test_set_monitor_action() {
     assert!(serialized.contains("true"));
 
     // Test SetMonitorAction without monitor name
-    let monitor_action = CoreSetMonitorAction {
+    let monitor_action = SetMonitorAction {
         enable: Boolean::literal(false),
         monitor_name: None,
     };
@@ -378,13 +374,13 @@ fn test_random_route_action() {
 #[test]
 fn test_type_aliases() {
     // Test that type aliases work correctly
-    let _entity_action: EntityAction = CoreEntityAction::default();
-    let _infra_action: InfrastructureAction = CoreInfrastructureAction::default();
-    let _user_action: UserDefinedAction = CoreUserDefinedAction::default();
-    let _var_action: VariableAction = CoreVariableAction::default();
-    let _param_action: ParameterAction = CoreParameterAction::default();
-    let _monitor_action: SetMonitorAction = CoreSetMonitorAction::default();
-    let _traffic_action: TrafficAction = CoreTrafficAction::default();
+    let _entity_action: EntityAction = EntityAction::default();
+    let _infra_action: InfrastructureAction = InfrastructureAction::default();
+    let _user_action: UserDefinedAction = UserDefinedAction::default();
+    let _var_action: VariableAction = VariableAction::default();
+    let _param_action: ParameterAction = ParameterAction::default();
+    let _monitor_action: SetMonitorAction = SetMonitorAction::default();
+    let _traffic_action: TrafficAction = TrafficAction::default();
 
     // All should compile without issues
     assert!(true);
@@ -393,27 +389,27 @@ fn test_type_aliases() {
 #[test]
 fn test_default_implementations() {
     // Test all Default implementations work
-    let _core_action = CoreAction::default();
-    let _global_action = CoreGlobalAction::default();
-    let _private_action = CorePrivateAction::default();
-    let _entity_action = CoreEntityAction::default();
-    let _traffic_action = CoreTrafficAction::default();
-    let _infra_action = CoreInfrastructureAction::default();
-    let _add_entity = CoreAddEntityAction::default();
-    let _delete_entity = CoreDeleteEntityAction::default();
-    let _user_action = CoreUserDefinedAction::default();
-    let _action_wrapper = CoreActionWrapper::default();
+    let _core_action = Action::default();
+    let _global_action = GlobalAction::default();
+    let _private_action = PrivateAction::default();
+    let _entity_action = EntityAction::default();
+    let _traffic_action = TrafficAction::default();
+    let _infra_action = InfrastructureAction::default();
+    let _add_entity = AddEntityAction::default();
+    let _delete_entity = DeleteEntityAction::default();
+    let _user_action = UserDefinedAction::default();
+    let _action_wrapper = NamedAction::default();
 
     // Test new Default implementations
     let _action = Action::default();
     let _private_action_wrapper = PrivateAction::default();
-    let _monitor_action = CoreSetMonitorAction::default();
-    let _var_action = CoreVariableAction::default();
+    let _monitor_action = SetMonitorAction::default();
+    let _var_action = VariableAction::default();
     let _var_set = VariableSetAction::default();
     let _var_modify = VariableModifyAction::default();
     let _var_add_rule = VariableAddValueRule::default();
     let _var_multiply_rule = VariableMultiplyByValueRule::default();
-    let _param_action = CoreParameterAction::default();
+    let _param_action = ParameterAction::default();
     let _param_set = ParameterSetAction::default();
     let _param_modify = ParameterModifyAction::default();
     let _param_add_rule = ParameterAddValueRule::default();

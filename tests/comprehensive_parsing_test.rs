@@ -10,7 +10,6 @@ mod tests {
             LaneChangeActionBuilder,
             LaneOffsetActionBuilder,
             LateralDistanceActionBuilder,
-            OverrideControllerValueActionBuilder,
         },
         conditions::{
             AccelerationConditionBuilder, CollisionConditionBuilder, ParameterConditionBuilder,
@@ -88,20 +87,6 @@ mod tests {
             "Activate controller action should build successfully"
         );
         println!("✅ ActivateControllerAction built successfully");
-
-        // Test OverrideControllerValueAction
-        let override_controller = OverrideControllerValueActionBuilder::new()
-            .for_entity("ego")
-            .throttle(true, 0.8)
-            .brake(false, 0.0)
-            .steering(true, 0.2)
-            .build_action();
-
-        assert!(
-            override_controller.is_ok(),
-            "Override controller action should build successfully"
-        );
-        println!("✅ OverrideControllerValueAction built successfully");
     }
 
     #[test]

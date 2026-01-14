@@ -101,7 +101,7 @@ fn test_distance_condition_convenience_methods() {
 #[test]
 fn test_relative_distance_condition_basic() {
     let condition = RelativeDistanceCondition::new(
-        "target_vehicle",
+        OSString::literal("target_vehicle".to_string()),
         12.5,
         true,
         RelativeDistanceType::Cartesian,
@@ -125,8 +125,12 @@ fn test_relative_distance_condition_basic() {
 
 #[test]
 fn test_relative_distance_condition_types() {
-    let longitudinal =
-        RelativeDistanceCondition::longitudinal("vehicle1", 20.0, false, Rule::LessThan);
+    let longitudinal = RelativeDistanceCondition::longitudinal(
+        OSString::literal("vehicle1".to_string()),
+        20.0,
+        false,
+        Rule::LessThan,
+    );
     assert_eq!(
         longitudinal.relative_distance_type,
         RelativeDistanceType::Longitudinal
@@ -139,7 +143,12 @@ fn test_relative_distance_condition_types() {
     assert_eq!(longitudinal.freespace, Boolean::literal(false));
     assert_eq!(longitudinal.rule, Rule::LessThan);
 
-    let lateral = RelativeDistanceCondition::lateral("vehicle2", 5.0, true, Rule::GreaterThan);
+    let lateral = RelativeDistanceCondition::lateral(
+        OSString::literal("vehicle2".to_string()),
+        5.0,
+        true,
+        Rule::GreaterThan,
+    );
     assert_eq!(
         lateral.relative_distance_type,
         RelativeDistanceType::Lateral
@@ -152,7 +161,12 @@ fn test_relative_distance_condition_types() {
     assert_eq!(lateral.freespace, Boolean::literal(true));
     assert_eq!(lateral.rule, Rule::GreaterThan);
 
-    let cartesian = RelativeDistanceCondition::cartesian("vehicle3", 15.0, false, Rule::EqualTo);
+    let cartesian = RelativeDistanceCondition::cartesian(
+        OSString::literal("vehicle3".to_string()),
+        15.0,
+        false,
+        Rule::EqualTo,
+    );
     assert_eq!(
         cartesian.relative_distance_type,
         RelativeDistanceType::Cartesian
@@ -168,10 +182,14 @@ fn test_relative_distance_condition_types() {
 
 #[test]
 fn test_relative_distance_condition_with_options() {
-    let condition =
-        RelativeDistanceCondition::cartesian("ego_vehicle", 25.0, true, Rule::LessOrEqual)
-            .with_coordinate_system(CoordinateSystem::Lane)
-            .with_routing_algorithm(RoutingAlgorithm::Fastest);
+    let condition = RelativeDistanceCondition::cartesian(
+        OSString::literal("ego_vehicle".to_string()),
+        25.0,
+        true,
+        Rule::LessOrEqual,
+    )
+    .with_coordinate_system(CoordinateSystem::Lane)
+    .with_routing_algorithm(RoutingAlgorithm::Fastest);
 
     assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Lane));
     assert_eq!(condition.routing_algorithm, Some(RoutingAlgorithm::Fastest));
@@ -243,10 +261,14 @@ fn test_xml_serialization_distance_condition() {
 
 #[test]
 fn test_xml_serialization_relative_distance_condition() {
-    let condition =
-        RelativeDistanceCondition::lateral("target_vehicle", 8.5, false, Rule::NotEqualTo)
-            .with_coordinate_system(CoordinateSystem::Road)
-            .with_routing_algorithm(RoutingAlgorithm::LeastIntersections);
+    let condition = RelativeDistanceCondition::lateral(
+        OSString::literal("target_vehicle".to_string()),
+        8.5,
+        false,
+        Rule::NotEqualTo,
+    )
+    .with_coordinate_system(CoordinateSystem::Road)
+    .with_routing_algorithm(RoutingAlgorithm::LeastIntersections);
 
     let xml = quick_xml::se::to_string(&condition)
         .expect("Failed to serialize RelativeDistanceCondition");
@@ -310,7 +332,7 @@ fn test_xml_round_trip_distance_condition() {
 #[test]
 fn test_xml_round_trip_relative_distance_condition() {
     let original = RelativeDistanceCondition::longitudinal(
-        "reference_vehicle",
+        OSString::literal("reference_vehicle".to_string()),
         18.0,
         true,
         Rule::GreaterOrEqual,
@@ -358,7 +380,7 @@ fn test_real_world_scenario_examples() {
 
     // Example 3: Maintain longitudinal distance > 20m from lead vehicle
     let following_condition = RelativeDistanceCondition::longitudinal(
-        "lead_vehicle",
+        OSString::literal("lead_vehicle".to_string()),
         20.0,
         true, // freespace distance
         Rule::GreaterThan,
@@ -374,7 +396,7 @@ fn test_real_world_scenario_examples() {
 
     // Example 4: Lane change safety check - lateral distance > 3m from adjacent vehicle
     let lane_change_condition = RelativeDistanceCondition::lateral(
-        "adjacent_vehicle",
+        OSString::literal("adjacent_vehicle".to_string()),
         3.0,
         true, // freespace
         Rule::GreaterThan,

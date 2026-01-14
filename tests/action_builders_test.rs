@@ -13,7 +13,7 @@ mod action_builder_tests {
 
         // Verify the action was built correctly
         match action.action {
-            openscenario_rs::types::actions::wrappers::CorePrivateAction::LongitudinalAction(long_action) => {
+            openscenario_rs::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 match long_action.longitudinal_action_choice {
                     openscenario_rs::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => {
                         assert!(speed_action.speed_action_target.absolute.is_some());
@@ -37,7 +37,7 @@ mod action_builder_tests {
             .unwrap();
 
         match action.action {
-            openscenario_rs::types::actions::wrappers::CorePrivateAction::TeleportAction(
+            openscenario_rs::types::actions::wrappers::PrivateAction::TeleportAction(
                 teleport_action,
             ) => {
                 // Verify position was set correctly

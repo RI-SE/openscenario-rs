@@ -72,7 +72,7 @@ fn test_spatial_condition_builders() {
     assert_eq!(distance.rule, Rule::GreaterThan);
 
     let relative_distance = RelativeDistanceCondition::new(
-        "vehicle1",
+        OSString::literal("vehicle1".to_string()),
         10.0,
         false,
         RelativeDistanceType::Cartesian,

@@ -211,7 +211,7 @@ fn can_create_and_serialize_actions() {
     use openscenario_rs::types::actions::movement::{
         AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics,
     };
-    use openscenario_rs::types::actions::CoreActionWrapper as Action;
+    use openscenario_rs::types::actions::NamedAction as Action;
     use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
     use openscenario_rs::types::positions::Position;
 

@@ -1,10 +1,10 @@
-//! Tests for Phase 3 Safety Conditions: CollisionCondition, OffRoadCondition, EndOfRoadCondition
+//! Tests for Phase 3 Safety Conditions: CollisionCondition, OffroadCondition, EndOfRoadCondition
 
 use openscenario_rs::types::{
     basic::{Double, OSString},
     conditions::{
         ByEntityCondition, CollisionCondition, CollisionTarget, EndOfRoadCondition,
-        EntityCondition, OffRoadCondition,
+        EntityCondition, OffroadCondition,
     },
     positions::Position,
     scenario::triggers::TriggeringEntities,
@@ -68,19 +68,19 @@ fn test_collision_target_default() {
 
 #[test]
 fn test_off_road_condition_new() {
-    let condition = OffRoadCondition::new(2.5);
+    let condition = OffroadCondition::new(2.5);
     assert_eq!(condition.duration, Double::literal(2.5));
 }
 
 #[test]
 fn test_off_road_condition_with_duration() {
-    let condition = OffRoadCondition::with_duration(4.0);
+    let condition = OffroadCondition::with_duration(4.0);
     assert_eq!(condition.duration, Double::literal(4.0));
 }
 
 #[test]
 fn test_off_road_condition_default() {
-    let condition = OffRoadCondition::default();
+    let condition = OffroadCondition::default();
     assert_eq!(condition.duration, Double::literal(1.0));
 }
 
@@ -173,7 +173,7 @@ fn test_by_entity_condition_safety_variants() {
 #[test]
 fn test_safety_conditions_serialization() {
     let collision = CollisionCondition::with_target("vehicle1");
-    let off_road = OffRoadCondition::new(2.0);
+    let off_road = OffroadCondition::new(2.0);
     let end_of_road = EndOfRoadCondition::new(3.0);
 
     // Test that they can be serialized and deserialized
@@ -183,7 +183,7 @@ fn test_safety_conditions_serialization() {
     assert_eq!(collision, collision_deserialized);
 
     let off_road_serialized = serde_json::to_string(&off_road).unwrap();
-    let off_road_deserialized: OffRoadCondition =
+    let off_road_deserialized: OffroadCondition =
         serde_json::from_str(&off_road_serialized).unwrap();
     assert_eq!(off_road, off_road_deserialized);
 

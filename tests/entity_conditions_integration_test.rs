@@ -128,20 +128,34 @@ fn test_spatial_condition_builders() {
     assert_eq!(distance_greater.value, Double::literal(30.0));
 
     // Test RelativeDistanceCondition builders
-    let longitudinal =
-        RelativeDistanceCondition::longitudinal("vehicle1", 20.0, true, Rule::GreaterThan);
+    let longitudinal = RelativeDistanceCondition::longitudinal(
+        OSString::literal("vehicle1".to_string()),
+        20.0,
+        true,
+        Rule::GreaterThan,
+    );
     assert_eq!(
         longitudinal.relative_distance_type,
         RelativeDistanceType::Longitudinal
     );
 
-    let lateral = RelativeDistanceCondition::lateral("vehicle2", 5.0, false, Rule::LessThan);
+    let lateral = RelativeDistanceCondition::lateral(
+        OSString::literal("vehicle2".to_string()),
+        5.0,
+        false,
+        Rule::LessThan,
+    );
     assert_eq!(
         lateral.relative_distance_type,
         RelativeDistanceType::Lateral
     );
 
-    let cartesian = RelativeDistanceCondition::cartesian("vehicle3", 15.0, true, Rule::EqualTo);
+    let cartesian = RelativeDistanceCondition::cartesian(
+        OSString::literal("vehicle3".to_string()),
+        15.0,
+        true,
+        Rule::EqualTo,
+    );
     assert_eq!(
         cartesian.relative_distance_type,
         RelativeDistanceType::Cartesian
