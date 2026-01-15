@@ -385,7 +385,7 @@ impl CatalogController {
 /// Pedestrian entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogPedestrian {
-    /// Name of the pedestrian in the catalog
+    /// Name of pedestrian in the catalog
     #[serde(rename = "@name")]
     pub name: String,
 
@@ -393,9 +393,25 @@ pub struct CatalogPedestrian {
     #[serde(rename = "@pedestrianCategory")]
     pub pedestrian_category: OSString,
 
+    /// Mass in kg (can be parameterized) - REQUIRED by XSD
+    #[serde(rename = "@mass")]
+    pub mass: OSString,
+
+    /// Role (can be parameterized)
+    #[serde(rename = "@role", skip_serializing_if = "Option::is_none")]
+    pub role: Option<OSString>,
+
+    /// 3D model path (can be parameterized)
+    #[serde(rename = "@model3d", skip_serializing_if = "Option::is_none")]
+    pub model3d: Option<String>,
+
     /// Bounding box (can have parameterized dimensions)
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
+
+    /// Additional properties (can be parameterized)
+    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
+    pub properties: Option<vehicle::Properties>,
 
     /// Parameter declarations for this catalog pedestrian
     #[serde(
@@ -412,25 +428,53 @@ impl CatalogEntity for CatalogPedestrian {
         self,
         parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
+        let resolved_mass = self.mass.resolve(&parameters)?;
+        let mass_value = resolved_mass.parse::<f64>().map_err(|e| {
+            crate::error::Error::catalog_error(&format!("Failed to parse mass value: {}", e))
+        })?;
+
         let resolved_pedestrian = pedestrian::Pedestrian {
             name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
             pedestrian_category: self
                 .resolve_pedestrian_category(&self.pedestrian_category, &parameters)?,
+            mass: crate::types::basic::Double::literal(mass_value),
+            role: self
+                .role
+                .as_ref()
+                .map(|r| self.resolve_role(r, &parameters))
+                .transpose()?,
+            model3d: self.model3d,
             bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
+            properties: self.properties,
+            parameter_declarations: None,
         };
 
         Ok(resolved_pedestrian)
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![ParameterDefinition {
-            name: "PedestrianCategory".to_string(),
-            parameter_type: "String".to_string(),
-            default_value: Some("pedestrian".to_string()),
-            description: Some(
-                "Category of pedestrian (pedestrian, wheelchair, animal)".to_string(),
-            ),
-        }]
+        vec![
+            ParameterDefinition {
+                name: "PedestrianCategory".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("pedestrian".to_string()),
+                description: Some(
+                    "Category of pedestrian (pedestrian, wheelchair, animal)".to_string(),
+                ),
+            },
+            ParameterDefinition {
+                name: "Mass".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("75.0".to_string()),
+                description: Some("Mass of pedestrian in kg".to_string()),
+            },
+            ParameterDefinition {
+                name: "Role".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("none".to_string()),
+                description: Some("Role of pedestrian (civil, police, etc.)".to_string()),
+            },
+        ]
     }
 
     fn entity_name(&self) -> &str {
@@ -476,6 +520,29 @@ impl CatalogPedestrian {
             _ => Err(crate::error::Error::catalog_error(&format!(
                 "Invalid pedestrian category: {}",
                 category_str
+            ))),
+        }
+    }
+
+    /// Helper method to resolve role parameter
+    fn resolve_role(
+        &self,
+        role: &OSString,
+        parameters: &HashMap<String, String>,
+    ) -> Result<crate::types::enums::Role> {
+        let role_str = role.resolve(parameters)?;
+        match role_str.as_str() {
+            "none" => Ok(crate::types::enums::Role::None),
+            "ambulance" => Ok(crate::types::enums::Role::Ambulance),
+            "civil" => Ok(crate::types::enums::Role::Civil),
+            "fire" => Ok(crate::types::enums::Role::Fire),
+            "military" => Ok(crate::types::enums::Role::Military),
+            "police" => Ok(crate::types::enums::Role::Police),
+            "publicTransport" => Ok(crate::types::enums::Role::PublicTransport),
+            "roadAssistance" => Ok(crate::types::enums::Role::RoadAssistance),
+            _ => Err(crate::error::Error::catalog_error(&format!(
+                "Invalid role: {}",
+                role_str
             ))),
         }
     }
@@ -906,7 +973,7 @@ mod tests {
     #[test]
     fn test_catalog_pedestrian_parameter_schema() {
         let schema = CatalogPedestrian::parameter_schema();
-        assert_eq!(schema.len(), 1);
+        assert_eq!(schema.len(), 3);
 
         let pedestrian_category_param = schema
             .iter()
@@ -917,6 +984,14 @@ mod tests {
             pedestrian_category_param.default_value.as_ref().unwrap(),
             "pedestrian"
         );
+
+        let mass_param = schema.iter().find(|p| p.name == "Mass").unwrap();
+        assert_eq!(mass_param.parameter_type, "Double");
+        assert_eq!(mass_param.default_value.as_ref().unwrap(), "75.0");
+
+        let role_param = schema.iter().find(|p| p.name == "Role").unwrap();
+        assert_eq!(role_param.parameter_type, "String");
+        assert_eq!(role_param.default_value.as_ref().unwrap(), "none");
     }
 
     #[test]
@@ -924,7 +999,11 @@ mod tests {
         let catalog_pedestrian = CatalogPedestrian {
             name: "WalkingPerson".to_string(),
             pedestrian_category: Value::Literal("pedestrian".to_string()),
+            mass: Value::Literal(75.0),
+            role: Some(Value::Literal("none".to_string())),
+            model3d: None,
             bounding_box: BoundingBox::default(),
+            properties: None,
             parameter_declarations: None,
         };
 
@@ -936,7 +1015,11 @@ mod tests {
         let catalog_pedestrian = CatalogPedestrian {
             name: "TestPedestrian".to_string(),
             pedestrian_category: Value::Parameter("PedestrianTypeParam".to_string()),
+            mass: Value::Literal(75.0),
+            role: Some(Value::Literal("civil".to_string())),
+            model3d: None,
             bounding_box: BoundingBox::default(),
+            properties: None,
             parameter_declarations: None,
         };
 
@@ -946,6 +1029,7 @@ mod tests {
         let resolved = catalog_pedestrian.into_scenario_entity(parameters).unwrap();
         assert_eq!(resolved.pedestrian_category, PedestrianCategory::Wheelchair);
         assert_eq!(resolved.name.as_literal().unwrap(), "TestPedestrian");
+        assert_eq!(resolved.role.unwrap(), crate::types::enums::Role::Civil);
     }
 
     #[test]
@@ -990,7 +1074,7 @@ mod tests {
         // Should not panic and should return valid schemas
         assert!(vehicle_schema.len() >= 1);
         assert!(controller_schema.len() >= 1);
-        assert!(pedestrian_schema.len() >= 1);
-        assert!(misc_object_schema.len() >= 3); // Now has proper schema with name, mass, boundingBox
+        assert!(pedestrian_schema.len() >= 3); // Has PedestrianCategory, Mass, Role
+        assert!(misc_object_schema.len() >= 3);
     }
 }
