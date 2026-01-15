@@ -298,6 +298,25 @@ impl ScenarioBuilder<HasEntities> {
         crate::builder::entities::catalog::CatalogVehicleBuilder::new(self, name)
     }
 
+    /// Add a pedestrian entity using closure-based configuration
+    pub fn add_pedestrian<F>(mut self, name: &str, config: F) -> Self
+    where
+        F: FnOnce(
+            crate::builder::entities::DetachedPedestrianBuilder,
+        ) -> crate::builder::entities::DetachedPedestrianBuilder,
+    {
+        let pedestrian_builder = crate::builder::entities::DetachedPedestrianBuilder::new(name);
+        let configured_builder = config(pedestrian_builder);
+        let pedestrian_object = configured_builder.build();
+
+        // Add to entities
+        if let Some(ref mut entities) = self.data.entities {
+            entities.add_object(pedestrian_object);
+        }
+
+        self
+    }
+
     /// Add a pedestrian from catalog
     pub fn add_catalog_pedestrian(
         &mut self,
