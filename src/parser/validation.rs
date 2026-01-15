@@ -854,7 +854,7 @@ mod tests {
                 name: Value::literal("TestVehicle".to_string()),
                 vehicle: Some(vehicle),
                 pedestrian: None,
-                catalog_reference: None,
+                entity_catalog_reference: None,
                 object_controller: Default::default(),
             }],
         };
@@ -918,7 +918,7 @@ mod tests {
                 name: Value::literal("TestVehicle".to_string()),
                 vehicle: Some(vehicle),
                 pedestrian: None,
-                catalog_reference: None,
+                entity_catalog_reference: None,
                 object_controller: Default::default(),
             }],
         };
@@ -983,14 +983,14 @@ mod tests {
                     name: Value::literal("Car1".to_string()),
                     vehicle: Some(vehicle1),
                     pedestrian: None,
-                    catalog_reference: None,
+                    entity_catalog_reference: None,
                     object_controller: Default::default(),
                 },
                 ScenarioObject {
                     name: Value::literal("Car1".to_string()),
                     vehicle: Some(vehicle2),
                     pedestrian: None,
-                    catalog_reference: None,
+                    entity_catalog_reference: None,
                     object_controller: Default::default(),
                 },
             ],
@@ -1072,7 +1072,7 @@ mod tests {
             name: crate::types::basic::Value::literal("TestVehicle".to_string()),
             vehicle: Some(vehicle),
             pedestrian: None,
-            catalog_reference: None,
+            entity_catalog_reference: None,
             object_controller: Default::default(),
         };
 

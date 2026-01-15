@@ -999,7 +999,7 @@ mod tests {
         let catalog_pedestrian = CatalogPedestrian {
             name: "WalkingPerson".to_string(),
             pedestrian_category: Value::Literal("pedestrian".to_string()),
-            mass: Value::Literal(75.0),
+            mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal("none".to_string())),
             model3d: None,
             bounding_box: BoundingBox::default(),
@@ -1015,7 +1015,7 @@ mod tests {
         let catalog_pedestrian = CatalogPedestrian {
             name: "TestPedestrian".to_string(),
             pedestrian_category: Value::Parameter("PedestrianTypeParam".to_string()),
-            mass: Value::Literal(75.0),
+            mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal("civil".to_string())),
             model3d: None,
             bounding_box: BoundingBox::default(),

@@ -37,7 +37,7 @@ use crate::types::{
         LongitudinalAction, LongitudinalActionChoice, LongitudinalDistanceAction,
         SpeedProfileAction, SpeedProfileEntry,
     },
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     basic::{Boolean, Double, OSString},
 };
 
@@ -112,13 +112,11 @@ impl ActionBuilder for LongitudinalDistanceActionBuilder {
             dynamic_constraints: None,
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::LongitudinalAction(LongitudinalAction {
+        Ok(PrivateAction::LongitudinalAction(LongitudinalAction {
                 longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
                     action,
                 ),
-            }),
-        })
+            }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -191,11 +189,9 @@ impl ActionBuilder for SpeedProfileActionBuilder {
             dynamic_constraints: None,
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::LongitudinalAction(LongitudinalAction {
+        Ok(PrivateAction::LongitudinalAction(LongitudinalAction {
                 longitudinal_action_choice: LongitudinalActionChoice::SpeedProfileAction(action),
-            }),
-        })
+            }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -287,7 +283,7 @@ mod tests {
             .unwrap();
 
         // Verify structure
-        match builder.action {
+        match builder {
             PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::LongitudinalDistanceAction(ref dist) => {
@@ -310,7 +306,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::LongitudinalDistanceAction(ref dist) => {
@@ -357,7 +353,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {
@@ -391,7 +387,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::LongitudinalAction(ref action) => {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {

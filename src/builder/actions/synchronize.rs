@@ -24,7 +24,7 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     actions::movement::SynchronizeAction,
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     basic::OSString,
     positions::Position,
 };
@@ -82,9 +82,7 @@ impl ActionBuilder for SynchronizeActionBuilder {
             target_tolerance: None,
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::SynchronizeAction(action),
-        })
+        Ok(PrivateAction::SynchronizeAction(action))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -130,7 +128,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::SynchronizeAction(ref action) => {
                 assert_eq!(
                     action.master_entity_ref.as_literal(),

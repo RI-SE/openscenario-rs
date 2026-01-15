@@ -215,7 +215,7 @@ impl BuilderValidationRule for CatalogReferenceValidationRule {
             let has_catalog_refs = entities
                 .scenario_objects
                 .iter()
-                .any(|obj| obj.catalog_reference.is_some());
+                .any(|obj| obj.entity_catalog_reference.is_some());
 
             if has_catalog_refs && scenario.catalog_locations.is_none() {
                 return Err(BuilderError::validation_error(

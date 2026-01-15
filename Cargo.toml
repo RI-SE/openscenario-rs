@@ -48,3 +48,7 @@ path = "tools/xosc_validate.rs"
 [[bin]]
 name = "scenario_analyzer"
 path = "tools/scenario_analyzer.rs"
+
+[[example]]
+name = "pedestrian_builder_demo"
+required-features = ["builder"]

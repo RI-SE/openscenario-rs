@@ -290,6 +290,11 @@ impl DetachedPedestrianBuilder {
         self
     }
 
+    /// Finish configuring the pedestrian (for use in closure-based APIs)
+    pub fn finish(self) -> Self {
+        self
+    }
+
     /// Build the pedestrian object (returns ScenarioObject)
     pub fn build(self) -> ScenarioObject {
         let pedestrian = crate::types::entities::Pedestrian {

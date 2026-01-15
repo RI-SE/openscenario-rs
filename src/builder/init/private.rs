@@ -14,7 +14,7 @@ use crate::types::{
         LateralAction, LongitudinalAction as LongitudinalActionType, RoutingAction, SpeedAction,
         SpeedActionTarget, SynchronizeAction, TeleportAction, TransitionDynamics,
     },
-    actions::wrappers::PrivateAction,
+    actions::wrappers::PrivateAction as PrivateActionWrapper,
     basic::{Double, Value},
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
@@ -28,7 +28,7 @@ use crate::types::{
 pub struct PrivateActionBuilder {
     parent: InitActionBuilder,
     entity_ref: String,
-    actions: Vec<PrivateAction>,
+    actions: Vec<PrivateActionWrapper>,
 }
 
 impl PrivateActionBuilder {
@@ -41,44 +41,38 @@ impl PrivateActionBuilder {
         }
     }
 
-    /// Add a teleport action to position the entity
+    /// Add a teleport action to position an entity
     pub fn add_teleport_action(mut self, position: Position) -> Self {
-        let action = PrivateAction {
-            teleport_action: Some(TeleportAction { position }),
-            ..Default::default()
-        };
+        let action = PrivateActionWrapper::TeleportAction(TeleportAction { position });
         self.actions.push(action);
         self
     }
 
     /// Add a speed action to set initial velocity
     pub fn add_speed_action(mut self, speed: f64) -> Self {
-        let action = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction {
-                speed_action: Some(SpeedAction {
-                    speed_action_dynamics: TransitionDynamics {
-                        dynamics_dimension: DynamicsDimension::Time,
-                        dynamics_shape: DynamicsShape::Step,
-                        value: Double::literal(1.0),
-                    },
-                    speed_action_target: SpeedActionTarget {
-                        absolute: Some(crate::types::actions::movement::AbsoluteTargetSpeed {
-                            value: Double::literal(speed),
-                        }),
-                        relative: None,
-                    },
+        let speed_action = SpeedAction {
+            speed_action_dynamics: TransitionDynamics {
+                dynamics_dimension: DynamicsDimension::Time,
+                dynamics_shape: DynamicsShape::Step,
+                value: Double::literal(1.0),
+            },
+            speed_action_target: SpeedActionTarget {
+                absolute: Some(crate::types::actions::movement::AbsoluteTargetSpeed {
+                    value: Double::literal(speed),
                 }),
-                longitudinal_distance_action: None,
-                speed_profile_action: None,
-            }),
-            ..Default::default()
+                relative: None,
+            },
         };
+
+        let action = PrivateActionWrapper::LongitudinalAction(LongitudinalActionType {
+            longitudinal_action_choice: crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action),
+        });
         self.actions.push(action);
         self
     }
 
     /// Add a custom private action
-    pub fn add_action(mut self, action: PrivateAction) -> Self {
+    pub fn add_action(mut self, action: PrivateActionWrapper) -> Self {
         self.actions.push(action);
         self
     }
@@ -93,8 +87,7 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions
-            .push(self.convert_to_init_action(builder_action));
+        self.actions.push(builder_action);
         self
     }
 
@@ -106,8 +99,7 @@ impl PrivateActionBuilder {
         }
 
         if let Ok(builder_action) = builder.build_action() {
-            self.actions
-                .push(self.convert_to_init_action(builder_action));
+            self.actions.push(builder_action);
         }
         self
     }
@@ -121,8 +113,7 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions
-            .push(self.convert_to_init_action(builder_action));
+        self.actions.push(builder_action);
         self
     }
 
@@ -137,8 +128,7 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions
-            .push(self.convert_to_init_action(builder_action));
+        self.actions.push(builder_action);
         self
     }
 
@@ -149,8 +139,7 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions
-            .push(self.convert_to_init_action(builder_action));
+        self.actions.push(builder_action);
         self
     }
 
@@ -170,8 +159,7 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions
-            .push(self.convert_to_init_action(builder_action));
+        self.actions.push(builder_action);
         self
     }
 
@@ -184,8 +172,7 @@ impl PrivateActionBuilder {
             .build_action()
             .unwrap();
 
-        self.actions
-            .push(self.convert_to_init_action(builder_action));
+        self.actions.push(builder_action);
         self
     }
 
@@ -203,69 +190,94 @@ impl PrivateActionBuilder {
 
     /// Convert from builder PrivateAction to init PrivateAction
     fn convert_to_init_action(
-        &self,
-        action: crate::types::actions::wrappers::PrivateAction,
+        action: PrivateActionWrapper,
     ) -> PrivateAction {
-        match action.action {
-            PrivateAction::LongitudinalAction(long_action) => PrivateAction {
-                longitudinal_action: Some(LongitudinalAction {
-                    speed_action: match &long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => Some(a.clone()),
-                        _ => None,
-                    },
-                    longitudinal_distance_action: match &long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(a) => Some(a.clone()),
-                        _ => None,
-                    },
-                    speed_profile_action: match &long_action.longitudinal_action_choice {
-                        crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(a) => Some(a.clone()),
-                        _ => None,
-                    },
-                }),
-                ..Default::default()
-            },
-            PrivateAction::LateralAction(lateral_action) => PrivateAction {
-                lateral_action: Some(lateral_action),
-                ..Default::default()
-            },
-            PrivateAction::RoutingAction(routing_action) => PrivateAction {
-                routing_action: Some(routing_action),
-                ..Default::default()
-            },
-            PrivateAction::VisibilityAction(visibility_action) => PrivateAction {
-                visibility_action: Some(visibility_action),
-                ..Default::default()
-            },
-            PrivateAction::SynchronizeAction(sync_action) => PrivateAction {
-                synchronize_action: Some(sync_action),
-                ..Default::default()
-            },
-            PrivateAction::TeleportAction(teleport_action) => PrivateAction {
-                teleport_action: Some(teleport_action),
-                ..Default::default()
-            },
-            PrivateAction::ControllerAction(controller_action) => PrivateAction {
-                controller_action: Some(controller_action),
-                ..Default::default()
-            },
+        match action {
+            PrivateActionWrapper::LongitudinalAction(long_action) => {
+                PrivateAction {
+                    longitudinal_action: Some(LongitudinalAction {
+                        speed_action: match &long_action.longitudinal_action_choice {
+                            crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => Some(a.clone()),
+                            _ => None,
+                        },
+                        longitudinal_distance_action: match &long_action.longitudinal_action_choice {
+                            crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(a) => Some(a.clone()),
+                            _ => None,
+                        },
+                        speed_profile_action: match &long_action.longitudinal_action_choice {
+                            crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(a) => Some(a.clone()),
+                            _ => None,
+                        },
+                    }),
+                    ..Default::default()
+                }
+            }
+            PrivateActionWrapper::LateralAction(lateral_action) => {
+                PrivateAction {
+                    lateral_action: Some(lateral_action),
+                    ..Default::default()
+                }
+            }
+            PrivateActionWrapper::RoutingAction(routing_action) => {
+                PrivateAction {
+                    routing_action: Some(routing_action),
+                    ..Default::default()
+                }
+            }
+            PrivateActionWrapper::VisibilityAction(visibility_action) => {
+                PrivateAction {
+                    visibility_action: Some(visibility_action),
+                    ..Default::default()
+                }
+            }
+            PrivateActionWrapper::SynchronizeAction(sync_action) => {
+                PrivateAction {
+                    synchronize_action: Some(sync_action),
+                    ..Default::default()
+                }
+            }
+            PrivateActionWrapper::TeleportAction(teleport_action) => {
+                PrivateAction {
+                    teleport_action: Some(teleport_action),
+                    ..Default::default()
+                }
+            }
+            PrivateActionWrapper::ControllerAction(controller_action) => {
+                PrivateAction {
+                    controller_action: Some(controller_action),
+                    ..Default::default()
+                }
+            }
             _ => PrivateAction::default(),
         }
     }
 
     /// Finish building and return to parent
     pub fn finish(self) -> InitActionBuilder {
+        let private_actions: Vec<PrivateAction> = self
+            .actions
+            .into_iter()
+            .map(Self::convert_to_init_action)
+            .collect();
+
         let private = Private {
             entity_ref: Value::literal(self.entity_ref),
-            private_actions: self.actions,
+            private_actions,
         };
         self.parent.add_private(private)
     }
 
     /// Build the private action container
     pub fn build(self) -> BuilderResult<Private> {
+        let private_actions: Vec<PrivateAction> = self
+            .actions
+            .into_iter()
+            .map(Self::convert_to_init_action)
+            .collect();
+
         Ok(Private {
             entity_ref: Value::literal(self.entity_ref),
-            private_actions: self.actions,
+            private_actions,
         })
     }
 }

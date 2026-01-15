@@ -97,7 +97,7 @@ impl<'parent> CatalogVehicleReferenceBuilder<'parent> {
         // Create scenario object
         let scenario_object = ScenarioObject {
             name: OSString::literal(self.parent.name.clone()),
-            catalog_reference: None, // TODO: Store catalog reference if needed
+            entity_catalog_reference: None,
             vehicle: Some(vehicle),
             pedestrian: None,
             object_controller: None,
@@ -198,7 +198,7 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
         // Create scenario object
         let scenario_object = ScenarioObject {
             name: OSString::literal(self.parent.name.clone()),
-            catalog_reference: None, // TODO: Store catalog reference if needed
+            entity_catalog_reference: None,
             vehicle: None,
             pedestrian: Some(pedestrian),
             object_controller: None,

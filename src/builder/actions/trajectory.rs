@@ -49,7 +49,7 @@ use crate::types::{
         FollowTrajectoryAction, RoutingAction, TimeReference, Timing, Trajectory,
         TrajectoryFollowingMode,
     },
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     basic::{Boolean, Double, OSString},
     enums::FollowingMode,
     geometry::shapes::{Polyline, Shape, Vertex},
@@ -413,13 +413,11 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             initial_distance_offset: self.initial_distance_offset.map(|v| Double::literal(v)),
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::RoutingAction(RoutingAction {
-                assign_route_action: None,
-                follow_trajectory_action: Some(follow_trajectory_action),
-                follow_route_action: None,
-            }),
-        })
+        Ok(PrivateAction::RoutingAction(RoutingAction {
+            assign_route_action: None,
+            follow_trajectory_action: Some(follow_trajectory_action),
+            follow_route_action: None,
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -638,7 +636,7 @@ mod tests {
             .unwrap();
 
         // Verify action structure
-        match action.action {
+        match action {
             PrivateAction::RoutingAction(ref routing) => {
                 assert!(routing.follow_trajectory_action.is_some());
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
@@ -672,7 +670,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match action.action {
+        match action {
             PrivateAction::RoutingAction(ref routing) => {
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert_eq!(
@@ -705,7 +703,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match action.action {
+        match action {
             PrivateAction::RoutingAction(ref routing) => {
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert_eq!(

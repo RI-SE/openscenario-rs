@@ -25,10 +25,32 @@ pub use vehicle::{Properties, Vehicle};
 pub enum EntityObject {
     /// Vehicle entity
     Vehicle(Box<Vehicle>),
-    /// Pedestrian entity  
+    /// Pedestrian entity
     Pedestrian(Box<Pedestrian>),
     // TODO: Add MiscellaneousObject later
     // MiscellaneousObject(MiscObject),
+}
+
+/// Catalog reference for scenario entities (vehicle or pedestrian)
+///
+/// This enum wraps typed catalog references to handle the XSD constraint that
+/// only one CatalogReference element can exist per ScenarioObject. The actual
+/// type (vehicle vs pedestrian) is determined at runtime during catalog resolution.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ScenarioEntityReference {
+    /// Vehicle catalog reference
+    Vehicle(
+        crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogVehicle,
+        >,
+    ),
+    /// Pedestrian catalog reference
+    Pedestrian(
+        crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogPedestrian,
+        >,
+    ),
 }
 
 /// Wrapper for scenario objects containing entity information
@@ -46,21 +68,12 @@ pub struct ScenarioObject {
     #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
     pub pedestrian: Option<Pedestrian>,
 
-    /// Vehicle catalog reference (optional)
+    /// Entity catalog reference (vehicle or pedestrian)
+    ///
+    /// References a vehicle or pedestrian from an external catalog.
+    /// Mutually exclusive with direct vehicle/pedestrian definitions.
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub vehicle_catalog_reference: Option<
-        crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogVehicle,
-        >,
-    >,
-
-    /// Pedestrian catalog reference (optional)
-    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub pedestrian_catalog_reference: Option<
-        crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogPedestrian,
-        >,
-    >,
+    pub entity_catalog_reference: Option<ScenarioEntityReference>,
 
     /// Object controller configuration (optional)
     #[serde(rename = "ObjectController", skip_serializing_if = "Option::is_none")]
@@ -82,8 +95,7 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: Some(vehicle),
             pedestrian: None,
-            vehicle_catalog_reference: None,
-            pedestrian_catalog_reference: None,
+            entity_catalog_reference: None,
             object_controller: Some(ObjectController::default()),
         }
     }
@@ -94,8 +106,7 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: Some(pedestrian),
-            vehicle_catalog_reference: None,
-            pedestrian_catalog_reference: None,
+            entity_catalog_reference: None,
             object_controller: Some(ObjectController::default()),
         }
     }
@@ -111,8 +122,7 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: None,
-            vehicle_catalog_reference: Some(catalog_reference),
-            pedestrian_catalog_reference: None,
+            entity_catalog_reference: Some(ScenarioEntityReference::Vehicle(catalog_reference)),
             object_controller: Some(ObjectController::default()),
         }
     }
@@ -128,9 +138,36 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: None,
-            vehicle_catalog_reference: None,
-            pedestrian_catalog_reference: Some(catalog_reference),
+            entity_catalog_reference: Some(ScenarioEntityReference::Pedestrian(catalog_reference)),
             object_controller: Some(ObjectController::default()),
+        }
+    }
+
+    /// Get vehicle catalog reference if present
+    pub fn vehicle_catalog_reference(
+        &self,
+    ) -> Option<
+        &crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogVehicle,
+        >,
+    > {
+        match &self.entity_catalog_reference {
+            Some(ScenarioEntityReference::Vehicle(r)) => Some(r),
+            _ => None,
+        }
+    }
+
+    /// Get pedestrian catalog reference if present
+    pub fn pedestrian_catalog_reference(
+        &self,
+    ) -> Option<
+        &crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogPedestrian,
+        >,
+    > {
+        match &self.entity_catalog_reference {
+            Some(ScenarioEntityReference::Pedestrian(r)) => Some(r),
+            _ => None,
         }
     }
 

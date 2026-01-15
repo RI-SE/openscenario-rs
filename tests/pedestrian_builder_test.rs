@@ -13,9 +13,9 @@ mod pedestrian_builder_tests {
 
         assert!(scenario.is_ok());
         let scenario = scenario.unwrap();
-        assert_eq!(scenario.entities.unwrap().scenario_objects.len(), 1);
+        assert_eq!(scenario.entities.as_ref().unwrap().scenario_objects.len(), 1);
 
-        let obj = &scenario.entities.unwrap().scenario_objects[0];
+        let obj = &scenario.entities.as_ref().unwrap().scenario_objects[0];
         assert!(obj.pedestrian.is_some());
 
         let ped = obj.pedestrian.as_ref().unwrap();
@@ -43,7 +43,7 @@ mod pedestrian_builder_tests {
 
         assert_eq!(ped.pedestrian_category, PedestrianCategory::Wheelchair);
         assert_eq!(ped.mass.as_literal().unwrap(), &85.0);
-        assert_eq!(ped.role.unwrap(), Role::Civil);
+        assert_eq!(ped.role.as_ref().unwrap(), &Role::Civil);
     }
 
     #[test]

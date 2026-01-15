@@ -32,7 +32,7 @@ use crate::types::{
         AbsoluteTargetSpeed, LongitudinalAction, LongitudinalActionChoice, SpeedAction,
         SpeedActionTarget, TeleportAction, TransitionDynamics,
     },
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     basic::Double,
     enums::{DynamicsDimension, DynamicsShape},
     positions::Position,
@@ -88,11 +88,9 @@ impl ActionBuilder for SpeedActionBuilder {
             },
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::LongitudinalAction(LongitudinalAction {
-                longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(speed_action),
-            }),
-        })
+        Ok(PrivateAction::LongitudinalAction(LongitudinalAction {
+            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(speed_action),
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -145,9 +143,7 @@ impl ActionBuilder for TeleportActionBuilder {
             position: self.position.unwrap(),
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::TeleportAction(teleport_action),
-        })
+        Ok(PrivateAction::TeleportAction(teleport_action))
     }
 
     fn validate(&self) -> BuilderResult<()> {

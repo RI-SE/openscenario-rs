@@ -38,7 +38,7 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     actions::movement::{AssignRouteAction, FollowRouteAction, RoutingAction},
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     routing::{Route, RouteRef},
 };
 
@@ -92,13 +92,11 @@ impl ActionBuilder for AssignRouteActionBuilder {
             route: self.route_ref.unwrap(),
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::RoutingAction(RoutingAction {
+        Ok(PrivateAction::RoutingAction(RoutingAction {
                 assign_route_action: Some(action),
                 follow_trajectory_action: None,
                 follow_route_action: None,
-            }),
-        })
+            }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -167,13 +165,11 @@ impl ActionBuilder for FollowRouteActionBuilder {
             route_ref: self.route_ref.unwrap(),
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::RoutingAction(RoutingAction {
+        Ok(PrivateAction::RoutingAction(RoutingAction {
                 assign_route_action: None,
                 follow_trajectory_action: None,
                 follow_route_action: Some(action),
-            }),
-        })
+            }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -214,7 +210,7 @@ mod tests {
             .unwrap();
 
         // Verify structure
-        match builder.action {
+        match builder {
             PrivateAction::RoutingAction(ref action) => {
                 assert!(action.assign_route_action.is_some());
                 assert!(action.follow_route_action.is_none());
@@ -235,7 +231,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::RoutingAction(ref action) => {
                 let assign_action = action.assign_route_action.as_ref().unwrap();
                 assert!(matches!(assign_action.route, RouteRef::Catalog(_)));
@@ -267,7 +263,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::RoutingAction(ref action) => {
                 assert!(action.follow_route_action.is_some());
                 assert!(action.assign_route_action.is_none());
@@ -288,7 +284,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::RoutingAction(ref action) => {
                 let follow_action = action.follow_route_action.as_ref().unwrap();
                 assert!(matches!(follow_action.route_ref, RouteRef::Catalog(_)));

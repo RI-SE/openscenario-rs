@@ -88,6 +88,86 @@ mod catalog_builder_tests {
         assert!(catalog_locations.pedestrian_catalog.is_some());
     }
 
+    #[test]
+    fn test_catalog_pedestrian_with_all_fields() {
+        use openscenario_rs::types::basic::Value;
+        use openscenario_rs::types::catalogs::entities::CatalogPedestrian;
+
+        let catalog_pedestrian = CatalogPedestrian {
+            name: "TestPedestrian".to_string(),
+            pedestrian_category: Value::Literal("pedestrian".to_string()),
+            mass: Value::Literal("75.0".to_string()),
+            role: Some(Value::Literal("civil".to_string())),
+            model3d: Some("./models/ped.glb".to_string()),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            properties: None,
+            parameter_declarations: None,
+        };
+
+        assert_eq!(catalog_pedestrian.name, "TestPedestrian");
+        assert_eq!(catalog_pedestrian.mass.as_literal().unwrap(), "75.0");
+        assert!(catalog_pedestrian.role.is_some());
+        assert!(catalog_pedestrian.model3d.is_some());
+    }
+
+    #[test]
+    fn test_catalog_pedestrian_resolution_with_parameters() {
+        use openscenario_rs::types::basic::Value;
+        use openscenario_rs::types::catalogs::entities::{CatalogEntity, CatalogPedestrian};
+        use std::collections::HashMap;
+
+        let catalog_pedestrian = CatalogPedestrian {
+            name: "ParamPedestrian".to_string(),
+            pedestrian_category: Value::Literal("pedestrian".to_string()),
+            mass: Value::Literal("75.0".to_string()),
+            role: Some(Value::Literal("civil".to_string())),
+            model3d: Some("./models/ped.glb".to_string()),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            properties: None,
+            parameter_declarations: None,
+        };
+
+        let resolved = catalog_pedestrian
+            .into_scenario_entity(HashMap::new())
+            .unwrap();
+
+        assert_eq!(resolved.name.as_literal().unwrap(), "ParamPedestrian");
+        assert_eq!(resolved.mass.as_literal().unwrap(), &75.0);
+        assert_eq!(
+            resolved.role.unwrap(),
+            openscenario_rs::types::enums::Role::Civil
+        );
+        assert_eq!(resolved.model3d, Some("./models/ped.glb".to_string()));
+    }
+
+    #[test]
+    fn test_catalog_pedestrian_mass_parameter_resolution() {
+        use openscenario_rs::types::basic::Value;
+        use openscenario_rs::types::catalogs::entities::{CatalogEntity, CatalogPedestrian};
+        use std::collections::HashMap;
+
+        let catalog_pedestrian = CatalogPedestrian {
+            name: "MassParamPedestrian".to_string(),
+            pedestrian_category: Value::Literal("pedestrian".to_string()),
+            mass: Value::Literal("80.0".to_string()), // Parameterized mass
+            role: Some(Value::Literal("police".to_string())),
+            model3d: None,
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            properties: None,
+            parameter_declarations: None,
+        };
+
+        let resolved = catalog_pedestrian
+            .into_scenario_entity(HashMap::new())
+            .unwrap();
+
+        assert_eq!(resolved.mass.as_literal().unwrap(), &80.0);
+        assert_eq!(
+            resolved.role.unwrap(),
+            openscenario_rs::types::enums::Role::Police
+        );
+    }
+
     // Note: Integration tests with actual catalog resolution would require
     // mock catalog files and are better suited for integration test suites
 }

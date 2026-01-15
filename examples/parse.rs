@@ -555,8 +555,8 @@ fn resolve_catalog_references_simple(
                 println!("   🎭 Processing entity: {}", entity_name);
 
                 // Check if entity has a catalog reference
-                if let Some(catalog_ref) = &entity.catalog_reference {
-                    println!("      🔗 Resolving catalog reference...");
+                if let Some(catalog_ref) = entity.vehicle_catalog_reference() {
+                    println!("      🔗 Resolving vehicle catalog reference...");
                     println!("         Catalog: {:?}", catalog_ref.catalog_name);
                     println!("         Entry: {:?}", catalog_ref.entry_name);
 
@@ -648,7 +648,7 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                 let mut controller_refs = 0;
 
                 for entity in &entities.scenario_objects {
-                    if entity.catalog_reference.is_some() {
+                    if entity.entity_catalog_reference.is_some() {
                         catalog_refs += 1;
                     }
                     if let Some(object_controller) = &entity.object_controller {

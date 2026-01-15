@@ -8,7 +8,7 @@ use crate::types::{
         OverrideBrakeAction, OverrideClutchAction, OverrideGearAction, OverrideParkingBrakeAction,
         OverrideSteeringWheelAction, OverrideThrottleAction,
     },
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     basic::{Boolean, Double, Int, Value},
     controllers::Controller,
     enums::ControllerType,
@@ -88,18 +88,16 @@ impl ActionBuilder for ActivateControllerActionBuilder {
             animation: Some(Boolean::literal(self.animation)),
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::ControllerAction(ControllerAction {
-                assign_controller_action: None,
-                override_throttle_action: None,
-                override_brake_action: None,
-                override_clutch_action: None,
-                override_parking_brake_action: None,
-                override_steering_wheel_action: None,
-                override_gear_action: None,
-                activate_controller_action: Some(activate_action),
-            }),
-        })
+        Ok(PrivateAction::ControllerAction(ControllerAction {
+            assign_controller_action: None,
+            override_throttle_action: None,
+            override_brake_action: None,
+            override_clutch_action: None,
+            override_parking_brake_action: None,
+            override_steering_wheel_action: None,
+            override_gear_action: None,
+            activate_controller_action: Some(activate_action),
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -160,18 +158,16 @@ impl ActionBuilder for AssignControllerActionBuilder {
             catalog_reference: None,
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::ControllerAction(ControllerAction {
-                assign_controller_action: Some(assign_action),
-                override_throttle_action: None,
-                override_brake_action: None,
-                override_clutch_action: None,
-                override_parking_brake_action: None,
-                override_steering_wheel_action: None,
-                override_gear_action: None,
-                activate_controller_action: None,
-            }),
-        })
+        Ok(PrivateAction::ControllerAction(ControllerAction {
+            assign_controller_action: Some(assign_action),
+            override_throttle_action: None,
+            override_brake_action: None,
+            override_clutch_action: None,
+            override_parking_brake_action: None,
+            override_steering_wheel_action: None,
+            override_gear_action: None,
+            activate_controller_action: None,
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -203,7 +199,7 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let PrivateAction::ControllerAction(controller_action) = action.action {
+        if let PrivateAction::ControllerAction(controller_action) = action {
             let activate = controller_action.activate_controller_action.unwrap();
             assert!(*activate.lateral.unwrap().as_literal().unwrap());
             assert!(*activate.longitudinal.unwrap().as_literal().unwrap());
@@ -230,7 +226,7 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        if let PrivateAction::ControllerAction(controller_action) = action.action {
+        if let PrivateAction::ControllerAction(controller_action) = action {
             let assign = controller_action.assign_controller_action.unwrap();
             assert_eq!(
                 assign.controller.unwrap().name.as_literal().unwrap(),

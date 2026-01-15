@@ -735,11 +735,11 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
                 analysis.inline_definitions += 1;
                 let pedestrian_analysis = analyze_pedestrian(pedestrian, &entity_name, entity);
                 analysis.pedestrian_analyses.push(pedestrian_analysis);
-            } else if let Some(catalog_ref) = &entity.catalog_reference {
-                // This is a vehicle catalog reference based on the type system
+            } else if let Some(catalog_ref) = entity.vehicle_catalog_reference() {
+                // Vehicle catalog reference
                 analysis.vehicles += 1;
                 analysis.vehicles_catalog += 1;
-                analysis.catalog_references += 1; // Keep for total catalog reference tracking
+                analysis.catalog_references += 1;
 
                 // Analyze catalog reference details
                 let catalog_name = catalog_ref
@@ -763,7 +763,42 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
                     },
                 };
                 analysis.vehicle_analyses.push(vehicle_analysis);
+            } else if let Some(catalog_ref) = entity.pedestrian_catalog_reference() {
+                // Pedestrian catalog reference
+                analysis.pedestrians += 1;
+                analysis.pedestrians_catalog += 1;
+                analysis.catalog_references += 1;
+
+                // Analyze catalog reference details
+                let catalog_name = catalog_ref
+                    .catalog_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+                let entry_name = catalog_ref
+                    .entry_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+
+                let pedestrian_analysis =
+                    analyze_pedestrian_catalog_reference(&catalog_name, &entry_name, entity_name);
+                analysis.pedestrian_analyses.push(pedestrian_analysis);
             }
+        }
+    }
+
+    fn analyze_pedestrian_catalog_reference(
+        catalog_name: &str,
+        entry_name: &str,
+        entity_name: &str,
+    ) -> PedestrianAnalysis {
+        PedestrianAnalysis {
+            entity_name: entity_name.to_string(),
+            pedestrian_name: entry_name.to_string(),
+            category: "catalog-referenced".to_string(),
+            source: EntitySource::CatalogReference {
+                catalog_name: catalog_name.to_string(),
+                entry_name: entry_name.to_string(),
+            },
         }
     }
 
@@ -794,9 +829,9 @@ fn analyze_vehicle(
     axle_count += vehicle.axles.additional_axles.len();
 
     // Determine source
-    let source = if entity.catalog_reference.is_some() {
+    let source = if entity.entity_catalog_reference.is_some() {
         EntitySource::CatalogReference {
-            catalog_name: "VehicleCatalog".to_string(),
+            catalog_name: "Catalog".to_string(),
             entry_name: "Unknown".to_string(),
         }
     } else {
@@ -829,9 +864,9 @@ fn analyze_pedestrian(
     let category = format!("{:?}", pedestrian.pedestrian_category).to_lowercase();
 
     // Determine source
-    let source = if entity.catalog_reference.is_some() {
+    let source = if entity.entity_catalog_reference.is_some() {
         EntitySource::CatalogReference {
-            catalog_name: "PedestrianCatalog".to_string(),
+            catalog_name: "Catalog".to_string(),
             entry_name: "Unknown".to_string(),
         }
     } else {
@@ -2861,7 +2896,62 @@ fn resolve_catalog_references_in_scenario(
                 .to_string();
 
             // Check if entity has a catalog reference
-            if let Some(catalog_ref) = &entity.catalog_reference {
+            if let Some(catalog_ref) = entity.vehicle_catalog_reference() {
+                result.resolution_attempts += 1;
+
+                let catalog_name = catalog_ref
+                    .catalog_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+                let entry_name = catalog_ref
+                    .entry_name
+                    .as_literal()
+                    .map_or("Unknown".to_string(), |v| v.clone());
+
+                // Attempt to resolve the catalog reference
+                match resolve_catalog_reference_simple(
+                    &catalog_ref.catalog_name,
+                    &catalog_ref.entry_name,
+                    catalog_locations,
+                    parameters,
+                    base_dir,
+                ) {
+                    Ok(found) => {
+                        if found {
+                            result.resolution_successes += 1;
+                            result.resolution_results.push(CatalogResolutionResult {
+                                entity_name: entity_name.clone(),
+                                catalog_name,
+                                entry_name,
+                                resolution_type: "entity".to_string(),
+                                success: true,
+                                error_message: None,
+                            });
+                        } else {
+                            result.resolution_failures += 1;
+                            result.resolution_results.push(CatalogResolutionResult {
+                                entity_name: entity_name.clone(),
+                                catalog_name,
+                                entry_name,
+                                resolution_type: "entity".to_string(),
+                                success: false,
+                                error_message: Some("Entry not found in catalog".to_string()),
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        result.resolution_failures += 1;
+                        result.resolution_results.push(CatalogResolutionResult {
+                            entity_name: entity_name.clone(),
+                            catalog_name,
+                            entry_name,
+                            resolution_type: "entity".to_string(),
+                            success: false,
+                            error_message: Some(e.to_string()),
+                        });
+                    }
+                }
+            } else if let Some(catalog_ref) = entity.pedestrian_catalog_reference() {
                 result.resolution_attempts += 1;
 
                 let catalog_name = catalog_ref

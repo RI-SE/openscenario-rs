@@ -12,7 +12,7 @@ mod action_builder_tests {
             .unwrap();
 
         // Verify the action was built correctly
-        match action.action {
+        match action {
             openscenario_rs::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 match long_action.longitudinal_action_choice {
                     openscenario_rs::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => {
@@ -36,7 +36,7 @@ mod action_builder_tests {
             .build_action()
             .unwrap();
 
-        match action.action {
+        match action {
             openscenario_rs::types::actions::wrappers::PrivateAction::TeleportAction(
                 teleport_action,
             ) => {

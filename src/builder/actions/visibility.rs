@@ -30,7 +30,7 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::BuilderResult;
 use crate::types::{
     actions::appearance::VisibilityAction,
-    actions::wrappers::{PrivateAction, PrivateAction},
+    actions::wrappers::PrivateAction,
     basic::Boolean,
 };
 
@@ -110,9 +110,7 @@ impl ActionBuilder for VisibilityActionBuilder {
             sensor_reference_set: None,
         };
 
-        Ok(PrivateAction {
-            action: PrivateAction::VisibilityAction(action),
-        })
+        Ok(PrivateAction::VisibilityAction(action))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -138,7 +136,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::VisibilityAction(ref action) => {
                 assert_eq!(action.graphics.as_literal(), Some(&true));
                 assert_eq!(action.sensors.as_literal(), Some(&true));
@@ -156,7 +154,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::VisibilityAction(ref action) => {
                 assert_eq!(action.graphics.as_literal(), Some(&false));
                 assert_eq!(action.sensors.as_literal(), Some(&false));
@@ -176,7 +174,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::VisibilityAction(ref action) => {
                 assert_eq!(action.graphics.as_literal(), Some(&true));
                 assert_eq!(action.sensors.as_literal(), Some(&false));
@@ -193,7 +191,7 @@ mod tests {
             .build_action()
             .unwrap();
 
-        match builder.action {
+        match builder {
             PrivateAction::VisibilityAction(ref action) => {
                 // Default is all visible
                 assert_eq!(action.graphics.as_literal(), Some(&true));

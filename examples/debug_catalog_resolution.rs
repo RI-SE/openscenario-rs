@@ -65,35 +65,58 @@ fn main() -> Result<(), Error> {
                     println!("\n=== Entities ===");
                     for entity in &entities.scenario_objects {
                         println!("Entity: {:?}", entity.name);
-                        match &entity.catalog_reference {
-                            Some(catalog_ref) => {
-                                println!("  Catalog Reference:");
-                                println!("    Catalog Name: {:?}", catalog_ref.catalog_name);
-                                println!("    Entry Name: {:?}", catalog_ref.entry_name);
 
-                                // Use the simple catalog resolution function
-                                match resolve_catalog_reference_simple(
-                                    &catalog_ref.catalog_name,
-                                    &catalog_ref.entry_name,
-                                    catalog_locations,
-                                    &parameters,
-                                    base_path,
-                                ) {
-                                    Ok(found) => {
-                                        println!("    ✓ Catalog resolution completed:");
-                                        println!(
-                                            "      Entry found: {}",
-                                            if found { "✓ Yes" } else { "✗ No" }
-                                        );
-                                    }
-                                    Err(e) => {
-                                        println!("    ✗ Catalog resolution failed: {}", e);
-                                    }
+                        // Check for vehicle catalog reference
+                        if let Some(catalog_ref) = entity.vehicle_catalog_reference() {
+                            println!("  Vehicle Catalog Reference:");
+                            println!("    Catalog Name: {:?}", catalog_ref.catalog_name);
+                            println!("    Entry Name: {:?}", catalog_ref.entry_name);
+
+                            // Use the simple catalog resolution function
+                            match resolve_catalog_reference_simple(
+                                &catalog_ref.catalog_name,
+                                &catalog_ref.entry_name,
+                                catalog_locations,
+                                &parameters,
+                                base_path,
+                            ) {
+                                Ok(found) => {
+                                    println!("    ✓ Catalog resolution completed:");
+                                    println!(
+                                        "      Entry found: {}",
+                                        if found { "✓ Yes" } else { "✗ No" }
+                                    );
+                                }
+                                Err(e) => {
+                                    println!("    ✗ Catalog resolution failed: {}", e);
                                 }
                             }
-                            None => {
-                                println!("  No catalog reference (inline definition)");
+                        } else if let Some(catalog_ref) = entity.pedestrian_catalog_reference() {
+                            println!("  Pedestrian Catalog Reference:");
+                            println!("    Catalog Name: {:?}", catalog_ref.catalog_name);
+                            println!("    Entry Name: {:?}", catalog_ref.entry_name);
+
+                            // Use the simple catalog resolution function
+                            match resolve_catalog_reference_simple(
+                                &catalog_ref.catalog_name,
+                                &catalog_ref.entry_name,
+                                catalog_locations,
+                                &parameters,
+                                base_path,
+                            ) {
+                                Ok(found) => {
+                                    println!("    ✓ Catalog resolution completed:");
+                                    println!(
+                                        "      Entry found: {}",
+                                        if found { "✓ Yes" } else { "✗ No" }
+                                    );
+                                }
+                                Err(e) => {
+                                    println!("    ✗ Catalog resolution failed: {}", e);
+                                }
                             }
+                        } else {
+                            println!("  No catalog reference (inline definition)");
                         }
                     }
                 }
