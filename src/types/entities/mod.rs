@@ -34,7 +34,7 @@ pub enum EntityObject {
 /// Wrapper for scenario objects containing entity information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScenarioObject {
-    /// Name of the scenario object (used for references)
+    /// Name of scenario object (used for references)
     #[serde(rename = "@name")]
     pub name: OSString,
 
@@ -46,11 +46,19 @@ pub struct ScenarioObject {
     #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
     pub pedestrian: Option<Pedestrian>,
 
-    /// Catalog reference for entity definition (optional)
+    /// Vehicle catalog reference (optional)
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub catalog_reference: Option<
+    pub vehicle_catalog_reference: Option<
         crate::types::catalogs::references::CatalogReference<
             crate::types::catalogs::entities::CatalogVehicle,
+        >,
+    >,
+
+    /// Pedestrian catalog reference (optional)
+    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
+    pub pedestrian_catalog_reference: Option<
+        crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogPedestrian,
         >,
     >,
 
@@ -74,7 +82,8 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: Some(vehicle),
             pedestrian: None,
-            catalog_reference: None,
+            vehicle_catalog_reference: None,
+            pedestrian_catalog_reference: None,
             object_controller: Some(ObjectController::default()),
         }
     }
@@ -85,13 +94,14 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: Some(pedestrian),
-            catalog_reference: None,
+            vehicle_catalog_reference: None,
+            pedestrian_catalog_reference: None,
             object_controller: Some(ObjectController::default()),
         }
     }
 
-    /// Create a new scenario object with a catalog reference
-    pub fn new_catalog_reference(
+    /// Create a new scenario object with a vehicle catalog reference
+    pub fn new_vehicle_catalog_reference(
         name: String,
         catalog_reference: crate::types::catalogs::references::CatalogReference<
             crate::types::catalogs::entities::CatalogVehicle,
@@ -101,7 +111,25 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: None,
-            catalog_reference: Some(catalog_reference),
+            vehicle_catalog_reference: Some(catalog_reference),
+            pedestrian_catalog_reference: None,
+            object_controller: Some(ObjectController::default()),
+        }
+    }
+
+    /// Create a new scenario object with a pedestrian catalog reference
+    pub fn new_pedestrian_catalog_reference(
+        name: String,
+        catalog_reference: crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogPedestrian,
+        >,
+    ) -> Self {
+        Self {
+            name: crate::types::basic::Value::literal(name),
+            vehicle: None,
+            pedestrian: None,
+            vehicle_catalog_reference: None,
+            pedestrian_catalog_reference: Some(catalog_reference),
             object_controller: Some(ObjectController::default()),
         }
     }
