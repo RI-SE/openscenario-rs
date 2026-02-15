@@ -365,7 +365,7 @@ mod tests {
                         .ok_or_else(|| Error::invalid_xml(Error::invalid_xml(Error::validation_error("xml", "Invalid ElementC")format!("Invalid ElementC: {}"), element_name)format!("ElementC invalid: {}"), element_name))?;
                     let content = &xml[start + 1..end];
                     let value = content.parse::<bool>().map_err(|_| {
-                        Error::invalid_xml(Error::validation_error("xml", "Invalid boolean in ElementC")format!("Invalid boolean in ElementC: {}"), element_name)
+                        Error::invalid_xml(Error::invalid_xml(Error::validation_error("xml", "Invalid boolean in ElementC")format!("Invalid boolean in ElementC: {}"), element_name)format!("Invalid boolean in ElementC: {}"), element_name)
                     })?;
                     Ok(TestVariant::ElementC(value))
                 }
