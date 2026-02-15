@@ -238,15 +238,11 @@ impl CatalogVehicle {
         // If the value starts with '$', it's a parameter reference
         if value.starts_with('$') {
             let param_name = &value[1..]; // Remove '$' prefix
+            let available: Vec<String> = parameters.keys().cloned().collect();
             parameters
                 .get(param_name)
                 .map(|v| v.clone())
-                .ok_or_else(|| {
-                    crate::error::Error::catalog_error(&format!(
-                        "Parameter '{}' not found in substitution map",
-                        param_name
-                    ))
-                })
+                .ok_or_else(|| crate::error::Error::parameter_not_found(param_name, &available))
         } else {
             Ok(value.to_string())
         }
@@ -267,10 +263,11 @@ impl CatalogVehicle {
             "bicycle" => Ok(crate::types::enums::VehicleCategory::Bicycle),
             "train" => Ok(crate::types::enums::VehicleCategory::Train),
             "tram" => Ok(crate::types::enums::VehicleCategory::Tram),
-            _ => Err(crate::error::Error::catalog_error(&format!(
-                "Invalid vehicle category: {}",
-                category_str
-            ))),
+            _ => Err(crate::error::Error::invalid_value(
+                "vehicle_category",
+                &category_str,
+                "must be one of: car, truck, bus, motorbike, bicycle, train, tram",
+            )),
         }
     }
 }
