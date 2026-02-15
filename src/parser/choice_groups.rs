@@ -112,7 +112,7 @@ impl ChoiceGroupParser {
             // Find the end of the opening tag
             let tag_end = self.xml[pos..]
                 .find('>')
-                .ok_or_else(|| Error::validation_error("xml", "Malformed container start tag"))?
+                .ok_or_else(|| Error::malformed_xml(&container_start_tag, "missing > in start tag", "unknown"))?
                 + pos
                 + 1;
             tag_end
@@ -127,7 +127,7 @@ impl ChoiceGroupParser {
         let end_pos = self
             .xml
             .find(&container_end_tag)
-            .ok_or_else(|| Error::validation_error("xml", "Container end tag not found"))?;
+            .ok_or_else(|| Error::malformed_xml(&container_end_tag, "end tag not found", "unknown"))?;
 
         let content = &self.xml[start_pos..end_pos];
 
@@ -200,7 +200,7 @@ impl ChoiceGroupParser {
                 } else {
                     // Find the end of the opening tag
                     let tag_end_pos = content[element_pos..].find('>').ok_or_else(|| {
-                        Error::validation_error("xml", "Malformed element start tag")
+                        Error::invalid_xml("element", "malformed")
                     })? + element_pos
                         + 1;
 
@@ -336,40 +336,40 @@ mod tests {
                     // Simple text extraction for testing
                     let start = xml
                         .find('>')
-                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementA"))?;
+                        .ok_or_else(|| Error::invalid_xml(Error::validation_error("xml", "Invalid ElementA")format!("ElementA invalid: {}"), element_name))?;
                     let end = xml
                         .rfind('<')
-                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementA"))?;
+                        .ok_or_else(|| Error::invalid_xml(Error::validation_error("xml", "Invalid ElementA")format!("ElementA invalid: {}"), element_name))?;
                     let content = &xml[start + 1..end];
                     Ok(TestVariant::ElementA(content.to_string()))
                 }
                 "ElementB" => {
                     let start = xml
                         .find('>')
-                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementB"))?;
+                        .ok_or_else(|| Error::invalid_xml(Error::validation_error("xml", "Invalid ElementB")format!("ElementB invalid: {}"), element_name))?;
                     let end = xml
                         .rfind('<')
-                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementB"))?;
+                        .ok_or_else(|| Error::invalid_xml(Error::validation_error("xml", "Invalid ElementB")format!("ElementB invalid: {}"), element_name))?;
                     let content = &xml[start + 1..end];
                     let value = content.parse::<i32>().map_err(|_| {
-                        Error::validation_error("xml", "Invalid integer in ElementB")
+                        Error::invalid_xml(Error::validation_error("xml", "Invalid integer in ElementB")format!("Invalid integer in ElementB: {}"), element_name)
                     })?;
                     Ok(TestVariant::ElementB(value))
                 }
                 "ElementC" => {
                     let start = xml
                         .find('>')
-                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementC"))?;
+                        .ok_or_else(|| Error::invalid_xml(Error::invalid_xml(Error::validation_error("xml", "Invalid ElementC")format!("Invalid ElementC: {}"), element_name)format!("ElementC invalid: {}"), element_name))?;
                     let end = xml
                         .rfind('<')
-                        .ok_or_else(|| Error::validation_error("xml", "Invalid ElementC"))?;
+                        .ok_or_else(|| Error::invalid_xml(Error::invalid_xml(Error::validation_error("xml", "Invalid ElementC")format!("Invalid ElementC: {}"), element_name)format!("ElementC invalid: {}"), element_name))?;
                     let content = &xml[start + 1..end];
                     let value = content.parse::<bool>().map_err(|_| {
-                        Error::validation_error("xml", "Invalid boolean in ElementC")
+                        Error::invalid_xml(Error::validation_error("xml", "Invalid boolean in ElementC")format!("Invalid boolean in ElementC: {}"), element_name)
                     })?;
                     Ok(TestVariant::ElementC(value))
                 }
-                _ => Err(Error::validation_error("choice_group", "Unknown element")),
+                _ => Err(Error::choice_group_error("Unknown element")),
             }
         }
 
