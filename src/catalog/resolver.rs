@@ -145,11 +145,13 @@ impl CatalogManager {
                     ));
                 }
             }
+            let available: Vec<String> =
+                catalog.controllers.iter().map(|c| c.name.clone()).collect();
+            return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
+                .with_context(&format!("Available controllers: {}", available.join(", "))));
         }
-        Err(Error::catalog_error(&format!(
-            "Controller '{}' not found in catalog '{}'",
-            entry_name, catalog_name
-        )))
+        let available: Vec<String> = self.controller_catalogs.keys().cloned().collect();
+        Err(Error::catalog_not_found(catalog_name, &available))
     }
 
     /// Resolve trajectory reference from trajectory catalogs
@@ -179,11 +181,16 @@ impl CatalogManager {
                     ));
                 }
             }
+            let available: Vec<String> = catalog
+                .trajectories
+                .iter()
+                .map(|t| t.name.clone())
+                .collect();
+            return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
+                .with_context(&format!("Available trajectories: {}", available.join(", "))));
         }
-        Err(Error::catalog_error(&format!(
-            "Trajectory '{}' not found in catalog '{}'",
-            entry_name, catalog_name
-        )))
+        let available: Vec<String> = self.trajectory_catalogs.keys().cloned().collect();
+        Err(Error::catalog_not_found(catalog_name, &available))
     }
 
     /// Resolve route reference from route catalogs
@@ -213,11 +220,12 @@ impl CatalogManager {
                     ));
                 }
             }
+            let available: Vec<String> = catalog.routes.iter().map(|r| r.name.clone()).collect();
+            return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
+                .with_context(&format!("Available routes: {}", available.join(", "))));
         }
-        Err(Error::catalog_error(&format!(
-            "Route '{}' not found in catalog '{}'",
-            entry_name, catalog_name
-        )))
+        let available: Vec<String> = self.route_catalogs.keys().cloned().collect();
+        Err(Error::catalog_not_found(catalog_name, &available))
     }
 
     /// Resolve environment reference from environment catalogs
@@ -247,11 +255,16 @@ impl CatalogManager {
                     ));
                 }
             }
+            let available: Vec<String> = catalog
+                .environments
+                .iter()
+                .map(|e| e.name.clone())
+                .collect();
+            return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
+                .with_context(&format!("Available environments: {}", available.join(", "))));
         }
-        Err(Error::catalog_error(&format!(
-            "Environment '{}' not found in catalog '{}'",
-            entry_name, catalog_name
-        )))
+        let available: Vec<String> = self.environment_catalogs.keys().cloned().collect();
+        Err(Error::catalog_not_found(catalog_name, &available))
     }
 }
 
@@ -285,10 +298,7 @@ impl CatalogResolver {
     /// Begin resolving a reference (for circular dependency detection)
     pub fn begin_resolution(&mut self, reference_key: &str) -> Result<()> {
         if self.resolution_stack.contains(reference_key) {
-            return Err(Error::catalog_error(&format!(
-                "Circular catalog reference detected: {}",
-                reference_key
-            )));
+            return Err(Error::circular_dependency(reference_key));
         }
         self.resolution_stack.insert(reference_key.to_string());
         Ok(())
