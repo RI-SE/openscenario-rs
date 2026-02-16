@@ -115,8 +115,7 @@ pub struct ByName {
 }
 
 /// Template properties for scenario object templates
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TemplateProperties {
     /// Custom properties as key-value pairs
     #[serde(rename = "Property", default)]
@@ -213,7 +212,6 @@ impl Default for ByName {
         }
     }
 }
-
 
 impl Default for TemplateProperty {
     fn default() -> Self {

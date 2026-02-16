@@ -27,8 +27,6 @@ pub enum EntityObject {
     Vehicle(Box<Vehicle>),
     /// Pedestrian entity
     Pedestrian(Box<Pedestrian>),
-    // TODO: Add MiscellaneousObject later
-    // MiscellaneousObject(MiscObject),
 }
 
 /// Catalog reference for scenario entities (vehicle or pedestrian)
