@@ -95,7 +95,9 @@ impl ActionBuilder for LaneChangeActionBuilder {
             },
         };
 
-        Ok(PrivateAction::LateralAction(LateralAction::lane_change(lane_change_action)))
+        Ok(PrivateAction::LateralAction(LateralAction::lane_change(
+            lane_change_action,
+        )))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -180,9 +182,9 @@ impl ActionBuilder for LateralDistanceActionBuilder {
             dynamic_constraints: self.dynamic_constraints,
         };
 
-        Ok(PrivateAction::LateralAction(LateralAction::lateral_distance(
-                lateral_distance_action,
-            )))
+        Ok(PrivateAction::LateralAction(
+            LateralAction::lateral_distance(lateral_distance_action),
+        ))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -284,7 +286,9 @@ impl ActionBuilder for LaneOffsetActionBuilder {
             },
         };
 
-        Ok(PrivateAction::LateralAction(LateralAction::lane_offset(lane_offset_action)))
+        Ok(PrivateAction::LateralAction(LateralAction::lane_offset(
+            lane_offset_action,
+        )))
     }
 
     fn validate(&self) -> BuilderResult<()> {

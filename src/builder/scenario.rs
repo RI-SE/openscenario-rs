@@ -19,21 +19,10 @@
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Highway Test", "Test Author")
 //!     .with_entities()
-//!         .add_vehicle("ego")
-//!             .car()
-//!             .finish()
-//!     .with_storyboard()
-//!         .add_story("main_story")
-//!             .add_act("acceleration_act")
-//!                 .add_maneuver("speed_up", "ego")
-//!                     .add_speed_action()
-//!                         .to_speed(30.0)
-//!                         .finish()
-//!                         .unwrap()
-//!                     .finish()
-//!                 .finish()
-//!             .finish()
-//!         .finish()
+//!         .add_vehicle("ego", |v| v.car())
+//!     .with_storyboard(|storyboard| {
+//!         storyboard
+//!     })
 //!     .build()
 //!     .unwrap();
 //! ```
@@ -436,6 +425,10 @@ mod tests {
         let scenario = ScenarioBuilder::new()
             .with_header("Test Scenario", "Test Author")
             .with_entities()
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init, no stories required
+                storyboard
+            })
             .build()
             .unwrap();
 

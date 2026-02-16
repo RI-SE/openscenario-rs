@@ -146,7 +146,10 @@ mod tests {
     #[test]
     fn test_basic_scenario_template() {
         // Test that BasicScenarioTemplate provides working foundation
-        let scenario_builder = BasicScenarioTemplate::create();
+        let scenario_builder = BasicScenarioTemplate::create().with_storyboard(|storyboard| {
+            // Minimal storyboard with default init
+            storyboard
+        });
         let scenario = scenario_builder.build().unwrap();
 
         // Should have header

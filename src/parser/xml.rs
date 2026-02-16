@@ -150,7 +150,7 @@ fn parse_from_file_internal<P: AsRef<Path>>(path: P, validate_xml: bool) -> Resu
     let cleaned_content = remove_bom(&xml_content);
 
     if validate_xml {
-        validate_xml_structure(&cleaned_content).map_err(|e| {
+        validate_xml_structure(cleaned_content).map_err(|e| {
             e.with_context(&format!(
                 "XML validation failed for file: {}",
                 path.as_ref().display()
@@ -199,7 +199,7 @@ fn parse_catalog_from_file_internal<P: AsRef<Path>>(
     let cleaned_content = remove_bom(&xml_content);
 
     if validate_xml {
-        validate_catalog_xml_structure(&cleaned_content).map_err(|e| {
+        validate_catalog_xml_structure(cleaned_content).map_err(|e| {
             e.with_context(&format!(
                 "XML validation failed for catalog file: {}",
                 path.as_ref().display()

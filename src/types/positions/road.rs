@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 /// Orientation definition for positions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Orientation {
     /// Heading angle (rotation around z-axis)
     #[serde(rename = "@h", skip_serializing_if = "Option::is_none")]
@@ -355,15 +356,6 @@ impl Default for LaneCoordinate {
     }
 }
 
-impl Default for Orientation {
-    fn default() -> Self {
-        Self {
-            h: None,
-            p: None,
-            r: None,
-        }
-    }
-}
 
 impl Default for RelativeRoadPosition {
     fn default() -> Self {

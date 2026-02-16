@@ -10,18 +10,12 @@
 //!
 //! # Usage Examples
 //!
+//! SpeedActionBuilder and TeleportActionBuilder are used within maneuver builders.
+//! For standalone usage, see detached builders in the storyboard module.
+//!
 //! ```rust
-//! use openscenario_rs::builder::actions::movement::{SpeedActionBuilder, TeleportActionBuilder};
-//!
-//! // Create a speed action to set vehicle to 25 m/s
-//! let speed_action = SpeedActionBuilder::new()
-//!     .for_entity("ego_vehicle")
-//!     .to_speed(25.0);
-//!
-//! // Teleport vehicle to specific world coordinates
-//! let teleport_action = TeleportActionBuilder::new()
-//!     .for_entity("ego_vehicle")
-//!     .to_world_position(100.0, 200.0, 0.0);
+//! // Speed actions are added to maneuvers within the storyboard
+//! // See storyboard/maneuver module for detailed usage examples
 //! ```
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};

@@ -145,6 +145,7 @@ impl Default for RouteWaypoint {
 /// with optional parameterization.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "LaneConstraints")]
+#[derive(Default)]
 pub struct LaneConstraints {
     /// Preferred lane ID (can be parameterized)
     #[serde(rename = "@preferredLane", skip_serializing_if = "Option::is_none")]
@@ -163,15 +164,6 @@ pub struct LaneConstraints {
     pub forbidden_lanes: Vec<ForbiddenLane>,
 }
 
-impl Default for LaneConstraints {
-    fn default() -> Self {
-        Self {
-            preferred_lane: None,
-            allowed_lanes: Vec::new(),
-            forbidden_lanes: Vec::new(),
-        }
-    }
-}
 
 /// Allowed lane specification
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

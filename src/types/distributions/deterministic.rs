@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
 /// This version handles interspersed elements by collecting them all in one place
 #[derive(Debug, Clone, PartialEq)]
+#[derive(Default)]
 pub struct Deterministic {
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
     pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
@@ -161,15 +162,9 @@ impl DeterministicSingleParameterDistribution {
             Some(DeterministicSingleParameterDistributionType::DistributionSet(set.clone()))
         } else if let Some(range) = &self.distribution_range {
             Some(DeterministicSingleParameterDistributionType::DistributionRange(range.clone()))
-        } else if let Some(user_defined) = &self.user_defined_distribution {
-            Some(
-                DeterministicSingleParameterDistributionType::UserDefinedDistribution(
+        } else { self.user_defined_distribution.as_ref().map(|user_defined| DeterministicSingleParameterDistributionType::UserDefinedDistribution(
                     user_defined.clone(),
-                ),
-            )
-        } else {
-            None
-        }
+                )) }
     }
 
     /// Check if this has a distribution set
@@ -190,6 +185,7 @@ impl DeterministicSingleParameterDistribution {
 
 /// Multi-parameter deterministic distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct DeterministicMultiParameterDistribution {
     #[serde(rename = "ValueSetDistribution")]
     pub distribution_type: ValueSetDistribution,
@@ -305,14 +301,6 @@ impl Deterministic {
     }
 }
 
-impl Default for Deterministic {
-    fn default() -> Self {
-        Self {
-            single_distributions: Vec::new(),
-            multi_distributions: Vec::new(),
-        }
-    }
-}
 
 impl ValidateDistribution for Deterministic {
     fn validate(&self) -> Result<()> {
@@ -415,13 +403,6 @@ impl Default for DeterministicSingleParameterDistributionType {
     }
 }
 
-impl Default for DeterministicMultiParameterDistribution {
-    fn default() -> Self {
-        Self {
-            distribution_type: ValueSetDistribution::default(),
-        }
-    }
-}
 
 impl Default for DistributionSet {
     fn default() -> Self {

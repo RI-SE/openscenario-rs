@@ -13,17 +13,8 @@
 //!
 //! # Usage
 //!
-//! ```rust
-//! use openscenario_rs::builder::conditions::{TimeConditionBuilder, TriggerBuilder};
-//!
-//! // Create a time-based trigger
-//! let trigger = TriggerBuilder::new()
-//!     .add_condition(
-//!         TimeConditionBuilder::new()
-//!             .at_time(5.0)
-//!             .build()?
-//!     )
-//!     .build()?;
+//! Triggers are used within storyboard builders.
+//! For detailed usage examples, see the storyboard module documentation.
 //! ```
 
 pub mod entity;

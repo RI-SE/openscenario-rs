@@ -61,6 +61,7 @@ use serde::{Deserialize, Serialize};
 
 /// Catalog type - container for all catalog entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct Catalog {
     #[serde(flatten)]
     pub content: CatalogContent,
@@ -68,26 +69,13 @@ pub struct Catalog {
 
 /// CatalogDefinition group - XSD group wrapper for catalog sequence
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: Catalog,
 }
 
-impl Default for Catalog {
-    fn default() -> Self {
-        Self {
-            content: CatalogContent::default(),
-        }
-    }
-}
 
-impl Default for CatalogDefinition {
-    fn default() -> Self {
-        Self {
-            catalog: Catalog::default(),
-        }
-    }
-}
 
 impl Catalog {
     /// Create new catalog with name

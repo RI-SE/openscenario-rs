@@ -61,6 +61,12 @@ pub struct CatalogResolver {
     catalog_manager: Option<CatalogManager>,
 }
 
+impl Default for CatalogManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CatalogManager {
     /// Create a new empty catalog manager
     pub fn new() -> Self {

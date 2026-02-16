@@ -116,6 +116,7 @@ pub struct TrafficSwarmAction {
 
 /// Traffic area action for area-based traffic management
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct TrafficAreaAction {
     #[serde(rename = "TrafficArea")]
     pub traffic_area: TrafficArea,
@@ -242,8 +243,10 @@ pub struct VehicleCategoryDistributionEntry {
 
 /// Vehicle category enumeration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum VehicleCategory {
     #[serde(rename = "car")]
+    #[default]
     Car,
     #[serde(rename = "van")]
     Van,
@@ -341,14 +344,6 @@ impl Default for TrafficSwarmAction {
     }
 }
 
-impl Default for TrafficAreaAction {
-    fn default() -> Self {
-        Self {
-            traffic_area: TrafficArea::default(),
-            traffic_definition: TrafficDefinition::default(),
-        }
-    }
-}
 
 impl Default for TrafficSignalAction {
     fn default() -> Self {
@@ -497,11 +492,6 @@ impl Default for TrafficAreaVertex {
     }
 }
 
-impl Default for VehicleCategory {
-    fn default() -> Self {
-        VehicleCategory::Car
-    }
-}
 
 // PHASE 4C: Helper implementations
 

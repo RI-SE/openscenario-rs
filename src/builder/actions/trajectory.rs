@@ -12,36 +12,10 @@
 //!
 //! # Usage Examples
 //!
-//! ```rust
-//! use openscenario_rs::builder::actions::trajectory::{
-//!     TrajectoryBuilder, FollowTrajectoryActionBuilder
-//! };
-//!
-//! // Create a trajectory with vertices
-//! let trajectory = TrajectoryBuilder::new()
-//!     .name("ego_path")
-//!     .closed(false)
-//!     .polyline()
-//!         .add_vertex()
-//!             .time(0.0)
-//!             .world_position(0.0, 0.0, 0.0, 0.0)
-//!             .finish()?
-//!         .add_vertex()
-//!             .time(1.0)
-//!             .world_position(10.0, 0.0, 0.0, 0.0)
-//!             .finish()?
-//!         .finish()
-//!     .build()?;
-//!
-//! // Create a follow trajectory action
-//! let action = FollowTrajectoryActionBuilder::new()
-//!     .for_entity("ego_vehicle")
-//!     .with_trajectory(trajectory)
-//!     .following_mode_follow()
-//!     .build_action()?;
-//! # Ok::<(), openscenario_rs::builder::BuilderError>(())
+//! Trajectory actions are used within maneuver builders.
+//! For detailed usage examples, see the storyboard module documentation.
 //! ```
-
+//! //
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
@@ -63,25 +37,8 @@ use crate::types::{
 ///
 /// # Example
 ///
-/// ```rust
-/// use openscenario_rs::builder::actions::trajectory::TrajectoryBuilder;
+/// See storyboard module for usage examples.
 ///
-/// let trajectory = TrajectoryBuilder::new()
-///     .name("curved_path")
-///     .closed(false)
-///     .polyline()
-///         .add_vertex()
-///             .time(0.0)
-///             .world_position(0.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .add_vertex()
-///             .time(2.0)
-///             .world_position(20.0, 5.0, 0.0, 0.5)
-///             .finish()?
-///         .finish()
-///     .build()?;
-/// # Ok::<(), openscenario_rs::builder::BuilderError>(())
-/// ```
 #[derive(Debug, Default)]
 pub struct TrajectoryBuilder {
     name: Option<String>,
@@ -145,24 +102,9 @@ impl TrajectoryBuilder {
 ///
 /// # Example
 ///
-/// ```rust
-/// use openscenario_rs::builder::actions::trajectory::TrajectoryBuilder;
+/// See above for TrajectoryBuilder usage.
 ///
-/// let trajectory = TrajectoryBuilder::new()
-///     .name("straight_line")
-///     .polyline()
-///         .add_vertex()
-///             .time(0.0)
-///             .world_position(0.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .add_vertex()
-///             .time(5.0)
-///             .world_position(50.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .finish()
-///     .build()?;
-/// # Ok::<(), openscenario_rs::builder::BuilderError>(())
-/// ```
+///
 #[derive(Debug)]
 pub struct PolylineBuilder {
     parent: TrajectoryBuilder,
@@ -205,28 +147,9 @@ impl PolylineBuilder {
 ///
 /// # Example
 ///
-/// ```rust
-/// use openscenario_rs::builder::actions::trajectory::TrajectoryBuilder;
+/// See above for TrajectoryBuilder usage.
 ///
-/// let trajectory = TrajectoryBuilder::new()
-///     .name("waypoint_path")
-///     .polyline()
-///         .add_vertex()
-///             .time(0.0)
-///             .world_position(0.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .add_vertex()
-///             .time(1.5)
-///             .world_position(15.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .add_vertex()
-///             .time(3.0)
-///             .world_position(30.0, 5.0, 0.0, 0.2)
-///             .finish()?
-///         .finish()
-///     .build()?;
-/// # Ok::<(), openscenario_rs::builder::BuilderError>(())
-/// ```
+///
 #[derive(Debug)]
 pub struct VertexBuilder {
     parent: PolylineBuilder,
@@ -318,35 +241,9 @@ impl VertexBuilder {
 ///
 /// # Example
 ///
-/// ```rust
-/// use openscenario_rs::builder::actions::trajectory::{
-///     TrajectoryBuilder, FollowTrajectoryActionBuilder
-/// };
+/// See above for TrajectoryBuilder usage.
 ///
-/// // First create a trajectory
-/// let trajectory = TrajectoryBuilder::new()
-///     .name("vehicle_path")
-///     .closed(false)
-///     .polyline()
-///         .add_vertex()
-///             .time(0.0)
-///             .world_position(0.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .add_vertex()
-///             .time(10.0)
-///             .world_position(100.0, 0.0, 0.0, 0.0)
-///             .finish()?
-///         .finish()
-///     .build()?;
 ///
-/// // Then create the action
-/// let action = FollowTrajectoryActionBuilder::new()
-///     .for_entity("ego_vehicle")
-///     .with_trajectory(trajectory)
-///     .following_mode_follow()
-///     .build_action()?;
-/// # Ok::<(), openscenario_rs::builder::BuilderError>(())
-/// ```
 #[derive(Debug, Default)]
 pub struct FollowTrajectoryActionBuilder {
     entity_ref: Option<String>,

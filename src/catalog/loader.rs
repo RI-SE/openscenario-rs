@@ -191,7 +191,7 @@ impl CatalogLoader {
             return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path)
+        let xml_content = fs::read_to_string(path)
             .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
         quick_xml::de::from_str(&xml_content)
@@ -208,7 +208,7 @@ impl CatalogLoader {
             return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path)
+        let xml_content = fs::read_to_string(path)
             .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
         quick_xml::de::from_str(&xml_content)
@@ -225,7 +225,7 @@ impl CatalogLoader {
             return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path)
+        let xml_content = fs::read_to_string(path)
             .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
         quick_xml::de::from_str(&xml_content)
@@ -242,7 +242,7 @@ impl CatalogLoader {
             return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path)
+        let xml_content = fs::read_to_string(path)
             .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
         quick_xml::de::from_str(&xml_content)

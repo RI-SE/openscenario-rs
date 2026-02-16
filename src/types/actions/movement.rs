@@ -172,6 +172,7 @@ pub struct TrajectoryFollowingMode {
 
 /// Time reference for trajectory following
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct TimeReference {
     #[serde(rename = "Timing")]
     pub timing: Timing,
@@ -238,6 +239,7 @@ impl Default for FollowTrajectoryAction {
 /// or catalog reference, enabling route-based navigation scenarios.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "AssignRouteAction")]
+#[derive(Default)]
 pub struct AssignRouteAction {
     /// Route reference (direct or catalog-based)
     #[serde(flatten)]
@@ -246,6 +248,7 @@ pub struct AssignRouteAction {
 
 /// Follow route action with route reference support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct FollowRouteAction {
     /// Route reference (direct or catalog-based)
     #[serde(flatten)]
@@ -254,6 +257,7 @@ pub struct FollowRouteAction {
 
 /// Routing action container for trajectory and route-based movement
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct RoutingAction {
     /// Assign route action
     #[serde(rename = "AssignRouteAction", skip_serializing_if = "Option::is_none")]
@@ -271,20 +275,12 @@ pub struct RoutingAction {
     pub follow_route_action: Option<FollowRouteAction>,
 }
 
-impl Default for RoutingAction {
-    fn default() -> Self {
-        Self {
-            assign_route_action: None,
-            follow_trajectory_action: None,
-            follow_route_action: None,
-        }
-    }
-}
 
 // PHASE 4A: Core Movement Actions - Implementation
 
 /// Lane change action for lateral lane movements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct LaneChangeAction {
     #[serde(
         rename = "@targetLaneOffset",
@@ -482,6 +478,7 @@ pub struct SpeedProfileEntry {
 
 /// Dynamic constraints for movement actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct DynamicConstraints {
     #[serde(rename = "@maxLateralAcc")]
     pub max_lateral_acc: Option<Double>,
@@ -551,6 +548,7 @@ pub struct RelativeSpeedToMaster {
 
 /// Acquire position action for moving to a specific position
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct AcquirePositionAction {
     #[serde(rename = "Position")]
     pub position: Position,
@@ -614,13 +612,6 @@ impl Default for TrajectoryFollowingMode {
     }
 }
 
-impl Default for TimeReference {
-    fn default() -> Self {
-        Self {
-            timing: Timing::default(),
-        }
-    }
-}
 
 impl Default for Timing {
     fn default() -> Self {
@@ -641,21 +632,7 @@ impl Default for TrajectoryRef {
     }
 }
 
-impl Default for AssignRouteAction {
-    fn default() -> Self {
-        Self {
-            route: RouteRef::default(),
-        }
-    }
-}
 
-impl Default for FollowRouteAction {
-    fn default() -> Self {
-        Self {
-            route_ref: RouteRef::default(),
-        }
-    }
-}
 
 // Helper implementations for catalog-based actions
 
@@ -1008,15 +985,6 @@ impl LateralAction {
 
 // PHASE 4A: Default implementations for new movement actions
 
-impl Default for LaneChangeAction {
-    fn default() -> Self {
-        Self {
-            target_lane_offset: None,
-            lane_change_action_dynamics: TransitionDynamics::default(),
-            lane_change_target: LaneChangeTarget::default(),
-        }
-    }
-}
 
 impl Default for LaneChangeTarget {
     fn default() -> Self {
@@ -1153,14 +1121,6 @@ impl Default for SpeedProfileEntry {
     }
 }
 
-impl Default for DynamicConstraints {
-    fn default() -> Self {
-        Self {
-            max_lateral_acc: None,
-            max_speed: None,
-        }
-    }
-}
 
 impl Default for SynchronizeAction {
     fn default() -> Self {
@@ -1199,13 +1159,6 @@ impl Default for RelativeSpeedToMaster {
     }
 }
 
-impl Default for AcquirePositionAction {
-    fn default() -> Self {
-        Self {
-            position: Position::default(),
-        }
-    }
-}
 
 // PHASE 4A: Unit tests for new movement actions
 #[cfg(test)]

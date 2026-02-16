@@ -29,9 +29,7 @@
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::BuilderResult;
 use crate::types::{
-    actions::appearance::VisibilityAction,
-    actions::wrappers::PrivateAction,
-    basic::Boolean,
+    actions::appearance::VisibilityAction, actions::wrappers::PrivateAction, basic::Boolean,
 };
 
 /// Builder for visibility actions

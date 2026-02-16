@@ -108,6 +108,7 @@ pub enum OpenScenarioDocumentType {
 
 /// Scenario definition containing concrete scenario elements
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ScenarioDefinition {
     #[serde(
         rename = "ParameterDeclarations",
@@ -142,6 +143,7 @@ pub struct ScenarioDefinition {
 
 /// Catalog definition for catalog files
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: CatalogContent,
@@ -166,6 +168,7 @@ pub struct FileHeader {
 
 /// Storyboard structure (simplified for MVP)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct Storyboard {
     #[serde(rename = "Init")]
     pub init: Init,
@@ -180,15 +183,6 @@ pub use super::init::Init;
 
 // Story is now imported from story.rs module
 
-impl Default for Storyboard {
-    fn default() -> Self {
-        Self {
-            init: Init::default(),
-            stories: Vec::new(),
-            stop_trigger: None,
-        }
-    }
-}
 
 impl Default for OpenScenario {
     /// Default creates a concrete scenario document
@@ -217,24 +211,4 @@ impl Default for OpenScenario {
     }
 }
 
-impl Default for ScenarioDefinition {
-    fn default() -> Self {
-        Self {
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
-            road_network: crate::types::road::RoadNetwork::default(),
-            entities: Entities::default(),
-            storyboard: Storyboard::default(),
-        }
-    }
-}
 
-impl Default for CatalogDefinition {
-    fn default() -> Self {
-        Self {
-            catalog: CatalogContent::default(),
-        }
-    }
-}

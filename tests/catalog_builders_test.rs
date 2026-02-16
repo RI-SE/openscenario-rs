@@ -79,6 +79,10 @@ mod catalog_builder_tests {
             .with_header("Catalog Test", "Test Author")
             .with_catalog_locations(locations)
             .with_entities()
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build()
             .unwrap();
 

@@ -17,7 +17,8 @@
 //!
 //! let condition = TimeConditionBuilder::new()
 //!     .at_time(5.0)
-//!     .build()?;
+//!     .build()
+//!     .unwrap();
 //! ```
 
 use crate::builder::{BuilderError, BuilderResult};

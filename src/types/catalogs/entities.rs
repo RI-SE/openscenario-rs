@@ -236,12 +236,11 @@ impl CatalogVehicle {
         parameters: &HashMap<String, String>,
     ) -> Result<String> {
         // If the value starts with '$', it's a parameter reference
-        if value.starts_with('$') {
-            let param_name = &value[1..]; // Remove '$' prefix
+        if let Some(param_name) = value.strip_prefix('$') {
+            // Remove '$' prefix
             let available: Vec<String> = parameters.keys().cloned().collect();
             parameters
-                .get(param_name)
-                .map(|v| v.clone())
+                .get(param_name).cloned()
                 .ok_or_else(|| crate::error::Error::parameter_not_found(param_name, &available))
         } else {
             Ok(value.to_string())
@@ -341,11 +340,10 @@ impl CatalogController {
         parameters: &HashMap<String, String>,
     ) -> Result<String> {
         // If the value starts with '$', it's a parameter reference
-        if value.starts_with('$') {
-            let param_name = &value[1..]; // Remove '$' prefix
+        if let Some(param_name) = value.strip_prefix('$') {
+            // Remove '$' prefix
             parameters
-                .get(param_name)
-                .map(|v| v.clone())
+                .get(param_name).cloned()
                 .ok_or_else(|| {
                     crate::error::Error::catalog_error(&format!(
                         "Parameter '{}' not found in substitution map",
@@ -487,11 +485,10 @@ impl CatalogPedestrian {
         parameters: &HashMap<String, String>,
     ) -> Result<String> {
         // If the value starts with '$', it's a parameter reference
-        if value.starts_with('$') {
-            let param_name = &value[1..]; // Remove '$' prefix
+        if let Some(param_name) = value.strip_prefix('$') {
+            // Remove '$' prefix
             parameters
-                .get(param_name)
-                .map(|v| v.clone())
+                .get(param_name).cloned()
                 .ok_or_else(|| {
                     crate::error::Error::catalog_error(&format!(
                         "Parameter '{}' not found in substitution map",

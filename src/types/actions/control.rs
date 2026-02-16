@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 /// Main controller action wrapper containing all controller action types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct ControllerAction {
     /// Assign controller action
     #[serde(
@@ -181,6 +182,7 @@ pub struct AutomaticGear {
 
 /// Automatic gear type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum AutomaticGearType {
     #[serde(rename = "park")]
     Park,
@@ -189,6 +191,7 @@ pub enum AutomaticGearType {
     #[serde(rename = "neutral")]
     Neutral,
     #[serde(rename = "drive")]
+    #[default]
     Drive,
 }
 
@@ -228,20 +231,6 @@ impl Default for AssignControllerAction {
     }
 }
 
-impl Default for ControllerAction {
-    fn default() -> Self {
-        Self {
-            assign_controller_action: None,
-            override_throttle_action: None,
-            override_brake_action: None,
-            override_clutch_action: None,
-            override_parking_brake_action: None,
-            override_steering_wheel_action: None,
-            override_gear_action: None,
-            activate_controller_action: None,
-        }
-    }
-}
 
 impl Default for ActivateControllerAction {
     fn default() -> Self {
@@ -270,11 +259,6 @@ impl Default for AutomaticGear {
     }
 }
 
-impl Default for AutomaticGearType {
-    fn default() -> Self {
-        AutomaticGearType::Drive
-    }
-}
 
 impl Default for Brake {
     fn default() -> Self {

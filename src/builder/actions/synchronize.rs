@@ -23,9 +23,7 @@
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    actions::movement::SynchronizeAction,
-    actions::wrappers::PrivateAction,
-    basic::OSString,
+    actions::movement::SynchronizeAction, actions::wrappers::PrivateAction, basic::OSString,
     positions::Position,
 };
 

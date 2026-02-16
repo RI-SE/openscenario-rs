@@ -113,10 +113,10 @@ impl ActionBuilder for LongitudinalDistanceActionBuilder {
         };
 
         Ok(PrivateAction::LongitudinalAction(LongitudinalAction {
-                longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
-                    action,
-                ),
-            }))
+            longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
+                action,
+            ),
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -190,8 +190,8 @@ impl ActionBuilder for SpeedProfileActionBuilder {
         };
 
         Ok(PrivateAction::LongitudinalAction(LongitudinalAction {
-                longitudinal_action_choice: LongitudinalActionChoice::SpeedProfileAction(action),
-            }))
+            longitudinal_action_choice: LongitudinalActionChoice::SpeedProfileAction(action),
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {

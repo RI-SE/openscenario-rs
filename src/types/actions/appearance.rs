@@ -33,6 +33,7 @@ pub struct VisibilityAction {
 
 /// Set of sensor references for selective visibility control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct SensorReferenceSet {
     /// Individual sensor references
     #[serde(rename = "SensorReference")]
@@ -49,6 +50,7 @@ pub struct SensorReference {
 
 /// Appearance actions for visual changes and animations
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct AppearanceAction {
     /// Light state action for lighting control
     #[serde(rename = "LightStateAction", skip_serializing_if = "Option::is_none")]
@@ -61,12 +63,14 @@ pub struct AppearanceAction {
 
 /// Light state control action (placeholder for future implementation)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct LightStateAction {
     // TODO: Implement based on schema definition
 }
 
 /// Animation action (placeholder for future implementation)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct AnimationAction {
     // TODO: Implement based on schema definition
 }
@@ -82,13 +86,6 @@ impl Default for VisibilityAction {
     }
 }
 
-impl Default for SensorReferenceSet {
-    fn default() -> Self {
-        Self {
-            sensor_references: Vec::new(),
-        }
-    }
-}
 
 impl Default for SensorReference {
     fn default() -> Self {
@@ -98,23 +95,5 @@ impl Default for SensorReference {
     }
 }
 
-impl Default for AppearanceAction {
-    fn default() -> Self {
-        Self {
-            light_state_action: None,
-            animation_action: None,
-        }
-    }
-}
 
-impl Default for LightStateAction {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
-impl Default for AnimationAction {
-    fn default() -> Self {
-        Self {}
-    }
-}

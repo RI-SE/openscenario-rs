@@ -9,6 +9,10 @@ mod builder_tests {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
             .with_entities()
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build()
             .unwrap();
 
@@ -23,6 +27,10 @@ mod builder_tests {
             .add_parameter("initial_speed", ParameterType::Double, "25.0")
             .add_parameter("target_lane", ParameterType::Int, "1")
             .with_entities()
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build()
             .unwrap();
 
