@@ -73,6 +73,5 @@
 //! - Enable validation caching for repeated validation operations
 
 pub mod choice_groups;
-pub mod deserializer;
 pub mod validation;
 pub mod xml;
