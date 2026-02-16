@@ -29,30 +29,19 @@
 //! ```rust
 //! use openscenario_rs::builder::actions::{SpeedActionBuilder, TeleportActionBuilder};
 //!
-//! // Create a speed action
-//! let speed_action = SpeedActionBuilder::new()
-//!     .for_entity("ego_vehicle")
-//!     .to_speed(25.0);
-//!
-//! // Create a teleport action
-//! let teleport_action = TeleportActionBuilder::new()
-//!     .for_entity("ego_vehicle")
-//!     .to_world_position(100.0, 50.0, 0.0);
+//! // SpeedActionBuilder and TeleportActionBuilder are used within maneuver builders
+//! // They are not used directly in this way anymore
+//! // See DetachedSpeedActionBuilder and DetachedTeleportActionBuilder for standalone usage
 //! ```
 //!
 //! # Action Collections
 //!
-//! Use `ActionCollection` to manage multiple actions in a maneuver:
+//! ActionCollection is used internally for managing actions. For creating actions,
+//! see the detached builders in the builder module.
 //!
 //! ```rust
-//! use openscenario_rs::builder::actions::{ActionCollection, SpeedActionBuilder};
-//!
-//! let actions = ActionCollection::new()
-//!     .add_action(SpeedActionBuilder::new()
-//!         .for_entity("ego")
-//!         .to_speed(30.0))?;
-//!
-//! let action_list = actions.into_actions();
+//! // Action builders are used within maneuver builders
+//! // See storyboard/maneuver module for detailed usage examples
 //! ```
 
 pub mod base;

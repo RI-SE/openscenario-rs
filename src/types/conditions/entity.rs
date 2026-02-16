@@ -80,6 +80,7 @@ pub struct StandStillCondition {
 
 /// Condition for detecting collisions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct CollisionCondition {
     /// Specific target entity (optional)
     pub target: Option<OSString>,
@@ -284,6 +285,7 @@ pub struct TraveledDistanceCondition {
 /// Schema-compliant ByEntityCondition structure matching OpenSCENARIO XSD exactly
 /// This is the main ByEntityCondition type that should be used
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct ByEntityCondition {
     /// Entities that can trigger this condition
     #[serde(rename = "TriggeringEntities")]
@@ -836,15 +838,6 @@ impl Default for StandStillCondition {
     }
 }
 
-impl Default for CollisionCondition {
-    fn default() -> Self {
-        Self {
-            target: None,
-            by_type: None,
-            position: None,
-        }
-    }
-}
 
 impl Default for CollisionTarget {
     fn default() -> Self {
@@ -979,14 +972,6 @@ impl Default for EntityCondition {
     }
 }
 
-impl Default for ByEntityCondition {
-    fn default() -> Self {
-        Self {
-            triggering_entities: TriggeringEntities::default(),
-            entity_condition: EntityCondition::default(),
-        }
-    }
-}
 
 // Convenience constructors for ByEntityCondition
 impl ByEntityCondition {

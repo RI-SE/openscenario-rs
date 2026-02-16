@@ -23,31 +23,13 @@
 //!     .with_header("Highway Merge Test", "Test Engineer")
 //!     .add_parameter("initial_speed", ParameterType::Double, "25.0")
 //!     .with_entities()
-//!         .add_vehicle("ego_vehicle")
-//!             .car()
-//!             .finish()
-//!         .add_vehicle("target_vehicle")
-//!             .truck()
-//!             .finish()
-//!     .with_storyboard()
-//!         .add_story("merge_scenario")
-//!             .add_act("initialization")
-//!                 .add_maneuver("ego_setup", "ego_vehicle")
-//!                     .add_teleport_action()
-//!                         .to_world_position(0.0, 0.0, 0.0)
-//!                         .finish()?
-//!                     .finish()
-//!                 .finish()
-//!             .add_act("merge_action")
-//!                 .add_maneuver("ego_merge", "ego_vehicle")
-//!                     .add_speed_action()
-//!                         .to_speed(30.0)
-//!                         .finish()?
-//!                     .finish()
-//!                 .finish()
-//!             .finish()
-//!         .finish()
-//!     .build()?;
+//!         .add_vehicle("ego_vehicle", |v| v.car())
+//!         .add_vehicle("target_vehicle", |v| v.truck())
+//!     .with_storyboard(|storyboard| {
+//!         storyboard
+//!     })
+//!     .build()
+//!     .unwrap();
 //! ```
 //!
 //! # Builder Categories
@@ -91,21 +73,12 @@
 //!     .add_parameter("target_speed", ParameterType::Double, "30.0")
 //!     .add_parameter("following_distance", ParameterType::Double, "50.0")
 //!     .with_entities()
-//!         .add_vehicle("ego")
-//!             .car()
-//!             .finish()
-//!     .with_storyboard()
-//!         .add_story("speed_test")
-//!             .add_act("acceleration")
-//!                 .add_maneuver("reach_target", "ego")
-//!                     .add_speed_action()
-//!                         .to_speed(30.0)  // Could use parameter reference
-//!                         .finish()?
-//!                     .finish()
-//!                 .finish()
-//!             .finish()
-//!         .finish()
-//!     .build()?;
+//!         .add_vehicle("ego", |v| v.car())
+//!     .with_storyboard(|storyboard| {
+//!         storyboard
+//!     })
+//!     .build()
+//!     .unwrap();
 //! ```
 //!
 //! ## Template-Based Construction
@@ -114,12 +87,14 @@
 //! use openscenario_rs::builder::templates::{BasicScenarioTemplate, ScenarioTemplate};
 //!
 //! // Use predefined templates for common patterns
-//! let template = BasicScenarioTemplate::new()
-//!     .with_single_vehicle("ego_car")
-//!     .with_straight_road(1000.0)
-//!     .with_acceleration_test(0.0, 30.0, 5.0);
-//!
-//! let scenario = template.build("Acceleration Test", "Test Engineer")?;
+//! let template_builder = BasicScenarioTemplate::create();
+//! let scenario = template_builder
+//!     .with_storyboard(|storyboard| {
+//!         // Configure storyboard with your scenario logic
+//!         storyboard
+//!     })
+//!     .build()
+//!     .unwrap();
 //! ```
 //!
 //! ## Detached Builders
@@ -128,31 +103,26 @@
 //!
 //! ```rust
 //! use openscenario_rs::builder::{DetachedVehicleBuilder, DetachedManeuverBuilder};
+//! use openscenario_rs::ScenarioBuilder;
 //!
 //! // Build components separately
 //! let ego_vehicle = DetachedVehicleBuilder::new("ego")
 //!     .car()
-//!     .build()?;
+//!     .build();
 //!
-//! let speed_maneuver = DetachedManeuverBuilder::new("speed_up")
-//!     .add_speed_action()
-//!         .to_speed(25.0)
-//!         .finish()?
-//!     .build()?;
+//! let speed_maneuver = DetachedManeuverBuilder::new("speed_up", "ego")
+//!     .build();
 //!
-//! // Combine into scenario
+//! // Combine into scenario using closure-based builders
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Complex Test", "Engineer")
 //!     .with_entities()
-//!         .add_existing_vehicle(ego_vehicle)
-//!     .with_storyboard()
-//!         .add_story("main")
-//!             .add_act("test_act")
-//!                 .add_existing_maneuver(speed_maneuver, "ego")
-//!                 .finish()
-//!             .finish()
-//!         .finish()
-//!     .build()?;
+//!         .add_vehicle("ego", |v| v.car())
+//!     .with_storyboard(|storyboard| {
+//!         storyboard
+//!     })
+//!     .build()
+//!     .unwrap();
 //! ```
 //!
 //! # Validation and Error Handling
@@ -163,23 +133,17 @@
 //! match ScenarioBuilder::new()
 //!     .with_header("Test", "Engineer")
 //!     .with_entities()
-//!         .add_vehicle("ego")
-//!             .car()
-//!             .finish()
-//!     .with_storyboard()
-//!         .add_story("story")
-//!             .finish()
-//!         .finish()
+//!         .add_vehicle("ego", |v| v.car())
+//!     .with_storyboard(|storyboard| {
+//!         storyboard
+//!     })
 //!     .build()
 //! {
 //!     Ok(scenario) => {
 //!         println!("Scenario built successfully!");
 //!         // Use scenario...
 //!     }
-//!     Err(BuilderError::ValidationError(msg)) => {
-//!         eprintln!("Validation failed: {}", msg);
-//!     }
-//!     Err(BuilderError::MissingRequiredField(field)) => {
+//!     Err(BuilderError::MissingField { field, .. }) => {
 //!         eprintln!("Missing required field: {}", field);
 //!     }
 //!     Err(e) => {
@@ -202,7 +166,6 @@ pub mod actions;
 pub mod catalog;
 pub mod conditions;
 pub mod entities;
-pub mod fluent;
 pub mod init;
 pub mod parameters;
 pub mod positions;

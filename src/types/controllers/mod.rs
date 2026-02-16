@@ -12,17 +12,11 @@ use serde::{Deserialize, Serialize};
 
 // Placeholder types that will be implemented in future modules
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct ParameterAssignments {
     pub assignments: Vec<ParameterAssignment>,
 }
 
-impl Default for ParameterAssignments {
-    fn default() -> Self {
-        Self {
-            assignments: Vec::new(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ParameterAssignment {
@@ -210,19 +204,13 @@ impl Default for ObjectController {
 /// Provides a container for controller parameters and configuration options.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub struct ControllerProperties {
     /// List of controller properties
     #[serde(rename = "Property")]
     pub properties: Vec<Property>,
 }
 
-impl Default for ControllerProperties {
-    fn default() -> Self {
-        Self {
-            properties: Vec::new(),
-        }
-    }
-}
 
 /// Action to activate a controller for an entity.
 ///
@@ -310,19 +298,13 @@ impl Default for ControllerAssignment {
 /// Specifies where controller catalog files can be found.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub struct ControllerCatalogLocation {
     /// Directory containing controller catalog files
     #[serde(rename = "Directory")]
     pub directory: Directory,
 }
 
-impl Default for ControllerCatalogLocation {
-    fn default() -> Self {
-        Self {
-            directory: Directory::default(),
-        }
-    }
-}
 
 /// Distribution configuration for controller parameters.
 ///

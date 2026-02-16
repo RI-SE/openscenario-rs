@@ -110,12 +110,12 @@ impl ChoiceGroupParser {
 
         let start_pos = if let Some(pos) = self.xml.find(&container_start_tag) {
             // Find the end of the opening tag
-            let tag_end = self.xml[pos..]
+            
+            (self.xml[pos..]
                 .find('>')
                 .ok_or_else(|| Error::validation_error("xml", "Malformed container start tag"))?
                 + pos
-                + 1;
-            tag_end
+                + 1)
         } else {
             return Err(Error::validation_error(
                 "xml",
@@ -187,7 +187,7 @@ impl ChoiceGroupParser {
                 // Check if it's self-closing (either <element/> or <element .../>)
                 let is_self_closing = content[element_pos..].starts_with(&element_self_closing)
                     || (content[element_pos..].starts_with(&element_self_closing_with_space)
-                        && content[element_pos..].find('>').map_or(false, |pos| {
+                        && content[element_pos..].find('>').is_some_and(|pos| {
                             content[element_pos..element_pos + pos + 1].ends_with("/>")
                         }));
 
@@ -302,7 +302,7 @@ static GLOBAL_REGISTRY: std::sync::OnceLock<ChoiceGroupRegistry> = std::sync::On
 
 /// Parse a choice group using the global registry
 pub fn parse_choice_group<T: XsdChoiceGroup>(container_name: &str, xml: &str) -> Result<T> {
-    let registry = GLOBAL_REGISTRY.get_or_init(|| ChoiceGroupRegistry::new());
+    let registry = GLOBAL_REGISTRY.get_or_init(ChoiceGroupRegistry::new);
     registry.parse(container_name, xml)
 }
 

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// Main trailer action wrapper containing all trailer action types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct TrailerAction {
     /// Connect trailer action
     #[serde(
@@ -36,18 +37,11 @@ pub struct ConnectTrailerAction {
 
 /// Disconnect trailer action for detaching trailers from vehicles
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct DisconnectTrailerAction {
     // Empty according to schema
 }
 
-impl Default for TrailerAction {
-    fn default() -> Self {
-        Self {
-            connect_trailer_action: None,
-            disconnect_trailer_action: None,
-        }
-    }
-}
 
 impl Default for ConnectTrailerAction {
     fn default() -> Self {
@@ -57,11 +51,6 @@ impl Default for ConnectTrailerAction {
     }
 }
 
-impl Default for DisconnectTrailerAction {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 #[cfg(test)]
 mod tests {

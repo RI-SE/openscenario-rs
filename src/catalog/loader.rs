@@ -41,37 +41,34 @@ impl CatalogLoader {
     /// Discover all .xosc files in a directory
     pub fn discover_catalog_files(&self, directory: &Directory) -> Result<Vec<PathBuf>> {
         let path_str = directory.path.as_literal().ok_or_else(|| {
-            Error::catalog_error("Cannot discover files with parameterized paths")
+            Error::invalid_value(
+                "directory.path",
+                "parameterized path",
+                "literal path required",
+            )
         })?;
 
         let dir_path = self.resolve_path(path_str)?;
 
         if !dir_path.exists() {
-            return Err(Error::catalog_error(&format!(
-                "Directory does not exist: {}",
-                dir_path.display()
-            )));
+            return Err(Error::directory_not_found(&dir_path.to_string_lossy()));
         }
 
         if !dir_path.is_dir() {
-            return Err(Error::catalog_error(&format!(
-                "Path is not a directory: {}",
-                dir_path.display()
-            )));
+            return Err(Error::invalid_value(
+                "directory.path",
+                &dir_path.to_string_lossy(),
+                "path must be a directory",
+            ));
         }
 
         let mut catalog_files = Vec::new();
 
-        for entry in fs::read_dir(&dir_path).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to read directory {}: {}",
-                dir_path.display(),
-                e
-            ))
-        })? {
-            let entry = entry.map_err(|e| {
-                Error::catalog_error(&format!("Failed to read directory entry: {}", e))
-            })?;
+        for entry in fs::read_dir(&dir_path)
+            .map_err(|e| Error::file_read_error(&dir_path.to_string_lossy(), &e.to_string()))?
+        {
+            let entry = entry
+                .map_err(|e| Error::file_read_error(&dir_path.to_string_lossy(), &e.to_string()))?;
 
             let path = entry.path();
 
@@ -93,19 +90,11 @@ impl CatalogLoader {
         let path = file_path.as_ref();
 
         if !path.exists() {
-            return Err(Error::catalog_error(&format!(
-                "Catalog file does not exist: {}",
-                path.display()
-            )));
+            return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        fs::read_to_string(path).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to read catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })
+        fs::read_to_string(path)
+            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))
     }
 
     /// Load and parse a catalog file into a CatalogFile structure
@@ -199,27 +188,14 @@ impl CatalogLoader {
     ) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!(
-                "Controller catalog file does not exist: {}",
-                path.display()
-            )));
+            return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to read controller catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })?;
+        let xml_content = fs::read_to_string(path)
+            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
-        quick_xml::de::from_str(&xml_content).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to parse controller catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
     }
 
     /// Load a specific trajectory catalog from a file
@@ -229,27 +205,14 @@ impl CatalogLoader {
     ) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!(
-                "Trajectory catalog file does not exist: {}",
-                path.display()
-            )));
+            return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to read trajectory catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })?;
+        let xml_content = fs::read_to_string(path)
+            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
-        quick_xml::de::from_str(&xml_content).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to parse trajectory catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
     }
 
     /// Load a specific route catalog from a file
@@ -259,27 +222,14 @@ impl CatalogLoader {
     ) -> Result<crate::types::catalogs::routes::RouteCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!(
-                "Route catalog file does not exist: {}",
-                path.display()
-            )));
+            return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to read route catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })?;
+        let xml_content = fs::read_to_string(path)
+            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
-        quick_xml::de::from_str(&xml_content).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to parse route catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
     }
 
     /// Load a specific environment catalog from a file
@@ -289,27 +239,14 @@ impl CatalogLoader {
     ) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
         let path = file_path.as_ref();
         if !path.exists() {
-            return Err(Error::catalog_error(&format!(
-                "Environment catalog file does not exist: {}",
-                path.display()
-            )));
+            return Err(Error::file_not_found(&path.to_string_lossy()));
         }
 
-        let xml_content = fs::read_to_string(&path).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to read environment catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })?;
+        let xml_content = fs::read_to_string(path)
+            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
 
-        quick_xml::de::from_str(&xml_content).map_err(|e| {
-            Error::catalog_error(&format!(
-                "Failed to parse environment catalog file {}: {}",
-                path.display(),
-                e
-            ))
-        })
+        quick_xml::de::from_str(&xml_content)
+            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
     }
 
     /// Load all controller catalogs from a directory and return them as a hashmap
@@ -417,11 +354,7 @@ impl CatalogLoader {
             Ok(base.join(path))
         } else {
             // Use current directory as base
-            Ok(std::env::current_dir()
-                .map_err(|e| {
-                    Error::catalog_error(&format!("Failed to get current directory: {}", e))
-                })?
-                .join(path))
+            Ok(std::env::current_dir()?.join(path))
         }
     }
 }

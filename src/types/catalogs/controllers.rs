@@ -82,19 +82,13 @@ impl Default for CatalogController {
 /// can be parameterized and overridden when the controller is referenced.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Properties")]
+#[derive(Default)]
 pub struct ControllerProperties {
     /// List of controller properties
     #[serde(rename = "Property")]
     pub properties: Vec<ControllerProperty>,
 }
 
-impl Default for ControllerProperties {
-    fn default() -> Self {
-        Self {
-            properties: Vec::new(),
-        }
-    }
-}
 
 /// Individual property for catalog controllers
 ///

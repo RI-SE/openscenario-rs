@@ -9,6 +9,10 @@ mod xsd_compliance_tests {
             .with_header("Test", "Author")
             .with_entities()
             .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build()
             .unwrap();
 
@@ -32,6 +36,10 @@ mod xsd_compliance_tests {
                     .with_role(Role::Police)
                     .with_model3d("./models/police.glb")
                     .finish()
+            })
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
             })
             .build()
             .unwrap();

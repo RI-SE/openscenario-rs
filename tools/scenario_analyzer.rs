@@ -727,13 +727,13 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
                 analysis.vehicles += 1;
                 analysis.vehicles_inline += 1;
                 analysis.inline_definitions += 1;
-                let vehicle_analysis = analyze_vehicle(vehicle, &entity_name, entity);
+                let vehicle_analysis = analyze_vehicle(vehicle, entity_name, entity);
                 analysis.vehicle_analyses.push(vehicle_analysis);
             } else if let Some(pedestrian) = &entity.pedestrian {
                 analysis.pedestrians += 1;
                 analysis.pedestrians_inline += 1;
                 analysis.inline_definitions += 1;
-                let pedestrian_analysis = analyze_pedestrian(pedestrian, &entity_name, entity);
+                let pedestrian_analysis = analyze_pedestrian(pedestrian, entity_name, entity);
                 analysis.pedestrian_analyses.push(pedestrian_analysis);
             } else if let Some(catalog_ref) = entity.vehicle_catalog_reference() {
                 // Vehicle catalog reference
@@ -1591,10 +1591,7 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
                     if document.document_type() == OpenScenarioDocumentType::Scenario {
                         let scenario_parameters =
                             extract_scenario_parameters(&document.parameter_declarations);
-                        match evaluate_expression::<String>(expr, &scenario_parameters) {
-                            Ok(resolved) => Some(resolved),
-                            Err(_) => None,
-                        }
+                        evaluate_expression::<String>(expr, &scenario_parameters).ok()
                     } else {
                         None
                     }

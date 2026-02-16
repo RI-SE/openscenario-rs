@@ -93,10 +93,10 @@ impl ActionBuilder for AssignRouteActionBuilder {
         };
 
         Ok(PrivateAction::RoutingAction(RoutingAction {
-                assign_route_action: Some(action),
-                follow_trajectory_action: None,
-                follow_route_action: None,
-            }))
+            assign_route_action: Some(action),
+            follow_trajectory_action: None,
+            follow_route_action: None,
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -166,10 +166,10 @@ impl ActionBuilder for FollowRouteActionBuilder {
         };
 
         Ok(PrivateAction::RoutingAction(RoutingAction {
-                assign_route_action: None,
-                follow_trajectory_action: None,
-                follow_route_action: Some(action),
-            }))
+            assign_route_action: None,
+            follow_trajectory_action: None,
+            follow_route_action: Some(action),
+        }))
     }
 
     fn validate(&self) -> BuilderResult<()> {

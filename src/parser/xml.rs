@@ -133,9 +133,11 @@ fn parse_from_file_internal<P: AsRef<Path>>(path: P, validate_xml: bool) -> Resu
     })?;
 
     if metadata.len() > MAX_FILE_SIZE {
-        return Err(Error::validation_error(
+        return Err(Error::out_of_range(
             "file_size",
-            &format!("File exceeds maximum size of {} bytes", MAX_FILE_SIZE),
+            &metadata.len().to_string(),
+            "0",
+            &MAX_FILE_SIZE.to_string(),
         ));
     }
 
@@ -148,7 +150,7 @@ fn parse_from_file_internal<P: AsRef<Path>>(path: P, validate_xml: bool) -> Resu
     let cleaned_content = remove_bom(&xml_content);
 
     if validate_xml {
-        validate_xml_structure(&cleaned_content).map_err(|e| {
+        validate_xml_structure(cleaned_content).map_err(|e| {
             e.with_context(&format!(
                 "XML validation failed for file: {}",
                 path.as_ref().display()
@@ -177,9 +179,11 @@ fn parse_catalog_from_file_internal<P: AsRef<Path>>(
     })?;
 
     if metadata.len() > MAX_FILE_SIZE {
-        return Err(Error::validation_error(
+        return Err(Error::out_of_range(
             "file_size",
-            &format!("File exceeds maximum size of {} bytes", MAX_FILE_SIZE),
+            &metadata.len().to_string(),
+            "0",
+            &MAX_FILE_SIZE.to_string(),
         ));
     }
 
@@ -195,7 +199,7 @@ fn parse_catalog_from_file_internal<P: AsRef<Path>>(
     let cleaned_content = remove_bom(&xml_content);
 
     if validate_xml {
-        validate_catalog_xml_structure(&cleaned_content).map_err(|e| {
+        validate_catalog_xml_structure(cleaned_content).map_err(|e| {
             e.with_context(&format!(
                 "XML validation failed for catalog file: {}",
                 path.as_ref().display()
@@ -277,19 +281,17 @@ pub fn validate_xml_structure(xml: &str) -> Result<()> {
     let trimmed = xml.trim();
 
     if trimmed.is_empty() {
-        return Err(Error::validation_error("xml", "XML document is empty"));
+        return Err(Error::invalid_xml("XML document is empty"));
     }
 
     if !trimmed.starts_with("<?xml") && !trimmed.starts_with('<') {
-        return Err(Error::validation_error(
-            "xml",
+        return Err(Error::invalid_xml(
             "XML document must start with XML declaration or root element",
         ));
     }
 
     if !trimmed.contains("OpenSCENARIO") {
-        return Err(Error::validation_error(
-            "xml",
+        return Err(Error::invalid_xml(
             "Document does not appear to contain OpenSCENARIO root element",
         ));
     }
@@ -342,29 +344,23 @@ pub fn validate_catalog_xml_structure(xml: &str) -> Result<()> {
     let trimmed = xml.trim();
 
     if trimmed.is_empty() {
-        return Err(Error::validation_error(
-            "xml",
-            "Catalog XML document is empty",
-        ));
+        return Err(Error::invalid_xml("Catalog XML document is empty"));
     }
 
     if !trimmed.starts_with("<?xml") && !trimmed.starts_with('<') {
-        return Err(Error::validation_error(
-            "xml",
+        return Err(Error::invalid_xml(
             "Catalog XML document must start with XML declaration or root element",
         ));
     }
 
     if !trimmed.contains("OpenSCENARIO") {
-        return Err(Error::validation_error(
-            "xml",
+        return Err(Error::invalid_xml(
             "Document does not appear to contain OpenSCENARIO root element",
         ));
     }
 
     if !trimmed.contains("Catalog") {
-        return Err(Error::validation_error(
-            "xml",
+        return Err(Error::invalid_xml(
             "Document does not appear to contain Catalog element",
         ));
     }

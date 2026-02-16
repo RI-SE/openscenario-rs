@@ -65,7 +65,8 @@ impl PrivateActionBuilder {
         };
 
         let action = PrivateActionWrapper::LongitudinalAction(LongitudinalActionType {
-            longitudinal_action_choice: crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action),
+            longitudinal_action_choice:
+                crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action),
         });
         self.actions.push(action);
         self
@@ -189,9 +190,7 @@ impl PrivateActionBuilder {
     // ========== INTERNAL HELPER ==========
 
     /// Convert from builder PrivateAction to init PrivateAction
-    fn convert_to_init_action(
-        action: PrivateActionWrapper,
-    ) -> PrivateAction {
+    fn convert_to_init_action(action: PrivateActionWrapper) -> PrivateAction {
         match action {
             PrivateActionWrapper::LongitudinalAction(long_action) => {
                 PrivateAction {

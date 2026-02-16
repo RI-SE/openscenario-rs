@@ -9,11 +9,18 @@ mod pedestrian_builder_tests {
             .with_header("Test", "Author")
             .with_entities()
             .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build();
 
         assert!(scenario.is_ok());
         let scenario = scenario.unwrap();
-        assert_eq!(scenario.entities.as_ref().unwrap().scenario_objects.len(), 1);
+        assert_eq!(
+            scenario.entities.as_ref().unwrap().scenario_objects.len(),
+            1
+        );
 
         let obj = &scenario.entities.as_ref().unwrap().scenario_objects[0];
         assert!(obj.pedestrian.is_some());
@@ -33,6 +40,10 @@ mod pedestrian_builder_tests {
                     .with_mass(85.0)
                     .with_role(Role::Civil)
                     .finish()
+            })
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
             })
             .build();
 
@@ -57,6 +68,10 @@ mod pedestrian_builder_tests {
                     .with_model3d("./models/dog.glb")
                     .finish()
             })
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build();
 
         assert!(scenario.is_ok());
@@ -79,6 +94,10 @@ mod pedestrian_builder_tests {
                     .with_mass(90.0)
                     .with_dimensions(0.7, 0.7, 2.0)
                     .finish()
+            })
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
             })
             .build();
 
@@ -106,6 +125,10 @@ mod pedestrian_builder_tests {
             .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
             .add_pedestrian("wheel1", |p| p.wheelchair().with_mass(85.0).finish())
             .add_pedestrian("dog1", |p| p.animal().with_mass(50.0).finish())
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build();
 
         assert!(scenario.is_ok());

@@ -61,6 +61,7 @@ pub struct Private {
 /// XSD requires exactly one child element (choice group)
 /// The PrivateAction element in XML contains one of these action types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct PrivateAction {
     /// Exactly one of these fields should be present (XML choice group)
     #[serde(
@@ -164,20 +165,6 @@ impl PrivateAction {
     }
 }
 
-impl Default for PrivateAction {
-    fn default() -> Self {
-        Self {
-            longitudinal_action: None,
-            lateral_action: None,
-            teleport_action: None,
-            routing_action: None,
-            synchronize_action: None,
-            activate_controller_action: None,
-            visibility_action: None,
-            controller_action: None,
-        }
-    }
-}
 
 /// Longitudinal movement actions (speed control, etc.)
 /// XSD requires exactly one child element (choice group)

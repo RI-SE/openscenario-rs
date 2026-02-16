@@ -116,6 +116,10 @@ mod parameter_builder_tests {
             .with_header("Parameterized Test", "Test Author")
             .with_parameters(params)
             .with_entities()
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
             .build()
             .unwrap();
 

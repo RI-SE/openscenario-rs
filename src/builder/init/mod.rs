@@ -19,10 +19,12 @@
 //!     .add_teleport_action("ego",
 //!         WorldPositionBuilder::new()
 //!             .at_coordinates(0.0, 0.0, 0.0)
-//!             .build()?
+//!             .build()
+//!             .unwrap()
 //!     )
 //!     .add_speed_action("ego", 30.0)
-//!     .build()?;
+//!     .build()
+//!     .unwrap();
 //! ```
 
 pub mod actions;

@@ -115,7 +115,7 @@ pub struct ByName {
 }
 
 /// Template properties for scenario object templates
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TemplateProperties {
     /// Custom properties as key-value pairs
     #[serde(rename = "Property", default)]
@@ -209,14 +209,6 @@ impl Default for ByName {
     fn default() -> Self {
         Self {
             name: OSString::literal("*".to_string()),
-        }
-    }
-}
-
-impl Default for TemplateProperties {
-    fn default() -> Self {
-        Self {
-            properties: Vec::new(),
         }
     }
 }

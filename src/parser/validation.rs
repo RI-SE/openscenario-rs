@@ -329,6 +329,12 @@ pub struct ValidationMetrics {
     pub cache_hit_ratio: f64,
 }
 
+impl Default for ScenarioValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ScenarioValidator {
     /// Create a new validator with default configuration
     pub fn new() -> Self {

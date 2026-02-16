@@ -92,6 +92,7 @@ pub enum TrafficActionChoice {
 // InfrastructureAction wrapper type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
+#[derive(Default)]
 pub struct InfrastructureAction {
     pub traffic_signal_action: TrafficSignalAction,
 }
@@ -99,6 +100,7 @@ pub struct InfrastructureAction {
 // AddEntityAction type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
+#[derive(Default)]
 pub struct AddEntityAction {
     pub position: Position,
 }
@@ -109,6 +111,7 @@ pub struct DeleteEntityAction {}
 
 // UserDefinedAction placeholder
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct UserDefinedAction {
     #[serde(rename = "CustomCommandAction")]
     pub custom_command_action: CustomCommandAction,
@@ -240,6 +243,7 @@ pub struct NamedAction {
 
 // Additional action types for completeness
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct RandomRouteAction {
     #[serde(rename = "@numberOfRoutes", skip_serializing_if = "Option::is_none")]
     pub number_of_routes: Option<UnsignedInt>,
@@ -284,29 +288,8 @@ impl Default for TrafficAction {
     }
 }
 
-impl Default for InfrastructureAction {
-    fn default() -> Self {
-        InfrastructureAction {
-            traffic_signal_action: TrafficSignalAction::default(),
-        }
-    }
-}
 
-impl Default for AddEntityAction {
-    fn default() -> Self {
-        AddEntityAction {
-            position: Position::default(),
-        }
-    }
-}
 
-impl Default for UserDefinedAction {
-    fn default() -> Self {
-        UserDefinedAction {
-            custom_command_action: CustomCommandAction::default(),
-        }
-    }
-}
 
 impl Default for NamedAction {
     fn default() -> Self {
@@ -408,11 +391,3 @@ impl Default for ParameterMultiplyByValueRule {
     }
 }
 
-impl Default for RandomRouteAction {
-    fn default() -> Self {
-        RandomRouteAction {
-            number_of_routes: None,
-            random_seed: None,
-        }
-    }
-}

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// Road network definition for scenario
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct RoadNetwork {
     /// Logic file reference containing road network data
     #[serde(rename = "LogicFile", skip_serializing_if = "Option::is_none")]
@@ -67,14 +68,6 @@ impl SceneGraphFile {
     }
 }
 
-impl Default for RoadNetwork {
-    fn default() -> Self {
-        Self {
-            logic_file: None,
-            scene_graph_file: None,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

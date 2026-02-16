@@ -83,7 +83,7 @@ impl ExpressionParser {
     pub fn parse(&mut self) -> Result<Expr> {
         let expr = self.parse_expression()?;
         if self.current < self.tokens.len() {
-            return Err(Error::validation_error(
+            return Err(Error::parse_error(
                 "expression",
                 "unexpected token after expression",
             ));
@@ -157,8 +157,8 @@ impl ExpressionParser {
                         chars.next();
                         tokens.push(Token::Operator(Operator::Equal));
                     } else {
-                        return Err(Error::validation_error(
-                            "tokenize",
+                        return Err(Error::parse_error(
+                            input,
                             "single '=' not supported, use '==' for equality",
                         ));
                     }
@@ -169,8 +169,8 @@ impl ExpressionParser {
                         chars.next();
                         tokens.push(Token::Operator(Operator::NotEqual));
                     } else {
-                        return Err(Error::validation_error(
-                            "tokenize",
+                        return Err(Error::parse_error(
+                            input,
                             "single '!' not supported, use '!=' for inequality",
                         ));
                     }
@@ -182,8 +182,8 @@ impl ExpressionParser {
                         chars.next();
                         let param_name = Self::read_until_char(&mut chars, '}')?;
                         if chars.next() != Some('}') {
-                            return Err(Error::validation_error(
-                                "parameter",
+                            return Err(Error::parse_error(
+                                input,
                                 "missing closing brace in parameter reference",
                             ));
                         }
@@ -192,10 +192,7 @@ impl ExpressionParser {
                         // Simple $paramName format (deprecated but supported)
                         let param_name = Self::read_identifier(&mut chars)?;
                         if param_name.is_empty() {
-                            return Err(Error::validation_error(
-                                "parameter",
-                                "empty parameter name",
-                            ));
+                            return Err(Error::parse_error(input, "empty parameter name"));
                         }
                         tokens.push(Token::Parameter(param_name));
                     }
@@ -216,8 +213,8 @@ impl ExpressionParser {
                     }
                 }
                 _ => {
-                    return Err(Error::validation_error(
-                        "tokenize",
+                    return Err(Error::parse_error(
+                        input,
                         &format!("unexpected character: '{}'", ch),
                     ));
                 }
@@ -255,9 +252,9 @@ impl ExpressionParser {
             }
         }
 
-        number_str.parse::<f64>().map_err(|_| {
-            Error::validation_error("number", &format!("invalid number: '{}'", number_str))
-        })
+        number_str
+            .parse::<f64>()
+            .map_err(|_| Error::parse_error(&number_str, "invalid number format"))
     }
 
     /// Read an identifier from the character stream
@@ -275,8 +272,8 @@ impl ExpressionParser {
         }
 
         if identifier.is_empty() {
-            return Err(Error::validation_error(
-                "identifier",
+            return Err(Error::parse_error(
+                "",
                 "Expected identifier but found empty string",
             ));
         }

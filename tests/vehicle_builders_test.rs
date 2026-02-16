@@ -11,7 +11,13 @@ mod vehicle_builder_tests {
 
         scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
 
-        let scenario = scenario_builder.build().unwrap();
+        let scenario = scenario_builder
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
+            .build()
+            .unwrap();
 
         let entities = scenario.entities.unwrap();
         assert_eq!(entities.scenario_objects.len(), 1);
@@ -37,7 +43,13 @@ mod vehicle_builder_tests {
             .add_vehicle("ego", |v| v.car())
             .add_vehicle("truck1", |v| v.truck());
 
-        let scenario = scenario_builder.build().unwrap();
+        let scenario = scenario_builder
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
+            .build()
+            .unwrap();
 
         let entities = scenario.entities.unwrap();
         assert_eq!(entities.scenario_objects.len(), 2);
@@ -61,7 +73,13 @@ mod vehicle_builder_tests {
                 .with_performance(150.0, 5.0, 12.0)
         });
 
-        let scenario = scenario_builder.build().unwrap();
+        let scenario = scenario_builder
+            .with_storyboard(|storyboard| {
+                // Minimal storyboard with default init
+                storyboard
+            })
+            .build()
+            .unwrap();
 
         let entities = scenario.entities.unwrap();
         assert_eq!(entities.scenario_objects.len(), 1);

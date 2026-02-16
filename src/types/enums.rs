@@ -1457,7 +1457,7 @@ impl FromStr for CloudState {
             "overcast" => Ok(CloudState::Overcast),
             "rainy" => Ok(CloudState::Rainy),
             "skyOff" => Ok(CloudState::SkyOff),
-            _ => Err(format!("Invalid cloud state: {}", s)),
+            _ => Err(s.to_string()),
         }
     }
 }

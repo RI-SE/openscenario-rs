@@ -182,6 +182,7 @@ pub enum DeterministicSingleParameterDistributionTypeGroup {
 
 /// DeterministicMultiParameterDistributionType group - XSD group wrapper for value set sequence
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct DeterministicMultiParameterDistributionTypeGroup {
     #[serde(rename = "ValueSetDistribution")]
     pub value_set_distribution: ValueSetDistribution,
@@ -189,6 +190,7 @@ pub struct DeterministicMultiParameterDistributionTypeGroup {
 
 /// ParameterValueDistributionDefinition group - XSD group wrapper for parameter value distribution sequence
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ParameterValueDistributionDefinitionGroup {
     #[serde(rename = "ParameterValueDistribution")]
     pub parameter_value_distribution: ParameterValueDistribution,
@@ -216,21 +218,7 @@ impl Default for DeterministicSingleParameterDistributionTypeGroup {
     }
 }
 
-impl Default for DeterministicMultiParameterDistributionTypeGroup {
-    fn default() -> Self {
-        Self {
-            value_set_distribution: ValueSetDistribution::default(),
-        }
-    }
-}
 
-impl Default for ParameterValueDistributionDefinitionGroup {
-    fn default() -> Self {
-        Self {
-            parameter_value_distribution: ParameterValueDistribution::default(),
-        }
-    }
-}
 
 // Helper implementations for ergonomic group usage
 

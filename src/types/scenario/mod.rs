@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 
 /// ScenarioDefinition group - XSD group wrapper for scenario sequence
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub struct ScenarioDefinition {
     #[serde(
         rename = "ParameterDeclarations",
@@ -52,19 +53,6 @@ pub struct ScenarioDefinition {
     pub storyboard: Storyboard,
 }
 
-impl Default for ScenarioDefinition {
-    fn default() -> Self {
-        Self {
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: CatalogLocations::default(),
-            road_network: RoadNetwork::default(),
-            entities: Entities::default(),
-            storyboard: Storyboard::default(),
-        }
-    }
-}
 
 impl ScenarioDefinition {
     /// Create new scenario definition with required elements
