@@ -317,7 +317,7 @@ cargo run --example parse -- scenario.xosc
 - **[Builder Guide](docs/builder_guide.md)**: Complete builder system documentation
 - **[User Guide](docs/user_guide.md)**: Comprehensive usage and API patterns
 - **[Design Document](docs/design.md)**: Architecture decisions and rationale
-- **[Examples](examples/)**: 44 example files including parsing demos, builder examples, and test scenarios
+ - **[Examples](examples/)**: 18 production example files including parsing demos, builder examples, and complete scenarios
 - **[API Documentation](https://docs.rs/openscenario-rs)**: Complete API reference
 
 ### Key Documentation
