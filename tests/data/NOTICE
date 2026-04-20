@@ -1,0 +1,15 @@
+NOTICE: Third-Party Test Data
+
+The following files in this directory are not original works of this project
+and are subject to their own licenses:
+
+-------------------------------------------------------------------------------
+alks_scenario.xosc
+-------------------------------------------------------------------------------
+Source:    https://github.com/openMSL/sl-3-1-osc-alks-scenarios
+Copyright: BMW Group
+License:   Mozilla Public License 2.0 (MPL-2.0)
+           https://www.mozilla.org/en-US/MPL/2.0/
+
+This file is included here unchanged for use as a test fixture. Any
+modifications to this file must be made available under the MPL-2.0.

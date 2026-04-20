@@ -2,7 +2,7 @@
 name = "openscenario-rs"
 version = "0.3.0"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.90"
 authors = ["Ashfaq Farooqui"]
 description = "Rust library for parsing and manipulating OpenSCENARIO files"
 license = "GPLv3"
@@ -29,12 +29,6 @@ default = ["chrono"]
 chrono = ["dep:chrono"]
 builder = []
 
-[lints.clippy]
-unwrap_used = "warn"
-expect_used = "warn"
-print_stdout = "warn"
-print_stderr = "warn"
-todo = "warn"
 
 [dev-dependencies]
 proptest = "1.0"
