@@ -5,7 +5,6 @@ A Rust library for parsing, validating, and manipulating [OpenSCENARIO](https://
 [![Crates.io](https://img.shields.io/crates/v/openscenario-rs)](https://crates.io/crates/openscenario-rs)
 [![Documentation](https://docs.rs/openscenario-rs/badge.svg)](https://docs.rs/openscenario-rs)
 [![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
-[![Build Status](https://github.com/ashfaqfarooqui/openscenario-rs/workflows/CI/badge.svg)](https://github.com/ashfaqfarooqui/openscenario-rs/actions)
 
 ## Features
 
@@ -24,7 +23,7 @@ Core parsing and serialization is functional. Actions and conditions have broad 
 
 ```toml
 [dependencies]
-openscenario-rs = "0.2.0"
+openscenario-rs = "0.3.0"
 ```
 
 ### Parsing
