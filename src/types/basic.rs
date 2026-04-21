@@ -223,12 +223,9 @@ pub type UnsignedInt = Value<u32>;
 pub type UnsignedShort = Value<u16>;
 pub type Boolean = Value<bool>;
 
-// DateTime support will be added with chrono feature
-#[cfg(feature = "chrono")]
 pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
 
 // TODO: Add any missing basic types needed for actions and conditions (Week 4)
-// TODO: pub type DateTime = Value<chrono::DateTime<chrono::Utc>>; - already defined but may need chrono feature
 
 /// Parse a parameter reference from a string
 ///

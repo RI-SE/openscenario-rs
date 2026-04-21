@@ -8,7 +8,6 @@
 //! - Traffic signal conditions for infrastructure interaction
 //! - User-defined custom condition support
 //!
-#[cfg(feature = "chrono")]
 use crate::types::basic::DateTime;
 use crate::types::basic::{Double, OSString};
 use crate::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
@@ -35,21 +34,10 @@ pub struct ParameterCondition {
 }
 
 /// Time-of-day condition for scheduling based on absolute time
-#[cfg(feature = "chrono")]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeOfDayCondition {
     #[serde(rename = "@dateTime")]
     pub date_time: DateTime,
-    #[serde(rename = "@rule")]
-    pub rule: Rule,
-}
-
-/// Time-of-day condition for scheduling based on absolute time (without chrono feature)
-#[cfg(not(feature = "chrono"))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TimeOfDayCondition {
-    #[serde(rename = "@dateTime")]
-    pub date_time: OSString, // Fallback to string when chrono is not available
     #[serde(rename = "@rule")]
     pub rule: Rule,
 }
@@ -176,21 +164,10 @@ impl Default for ParameterCondition {
     }
 }
 
-#[cfg(feature = "chrono")]
 impl Default for TimeOfDayCondition {
     fn default() -> Self {
         Self {
             date_time: DateTime::literal(chrono::Utc::now()),
-            rule: Rule::GreaterThan,
-        }
-    }
-}
-
-#[cfg(not(feature = "chrono"))]
-impl Default for TimeOfDayCondition {
-    fn default() -> Self {
-        Self {
-            date_time: OSString::literal("2024-01-01T12:00:00Z".to_string()),
             rule: Rule::GreaterThan,
         }
     }

@@ -137,10 +137,7 @@ impl ScenarioBuilder<Empty> {
     /// // Can now add parameters, catalogs, or entities
     /// ```
     pub fn with_header(mut self, description: &str, author: &str) -> ScenarioBuilder<HasHeader> {
-        #[cfg(feature = "chrono")]
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
-        #[cfg(not(feature = "chrono"))]
-        let now = "2024-01-01T00:00:00".to_string();
 
         self.data.file_header = Some(FileHeader {
             rev_major: UnsignedShort::literal(1),
