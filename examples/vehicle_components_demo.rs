@@ -1,6 +1,6 @@
-//! Week 5 Vehicle Components Demo
+//! Vehicle Components Demo
 //!
-//! This example demonstrates the enhanced vehicle components implemented in Week 5:
+//! This example demonstrates the enhanced vehicle components:
 //! - Enhanced BoundingBox with volume and contains_point methods
 //! - Center distance calculations
 //! - New Dimensions default methods (vehicle_default, pedestrian_default, truck_default)
@@ -13,7 +13,7 @@ use openscenario_rs::types::geometry::{BoundingBox, Center, Dimensions};
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚗 Week 5 Vehicle Components Demo");
+    println!("🚗 Vehicle Components Demo");
     println!("==================================\n");
 
     // Demo 1: Enhanced BoundingBox Operations
@@ -207,7 +207,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &axles_xml[..axles_xml.len().min(80)]
     );
 
-    println!("\n✅ Week 5 Vehicle Components Demo Complete!");
+    println!("\n✅ Vehicle Components Demo Complete!");
     println!("All enhanced functionality is working correctly.");
 
     Ok(())

@@ -1,6 +1,6 @@
-//! Week 5 Vehicle Components Integration Tests
+//! Vehicle Components Integration Tests
 //!
-//! This test file verifies the complete implementation of Week 5 vehicle components
+//! This test file verifies the complete implementation of vehicle components
 //! including enhanced BoundingBox, Center distance calculations, new Dimensions defaults,
 //! and comprehensive Axle system integration.
 

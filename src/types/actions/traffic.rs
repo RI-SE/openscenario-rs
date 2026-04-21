@@ -1,4 +1,4 @@
-//! Phase 4C: Traffic Management Actions Implementation
+//! Traffic management actions implementation
 //!
 //! This file contains:
 //! - Traffic source and sink actions for dynamic traffic generation
@@ -11,7 +11,6 @@ use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-// PHASE 4C: Core Traffic Management Actions
 
 /// Traffic source action for traffic generation with rate and position
 ///
@@ -206,7 +205,6 @@ pub struct TrafficStopAction {
     pub enable: Boolean,
 }
 
-// PHASE 4C: Supporting Types for Traffic Management
 
 /// Traffic definition for vehicle category and controller distribution
 ///
@@ -305,7 +303,6 @@ pub struct TrafficAreaVertex {
     pub z: Double,
 }
 
-// PHASE 4C: Default implementations
 
 impl Default for TrafficSourceAction {
     fn default() -> Self {
@@ -493,7 +490,6 @@ impl Default for TrafficAreaVertex {
 }
 
 
-// PHASE 4C: Helper implementations
 
 impl TrafficSourceAction {
     /// Create traffic source with rate and position
@@ -917,7 +913,6 @@ impl TrafficArea {
     }
 }
 
-// PHASE 4C: Unit tests for all traffic actions
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -225,7 +225,7 @@ pub type Boolean = Value<bool>;
 
 pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
 
-// TODO: Add any missing basic types needed for actions and conditions (Week 4)
+
 
 /// Parse a parameter reference from a string
 ///

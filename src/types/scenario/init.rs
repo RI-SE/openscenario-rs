@@ -16,7 +16,7 @@ use crate::types::basic::OSString;
 use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
 
-/// Complete Init structure replacing the empty placeholder in storyboard
+/// Initialization structure containing actions to run at scenario start
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct Init {
     #[serde(rename = "Actions")]

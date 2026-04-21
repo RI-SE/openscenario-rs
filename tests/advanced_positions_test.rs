@@ -1,4 +1,4 @@
-//! Tests for Phase 4 Advanced Positions: TrajectoryPosition, GeographicPosition, RelativeObjectPosition
+//! Tests for advanced positions: TrajectoryPosition, GeographicPosition, RelativeObjectPosition
 
 use openscenario_rs::types::{
     basic::{Double, OSString},
@@ -196,8 +196,8 @@ fn test_advanced_positions_serialization() {
 }
 
 #[test]
-fn test_phase4_positions_completeness() {
-    // Test that all Phase 4 position types are accessible
+fn test_advanced_positions_completeness() {
+    // Test that all advanced position types are accessible
     let _trajectory = TrajectoryPosition::new(0.0);
     let _geographic = GeographicPosition::new(0.0, 0.0);
     let _relative_object = RelativeObjectPosition::new("entity", 0.0, 0.0);

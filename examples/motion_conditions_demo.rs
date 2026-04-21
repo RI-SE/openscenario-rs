@@ -1,4 +1,4 @@
-//! Motion Conditions Demo - Phase 2 Implementation
+//! Motion Conditions Demo
 //!
 //! This example demonstrates the usage of AccelerationCondition and StandStillCondition
 //! for motion-based scenario triggering in OpenSCENARIO files.
@@ -125,7 +125,7 @@ fn main() {
     }
 
     println!("\n=== Demo Complete ===");
-    println!("Phase 2: Motion Conditions successfully implemented!");
+    println!("Motion conditions successfully implemented!");
     println!("- AccelerationCondition: ✅");
     println!("- StandStillCondition: ✅");
     println!("- ByEntityCondition integration: ✅");

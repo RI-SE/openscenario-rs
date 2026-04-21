@@ -1,4 +1,4 @@
-//! Integration tests for Phase 1 position types: RelativeRoadPosition and RelativeLanePosition
+//! Integration tests for position types: RelativeRoadPosition and RelativeLanePosition
 //!
 //! This test file validates:
 //! - Correct serialization/deserialization of new position types

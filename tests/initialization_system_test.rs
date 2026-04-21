@@ -1,6 +1,6 @@
-//! Phase 1 Integration Test - Init Action System
+//! Integration tests for the Init Action System
 //!
-//! This test verifies that Phase 1 implementation fixes the critical execution blockers:
+//! Verifies:
 //! 1. Empty Triggers - All events should have non-empty StartTrigger elements
 //! 2. Missing Init Actions - Entities should have proper initialization
 //! 3. Integration - Trigger builders should be connected to event builders
@@ -235,8 +235,8 @@ mod tests {
     }
 
     #[test]
-    fn test_phase1_success_criteria() {
-        // This test verifies all Phase 1 success criteria are met
+    fn test_success_criteria() {
+        // This test verifies all success criteria are met
 
         // 1. Non-empty triggers can be created
         let trigger = TriggerBuilder::new()
@@ -281,7 +281,7 @@ mod tests {
         );
         assert!(scenario.entities.is_some());
 
-        println!("✅ Phase 1 Success Criteria Met:");
+        println!("✅ Success Criteria Met:");
         println!("   - Non-empty triggers can be created");
         println!("   - Entity initialization system works");
         println!("   - Templates provide executable foundations");

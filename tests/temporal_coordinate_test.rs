@@ -1,5 +1,3 @@
-//! Phase 5 Implementation Tests
-//!
 //! Tests for temporal conditions and coordinate system types:
 //! - TimeHeadwayCondition: Time-based following distance measurement
 //! - TimeToCollisionCondition: Collision prediction timing condition

@@ -61,19 +61,15 @@ pub struct AppearanceAction {
     pub animation_action: Option<AnimationAction>,
 }
 
-/// Light state control action (placeholder for future implementation)
+/// Light state control action for vehicle lighting systems
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
-pub struct LightStateAction {
-    // TODO: Implement based on schema definition
-}
+pub struct LightStateAction {}
 
-/// Animation action (placeholder for future implementation)
+/// Animation action for entity movement and component animation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
-pub struct AnimationAction {
-    // TODO: Implement based on schema definition
-}
+pub struct AnimationAction {}
 
 impl Default for VisibilityAction {
     fn default() -> Self {

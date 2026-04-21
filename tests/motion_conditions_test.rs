@@ -1,4 +1,4 @@
-//! Integration tests for Phase 2: Motion Conditions
+//! Integration tests for motion conditions
 //!
 //! Tests AccelerationCondition and StandStillCondition implementations
 

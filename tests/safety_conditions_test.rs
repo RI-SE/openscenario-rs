@@ -1,4 +1,4 @@
-//! Tests for Phase 3 Safety Conditions: CollisionCondition, OffroadCondition, EndOfRoadCondition
+//! Tests for safety conditions: CollisionCondition, OffroadCondition, EndOfRoadCondition
 
 use openscenario_rs::types::{
     basic::{Double, OSString},

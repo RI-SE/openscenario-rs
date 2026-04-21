@@ -1,4 +1,4 @@
-//! Phase 2 comprehensive test demonstrating all new action builders and condition builders
+//! Comprehensive tests for action builders and condition builders
 
 #[cfg(feature = "builder")]
 mod tests {
@@ -25,8 +25,8 @@ mod tests {
         positions::{Position, WorldPosition},
     };
     #[test]
-    fn test_phase2_lateral_actions() {
-        println!("🧪 Testing Phase 2 Lateral Actions...");
+    fn test_lateral_actions() {
+        println!("🧪 Testing Lateral Actions...");
 
         // Test LaneChangeAction
         let lane_change = LaneChangeActionBuilder::new()
@@ -73,8 +73,8 @@ mod tests {
     }
 
     #[test]
-    fn test_phase2_controller_actions() {
-        println!("🧪 Testing Phase 2 Controller Actions...");
+    fn test_controller_actions() {
+        println!("🧪 Testing Controller Actions...");
 
         // Test ActivateControllerAction
         let activate_controller = ActivateControllerActionBuilder::new()
@@ -90,8 +90,8 @@ mod tests {
     }
 
     #[test]
-    fn test_phase2_global_actions() {
-        println!("🧪 Testing Phase 2 Global Actions...");
+    fn test_global_actions() {
+        println!("🧪 Testing Global Actions...");
 
         // Test EnvironmentAction
         let environment = Environment {
@@ -132,8 +132,8 @@ mod tests {
     }
 
     #[test]
-    fn test_phase2_enhanced_conditions() {
-        println!("🧪 Testing Phase 2 Enhanced Conditions...");
+    fn test_enhanced_conditions() {
+        println!("🧪 Testing Enhanced Conditions...");
 
         // Test ParameterCondition
         let parameter_condition = ParameterConditionBuilder::new()
@@ -240,8 +240,8 @@ mod tests {
     }
 
     #[test]
-    fn test_phase2_stop_trigger_support() {
-        println!("🧪 Testing Phase 2 Stop Trigger Support...");
+    fn test_stop_trigger_support() {
+        println!("🧪 Testing Stop Trigger Support...");
 
         let scenario_builder = ScenarioBuilder::new()
             .with_header("Phase2Test", "TestAuthor")
@@ -290,10 +290,10 @@ mod tests {
     }
 
     #[test]
-    fn test_phase2_comprehensive_scenario() {
-        println!("🧪 Testing Phase 2 Comprehensive Scenario...");
+    fn test_comprehensive_scenario() {
+        println!("🧪 Testing Comprehensive Scenario...");
 
-        // Create a comprehensive scenario using Phase 2 features
+        // Create a comprehensive scenario
         let scenario = ScenarioBuilder::new()
             .with_header("Phase2ComprehensiveTest", "TestAuthor")
             .with_entities()
@@ -326,7 +326,7 @@ mod tests {
 
         assert!(
             scenario.is_ok(),
-            "Comprehensive Phase 2 scenario should build successfully"
+            "Comprehensive scenario should build successfully"
         );
 
         let scenario = scenario.unwrap();
@@ -335,14 +335,14 @@ mod tests {
             "Stop trigger should be present"
         );
 
-        println!("✅ Phase 2 comprehensive scenario built successfully");
-        println!("🎉 Phase 2 implementation complete!");
+        println!("✅ Comprehensive scenario built successfully");
+        println!("🎉 Implementation complete!");
     }
 }
 
 #[cfg(not(feature = "builder"))]
 fn main() {
     println!(
-        "Builder feature not enabled. Run with --features builder to test Phase 2 functionality."
+        "Builder feature not enabled. Run with --features builder to test builder functionality."
     );
 }

@@ -12,8 +12,9 @@ use crate::types::enums::{CoordinateSystem, RelativeDistanceType, RoutingAlgorit
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-/// Condition for reaching a specific position within tolerance
-/// Note: Marked as deprecated in XSD but still supported for compatibility
+/// Condition for reaching a specific position within tolerance.
+///
+/// Note: Deprecated in the OpenSCENARIO XSD. Prefer [`DistanceCondition`] for new scenarios.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "ReachPositionCondition")]
 pub struct ReachPositionCondition {

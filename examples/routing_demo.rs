@@ -1,4 +1,4 @@
-//! Comprehensive routing demo showcasing Week 5 implementation
+//! Comprehensive routing demo
 //!
 //! This example demonstrates:
 //! - Creating routes with multiple waypoints
@@ -11,7 +11,7 @@ use openscenario_rs::types::{Route, RouteRef, RouteStrategy, Waypoint};
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚗 OpenSCENARIO-rs Routing Demo - Week 5 Implementation");
+    println!("🚗 OpenSCENARIO-rs Routing Demo");
     println!("{}", "=".repeat(60));
 
     // Demo 1: Create a simple point-to-point route

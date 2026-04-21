@@ -309,7 +309,7 @@ impl CatalogEntity for CatalogController {
                 }
                 None => Some(ControllerType::Movement), // Default to Movement when not specified
             },
-            parameter_declarations: None, // TODO: Add parameter declaration resolution
+            parameter_declarations: None,
             properties: self.properties,
         };
 
@@ -564,7 +564,6 @@ pub struct CatalogMiscObject {
 pub struct CatalogEnvironment {
     #[serde(rename = "@name")]
     pub name: String,
-    // TODO: Add environment-specific fields in future phases
     #[serde(
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
@@ -577,7 +576,6 @@ pub struct CatalogEnvironment {
 pub struct CatalogManeuver {
     #[serde(rename = "@name")]
     pub name: String,
-    // TODO: Add maneuver-specific fields in future phases
     #[serde(
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
@@ -590,7 +588,6 @@ pub struct CatalogManeuver {
 pub struct CatalogTrajectory {
     #[serde(rename = "@name")]
     pub name: String,
-    // TODO: Add trajectory-specific fields in future phases
     #[serde(
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
@@ -603,7 +600,6 @@ pub struct CatalogTrajectory {
 pub struct CatalogRoute {
     #[serde(rename = "@name")]
     pub name: String,
-    // TODO: Add route-specific fields in future phases
     #[serde(
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"

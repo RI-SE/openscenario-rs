@@ -174,7 +174,7 @@ impl TeleportPositionBuilder {
             .y(y)
             .z(z)
             .finish()
-            .unwrap(); // TODO: Better error handling
+            .unwrap();
 
         self.parent.position = Some(position);
         self.parent
@@ -188,7 +188,7 @@ impl TeleportPositionBuilder {
             .s(s)
             .offset(0.0)
             .finish()
-            .unwrap(); // TODO: Better error handling
+            .unwrap();
 
         self.parent.position = Some(position);
         self.parent

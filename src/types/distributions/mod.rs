@@ -148,7 +148,7 @@ impl ValidateDistribution for UserDefinedDistribution {
     }
 }
 
-// Phase 3 XSD Group Implementations - Distribution Groups
+// XSD Group Implementations - Distribution Groups
 // All 5 groups are trivial wrappers around existing complete infrastructure
 
 /// DistributionDefinition group - XSD group wrapper for deterministic/stochastic choice
@@ -434,7 +434,7 @@ mod tests {
         assert!(invalid_dist.validate().is_err());
     }
 
-    // Tests for Phase 3 Distribution Groups
+    // Tests for Distribution Groups
 
     #[test]
     fn test_distribution_definition_group_creation() {

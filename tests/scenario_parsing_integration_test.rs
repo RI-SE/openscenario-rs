@@ -925,7 +925,7 @@ fn tdd_can_parse_simulation_time_conditions() {
  *    - Real-world XOSC compatibility demonstrated
  */
 
-// Week 5 Complete Scenario Structure Integration Test
+// Complete Scenario Structure Integration Test
 #[test]
 fn can_create_complete_scenario_structure_with_story_hierarchy() {
     use openscenario_rs::types::enums::ParameterType;
@@ -1178,7 +1178,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     println!("   📊 Condition: SimulationTimeCondition with edge detection");
     println!("   🎭 Actors: Entity reference to 'Ego'");
     println!("");
-    println!("✅ Week 5 Core Scenario Structure: COMPLETE");
+    println!("✅ Core Scenario Structure: COMPLETE");
 }
 
 #[test]

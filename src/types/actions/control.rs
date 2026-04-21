@@ -1,4 +1,4 @@
-//! Phase 4B: Controller Actions Implementation
+//! Controller actions implementation
 //!
 //! This file contains:
 //! - Controller assignment and activation actions following OpenSCENARIO specification  
@@ -12,7 +12,6 @@ use crate::types::catalogs::references::CatalogReference;
 use crate::types::controllers::Controller;
 use serde::{Deserialize, Serialize};
 
-// PHASE 4B: Core Controller Actions Implementation
 
 /// Main controller action wrapper containing all controller action types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -64,7 +63,7 @@ pub struct ControllerAction {
     #[serde(rename = "OverrideGearAction", skip_serializing_if = "Option::is_none")]
     pub override_gear_action: Option<OverrideGearAction>,
 
-    /// Activate controller (deprecated but still supported)
+    /// Activate controller action (deprecated in OpenSCENARIO 1.2)
     #[serde(
         rename = "ActivateControllerAction",
         skip_serializing_if = "Option::is_none"
@@ -164,7 +163,6 @@ pub struct OverrideClutchAction {
     pub max_rate: Option<Double>,
 }
 
-// PHASE 4B: Supporting Types for Gear Control
 
 /// Manual gear specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -220,7 +218,6 @@ pub enum Gear {
     AutomaticGear(AutomaticGear),
 }
 
-// PHASE 4B: Default implementations
 
 impl Default for AssignControllerAction {
     fn default() -> Self {
@@ -280,7 +277,6 @@ impl Default for Gear {
     }
 }
 
-// PHASE 4B: Helper implementations
 
 impl AssignControllerAction {
     /// Create assignment with direct controller
@@ -472,7 +468,6 @@ impl BrakeInput {
     }
 }
 
-// PHASE 4B: Unit tests for all controller actions
 #[cfg(test)]
 mod tests {
     use super::*;

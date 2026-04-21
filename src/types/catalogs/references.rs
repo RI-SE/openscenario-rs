@@ -126,7 +126,7 @@ impl<T: CatalogEntity> CatalogResolvable<T> for CatalogReference<T> {
         let entry_name = self.get_entry_name(&context_params)?;
         let _parameters = self.build_parameter_map(&context_params)?;
 
-        // Placeholder - actual implementation will load from catalog files
+        // Catalog file loading is not yet implemented
         Err(crate::error::Error::catalog_error(&format!(
             "Catalog resolution not yet implemented: {}::{}",
             catalog_name, entry_name

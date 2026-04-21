@@ -14,7 +14,6 @@ pub mod traffic; // Traffic actions
 pub mod trailer; // Trailer actions
 pub mod wrappers; // Action wrapper types matching XSD schema
 
-// PHASE 4A: Export all movement actions
 pub use movement::{
     AbsoluteTargetLane,
     AbsoluteTargetLaneOffset,
@@ -24,7 +23,6 @@ pub use movement::{
     FinalSpeed,
     FollowRouteAction,
     FollowTrajectoryAction,
-    // New Phase 4A actions
     LaneChangeAction,
     LaneChangeTarget,
     LaneChangeTargetChoice,
@@ -40,7 +38,6 @@ pub use movement::{
     RelativeTargetLane,
     RelativeTargetLaneOffset,
     RoutingAction,
-    // Original actions
     SpeedAction,
     SpeedProfileAction,
     SynchronizeAction,
@@ -49,11 +46,9 @@ pub use movement::{
     TrajectoryFollowingMode,
 };
 
-// PHASE 4C: Export all traffic actions
 pub use traffic::{
     CentralSwarmObject,
     ControllerDistribution,
-    // Traffic signal system types
     Phase,
     TrafficArea,
     TrafficAreaAction,
@@ -67,7 +62,6 @@ pub use traffic::{
     TrafficSignalState,
     TrafficSignalStateAction,
     TrafficSinkAction,
-    // Core traffic actions
     TrafficSourceAction,
     TrafficStopAction,
     TrafficSwarmAction,
@@ -86,20 +80,15 @@ pub use trailer::{ConnectTrailerAction, DisconnectTrailerAction, TrailerAction};
 
 // Export updated controller action
 pub use control::{
-    // Keep existing exports too
     ActivateControllerAction,
-    // Core controller actions
     AssignControllerAction,
     AutomaticGear,
     AutomaticGearType,
-    // Phase 1 Groups: XSD group wrappers
     Brake,
     BrakeInput,
     ControllerAction,
     Gear,
-    // Supporting types
     ManualGear,
-    // XSD compliant override action names
     OverrideBrakeAction,
     OverrideClutchAction,
     OverrideGearAction,
@@ -113,7 +102,6 @@ pub use wrappers::*;
 
 use crate::types::ValidationContext;
 
-// Add action validation trait (Week 6) - KEEP AS FUTURE WORK
 pub trait ValidateAction {
     fn validate(&self, ctx: &ValidationContext) -> crate::error::Result<()>;
 }

@@ -79,7 +79,7 @@ pub trait XsdChoiceGroup: Sized {
 ///
 /// This is a simplified implementation that uses string parsing instead of
 /// event-based parsing to avoid borrowing issues. It's sufficient for the
-/// Phase 1 infrastructure requirements.
+/// infrastructure requirements.
 pub struct ChoiceGroupParser {
     xml: String,
 }

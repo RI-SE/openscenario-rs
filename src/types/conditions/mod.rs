@@ -54,5 +54,3 @@ pub struct ConditionWrapper {
     pub condition: Condition,
 }
 
-// Add condition evaluation trait (later phases) - KEEP AS FUTURE WORK
-// pub trait EvaluateCondition { fn evaluate(&self, ctx: &SimulationContext) -> bool; }

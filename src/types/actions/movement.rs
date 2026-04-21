@@ -276,7 +276,6 @@ pub struct RoutingAction {
 }
 
 
-// PHASE 4A: Core Movement Actions - Implementation
 
 /// Lane change action for lateral lane movements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -816,7 +815,6 @@ impl RoutingAction {
     }
 }
 
-// PHASE 4A: Helper methods for LaneChangeAction system
 
 impl LaneChangeAction {
     /// Create a new LaneChangeAction with the specified dynamics and target
@@ -875,7 +873,6 @@ impl AbsoluteTargetLane {
     }
 }
 
-// PHASE 4A: Helper methods for LaneOffsetAction system
 
 impl LaneOffsetAction {
     /// Create a new LaneOffsetAction with the specified dynamics and target
@@ -958,7 +955,6 @@ impl AbsoluteTargetLaneOffset {
     }
 }
 
-// PHASE 4A: Helper methods for LateralAction system
 
 impl LateralAction {
     /// Create a lateral action with lane change
@@ -983,7 +979,6 @@ impl LateralAction {
     }
 }
 
-// PHASE 4A: Default implementations for new movement actions
 
 
 impl Default for LaneChangeTarget {
@@ -1160,7 +1155,6 @@ impl Default for RelativeSpeedToMaster {
 }
 
 
-// PHASE 4A: Unit tests for new movement actions
 #[cfg(test)]
 mod tests {
     use super::*;

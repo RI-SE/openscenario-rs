@@ -1,4 +1,4 @@
-//! Test for position builders to verify Phase 2 fixes
+//! Tests for position builders
 
 #[cfg(feature = "builder")]
 mod position_builder_tests {

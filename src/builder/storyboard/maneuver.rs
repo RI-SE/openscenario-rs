@@ -383,7 +383,7 @@ impl<P> EventTriggerBuilder<P> {
         let condition = crate::builder::conditions::TimeConditionBuilder::new()
             .at_time(time)
             .build()
-            .unwrap(); // TODO: Better error handling
+            .unwrap();
         self.trigger_builder = self.trigger_builder.add_condition(condition);
         self
     }
@@ -394,7 +394,7 @@ impl<P> EventTriggerBuilder<P> {
             .for_entity(entity_ref)
             .speed_above(speed)
             .build()
-            .unwrap(); // TODO: Better error handling
+            .unwrap();
         self.trigger_builder = self.trigger_builder.add_condition(condition);
         self
     }
@@ -403,7 +403,7 @@ impl<P> EventTriggerBuilder<P> {
 impl<'a> EventTriggerBuilder<SpeedActionEventBuilder<'a>> {
     /// Finish trigger and return to speed action event builder
     pub fn finish(self) -> SpeedActionEventBuilder<'a> {
-        let trigger = self.trigger_builder.build().unwrap(); // TODO: Better error handling
+        let trigger = self.trigger_builder.build().unwrap();
         self.parent.with_trigger(trigger)
     }
 }

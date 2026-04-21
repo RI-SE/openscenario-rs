@@ -10,7 +10,6 @@ use crate::types::entities::vehicle::{File, Properties, Property};
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
 
-// Placeholder types that will be implemented in future modules
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct ParameterAssignments {

@@ -1,4 +1,3 @@
-//! Integration tests for Week 4 Vehicle Components Implementation
 //!
 //! Tests the enhanced BoundingBox geometric operations and comprehensive
 //! Axle system implementation for various vehicle types.

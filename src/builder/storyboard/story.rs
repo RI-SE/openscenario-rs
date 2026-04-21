@@ -614,7 +614,7 @@ impl PrivateActionBuilderForStoryboard {
         Self {
             parent: InitActionBuilderForStoryboard {
                 storyboard_builder,
-                init_builder: InitActionBuilder::new(), // Placeholder, will be replaced by finish()
+                init_builder: InitActionBuilder::new(),
             },
             entity_ref: entity_ref.to_string(),
             private_builder,

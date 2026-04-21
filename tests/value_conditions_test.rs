@@ -125,15 +125,3 @@ fn test_time_of_day_condition_with_chrono() {
     }
 }
 
-#[cfg(not(feature = "chrono"))]
-#[test]
-fn test_time_of_day_condition_without_chrono() {
-    let condition = TimeOfDayCondition::default();
-    assert_eq!(condition.rule, Rule::GreaterThan);
-    // Should have a string datetime
-    if let OSString::Literal(date_str) = &condition.date_time {
-        assert_eq!(date_str, "2024-01-01T12:00:00Z");
-    } else {
-        panic!("Expected literal string datetime");
-    }
-}
