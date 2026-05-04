@@ -211,4 +211,56 @@ impl Default for OpenScenario {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_open_scenario_default_is_scenario_type() {
+        let doc = OpenScenario::default();
+        assert_eq!(doc.document_type(), OpenScenarioDocumentType::Scenario);
+        assert!(doc.is_scenario());
+        assert!(!doc.is_catalog());
+        assert!(!doc.is_parameter_variation());
+    }
+
+    #[test]
+    fn test_document_type_unknown_when_no_content() {
+        let mut doc = OpenScenario::default();
+        doc.entities = None;
+        doc.storyboard = None;
+        doc.catalog = None;
+        doc.parameter_value_distribution = None;
+        assert_eq!(doc.document_type(), OpenScenarioDocumentType::Unknown);
+    }
+
+    #[test]
+    fn test_document_type_catalog() {
+        let mut doc = OpenScenario::default();
+        doc.entities = None;
+        doc.storyboard = None;
+        doc.catalog = Some(CatalogDefinition::default());
+        assert_eq!(doc.document_type(), OpenScenarioDocumentType::Catalog);
+        assert!(doc.is_catalog());
+    }
+
+    #[test]
+    fn test_storyboard_default() {
+        let sb = Storyboard::default();
+        assert!(sb.stories.is_empty());
+        assert!(sb.stop_trigger.is_none());
+    }
+
+    #[test]
+    fn test_open_scenario_xml_roundtrip() {
+        let doc = OpenScenario::default();
+        let xml = quick_xml::se::to_string(&doc).unwrap();
+        assert!(xml.contains("OpenSCENARIO"));
+        assert!(xml.contains("FileHeader"));
+        // Verify it can be deserialized back
+        let deserialized: OpenScenario = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(deserialized.document_type(), OpenScenarioDocumentType::Scenario);
+    }
+}
+
 

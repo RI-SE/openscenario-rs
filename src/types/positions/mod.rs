@@ -191,3 +191,60 @@ impl Position {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_position_default_has_world_position() {
+        let pos = Position::default();
+        assert!(pos.world_position.is_some());
+        assert!(pos.lane_position.is_none());
+        assert!(pos.road_position.is_none());
+    }
+
+    #[test]
+    fn test_position_empty_has_all_none() {
+        let pos = Position::empty();
+        assert!(pos.world_position.is_none());
+        assert!(pos.relative_world_position.is_none());
+        assert!(pos.road_position.is_none());
+        assert!(pos.lane_position.is_none());
+        assert!(pos.trajectory_position.is_none());
+        assert!(pos.geographic_position.is_none());
+        assert!(pos.relative_object_position.is_none());
+    }
+
+    #[test]
+    fn test_position_trajectory_constructor() {
+        let tp = TrajectoryPosition::new(10.0);
+        let pos = Position::trajectory(tp.clone());
+        assert!(pos.trajectory_position.is_some());
+        assert!(pos.world_position.is_none());
+    }
+
+    #[test]
+    fn test_position_geographic_constructor() {
+        let gp = GeographicPosition::new(48.0, 11.0);
+        let pos = Position::geographic(gp);
+        assert!(pos.geographic_position.is_some());
+        assert!(pos.world_position.is_none());
+    }
+
+    #[test]
+    fn test_relative_world_position_default() {
+        let rwp = RelativeWorldPosition::default();
+        assert_eq!(rwp.entity_ref.as_literal().unwrap(), "DefaultEntity");
+        assert_eq!(rwp.dx.as_literal().unwrap(), &0.0);
+    }
+
+    #[test]
+    fn test_position_xml_roundtrip() {
+        let pos = Position::default();
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(xml.contains("WorldPosition"));
+        let deserialized: Position = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+    }
+}

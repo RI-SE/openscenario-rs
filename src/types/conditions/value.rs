@@ -235,3 +235,72 @@ impl Default for ByValueCondition {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simulation_time_condition_default() {
+        let cond = SimulationTimeCondition::default();
+        assert_eq!(cond.value.as_literal().unwrap(), &10.0);
+        assert_eq!(cond.rule, Rule::GreaterThan);
+    }
+
+    #[test]
+    fn test_simulation_time_condition_xml_roundtrip() {
+        let cond = SimulationTimeCondition {
+            value: Double::literal(5.0),
+            rule: Rule::EqualTo,
+        };
+        let xml = quick_xml::se::to_string(&cond).unwrap();
+        let deserialized: SimulationTimeCondition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(cond, deserialized);
+    }
+
+    #[test]
+    fn test_parameter_condition_default() {
+        let cond = ParameterCondition::default();
+        assert_eq!(cond.parameter_ref.as_literal().unwrap(), "defaultParam");
+        assert_eq!(cond.rule, Rule::EqualTo);
+        assert_eq!(cond.value.as_literal().unwrap(), "defaultValue");
+    }
+
+    #[test]
+    fn test_traffic_signal_condition_xml_roundtrip() {
+        let cond = TrafficSignalCondition {
+            name: OSString::literal("signal1".to_string()),
+            state: OSString::literal("red".to_string()),
+        };
+        let xml = quick_xml::se::to_string(&cond).unwrap();
+        let deserialized: TrafficSignalCondition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(cond, deserialized);
+    }
+
+    #[test]
+    fn test_by_value_condition_default_has_simulation_time() {
+        let cond = ByValueCondition::default();
+        assert!(cond.simulation_time_condition.is_some());
+        assert!(cond.parameter_condition.is_none());
+        assert!(cond.variable_condition.is_none());
+    }
+
+    #[test]
+    fn test_storyboard_element_state_condition_default() {
+        let cond = StoryboardElementStateCondition::default();
+        assert_eq!(cond.state, StoryboardElementState::RunningState);
+        assert_eq!(cond.storyboard_element_type, StoryboardElementType::Story);
+    }
+
+    #[test]
+    fn test_variable_condition_xml_roundtrip() {
+        let cond = VariableCondition {
+            variable_ref: OSString::literal("speed".to_string()),
+            rule: Rule::GreaterThan,
+            value: OSString::literal("100".to_string()),
+        };
+        let xml = quick_xml::se::to_string(&cond).unwrap();
+        let deserialized: VariableCondition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(cond, deserialized);
+    }
+}

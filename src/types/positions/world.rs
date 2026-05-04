@@ -164,3 +164,66 @@ impl Default for GeographicPosition {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_world_position_new() {
+        let pos = WorldPosition::new(10.0, 20.0);
+        assert_eq!(pos.x.as_literal().unwrap(), &10.0);
+        assert_eq!(pos.y.as_literal().unwrap(), &20.0);
+        assert!(pos.z.is_none());
+        assert!(pos.h.is_none());
+    }
+
+    #[test]
+    fn test_world_position_with_full_orientation() {
+        let pos = WorldPosition::with_full_orientation(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+        assert_eq!(pos.x.as_literal().unwrap(), &1.0);
+        assert_eq!(pos.z.unwrap().as_literal().unwrap(), &3.0);
+        assert_eq!(pos.r.unwrap().as_literal().unwrap(), &6.0);
+    }
+
+    #[test]
+    fn test_world_position_xml_roundtrip() {
+        let pos = WorldPosition::new(100.5, -50.3);
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(xml.contains("x=\"100.5\""));
+        assert!(xml.contains("y=\"-50.3\""));
+        let deserialized: WorldPosition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+    }
+
+    #[test]
+    fn test_world_position_optional_fields_not_serialized() {
+        let pos = WorldPosition::default();
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(!xml.contains("z="));
+        assert!(!xml.contains("h="));
+    }
+
+    #[test]
+    fn test_geographic_position_new() {
+        let pos = GeographicPosition::new(48.137, 11.576);
+        assert_eq!(pos.latitude.as_literal().unwrap(), &48.137);
+        assert_eq!(pos.longitude.as_literal().unwrap(), &11.576);
+        assert!(pos.height.is_none());
+    }
+
+    #[test]
+    fn test_geographic_position_at_coordinates() {
+        let pos = GeographicPosition::at_coordinates(48.0, 11.0, 500.0, 1.57);
+        assert!(pos.height.is_some());
+        assert!(pos.orientation.is_some());
+    }
+
+    #[test]
+    fn test_geographic_position_xml_roundtrip() {
+        let pos = GeographicPosition::with_height(48.0, 11.0, 500.0);
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        let deserialized: GeographicPosition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+    }
+}

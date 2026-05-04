@@ -391,3 +391,76 @@ impl Default for ParameterMultiplyByValueRule {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_action_default_is_private_teleport() {
+        let action = Action::default();
+        assert!(matches!(action, Action::PrivateAction(PrivateAction::TeleportAction(_))));
+    }
+
+    #[test]
+    fn test_global_action_default_is_traffic() {
+        let action = GlobalAction::default();
+        assert!(matches!(action, GlobalAction::TrafficAction(_)));
+    }
+
+    #[test]
+    fn test_entity_action_default() {
+        let ea = EntityAction::default();
+        assert_eq!(ea.entity_ref.as_literal().unwrap(), "defaultEntity");
+        assert!(matches!(ea.action, EntityActionChoice::DeleteEntityAction(_)));
+    }
+
+    #[test]
+    fn test_variable_action_default() {
+        let va = VariableAction::default();
+        assert_eq!(va.variable_ref.as_literal().unwrap(), "defaultVariable");
+        assert!(matches!(va.action, VariableActionChoice::VariableSetAction(_)));
+    }
+
+    #[test]
+    fn test_variable_multiply_default_value_is_one() {
+        let rule = VariableMultiplyByValueRule::default();
+        assert_eq!(rule.value.as_literal().unwrap(), &1.0);
+    }
+
+    #[test]
+    fn test_named_action_default() {
+        let na = NamedAction::default();
+        assert_eq!(na.name.as_literal().unwrap(), "defaultTraffic");
+    }
+
+    #[test]
+    fn test_delete_entity_action_xml_roundtrip() {
+        let action = DeleteEntityAction::default();
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        let deserialized: DeleteEntityAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(action, deserialized);
+    }
+
+    #[test]
+    fn test_infrastructure_action_xml_roundtrip() {
+        let action = InfrastructureAction::default();
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        let deserialized: InfrastructureAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(action, deserialized);
+    }
+
+    #[test]
+    fn test_set_monitor_action_default() {
+        let sma = SetMonitorAction::default();
+        assert_eq!(sma.enable.as_literal().unwrap(), &true);
+        assert!(sma.monitor_name.is_none());
+    }
+
+    #[test]
+    fn test_random_route_action_default_has_no_options() {
+        let rra = RandomRouteAction::default();
+        assert!(rra.number_of_routes.is_none());
+        assert!(rra.random_seed.is_none());
+    }
+}
+

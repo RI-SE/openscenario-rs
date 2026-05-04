@@ -145,3 +145,43 @@ impl Default for Trajectory {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trajectory_position_new() {
+        let pos = TrajectoryPosition::new(50.0);
+        assert_eq!(pos.s.as_literal().unwrap(), &50.0);
+        assert!(pos.t.is_none());
+        assert!(pos.orientation.is_none());
+    }
+
+    #[test]
+    fn test_trajectory_position_with_offset() {
+        let pos = TrajectoryPosition::with_offset(100.0, -1.5);
+        assert_eq!(pos.s.as_literal().unwrap(), &100.0);
+        assert_eq!(pos.t.unwrap().as_literal().unwrap(), &-1.5);
+    }
+
+    #[test]
+    fn test_trajectory_position_xml_roundtrip() {
+        let pos = TrajectoryPosition::new(25.0);
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(xml.contains("s=\"25\""));
+        let deserialized: TrajectoryPosition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+    }
+
+    #[test]
+    fn test_trajectory_default_is_empty_polyline() {
+        let traj = Trajectory::default();
+        assert!(traj.name.is_none());
+        assert!(traj.closed.is_none());
+        match &traj.shape {
+            TrajectoryShape::Polyline(p) => assert!(p.vertex.is_empty()),
+            _ => panic!("Expected Polyline shape"),
+        }
+    }
+}

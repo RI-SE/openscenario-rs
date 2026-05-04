@@ -97,3 +97,48 @@ impl Default for RelativeObjectPosition {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_relative_position_new() {
+        let pos = RelativeObjectPosition::new("ego", 5.0, 3.0);
+        assert_eq!(pos.entity_ref.as_literal().unwrap(), "ego");
+        assert_eq!(pos.dx.as_literal().unwrap(), &5.0);
+        assert_eq!(pos.dy.as_literal().unwrap(), &3.0);
+        assert!(pos.dz.is_none());
+    }
+
+    #[test]
+    fn test_relative_position_behind() {
+        let pos = RelativeObjectPosition::behind("ego", 10.0);
+        assert_eq!(pos.dx.as_literal().unwrap(), &-10.0);
+        assert_eq!(pos.dy.as_literal().unwrap(), &0.0);
+    }
+
+    #[test]
+    fn test_relative_position_ahead() {
+        let pos = RelativeObjectPosition::ahead("ego", 10.0);
+        assert_eq!(pos.dx.as_literal().unwrap(), &10.0);
+    }
+
+    #[test]
+    fn test_relative_position_left_right() {
+        let left = RelativeObjectPosition::left_of("ego", 3.5);
+        assert_eq!(left.dy.as_literal().unwrap(), &3.5);
+
+        let right = RelativeObjectPosition::right_of("ego", 3.5);
+        assert_eq!(right.dy.as_literal().unwrap(), &-3.5);
+    }
+
+    #[test]
+    fn test_relative_position_xml_roundtrip() {
+        let pos = RelativeObjectPosition::with_z("car1", 1.0, 2.0, 3.0);
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(xml.contains("entityRef=\"car1\""));
+        let deserialized: RelativeObjectPosition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+    }
+}

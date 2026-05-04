@@ -91,5 +91,37 @@ impl Default for SensorReference {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn test_visibility_action_default_all_true() {
+        let va = VisibilityAction::default();
+        assert_eq!(va.graphics.as_literal(), Some(&true));
+        assert_eq!(va.sensors.as_literal(), Some(&true));
+        assert_eq!(va.traffic.as_literal(), Some(&true));
+        assert!(va.sensor_reference_set.is_none());
+    }
 
+    #[test]
+    fn test_appearance_action_default_is_empty() {
+        let aa = AppearanceAction::default();
+        assert!(aa.light_state_action.is_none());
+        assert!(aa.animation_action.is_none());
+    }
+
+    #[test]
+    fn test_sensor_reference_set_default_empty_vec() {
+        let srs = SensorReferenceSet::default();
+        assert!(srs.sensor_references.is_empty());
+    }
+
+    #[test]
+    fn test_visibility_action_xml_roundtrip() {
+        let va = VisibilityAction::default();
+        let xml = quick_xml::se::to_string(&va).unwrap();
+        let deserialized: VisibilityAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(va, deserialized);
+    }
+}

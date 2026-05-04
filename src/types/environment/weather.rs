@@ -86,3 +86,54 @@ impl Default for Precipitation {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_weather_default_is_clear() {
+        let w = Weather::default();
+        assert_eq!(w.cloud_state, "free");
+        assert_eq!(w.precipitation.precipitation_type, "dry");
+        assert_eq!(w.precipitation.intensity.as_literal(), Some(&0.0));
+        assert_eq!(w.fog.visual_range.as_literal(), Some(&100000.0));
+    }
+
+    #[test]
+    fn test_sun_default_noon_position() {
+        let s = Sun::default();
+        assert_eq!(s.intensity.as_literal(), Some(&1.0));
+        assert_eq!(s.elevation.as_literal(), Some(&1.571));
+    }
+
+    #[test]
+    fn test_weather_xml_roundtrip() {
+        let w = Weather::default();
+        let xml = quick_xml::se::to_string(&w).unwrap();
+        let deserialized: Weather = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(w, deserialized);
+    }
+
+    #[test]
+    fn test_custom_rain_weather() {
+        let w = Weather {
+            cloud_state: "rainy".to_string(),
+            sun: Sun {
+                intensity: Double::literal(0.3),
+                azimuth: Double::literal(3.14),
+                elevation: Double::literal(0.5),
+            },
+            fog: Fog {
+                visual_range: Double::literal(500.0),
+            },
+            precipitation: Precipitation {
+                precipitation_type: "rain".to_string(),
+                intensity: Double::literal(0.8),
+            },
+        };
+        assert_eq!(w.precipitation.precipitation_type, "rain");
+        assert_eq!(w.precipitation.intensity.as_literal(), Some(&0.8));
+        assert_eq!(w.fog.visual_range.as_literal(), Some(&500.0));
+    }
+}
