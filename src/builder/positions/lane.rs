@@ -87,3 +87,57 @@ impl PositionBuilder for LanePositionBuilder {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_lane_position_builds() {
+        let pos = LanePositionBuilder::new()
+            .road("1")
+            .lane("-1")
+            .s(50.0)
+            .offset(0.0)
+            .finish()
+            .unwrap();
+        let lp = pos.lane_position.unwrap();
+        assert_eq!(lp.road_id.as_literal(), Some(&"1".to_string()));
+        assert_eq!(lp.lane_id.as_literal(), Some(&"-1".to_string()));
+        assert_eq!(lp.s.as_literal(), Some(&50.0));
+    }
+
+    #[test]
+    fn test_missing_road_id_fails_validation() {
+        let result = LanePositionBuilder::new()
+            .lane("-1")
+            .s(50.0)
+            .offset(0.0)
+            .finish();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Road ID"));
+    }
+
+    #[test]
+    fn test_missing_s_coordinate_fails() {
+        let result = LanePositionBuilder::new()
+            .road("1")
+            .lane("-1")
+            .offset(0.0)
+            .finish();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("S coordinate"));
+    }
+
+    #[test]
+    fn test_right_lane_helper_sets_all_fields() {
+        let pos = LanePositionBuilder::new()
+            .right_lane("road1", -2, 100.0)
+            .finish()
+            .unwrap();
+        let lp = pos.lane_position.unwrap();
+        assert_eq!(lp.lane_id.as_literal(), Some(&"-2".to_string()));
+        assert_eq!(lp.s.as_literal(), Some(&100.0));
+        assert_eq!(lp.offset.as_literal(), Some(&0.0));
+    }
+}

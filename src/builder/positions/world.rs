@@ -106,3 +106,58 @@ impl PositionBuilder for WorldPositionBuilder {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_minimal_world_position_xy_only() {
+        let pos = WorldPositionBuilder::new()
+            .x(10.0)
+            .y(20.0)
+            .finish()
+            .unwrap();
+        let wp = pos.world_position.unwrap();
+        assert_eq!(wp.x.as_literal(), Some(&10.0));
+        assert_eq!(wp.y.as_literal(), Some(&20.0));
+        assert!(wp.z.is_none());
+        assert!(wp.h.is_none());
+    }
+
+    #[test]
+    fn test_missing_x_fails() {
+        let result = WorldPositionBuilder::new().y(20.0).finish();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("X coordinate"));
+    }
+
+    #[test]
+    fn test_missing_y_fails() {
+        let result = WorldPositionBuilder::new().x(10.0).finish();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Y coordinate"));
+    }
+
+    #[test]
+    fn test_at_coordinates_with_heading() {
+        let pos = WorldPositionBuilder::new()
+            .at_coordinates(1.0, 2.0, 3.0)
+            .heading(1.57)
+            .finish()
+            .unwrap();
+        let wp = pos.world_position.unwrap();
+        assert_eq!(wp.z.as_ref().unwrap().as_literal(), Some(&3.0));
+        assert_eq!(wp.h.as_ref().unwrap().as_literal(), Some(&1.57));
+    }
+
+    #[test]
+    fn test_build_alias_works_same_as_finish() {
+        let pos = WorldPositionBuilder::new()
+            .x(5.0)
+            .y(6.0)
+            .build()
+            .unwrap();
+        assert!(pos.world_position.is_some());
+    }
+}

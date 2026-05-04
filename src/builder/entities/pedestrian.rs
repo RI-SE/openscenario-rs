@@ -321,3 +321,62 @@ impl DetachedPedestrianBuilder {
         ScenarioObject::new_pedestrian(self.name.clone(), pedestrian)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detached_builder_defaults() {
+        let obj = DetachedPedestrianBuilder::new("ped1").build();
+        let p = obj.pedestrian.as_ref().unwrap();
+        assert_eq!(p.name.as_literal(), Some(&"DefaultPedestrian".to_string()));
+        assert_eq!(p.pedestrian_category, PedestrianCategory::Pedestrian);
+        assert_eq!(p.mass.as_literal(), Some(&75.0));
+        assert!(p.role.is_none());
+        assert!(p.model3d.is_none());
+    }
+
+    #[test]
+    fn test_pedestrian_preset_sets_dimensions() {
+        let obj = DetachedPedestrianBuilder::new("ped1").pedestrian().build();
+        let p = obj.pedestrian.as_ref().unwrap();
+        assert_eq!(p.name.as_literal(), Some(&"StandardPedestrian".to_string()));
+        assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&1.8));
+        assert_eq!(p.bounding_box.dimensions.width.as_literal(), Some(&0.6));
+    }
+
+    #[test]
+    fn test_animal_preset_differs_from_pedestrian() {
+        let obj = DetachedPedestrianBuilder::new("dog").animal().build();
+        let p = obj.pedestrian.as_ref().unwrap();
+        assert_eq!(p.pedestrian_category, PedestrianCategory::Animal);
+        assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&0.8));
+    }
+
+    #[test]
+    fn test_wheelchair_preset() {
+        let obj = DetachedPedestrianBuilder::new("w1").wheelchair().build();
+        let p = obj.pedestrian.as_ref().unwrap();
+        assert_eq!(p.pedestrian_category, PedestrianCategory::Wheelchair);
+        assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&1.4));
+    }
+
+    #[test]
+    fn test_chained_customizations() {
+        let obj = DetachedPedestrianBuilder::new("ped1")
+            .pedestrian()
+            .with_mass(90.0)
+            .with_role(Role::Civil)
+            .with_model3d("models/person.fbx")
+            .with_dimensions(0.7, 0.7, 1.9)
+            .build();
+        let p = obj.pedestrian.as_ref().unwrap();
+        assert_eq!(p.mass.as_literal(), Some(&90.0));
+        assert_eq!(p.role, Some(Role::Civil));
+        assert_eq!(p.model3d, Some("models/person.fbx".to_string()));
+        assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&1.9));
+        // Center preserved from pedestrian preset
+        assert_eq!(p.bounding_box.center.z.as_literal(), Some(&0.9));
+    }
+}

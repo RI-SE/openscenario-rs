@@ -300,3 +300,60 @@ impl DetachedVehicleBuilder {
         ScenarioObject::new_vehicle(self.name.clone(), vehicle)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detached_builder_defaults_when_no_preset_called() {
+        let obj = DetachedVehicleBuilder::new("ego").build();
+        let v = obj.vehicle.as_ref().unwrap();
+        assert_eq!(v.name.as_literal(), Some(&"DefaultVehicle".to_string()));
+        assert_eq!(v.vehicle_category, VehicleCategory::Car);
+    }
+
+    #[test]
+    fn test_car_preset_sets_category_and_dimensions() {
+        let obj = DetachedVehicleBuilder::new("ego").car().build();
+        let v = obj.vehicle.as_ref().unwrap();
+        assert_eq!(v.vehicle_category, VehicleCategory::Car);
+        assert_eq!(v.name.as_literal(), Some(&"PassengerCar".to_string()));
+        assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&4.5));
+    }
+
+    #[test]
+    fn test_truck_preset_overrides_car_preset() {
+        let obj = DetachedVehicleBuilder::new("ego").car().truck().build();
+        let v = obj.vehicle.as_ref().unwrap();
+        assert_eq!(v.vehicle_category, VehicleCategory::Truck);
+        assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&8.0));
+        assert_eq!(v.performance.max_speed.as_literal(), Some(&120.0));
+    }
+
+    #[test]
+    fn test_with_dimensions_overrides_preset_but_preserves_center() {
+        let obj = DetachedVehicleBuilder::new("ego")
+            .car()
+            .with_dimensions(5.0, 2.0, 1.6)
+            .build();
+        let v = obj.vehicle.as_ref().unwrap();
+        assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&5.0));
+        assert_eq!(v.bounding_box.dimensions.width.as_literal(), Some(&2.0));
+        assert_eq!(v.bounding_box.dimensions.height.as_literal(), Some(&1.6));
+        // Center preserved from car preset
+        assert_eq!(v.bounding_box.center.x.as_literal(), Some(&1.4));
+    }
+
+    #[test]
+    fn test_with_performance_overrides_preset() {
+        let obj = DetachedVehicleBuilder::new("ego")
+            .truck()
+            .with_performance(200.0, 5.0, 10.0)
+            .build();
+        let v = obj.vehicle.as_ref().unwrap();
+        assert_eq!(v.performance.max_speed.as_literal(), Some(&200.0));
+        assert_eq!(v.performance.max_acceleration.as_literal(), Some(&5.0));
+        assert_eq!(v.performance.max_deceleration.as_literal(), Some(&10.0));
+    }
+}

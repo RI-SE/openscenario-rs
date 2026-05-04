@@ -73,3 +73,51 @@ impl BuilderError {
 
 /// Result type for builder operations
 pub type BuilderResult<T> = Result<T, BuilderError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validation_error_display_includes_suggestion() {
+        let err = BuilderError::validation_error("bad value");
+        let msg = err.to_string();
+        assert!(msg.contains("bad value"));
+        assert!(msg.contains("Suggestion"));
+    }
+
+    #[test]
+    fn test_missing_field_display() {
+        let err = BuilderError::missing_field("name", "with_name()");
+        let msg = err.to_string();
+        assert!(msg.contains("name"));
+        assert!(msg.contains("with_name()"));
+    }
+
+    #[test]
+    fn test_invalid_entity_ref_joins_available() {
+        let err = BuilderError::invalid_entity_ref(
+            "ghost",
+            &["ego".to_string(), "lead".to_string()],
+        );
+        let msg = err.to_string();
+        assert!(msg.contains("ghost"));
+        assert!(msg.contains("ego, lead"));
+    }
+
+    #[test]
+    fn test_constraint_violation_display() {
+        let err = BuilderError::constraint_violation("speed > 0", "speed was -1");
+        let msg = err.to_string();
+        assert!(msg.contains("speed > 0"));
+        assert!(msg.contains("speed was -1"));
+    }
+
+    #[test]
+    fn test_validation_error_with_custom_suggestion() {
+        let err = BuilderError::validation_error_with_suggestion("oops", "try X");
+        let msg = err.to_string();
+        assert!(msg.contains("oops"));
+        assert!(msg.contains("try X"));
+    }
+}

@@ -116,3 +116,52 @@ impl PositionBuilder for RelativePositionBuilder {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_world_offset_builds_relative_world_position() {
+        let pos = RelativePositionBuilder::new()
+            .to_entity("ego")
+            .world_offset(10.0, 5.0, 0.0)
+            .finish()
+            .unwrap();
+        let rwp = pos.relative_world_position.unwrap();
+        assert_eq!(rwp.entity_ref.as_literal(), Some(&"ego".to_string()));
+        assert_eq!(rwp.dx.as_literal(), Some(&10.0));
+        assert_eq!(rwp.dy.as_literal(), Some(&5.0));
+    }
+
+    #[test]
+    fn test_lane_offset_builds_relative_lane_position() {
+        let pos = RelativePositionBuilder::new()
+            .to_entity("lead")
+            .lane_offset(20.0, 0.5)
+            .finish()
+            .unwrap();
+        let rlp = pos.relative_lane_position.unwrap();
+        assert_eq!(rlp.entity_ref.as_literal(), Some(&"lead".to_string()));
+        assert_eq!(rlp.ds.as_literal(), Some(&20.0));
+        assert_eq!(rlp.offset.as_literal(), Some(&0.5));
+    }
+
+    #[test]
+    fn test_missing_entity_ref_fails() {
+        let result = RelativePositionBuilder::new()
+            .world_offset(1.0, 2.0, 3.0)
+            .finish();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Entity reference"));
+    }
+
+    #[test]
+    fn test_default_type_is_world_and_fails_without_offsets() {
+        let result = RelativePositionBuilder::new()
+            .to_entity("ego")
+            .finish();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("World offsets"));
+    }
+}
