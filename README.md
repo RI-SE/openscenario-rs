@@ -97,3 +97,17 @@ The Rust source code is licensed under the [GNU General Public License v3.0](LIC
 ### ALKS Test Scenarios
 
 `tests/data/alks_scenario.xosc` originates from [openMSL/sl-3-1-osc-alks-scenarios](https://github.com/openMSL/sl-3-1-osc-alks-scenarios) (© BMW Group), licensed under [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/). See [`tests/data/NOTICE`](tests/data/NOTICE) for details.
+
+## Acknowledgement
+
+<p align="center">
+<img src="docs/synergies.svg" alt="Synergies logo" width="200"/>
+</p>
+
+This package is developed as part of the [SYNERGIES](https://synergies-ccam.eu/) project.
+
+<p align="center">
+<img src="docs/funded_by_eu.svg" alt="Funded by EU" width="200"/>
+</p>
+
+Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or European Climate, Infrastructure and Environment Executive Agency (CINEA). Neither the European Union nor the granting authority can be held responsible for them.
