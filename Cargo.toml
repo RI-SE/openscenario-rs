@@ -6,12 +6,12 @@ rust-version = "1.90"
 authors = ["Ashfaq Farooqui"]
 description = "Rust library for parsing and manipulating OpenSCENARIO files"
 license = "GPL-3.0-only"
-repository = "https://github.com/ashfaqfarooqui/openscenario-rs"
+repository = "https://github.com/RI-SE/openscenario-rs"
 keywords = ["openscenario", "xml", "automotive", "simulation", "asam"]
 categories = ["parsing", "simulation", "science::robotics"]
 readme = "README.md"
 documentation = "https://docs.rs/openscenario-rs"
-homepage = "https://github.com/ashfaqfarooqui/openscenario-rs"
+homepage = "https://github.com/RI-SE/openscenario-rs"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
