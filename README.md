@@ -1,5 +1,9 @@
 # openscenario-rs
 
+<p align="center">
+<img src="docs/assets/openscenario-rs-badge-vertical.svg" alt="openscenario-rs logo" width="160"/>
+</p>
+
 A Rust library for parsing, validating, and manipulating [OpenSCENARIO](https://www.asam.net/standards/detail/openscenario/) files.
 
 [![Crates.io](https://img.shields.io/crates/v/openscenario-rs)](https://crates.io/crates/openscenario-rs)
@@ -101,13 +105,13 @@ The Rust source code is licensed under the [GNU General Public License v3.0](LIC
 ## Acknowledgement
 
 <p align="center">
-<img src="docs/synergies.svg" alt="Synergies logo" width="200"/>
+<img src="docs/assets/synergies.svg" alt="Synergies logo" width="200"/>
 </p>
 
 This package is developed as part of the [SYNERGIES](https://synergies-ccam.eu/) project.
 
 <p align="center">
-<img src="docs/funded_by_eu.svg" alt="Funded by EU" width="200"/>
+<img src="docs/assets/funded_by_eu.svg" alt="Funded by EU" width="200"/>
 </p>
 
 Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or European Climate, Infrastructure and Environment Executive Agency (CINEA). Neither the European Union nor the granting authority can be held responsible for them.
