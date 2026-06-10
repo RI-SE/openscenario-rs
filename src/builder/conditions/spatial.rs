@@ -305,7 +305,9 @@ impl CollisionConditionBuilder {
                 },
                 entity_condition: EntityCondition::Collision(
                     crate::types::conditions::entity::CollisionCondition {
-                        target: self.target_entity.map(OSString::literal),
+                        target: self.target_entity.map(|s| EntityRef {
+                            entity_ref: OSString::literal(s),
+                        }),
                         by_type: self.collision_type.map(|collision_type| {
                             crate::types::conditions::entity::CollisionTarget {
                                 target_type: OSString::literal(collision_type),

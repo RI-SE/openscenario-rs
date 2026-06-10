@@ -7,7 +7,7 @@ use openscenario_rs::types::{
         EntityCondition, OffroadCondition,
     },
     positions::Position,
-    scenario::triggers::TriggeringEntities,
+    scenario::triggers::{EntityRef, TriggeringEntities},
 };
 
 #[test]
@@ -15,7 +15,9 @@ fn test_collision_condition_with_target() {
     let condition = CollisionCondition::with_target("vehicle1");
     assert_eq!(
         condition.target,
-        Some(OSString::literal("vehicle1".to_string()))
+        Some(EntityRef {
+            entity_ref: OSString::literal("vehicle1".to_string())
+        })
     );
     assert_eq!(condition.by_type, None);
     assert_eq!(condition.position, None);
@@ -115,7 +117,9 @@ fn test_by_entity_condition_collision_variants() {
         EntityCondition::Collision(condition) => {
             assert_eq!(
                 condition.target,
-                Some(OSString::literal("vehicle1".to_string()))
+                Some(EntityRef {
+                    entity_ref: OSString::literal("vehicle1".to_string())
+                })
             );
         }
         _ => panic!("Expected Collision variant"),

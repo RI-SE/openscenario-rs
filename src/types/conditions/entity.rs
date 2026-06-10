@@ -82,26 +82,32 @@ pub struct StandStillCondition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct CollisionCondition {
-    /// Specific target entity (optional)
-    pub target: Option<OSString>,
+    /// Specific target entity (optional) — XSD child `<EntityRef entityRef="..."/>`
+    #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
+    pub target: Option<EntityRef>,
 
-    /// Collision detection by entity type
+    /// Collision detection by entity type — XSD child `<ByObjectType objectType="..."/>`
+    #[serde(rename = "ByObjectType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<CollisionTarget>,
 
-    /// Position-based collision detection
+    /// Position-based collision detection — XSD child `<Position>`
+    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
 }
 
-/// Target specification for collision detection
+/// Target specification for collision detection — wraps XSD `<ByObjectType objectType="..."/>`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CollisionTarget {
+    /// XSD required attribute `objectType` on `<ByObjectType>`
+    #[serde(rename = "@objectType")]
     pub target_type: OSString,
 }
 
 /// Condition for detecting end-of-road state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EndOfRoadCondition {
-    /// Duration entity must be at end of road
+    /// Duration entity must be at end of road — XSD required attr `duration`
+    #[serde(rename = "@duration")]
     pub duration: Double,
 }
 
@@ -170,107 +176,132 @@ pub struct TimeToCollisionCondition {
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
     pub routing_algorithm: Option<RoutingAlgorithm>,
 
-    /// Target specification for collision detection
+    /// Target specification for collision detection — XSD child `<TimeToCollisionConditionTarget>`
+    #[serde(rename = "TimeToCollisionConditionTarget")]
     pub target: TimeToCollisionTarget,
 }
 
 /// Target for time to collision condition - matches XSD TimeToCollisionConditionTarget
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeToCollisionTarget {
-    /// Target entity reference
+    /// Target entity reference — XSD child `<EntityRef>`
+    #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
     pub entity_ref: Option<EntityRef>,
 
-    /// Target position
+    /// Target position — XSD child `<Position>`
+    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
 }
 
 /// Angle condition for entity orientation/direction triggering
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AngleCondition {
-    /// Type of angle measurement (relative or absolute)
+    /// Type of angle measurement (relative or absolute) — XSD required attr `angleType`
+    #[serde(rename = "@angleType")]
     pub angle_type: AngleType,
 
-    /// Target angle value in radians
+    /// Target angle value in radians — XSD required attr `angle`
+    #[serde(rename = "@angle")]
     pub angle: Double,
 
-    /// Tolerance for angle matching in radians
+    /// Tolerance for angle matching in radians — XSD required attr `angleTolerance`
+    #[serde(rename = "@angleTolerance")]
     pub angle_tolerance: Double,
 
-    /// Coordinate system for angle measurement
+    /// Coordinate system for angle measurement — XSD optional attr `coordinateSystem`
+    #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
 /// Off-road detection condition - matches XSD OffroadCondition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OffroadCondition {
-    /// Duration entity must be off-road
+    /// Duration entity must be off-road — XSD required attr `duration`
+    #[serde(rename = "@duration")]
     pub duration: Double,
 }
 
 /// Relative speed monitoring between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeSpeedCondition {
-    /// Reference entity for speed comparison
+    /// Reference entity for speed comparison — XSD required attr `entityRef`
+    #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
 
-    /// Comparison rule (greater than, less than, etc.)
+    /// Comparison rule (greater than, less than, etc.) — XSD required attr `rule`
+    #[serde(rename = "@rule")]
     pub rule: Rule,
 
-    /// Speed difference value
+    /// Speed difference value — XSD required attr `value`
+    #[serde(rename = "@value")]
     pub value: Double,
 
-    /// Direction of speed measurement (optional)
+    /// Direction of speed measurement (optional) — XSD optional attr `direction`
+    #[serde(rename = "@direction", default, skip_serializing_if = "Option::is_none")]
     pub direction: Option<DirectionalDimension>,
 }
 
 /// Relative lane range specification for clearance conditions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeLaneRange {
-    /// Starting lane offset
+    /// Starting lane offset — XSD optional attr `from`
+    #[serde(rename = "@from", default, skip_serializing_if = "Option::is_none")]
     pub from: Option<Int>,
 
-    /// Ending lane offset
+    /// Ending lane offset — XSD optional attr `to`
+    #[serde(rename = "@to", default, skip_serializing_if = "Option::is_none")]
     pub to: Option<Int>,
 }
 
 /// Clearance monitoring between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeClearanceCondition {
-    /// Lane ranges to check for clearance
+    /// Lane ranges to check for clearance — XSD repeated child `<RelativeLaneRange>`
+    #[serde(rename = "RelativeLaneRange", default)]
     pub relative_lane_ranges: Vec<RelativeLaneRange>,
 
-    /// Entity references to check clearance against
+    /// Entity references to check clearance against — XSD repeated child `<EntityRef>`
+    #[serde(rename = "EntityRef", default)]
     pub entity_refs: Vec<EntityRef>,
 
-    /// Whether to check opposite lanes
+    /// Whether to check opposite lanes — XSD required attr `oppositeLanes`
+    #[serde(rename = "@oppositeLanes")]
     pub opposite_lanes: Boolean,
 
-    /// Distance to check forward (optional)
+    /// Distance to check forward (optional) — XSD optional attr `distanceForward`
+    #[serde(rename = "@distanceForward", default, skip_serializing_if = "Option::is_none")]
     pub distance_forward: Option<Double>,
 
-    /// Distance to check backward (optional)
+    /// Distance to check backward (optional) — XSD optional attr `distanceBackward`
+    #[serde(rename = "@distanceBackward", default, skip_serializing_if = "Option::is_none")]
     pub distance_backward: Option<Double>,
 
-    /// Whether to use free space measurement
+    /// Whether to use free space measurement — XSD required attr `freeSpace`
+    #[serde(rename = "@freeSpace")]
     pub free_space: Boolean,
 }
 
 /// Relative angle conditions between entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeAngleCondition {
-    /// Reference entity for angle comparison
+    /// Reference entity for angle comparison — XSD required attr `entityRef`
+    #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
 
-    /// Type of angle measurement (relative or absolute)
+    /// Type of angle measurement (relative or absolute) — XSD required attr `angleType`
+    #[serde(rename = "@angleType")]
     pub angle_type: AngleType,
 
-    /// Target angle value in radians
+    /// Target angle value in radians — XSD required attr `angle`
+    #[serde(rename = "@angle")]
     pub angle: Double,
 
-    /// Tolerance for angle matching in radians
+    /// Tolerance for angle matching in radians — XSD required attr `angleTolerance`
+    #[serde(rename = "@angleTolerance")]
     pub angle_tolerance: Double,
 
-    /// Coordinate system for angle measurement
+    /// Coordinate system for angle measurement — XSD optional attr `coordinateSystem`
+    #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
@@ -609,7 +640,9 @@ impl CollisionCondition {
     /// Create a new collision condition with specific target
     pub fn with_target(target: &str) -> Self {
         Self {
-            target: Some(OSString::literal(target.to_string())),
+            target: Some(EntityRef {
+                entity_ref: OSString::literal(target.to_string()),
+            }),
             by_type: None,
             position: None,
         }
@@ -1461,7 +1494,9 @@ mod tests {
         let condition = CollisionCondition::with_target("vehicle1");
         assert_eq!(
             condition.target,
-            Some(OSString::literal("vehicle1".to_string()))
+            Some(EntityRef {
+                entity_ref: OSString::literal("vehicle1".to_string())
+            })
         );
         assert_eq!(condition.by_type, None);
         assert_eq!(condition.position, None);
@@ -1546,7 +1581,9 @@ mod tests {
             EntityCondition::Collision(condition) => {
                 assert_eq!(
                     condition.target,
-                    Some(OSString::literal("vehicle1".to_string()))
+                    Some(EntityRef {
+                        entity_ref: OSString::literal("vehicle1".to_string())
+                    })
                 );
             }
             _ => panic!("Expected Collision variant"),
