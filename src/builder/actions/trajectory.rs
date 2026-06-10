@@ -297,11 +297,12 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             trajectory: self.trajectory,
             catalog_reference: None,
             time_reference: TimeReference {
-                timing: Timing {
+                none: None,
+                timing: Some(Timing {
                     domain_absolute_relative: OSString::literal("absolute".to_string()),
                     scale: Double::literal(1.0),
                     offset: Double::literal(0.0),
-                },
+                }),
             },
             trajectory_ref: None,
             trajectory_following_mode: TrajectoryFollowingMode {

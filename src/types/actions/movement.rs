@@ -170,12 +170,21 @@ pub struct TrajectoryFollowingMode {
     pub following_mode: FollowingMode,
 }
 
-/// Time reference for trajectory following
+/// Empty element representing the absence of timing in a `TimeReference`.
+/// Corresponds to `<None/>` in OpenSCENARIO XML.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct NoneElement {}
+
+/// Time reference for trajectory following.
+/// OpenSCENARIO defines this as a choice between `<None/>` and `<Timing>`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
 pub struct TimeReference {
-    #[serde(rename = "Timing")]
-    pub timing: Timing,
+    /// Present when no timing constraint is needed (`<None/>`).
+    #[serde(rename = "None", default, skip_serializing_if = "Option::is_none")]
+    pub none: Option<NoneElement>,
+    /// Present when explicit timing is specified.
+    #[serde(rename = "Timing", default, skip_serializing_if = "Option::is_none")]
+    pub timing: Option<Timing>,
 }
 
 /// Timing specification for trajectory following
@@ -618,6 +627,17 @@ impl Default for Timing {
             domain_absolute_relative: OSString::literal("absolute".to_string()),
             scale: Double::literal(1.0),
             offset: Double::literal(0.0),
+        }
+    }
+}
+
+impl Default for TimeReference {
+    /// Defaults to `<None/>` (no timing constraint), matching the most common
+    /// use-case and what OpenSCENARIO generators like esmini emit.
+    fn default() -> Self {
+        Self {
+            none: Some(NoneElement::default()),
+            timing: None,
         }
     }
 }

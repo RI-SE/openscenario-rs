@@ -10,7 +10,7 @@
 
 use openscenario_rs::types::actions::movement::{
     FollowTrajectoryAction, LongitudinalDistanceAction, SpeedAction, SpeedProfileAction,
-    TimeReference, Timing, Trajectory, TrajectoryFollowingMode, TrajectoryRef,
+    TimeReference, Timing, Trajectory, TrajectoryFollowingMode, TrajectoryRef, NoneElement,
 };
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;
@@ -58,11 +58,12 @@ fn test_follow_trajectory_action_complete() {
         trajectory: Some(Trajectory::default()),
         catalog_reference: None,
         time_reference: TimeReference {
-            timing: Timing {
+            none: None,
+            timing: Some(Timing {
                 domain_absolute_relative: OSString::literal("absolute".to_string()),
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
-            },
+            }),
         },
         trajectory_ref: None,
         trajectory_following_mode: TrajectoryFollowingMode {
@@ -77,11 +78,12 @@ fn test_follow_trajectory_action_complete() {
         trajectory: None,
         catalog_reference: None,
         time_reference: TimeReference {
-            timing: Timing {
+            none: None,
+            timing: Some(Timing {
                 domain_absolute_relative: OSString::literal("absolute".to_string()),
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
-            },
+            }),
         },
         trajectory_ref: None,
         trajectory_following_mode: TrajectoryFollowingMode::default(),
@@ -94,11 +96,12 @@ fn test_follow_trajectory_action_complete() {
         trajectory: None,
         catalog_reference: None,
         time_reference: TimeReference {
-            timing: Timing {
+            none: None,
+            timing: Some(Timing {
                 domain_absolute_relative: OSString::literal("absolute".to_string()),
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
-            },
+            }),
         },
         trajectory_ref: Some(TrajectoryRef::default()),
         trajectory_following_mode: TrajectoryFollowingMode::default(),
