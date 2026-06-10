@@ -30,17 +30,41 @@ pub trait CatalogEntity: Clone + Send + Sync {
     fn entity_name(&self) -> &str;
 }
 
-/// Parameter definition for catalog entities
+/// Parameter definition for catalog entities.
+///
+/// Maps to an individual `<ParameterDeclaration>` XML element, e.g.:
+/// ```xml
+/// <ParameterDeclaration name="MaxDeceleration" parameterType="double" value="10.0"/>
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParameterDefinition {
-    /// Parameter name
+    /// Parameter name — XML attribute `name`
+    #[serde(rename = "@name")]
     pub name: String,
-    /// Parameter type (String, Double, Integer, Boolean)
+    /// Parameter type (string, double, integer, boolean) — XML attribute `parameterType`
+    #[serde(rename = "@parameterType")]
     pub parameter_type: String,
-    /// Optional default value
+    /// Default value — XML attribute `value`
+    #[serde(rename = "@value", skip_serializing_if = "Option::is_none")]
     pub default_value: Option<String>,
-    /// Parameter description
+    /// Human-readable description (not an XML attribute; used only in parameter_schema())
+    #[serde(skip)]
     pub description: Option<String>,
+}
+
+/// Wrapper for the `<ParameterDeclarations>` XML element.
+///
+/// The XML structure nests individual declarations inside a container:
+/// ```xml
+/// <ParameterDeclarations>
+///   <ParameterDeclaration name="MaxDeceleration" parameterType="double" value="10.0"/>
+/// </ParameterDeclarations>
+/// ```
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct ParameterDeclarationsBlock {
+    /// Individual `<ParameterDeclaration>` children
+    #[serde(rename = "ParameterDeclaration", default)]
+    pub declarations: Vec<ParameterDefinition>,
 }
 
 /// Vehicle entity definition for catalogs
@@ -75,7 +99,7 @@ pub struct CatalogVehicle {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 /// Performance characteristics with parameter support
@@ -287,7 +311,7 @@ pub struct CatalogController {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 
     /// Additional properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
@@ -413,7 +437,7 @@ pub struct CatalogPedestrian {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 impl CatalogEntity for CatalogPedestrian {
@@ -556,7 +580,7 @@ pub struct CatalogMiscObject {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 /// Environment entity definition for catalogs
@@ -568,7 +592,7 @@ pub struct CatalogEnvironment {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 /// Maneuver entity definition for catalogs
@@ -580,7 +604,7 @@ pub struct CatalogManeuver {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 /// Trajectory entity definition for catalogs
@@ -592,7 +616,7 @@ pub struct CatalogTrajectory {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 /// Route entity definition for catalogs
@@ -604,7 +628,7 @@ pub struct CatalogRoute {
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<Vec<ParameterDefinition>>,
+    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
 // Placeholder implementations for remaining catalog entities
@@ -1066,5 +1090,108 @@ mod tests {
         assert!(controller_schema.len() >= 1);
         assert!(pedestrian_schema.len() >= 3); // Has PedestrianCategory, Mass, Role
         assert!(misc_object_schema.len() >= 3);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Regression tests: ParameterDeclarations XML round-trip
+    // ---------------------------------------------------------------------------
+
+    /// Verify that a Vehicle with a <ParameterDeclarations> block deserializes
+    /// correctly.  This was previously broken because ParameterDefinition lacked
+    /// #[serde(rename = "@...")] on its fields, causing quick-xml to look for
+    /// child elements instead of XML attributes.
+    #[test]
+    fn test_catalog_vehicle_with_parameter_declarations_parses() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00"
+              description="regression test" author="test"/>
+  <Catalog name="TestCatalog">
+    <Vehicle name="TestVehicle" vehicleCategory="car">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="MaxDeceleration" parameterType="double" value="10.0"/>
+        <ParameterDeclaration name="MaxSpeed" parameterType="double" value="50.0"/>
+      </ParameterDeclarations>
+      <BoundingBox>
+        <Center x="0.0" y="0.0" z="0.75"/>
+        <Dimensions width="2.0" length="4.5" height="1.5"/>
+      </BoundingBox>
+      <Performance maxSpeed="$MaxSpeed" maxAcceleration="10.0" maxDeceleration="$MaxDeceleration"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.7" positionX="2.8" positionZ="0.3"/>
+        <RearAxle  maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="0.0" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>"#;
+
+        let catalog = crate::parser::xml::parse_catalog_from_str(xml)
+            .expect("catalog with ParameterDeclarations should parse without error");
+
+        assert_eq!(catalog.catalog.vehicles.len(), 1, "expected one vehicle");
+
+        let vehicle = &catalog.catalog.vehicles[0];
+        assert_eq!(vehicle.name, "TestVehicle");
+
+        let decls = vehicle
+            .parameter_declarations
+            .as_ref()
+            .expect("vehicle should have a ParameterDeclarations block");
+
+        assert_eq!(decls.declarations.len(), 2, "expected two parameter declarations");
+
+        let max_decel = decls
+            .declarations
+            .iter()
+            .find(|p| p.name == "MaxDeceleration")
+            .expect("MaxDeceleration declaration must be present");
+        assert_eq!(max_decel.parameter_type, "double");
+        assert_eq!(
+            max_decel.default_value.as_deref(),
+            Some("10.0"),
+            "default_value should map to the 'value' XML attribute"
+        );
+
+        let max_speed = decls
+            .declarations
+            .iter()
+            .find(|p| p.name == "MaxSpeed")
+            .expect("MaxSpeed declaration must be present");
+        assert_eq!(max_speed.parameter_type, "double");
+        assert_eq!(max_speed.default_value.as_deref(), Some("50.0"));
+    }
+
+    /// Verify that a Vehicle WITHOUT a <ParameterDeclarations> block still
+    /// parses correctly (regression guard: the Option must remain None).
+    #[test]
+    fn test_catalog_vehicle_without_parameter_declarations_parses() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00"
+              description="regression test" author="test"/>
+  <Catalog name="TestCatalog">
+    <Vehicle name="SimpleCar" vehicleCategory="car">
+      <BoundingBox>
+        <Center x="0.0" y="0.0" z="0.75"/>
+        <Dimensions width="2.0" length="4.5" height="1.5"/>
+      </BoundingBox>
+      <Performance maxSpeed="50.0" maxAcceleration="10.0" maxDeceleration="8.0"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.7" positionX="2.8" positionZ="0.3"/>
+        <RearAxle  maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="0.0" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>"#;
+
+        let catalog = crate::parser::xml::parse_catalog_from_str(xml)
+            .expect("catalog without ParameterDeclarations should parse without error");
+
+        let vehicle = &catalog.catalog.vehicles[0];
+        assert_eq!(vehicle.name, "SimpleCar");
+        assert!(
+            vehicle.parameter_declarations.is_none(),
+            "parameter_declarations should be None when element is absent"
+        );
     }
 }
