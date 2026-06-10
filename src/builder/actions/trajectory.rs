@@ -213,7 +213,7 @@ impl VertexBuilder {
         self.validate()?;
 
         let vertex = Vertex {
-            time: Double::literal(self.time.unwrap()),
+            time: Some(Double::literal(self.time.unwrap())),
             position: self.position.unwrap(),
         };
 

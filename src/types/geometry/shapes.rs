@@ -370,11 +370,12 @@ pub struct Polyline {
     pub vertices: Vec<Vertex>,
 }
 
-/// Trajectory vertex with time and position
+/// Trajectory vertex with time and position.
+/// `time` is optional in OpenSCENARIO 1.1+ (XSD does not require it).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Vertex {
-    #[serde(rename = "@time")]
-    pub time: Double,
+    #[serde(rename = "@time", default, skip_serializing_if = "Option::is_none")]
+    pub time: Option<Double>,
     #[serde(rename = "Position")]
     pub position: Position,
 }
@@ -398,7 +399,7 @@ impl Default for Polyline {
 impl Default for Vertex {
     fn default() -> Self {
         Self {
-            time: crate::types::basic::Value::literal(0.0),
+            time: None,
             position: Position::default(),
         }
     }
@@ -428,7 +429,7 @@ mod tests {
         use crate::types::positions::{Position, WorldPosition};
 
         let vertex = Vertex {
-            time: crate::types::basic::Value::literal(0.04),
+            time: Some(crate::types::basic::Value::literal(0.04)),
             position: Position {
                 world_position: Some(WorldPosition::default()),
                 relative_world_position: None,
@@ -442,7 +443,16 @@ mod tests {
             },
         };
 
-        assert_eq!(vertex.time.as_literal().unwrap(), &0.04);
+        assert_eq!(vertex.time.as_ref().unwrap().as_literal().unwrap(), &0.04);
+    }
+
+    #[test]
+    fn test_trajectory_vertex_without_time() {
+        // OpenSCENARIO 1.1+ allows Vertex elements without a time attribute.
+        // Previously this would fail with "missing field '@time'".
+        let xml = r#"<Vertex><Position><WorldPosition x="1" y="2" z="0" h="0" p="0" r="0"/></Position></Vertex>"#;
+        let v: Vertex = quick_xml::de::from_str(xml).unwrap();
+        assert!(v.time.is_none());
     }
 
     #[test]
@@ -452,19 +462,25 @@ mod tests {
         let polyline = Polyline {
             vertices: vec![
                 Vertex {
-                    time: crate::types::basic::Value::literal(0.0),
+                    time: Some(crate::types::basic::Value::literal(0.0)),
                     position: Position::default(),
                 },
                 Vertex {
-                    time: crate::types::basic::Value::literal(0.04),
+                    time: Some(crate::types::basic::Value::literal(0.04)),
                     position: Position::default(),
                 },
             ],
         };
 
         assert_eq!(polyline.vertices.len(), 2);
-        assert_eq!(polyline.vertices[0].time.as_literal().unwrap(), &0.0);
-        assert_eq!(polyline.vertices[1].time.as_literal().unwrap(), &0.04);
+        assert_eq!(
+            polyline.vertices[0].time.as_ref().unwrap().as_literal().unwrap(),
+            &0.0
+        );
+        assert_eq!(
+            polyline.vertices[1].time.as_ref().unwrap().as_literal().unwrap(),
+            &0.04
+        );
     }
 
     #[test]
@@ -474,7 +490,7 @@ mod tests {
         let shape = Shape {
             polyline: Some(Polyline {
                 vertices: vec![Vertex {
-                    time: crate::types::basic::Value::literal(1.0),
+                    time: Some(crate::types::basic::Value::literal(1.0)),
                     position: Position::default(),
                 }],
             }),
@@ -483,6 +499,24 @@ mod tests {
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(xml.contains("<Polyline"));
         assert!(xml.contains("time=\"1\""));
+    }
+
+    #[test]
+    fn test_shape_serialization_no_time() {
+        use crate::types::positions::Position;
+
+        // A Vertex without time must not emit a time attribute in XML.
+        let shape = Shape {
+            polyline: Some(Polyline {
+                vertices: vec![Vertex {
+                    time: None,
+                    position: Position::default(),
+                }],
+            }),
+        };
+
+        let xml = quick_xml::se::to_string(&shape).unwrap();
+        assert!(!xml.contains("time="), "time attr must be absent when None: {xml}");
     }
 
     #[test]
