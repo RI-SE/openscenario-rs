@@ -63,7 +63,8 @@ pub struct NormalDistribution {
     pub expected_value: OSString,
     #[serde(rename = "@variance")]
     pub variance: OSString,
-    #[serde(rename = "@range", skip_serializing_if = "Option::is_none")]
+    /// Optional bounding range — serializes as a child `<Range>` element, not an attribute.
+    #[serde(rename = "Range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
 }
 
@@ -74,14 +75,16 @@ pub struct LogNormalDistribution {
     pub expected_value: OSString,
     #[serde(rename = "@variance")]
     pub variance: OSString,
-    #[serde(rename = "@range", skip_serializing_if = "Option::is_none")]
+    /// Optional bounding range — child `<Range>` element, not an attribute.
+    #[serde(rename = "Range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
 }
 
 /// Uniform distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UniformDistribution {
-    #[serde(rename = "@range")]
+    /// Required bounding range — child `<Range>` element, not an attribute.
+    #[serde(rename = "Range")]
     pub range: Range,
 }
 
@@ -90,7 +93,8 @@ pub struct UniformDistribution {
 pub struct PoissonDistribution {
     #[serde(rename = "@expectedValue")]
     pub expected_value: OSString,
-    #[serde(rename = "@range", skip_serializing_if = "Option::is_none")]
+    /// Optional bounding range — child `<Range>` element, not an attribute.
+    #[serde(rename = "Range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
 }
 
@@ -104,7 +108,8 @@ pub struct Histogram {
 /// Bin in a histogram distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistogramBin {
-    #[serde(rename = "@range")]
+    /// Required bounding range — child `<Range>` element, not an attribute.
+    #[serde(rename = "Range")]
     pub range: Range,
     #[serde(rename = "@weight")]
     pub weight: OSString,

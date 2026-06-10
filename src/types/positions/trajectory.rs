@@ -5,13 +5,15 @@ use serde::{Deserialize, Serialize};
 
 /// Trajectory definition with shape and parameters
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
 pub struct Trajectory {
-    /// Name of the trajectory
+    /// Name of the trajectory — XSD attribute `name` (required in spec, kept Option for compat)
+    #[serde(rename = "@name", default, skip_serializing_if = "Option::is_none")]
     pub name: Option<OSString>,
-    /// Whether the trajectory is closed (forms a loop)
+    /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`
+    #[serde(rename = "@closed", default, skip_serializing_if = "Option::is_none")]
     pub closed: Option<bool>,
-    /// Shape definition of the trajectory
+    /// Shape definition of the trajectory — XSD child element `<Shape>`
+    #[serde(rename = "Shape")]
     pub shape: TrajectoryShape,
 }
 

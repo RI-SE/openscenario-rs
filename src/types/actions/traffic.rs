@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 pub struct TrafficSourceAction {
     #[serde(rename = "@rate")]
     pub rate: Double,
-    #[serde(rename = "@velocity")]
+    #[serde(rename = "@velocity", skip_serializing_if = "Option::is_none")]
     pub velocity: Option<Double>,
     #[serde(rename = "Position")]
     pub position: Position,
@@ -161,9 +161,9 @@ pub struct TrafficSignalControllerAction {
 pub struct TrafficSignalController {
     #[serde(rename = "@name")]
     pub name: OSString,
-    #[serde(rename = "@delay")]
+    #[serde(rename = "@delay", skip_serializing_if = "Option::is_none")]
     pub delay: Option<Double>,
-    #[serde(rename = "@reference")]
+    #[serde(rename = "@reference", skip_serializing_if = "Option::is_none")]
     pub reference: Option<OSString>,
     #[serde(rename = "Phase", default)]
     pub phases: Vec<Phase>,

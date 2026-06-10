@@ -341,7 +341,7 @@ pub struct LaneOffsetAction {
 pub struct LaneOffsetActionDynamics {
     #[serde(rename = "@dynamicsShape")]
     pub dynamics_shape: DynamicsShape,
-    #[serde(rename = "@maxLateralAcc")]
+    #[serde(rename = "@maxLateralAcc", skip_serializing_if = "Option::is_none")]
     pub max_lateral_acc: Option<Double>,
 }
 
@@ -399,7 +399,7 @@ pub enum LateralActionChoice {
 pub struct LateralDistanceAction {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-    #[serde(rename = "@distance")]
+    #[serde(rename = "@distance", skip_serializing_if = "Option::is_none")]
     pub distance: Option<Double>,
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
@@ -479,9 +479,9 @@ pub struct SpeedProfileEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct DynamicConstraints {
-    #[serde(rename = "@maxLateralAcc")]
+    #[serde(rename = "@maxLateralAcc", skip_serializing_if = "Option::is_none")]
     pub max_lateral_acc: Option<Double>,
-    #[serde(rename = "@maxSpeed")]
+    #[serde(rename = "@maxSpeed", skip_serializing_if = "Option::is_none")]
     pub max_speed: Option<Double>,
 }
 
