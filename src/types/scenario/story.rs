@@ -215,7 +215,7 @@ pub struct Actors {
     pub select_triggering_entities: bool,
 
     /// Direct entity references for actors
-    #[serde(rename = "EntityRef")]
+    #[serde(rename = "EntityRef", default)]
     pub entity_refs: Vec<EntityRef>,
 }
 
