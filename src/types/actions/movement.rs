@@ -152,11 +152,16 @@ pub struct Trajectory {
 }
 
 /// Trajectory reference wrapper - can contain direct trajectory or catalog reference
+///
+/// The direct trajectory definition is boxed because `Trajectory` transitively
+/// contains `Position` (via its `Shape` -> `Clothoid` -> `Position`), and
+/// `Position` itself contains a `TrajectoryPosition` with a `TrajectoryRef`.
+/// Boxing breaks this cycle so the types have a computable, finite size.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrajectoryRef {
     /// Direct trajectory definition
     #[serde(rename = "Trajectory", skip_serializing_if = "Option::is_none")]
-    pub trajectory: Option<Trajectory>,
+    pub trajectory: Option<Box<Trajectory>>,
 
     /// Reference to a trajectory in a catalog
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
@@ -651,7 +656,7 @@ impl Default for TimeReference {
 impl Default for TrajectoryRef {
     fn default() -> Self {
         Self {
-            trajectory: Some(Trajectory::default()),
+            trajectory: Some(Box::new(Trajectory::default())),
             catalog_reference: None,
         }
     }
@@ -665,7 +670,7 @@ impl TrajectoryRef {
     /// Create a trajectory reference with direct trajectory definition
     pub fn with_trajectory(trajectory: Trajectory) -> Self {
         Self {
-            trajectory: Some(trajectory),
+            trajectory: Some(Box::new(trajectory)),
             catalog_reference: None,
         }
     }

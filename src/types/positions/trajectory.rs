@@ -87,13 +87,9 @@ pub enum TrajectoryFollowingMode {
     Timing,
 }
 
-/// Reference to a trajectory in a catalog
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TrajectoryRef {
-    /// Name/ID of the trajectory
-    #[serde(rename = "@trajectory")]
-    pub trajectory: OSString,
-}
+/// Reference to a trajectory, either defined inline or via catalog — XSD choice
+/// of `<Trajectory>` | `<CatalogReference>` (xsd:2380-2385).
+pub use crate::types::actions::movement::TrajectoryRef;
 
 /// Position along a trajectory
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -110,24 +106,30 @@ pub struct TrajectoryPosition {
     /// Orientation relative to trajectory direction
     #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
     pub orientation: Option<crate::types::positions::road::Orientation>,
+
+    /// Reference to the trajectory being followed — required per XSD
+    #[serde(rename = "TrajectoryRef")]
+    pub trajectory_ref: TrajectoryRef,
 }
 
 impl TrajectoryPosition {
     /// Create a new trajectory position
-    pub fn new(s: f64) -> Self {
+    pub fn new(s: f64, trajectory_ref: TrajectoryRef) -> Self {
         Self {
             s: Double::literal(s),
             t: None,
             orientation: None,
+            trajectory_ref,
         }
     }
 
     /// Create trajectory position with lateral offset
-    pub fn with_offset(s: f64, t: f64) -> Self {
+    pub fn with_offset(s: f64, t: f64, trajectory_ref: TrajectoryRef) -> Self {
         Self {
             s: Double::literal(s),
             t: Some(Double::literal(t)),
             orientation: None,
+            trajectory_ref,
         }
     }
 
@@ -141,18 +143,8 @@ impl TrajectoryPosition {
     }
 
     /// Create trajectory position at distance with offset
-    pub fn at_distance(s: f64, t: f64) -> Self {
-        Self::with_offset(s, t)
-    }
-}
-
-impl Default for TrajectoryPosition {
-    fn default() -> Self {
-        Self {
-            s: Double::literal(0.0),
-            t: None,
-            orientation: None,
-        }
+    pub fn at_distance(s: f64, t: f64, trajectory_ref: TrajectoryRef) -> Self {
+        Self::with_offset(s, t, trajectory_ref)
     }
 }
 
@@ -172,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_trajectory_position_new() {
-        let pos = TrajectoryPosition::new(50.0);
+        let pos = TrajectoryPosition::new(50.0, TrajectoryRef::default());
         assert_eq!(pos.s.as_literal().unwrap(), &50.0);
         assert!(pos.t.is_none());
         assert!(pos.orientation.is_none());
@@ -180,14 +172,14 @@ mod tests {
 
     #[test]
     fn test_trajectory_position_with_offset() {
-        let pos = TrajectoryPosition::with_offset(100.0, -1.5);
+        let pos = TrajectoryPosition::with_offset(100.0, -1.5, TrajectoryRef::default());
         assert_eq!(pos.s.as_literal().unwrap(), &100.0);
         assert_eq!(pos.t.unwrap().as_literal().unwrap(), &-1.5);
     }
 
     #[test]
     fn test_trajectory_position_xml_roundtrip() {
-        let pos = TrajectoryPosition::new(25.0);
+        let pos = TrajectoryPosition::new(25.0, TrajectoryRef::default());
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(xml.contains("s=\"25\""));
         let deserialized: TrajectoryPosition = quick_xml::de::from_str(&xml).unwrap();

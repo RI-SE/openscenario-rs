@@ -20,7 +20,8 @@ pub use road::{
     LaneCoordinate, LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition,
     RoadCoordinate, RoadPosition,
 };
-pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition, TrajectoryRef};
+pub use crate::types::actions::movement::TrajectoryRef;
+pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition};
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
@@ -203,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_position_trajectory_constructor() {
-        let tp = TrajectoryPosition::new(10.0);
+        let tp = TrajectoryPosition::new(10.0, TrajectoryRef::default());
         let pos = Position::trajectory(tp.clone());
         assert!(pos.trajectory_position.is_some());
         assert!(pos.world_position.is_none());
