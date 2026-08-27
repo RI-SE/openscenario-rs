@@ -337,73 +337,104 @@ impl CatalogEnvironment {
         self.road_network = Some(road_network);
     }
 
-    /// Converts this catalog environment to a scenario environment
-    /// with parameter substitution (placeholder for future implementation)
-    pub fn to_scenario_environment(&self) -> Environment {
-        let time_of_day = self.time_of_day.as_ref().map(|tod| TimeOfDay {
-            animation: Boolean::literal(tod.animation.as_literal().copied().unwrap_or(false)),
-            date_time: tod
-                .date_time
-                .as_literal()
-                .unwrap_or(&"2021-01-01T12:00:00".to_string())
-                .clone(),
-        });
+    /// Converts this catalog environment to a scenario environment, resolving
+    /// every parameterizable value against `parameters`.
+    ///
+    /// The catalog-only `<RoadNetwork>` reference has no counterpart on the
+    /// scenario `Environment` type and is therefore not carried over.
+    pub fn resolve_environment(
+        &self,
+        parameters: &std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<Environment> {
+        let time_of_day = self
+            .time_of_day
+            .as_ref()
+            .map(|tod| -> crate::error::Result<TimeOfDay> {
+                Ok(TimeOfDay {
+                    animation: Boolean::literal(tod.animation.resolve(parameters)?),
+                    date_time: tod.date_time.resolve(parameters)?,
+                })
+            })
+            .transpose()?;
 
-        let weather = self.weather.as_ref().map(|w| {
-            let precipitation_type = w.precipitation.as_ref().map(|p| {
-                match p
-                    .precipitation_type
-                    .as_literal()
-                    .map(|s| s.as_str())
-                    .unwrap_or("dry")
-                {
-                    "rain" => crate::types::enums::PrecipitationType::Rain,
-                    "snow" => crate::types::enums::PrecipitationType::Snow,
-                    _ => crate::types::enums::PrecipitationType::Dry,
-                }
-            });
+        let weather = self
+            .weather
+            .as_ref()
+            .map(|w| -> crate::error::Result<Weather> {
+                let precipitation = w
+                    .precipitation
+                    .as_ref()
+                    .map(|p| -> crate::error::Result<Precipitation> {
+                        let type_str = p.precipitation_type.resolve(parameters)?;
+                        let precipitation_type = match type_str.as_str() {
+                            "rain" => crate::types::enums::PrecipitationType::Rain,
+                            "snow" => crate::types::enums::PrecipitationType::Snow,
+                            "dry" => crate::types::enums::PrecipitationType::Dry,
+                            other => {
+                                return Err(crate::error::Error::invalid_value(
+                                    "precipitationType",
+                                    other,
+                                    "must be one of: dry, rain, snow",
+                                ))
+                            }
+                        };
 
-            Weather {
-                cloud_state: None,
-                atmospheric_pressure: None,
-                temperature: None,
-                fractional_cloud_cover: None,
-                sun: w.sun.as_ref().map(|s| Sun {
-                    intensity: s.intensity.clone(),
-                    azimuth: s.azimuth.clone(),
-                    elevation: s.elevation.clone(),
-                    illuminance: s.illuminance.clone(),
-                }),
-                fog: w.fog.as_ref().map(|f| Fog {
-                    visual_range: f.visual_range.clone(),
-                    bounding_box: f.bounding_box.clone(),
-                }),
-                precipitation: w.precipitation.as_ref().map(|p| Precipitation {
-                    precipitation_type: precipitation_type
-                        .unwrap_or(crate::types::enums::PrecipitationType::Dry),
-                    intensity: None,
-                    precipitation_intensity: p.intensity.clone(),
-                }),
-                wind: None,
-                dome_image: None,
-            }
-        });
+                        Ok(Precipitation {
+                            precipitation_type,
+                            intensity: None,
+                            precipitation_intensity: p
+                                .precipitation_intensity
+                                .clone()
+                                .or_else(|| p.intensity.clone()),
+                        })
+                    })
+                    .transpose()?;
 
-        let road_condition = self.road_condition.as_ref().map(|rc| RoadCondition {
-            friction_scale_factor: Double::literal(
-                rc.friction_scale_factor.as_literal().copied().unwrap_or(1.0),
-            ),
-            wetness: rc.wetness.clone(),
-            properties: rc.properties.clone(),
-        });
+                Ok(Weather {
+                    cloud_state: w.cloud_state.clone(),
+                    atmospheric_pressure: w.atmospheric_pressure.clone(),
+                    temperature: w.temperature.clone(),
+                    fractional_cloud_cover: w.fractional_cloud_cover.clone(),
+                    sun: w.sun.as_ref().map(|s| Sun {
+                        intensity: s.intensity.clone(),
+                        azimuth: s.azimuth.clone(),
+                        elevation: s.elevation.clone(),
+                        illuminance: s.illuminance.clone(),
+                    }),
+                    fog: w.fog.as_ref().map(|f| Fog {
+                        visual_range: f.visual_range.clone(),
+                        bounding_box: f.bounding_box.clone(),
+                    }),
+                    precipitation,
+                    wind: None,
+                    dome_image: None,
+                })
+            })
+            .transpose()?;
 
-        Environment {
-            name: OSString::literal(self.name.clone()),
-            parameter_declarations: None,
+        let road_condition = self
+            .road_condition
+            .as_ref()
+            .map(|rc| -> crate::error::Result<RoadCondition> {
+                Ok(RoadCondition {
+                    friction_scale_factor: Double::literal(
+                        rc.friction_scale_factor.resolve(parameters)?,
+                    ),
+                    wetness: rc.wetness.clone(),
+                    properties: rc.properties.clone(),
+                })
+            })
+            .transpose()?;
+
+        Ok(Environment {
+            name: OSString::literal(crate::types::catalogs::entities::resolve_parameter(
+                &self.name, parameters,
+            )?),
+            parameter_declarations: self.parameter_declarations.clone(),
             time_of_day,
             weather,
             road_condition,
-        }
+        })
     }
 }
 
@@ -532,15 +563,13 @@ impl RoadNetworkReference {
 /// Catalog entity integration so `CatalogEnvironment` can be used as the entry type
 /// in `CatalogContent` and behind a `CatalogReference`.
 impl crate::types::catalogs::entities::CatalogEntity for CatalogEnvironment {
-    // Resolution into a scenario `Environment` is not implemented yet; the
-    // catalog entry itself is fully parsed and preserved.
-    type ResolvedType = String;
+    type ResolvedType = Environment;
 
     fn into_scenario_entity(
         self,
-        _parameters: std::collections::HashMap<String, String>,
+        parameters: std::collections::HashMap<String, String>,
     ) -> crate::error::Result<Self::ResolvedType> {
-        Ok(format!("Environment:{}", self.name))
+        self.resolve_environment(&parameters)
     }
 
     fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
@@ -760,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_scenario_environment() {
+    fn test_resolve_environment() {
         let mut catalog_env = CatalogEnvironment::new("TestEnvironment".to_string());
 
         // Set up a sunny day environment
@@ -769,15 +798,19 @@ mod tests {
             "2021-06-21T12:00:00".to_string(),
         )));
 
-        let scenario_env = catalog_env.to_scenario_environment();
+        let scenario_env = catalog_env
+            .resolve_environment(&std::collections::HashMap::new())
+            .unwrap();
 
         assert_eq!(scenario_env.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(
             scenario_env.time_of_day.as_ref().unwrap().date_time,
             "2021-06-21T12:00:00"
         );
-        // cloud_state is not propagated by to_scenario_environment (deprecated field)
-        assert!(scenario_env.weather.as_ref().unwrap().cloud_state.is_none());
+        assert_eq!(
+            scenario_env.weather.as_ref().unwrap().cloud_state,
+            Some(CloudState::Free)
+        );
         assert_eq!(
             scenario_env
                 .weather
@@ -793,6 +826,47 @@ mod tests {
                 .unwrap(),
             &1.0
         );
+    }
+
+    /// `CatalogEnvironment` resolves to a real scenario `Environment`, with
+    /// parameterized values substituted from the assignment map.
+    #[test]
+    fn test_catalog_environment_into_scenario_entity() {
+        use crate::types::catalogs::entities::CatalogEntity;
+
+        let mut catalog_env = CatalogEnvironment::new("Rainy".to_string());
+        catalog_env.set_weather(CatalogWeather::rainy(Value::Parameter(
+            "rainIntensity".to_string(),
+        )));
+        catalog_env.set_road_condition(CatalogRoadCondition {
+            friction_scale_factor: Value::Parameter("friction".to_string()),
+            wetness: Some(Wetness::Moist),
+            properties: None,
+        });
+
+        let mut parameters = std::collections::HashMap::new();
+        parameters.insert("friction".to_string(), "0.6".to_string());
+
+        let resolved = catalog_env.into_scenario_entity(parameters).unwrap();
+
+        assert_eq!(resolved.name.as_literal().unwrap(), "Rainy");
+        let weather = resolved.weather.as_ref().unwrap();
+        assert_eq!(
+            weather
+                .precipitation
+                .as_ref()
+                .unwrap()
+                .precipitation_type,
+            crate::types::enums::PrecipitationType::Rain
+        );
+        assert_eq!(weather.fog.as_ref().unwrap().visual_range, Value::Literal(5000.0));
+
+        let road_condition = resolved.road_condition.as_ref().unwrap();
+        assert_eq!(
+            road_condition.friction_scale_factor.as_literal().unwrap(),
+            &0.6
+        );
+        assert_eq!(road_condition.wetness, Some(Wetness::Moist));
     }
 
     #[test]

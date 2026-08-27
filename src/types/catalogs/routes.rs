@@ -449,18 +449,120 @@ impl RouteParameterAssignment {
     }
 }
 
+/// Converts canonical `basic::ParameterDeclarations` into the narrower
+/// `routing::ParameterDeclarations` used by the scenario `Route` type.
+///
+/// `routing` carries its own reduced `ParameterType` and stringly-typed
+/// constraint rules, so parameter types it does not model are rejected rather
+/// than silently coerced.
+fn route_parameter_declarations(
+    declarations: ParameterDeclarations,
+) -> crate::error::Result<crate::types::routing::ParameterDeclarations> {
+    use crate::types::enums::{ParameterType, Rule};
+
+    let parameter_declarations = declarations
+        .parameter_declarations
+        .into_iter()
+        .map(|decl| {
+            let parameter_type = match decl.parameter_type {
+                ParameterType::Double => crate::types::routing::ParameterType::Double,
+                ParameterType::Int => crate::types::routing::ParameterType::Int,
+                ParameterType::String => crate::types::routing::ParameterType::String,
+                ParameterType::Boolean => crate::types::routing::ParameterType::Boolean,
+                other => {
+                    return Err(crate::error::Error::validation_error(
+                        "ParameterDeclaration",
+                        &format!(
+                            "route parameter type {:?} is not supported by scenario routes",
+                            other
+                        ),
+                    ))
+                }
+            };
+
+            let constraint_groups = decl
+                .constraint_groups
+                .into_iter()
+                .map(|group| crate::types::routing::ValueConstraintGroup {
+                    constraints: group
+                        .value_constraints
+                        .into_iter()
+                        .map(|constraint| crate::types::routing::ValueConstraint {
+                            rule: match constraint.rule {
+                                Rule::EqualTo => "equalTo",
+                                Rule::GreaterThan => "greaterThan",
+                                Rule::LessThan => "lessThan",
+                                Rule::GreaterOrEqual => "greaterOrEqual",
+                                Rule::LessOrEqual => "lessOrEqual",
+                                Rule::NotEqualTo => "notEqualTo",
+                            }
+                            .to_string(),
+                            value: constraint
+                                .value
+                                .as_literal()
+                                .cloned()
+                                .unwrap_or_else(|| constraint.value.to_string()),
+                        })
+                        .collect(),
+                })
+                .collect();
+
+            Ok(crate::types::routing::ParameterDeclaration {
+                name: decl.name,
+                parameter_type,
+                value: decl.value,
+                constraint_groups,
+            })
+        })
+        .collect::<crate::error::Result<Vec<_>>>()?;
+
+    Ok(crate::types::routing::ParameterDeclarations {
+        parameter_declarations,
+    })
+}
+
 /// Catalog entity integration so `CatalogRoute` can be used as the entry type
 /// in `CatalogContent` and behind a `CatalogReference`.
 impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
-    // Resolution into a scenario `Route` is not implemented yet; the
-    // catalog entry itself is fully parsed and preserved.
-    type ResolvedType = String;
+    type ResolvedType = crate::types::routing::Route;
 
     fn into_scenario_entity(
         self,
-        _parameters: std::collections::HashMap<String, String>,
+        parameters: std::collections::HashMap<String, String>,
     ) -> crate::error::Result<Self::ResolvedType> {
-        Ok(format!("Route:{}", self.name))
+        // The scenario `Waypoint` type has no `routingAlgorithm`, `time`,
+        // `speed` or `LaneConstraints`; those catalog-only extensions are not
+        // carried over.
+        let waypoints = self
+            .waypoints
+            .into_iter()
+            .map(|w| {
+                let route_strategy = w.route_strategy.ok_or_else(|| {
+                    crate::error::Error::validation_error(
+                        "Waypoint",
+                        "routeStrategy is required by the XSD but missing on a catalog waypoint",
+                    )
+                })?;
+
+                Ok(crate::types::routing::Waypoint {
+                    position: w.position,
+                    route_strategy,
+                })
+            })
+            .collect::<crate::error::Result<Vec<_>>>()?;
+
+        Ok(crate::types::routing::Route {
+            name: OSString::literal(crate::types::catalogs::entities::resolve_parameter(
+                &self.name,
+                &parameters,
+            )?),
+            closed: Boolean::literal(self.closed.resolve(&parameters)?),
+            parameter_declarations: self
+                .parameter_declarations
+                .map(route_parameter_declarations)
+                .transpose()?,
+            waypoints,
+        })
     }
 
     fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
@@ -700,6 +802,47 @@ mod tests {
         assert!(xml.contains("RouteCatalog"));
         assert!(xml.contains("revMajor=\"1\""));
         assert!(xml.contains("revMinor=\"0\""));
+    }
+
+    #[test]
+    fn test_catalog_route_into_scenario_entity() {
+        use crate::types::catalogs::entities::CatalogEntity;
+
+        let mut route = CatalogRoute::new("ResolvedRoute".to_string());
+        route.closed = Value::Parameter("isClosed".to_string());
+        route.add_waypoint(RouteWaypoint::with_strategy(
+            Position::default(),
+            RouteStrategy::Shortest,
+        ));
+        route.add_waypoint(RouteWaypoint::with_strategy(
+            Position::default(),
+            RouteStrategy::Fastest,
+        ));
+
+        let mut parameters = std::collections::HashMap::new();
+        parameters.insert("isClosed".to_string(), "true".to_string());
+
+        let resolved = route.into_scenario_entity(parameters).unwrap();
+
+        assert_eq!(resolved.name.as_literal().unwrap(), "ResolvedRoute");
+        assert_eq!(resolved.closed.as_literal(), Some(&true));
+        assert_eq!(resolved.waypoints.len(), 2);
+        assert_eq!(resolved.waypoints[0].route_strategy, RouteStrategy::Shortest);
+        assert_eq!(resolved.waypoints[1].route_strategy, RouteStrategy::Fastest);
+    }
+
+    /// `routeStrategy` is required by the XSD on the scenario `Waypoint`, so a
+    /// catalog waypoint without one cannot be resolved.
+    #[test]
+    fn test_catalog_route_into_scenario_entity_requires_route_strategy() {
+        use crate::types::catalogs::entities::CatalogEntity;
+
+        let mut route = CatalogRoute::new("Incomplete".to_string());
+        route.add_position_waypoint(Position::default());
+
+        assert!(route
+            .into_scenario_entity(std::collections::HashMap::new())
+            .is_err());
     }
 
     #[test]

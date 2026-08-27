@@ -30,6 +30,25 @@ pub trait CatalogEntity: Clone + Send + Sync {
     fn entity_name(&self) -> &str;
 }
 
+/// Resolves a possibly `$`-prefixed parameter reference against a substitution map.
+///
+/// Values that do not start with `$` are returned unchanged.
+pub(crate) fn resolve_parameter(
+    value: &str,
+    parameters: &HashMap<String, String>,
+) -> Result<String> {
+    match value.strip_prefix('$') {
+        Some(param_name) => {
+            let available: Vec<String> = parameters.keys().cloned().collect();
+            parameters
+                .get(param_name)
+                .cloned()
+                .ok_or_else(|| crate::error::Error::parameter_not_found(param_name, &available))
+        }
+        None => Ok(value.to_string()),
+    }
+}
+
 /// In-memory description of a parameter accepted by a catalog entity.
 ///
 /// This is *not* an XML type: the wire representation of
@@ -148,7 +167,7 @@ impl CatalogEntity for CatalogVehicle {
     ) -> Result<Self::ResolvedType> {
         // Resolve parameters in the catalog vehicle
         let resolved_vehicle = vehicle::Vehicle {
-            name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
             vehicle_category: self.resolve_vehicle_category(&self.vehicle_category, &parameters)?,
             role: None,
             mass: None,
@@ -252,24 +271,6 @@ impl CatalogEntity for CatalogVehicle {
 }
 
 impl CatalogVehicle {
-    /// Helper method to resolve a parameter value
-    fn resolve_parameter(
-        &self,
-        value: &str,
-        parameters: &HashMap<String, String>,
-    ) -> Result<String> {
-        // If the value starts with '$', it's a parameter reference
-        if let Some(param_name) = value.strip_prefix('$') {
-            // Remove '$' prefix
-            let available: Vec<String> = parameters.keys().cloned().collect();
-            parameters
-                .get(param_name).cloned()
-                .ok_or_else(|| crate::error::Error::parameter_not_found(param_name, &available))
-        } else {
-            Ok(value.to_string())
-        }
-    }
-
     /// Helper method to resolve vehicle category parameter
     fn resolve_vehicle_category(
         &self,
@@ -326,7 +327,7 @@ impl CatalogEntity for CatalogController {
         parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
         let resolved_controller = Controller {
-            name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
             controller_type: match &self.controller_type {
                 Some(controller_type) => {
                     Some(self.resolve_controller_type(controller_type, &parameters)?)
@@ -357,28 +358,6 @@ impl CatalogEntity for CatalogController {
 }
 
 impl CatalogController {
-    /// Helper method to resolve a parameter value
-    fn resolve_parameter(
-        &self,
-        value: &str,
-        parameters: &HashMap<String, String>,
-    ) -> Result<String> {
-        // If the value starts with '$', it's a parameter reference
-        if let Some(param_name) = value.strip_prefix('$') {
-            // Remove '$' prefix
-            parameters
-                .get(param_name).cloned()
-                .ok_or_else(|| {
-                    crate::error::Error::catalog_error(&format!(
-                        "Parameter '{}' not found in substitution map",
-                        param_name
-                    ))
-                })
-        } else {
-            Ok(value.to_string())
-        }
-    }
-
     /// Helper method to resolve controller type parameter
     fn resolve_controller_type(
         &self,
@@ -454,7 +433,7 @@ impl CatalogEntity for CatalogPedestrian {
         })?;
 
         let resolved_pedestrian = pedestrian::Pedestrian {
-            name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
             pedestrian_category: self
                 .resolve_pedestrian_category(&self.pedestrian_category, &parameters)?,
             mass: crate::types::basic::Double::literal(mass_value),
@@ -503,28 +482,6 @@ impl CatalogEntity for CatalogPedestrian {
 }
 
 impl CatalogPedestrian {
-    /// Helper method to resolve a parameter value
-    fn resolve_parameter(
-        &self,
-        value: &str,
-        parameters: &HashMap<String, String>,
-    ) -> Result<String> {
-        // If the value starts with '$', it's a parameter reference
-        if let Some(param_name) = value.strip_prefix('$') {
-            // Remove '$' prefix
-            parameters
-                .get(param_name).cloned()
-                .ok_or_else(|| {
-                    crate::error::Error::catalog_error(&format!(
-                        "Parameter '{}' not found in substitution map",
-                        param_name
-                    ))
-                })
-        } else {
-            Ok(value.to_string())
-        }
-    }
-
     /// Helper method to resolve pedestrian category parameter
     fn resolve_pedestrian_category(
         &self,
@@ -624,13 +581,25 @@ pub struct CatalogManeuver {
 // These will be expanded when the corresponding entity types are fully implemented
 
 impl CatalogEntity for CatalogMiscObject {
-    type ResolvedType = String; // Placeholder - will be MiscObject when implemented
+    type ResolvedType = crate::types::entities::MiscObject;
 
     fn into_scenario_entity(
         self,
-        _parameters: HashMap<String, String>,
+        parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
-        Ok(format!("MiscObject:{}", self.name)) // Placeholder implementation
+        Ok(crate::types::entities::MiscObject {
+            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            mass: Double::literal(self.mass.resolve(&parameters)?),
+            misc_object_category: self.misc_object_category,
+            model3d: self
+                .model3d
+                .as_ref()
+                .map(|m| m.resolve(&parameters).map(Value::literal))
+                .transpose()?,
+            parameter_declarations: self.parameter_declarations,
+            bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
+            properties: self.properties,
+        })
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
@@ -674,13 +643,27 @@ impl CatalogEntity for CatalogMiscObject {
 }
 
 impl CatalogEntity for CatalogManeuver {
-    type ResolvedType = String; // Placeholder - will be Maneuver when implemented
+    type ResolvedType = crate::types::scenario::story::Maneuver;
 
     fn into_scenario_entity(
         self,
-        _parameters: HashMap<String, String>,
+        parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
-        Ok(format!("Maneuver:{}", self.name)) // Placeholder implementation
+        if self.events.is_empty() {
+            return Err(crate::error::Error::validation_error(
+                "Maneuver",
+                &format!(
+                    "maneuver '{}' has no <Event>; the XSD requires at least one",
+                    self.name
+                ),
+            ));
+        }
+
+        Ok(crate::types::scenario::story::Maneuver {
+            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            parameter_declarations: self.parameter_declarations,
+            events: self.events,
+        })
     }
 
     fn parameter_schema() -> Vec<ParameterDefinition> {
@@ -932,12 +915,12 @@ mod tests {
     }
 
     #[test]
-    fn test_catalog_misc_object_placeholder() {
+    fn test_catalog_misc_object_resolution() {
         let catalog_misc_object = CatalogMiscObject {
             name: "TrafficCone".to_string(),
-            mass: Value::Literal(5.0),
+            mass: Value::Parameter("ConeMass".to_string()),
             misc_object_category: MiscObjectCategory::Obstacle,
-            model3d: None,
+            model3d: Some(Value::Literal("cone.obj".to_string())),
             bounding_box: BoundingBox::default(),
             properties: None,
             parameter_declarations: None,
@@ -945,10 +928,64 @@ mod tests {
 
         assert_eq!(catalog_misc_object.entity_name(), "TrafficCone");
 
+        let mut parameters = HashMap::new();
+        parameters.insert("ConeMass".to_string(), "5.0".to_string());
+
         let resolved = catalog_misc_object
+            .into_scenario_entity(parameters)
+            .unwrap();
+        assert_eq!(resolved.name.as_literal().unwrap(), "TrafficCone");
+        assert_eq!(resolved.mass.as_literal().unwrap(), &5.0);
+        assert_eq!(
+            resolved.misc_object_category,
+            MiscObjectCategory::Obstacle
+        );
+        assert_eq!(
+            resolved.model3d.as_ref().unwrap().as_literal().unwrap(),
+            "cone.obj"
+        );
+    }
+
+    #[test]
+    fn test_catalog_maneuver_resolution() {
+        let xml = r#"<Maneuver name="LogAndSetVariables">
+    <Event name="AtCollision" priority="parallel" maximumExecutionCount="1">
+        <Action name="SetCollisionVariable">
+            <GlobalAction>
+                <VariableAction variableRef="collisionDetected">
+                    <SetAction value="true"/>
+                </VariableAction>
+            </GlobalAction>
+        </Action>
+    </Event>
+</Maneuver>"#;
+
+        let catalog_maneuver: CatalogManeuver = quick_xml::de::from_str(xml).unwrap();
+        let resolved = catalog_maneuver
             .into_scenario_entity(HashMap::new())
             .unwrap();
-        assert_eq!(resolved, "MiscObject:TrafficCone");
+
+        assert_eq!(resolved.name.as_literal().unwrap(), "LogAndSetVariables");
+        assert_eq!(resolved.events.len(), 1);
+        assert_eq!(
+            resolved.events[0].name.as_literal().unwrap(),
+            "AtCollision"
+        );
+    }
+
+    /// The XSD requires a Maneuver to carry at least one Event, so an empty
+    /// catalog maneuver must not resolve into a structurally invalid one.
+    #[test]
+    fn test_catalog_maneuver_resolution_rejects_empty_events() {
+        let catalog_maneuver = CatalogManeuver {
+            name: "Empty".to_string(),
+            parameter_declarations: None,
+            events: Vec::new(),
+        };
+
+        assert!(catalog_maneuver
+            .into_scenario_entity(HashMap::new())
+            .is_err());
     }
 
     /// Regression: `mass`, `miscObjectCategory` and `<Properties>` are part of
