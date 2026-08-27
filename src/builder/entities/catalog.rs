@@ -100,6 +100,8 @@ impl<'parent> CatalogVehicleReferenceBuilder<'parent> {
             entity_catalog_reference: None,
             vehicle: Some(vehicle),
             pedestrian: None,
+            misc_object: None,
+            external_object_reference: None,
             object_controller: None,
         };
 
@@ -201,6 +203,8 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
             entity_catalog_reference: None,
             vehicle: None,
             pedestrian: Some(pedestrian),
+            misc_object: None,
+            external_object_reference: None,
             object_controller: None,
         };
 

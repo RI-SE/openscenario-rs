@@ -5,12 +5,14 @@ use crate::types::controllers::ObjectController;
 use serde::{Deserialize, Serialize};
 
 pub mod axles;
+pub mod misc_object;
 pub mod pedestrian;
 pub mod selection;
 pub mod vehicle;
 
 // Re-export entity types
 pub use axles::{Axle, Axles};
+pub use misc_object::MiscObject;
 pub use pedestrian::Pedestrian;
 pub use selection::{
     ByName, ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntitySelection,
@@ -27,6 +29,8 @@ pub enum EntityObject {
     Vehicle(Box<Vehicle>),
     /// Pedestrian entity
     Pedestrian(Box<Pedestrian>),
+    /// Miscellaneous object entity
+    MiscObject(Box<MiscObject>),
 }
 
 /// Catalog reference for scenario entities (vehicle or pedestrian)
@@ -66,6 +70,22 @@ pub struct ScenarioObject {
     #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
     pub pedestrian: Option<Pedestrian>,
 
+    /// Miscellaneous object entity (optional)
+    #[serde(
+        rename = "MiscObject",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub misc_object: Option<MiscObject>,
+
+    /// External object reference (optional)
+    #[serde(
+        rename = "ExternalObjectReference",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub external_object_reference: Option<ExternalObjectReference>,
+
     /// Entity catalog reference (vehicle or pedestrian)
     ///
     /// References a vehicle or pedestrian from an external catalog.
@@ -93,6 +113,8 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: Some(vehicle),
             pedestrian: None,
+            misc_object: None,
+            external_object_reference: None,
             entity_catalog_reference: None,
             object_controller: Some(ObjectController::default()),
         }
@@ -104,6 +126,21 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: Some(pedestrian),
+            misc_object: None,
+            external_object_reference: None,
+            entity_catalog_reference: None,
+            object_controller: Some(ObjectController::default()),
+        }
+    }
+
+    /// Create a new scenario object with a miscellaneous object
+    pub fn new_misc_object(name: String, misc_object: MiscObject) -> Self {
+        Self {
+            name: crate::types::basic::Value::literal(name),
+            vehicle: None,
+            pedestrian: None,
+            misc_object: Some(misc_object),
+            external_object_reference: None,
             entity_catalog_reference: None,
             object_controller: Some(ObjectController::default()),
         }
@@ -120,6 +157,8 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: None,
+            misc_object: None,
+            external_object_reference: None,
             entity_catalog_reference: Some(ScenarioEntityReference::Vehicle(catalog_reference)),
             object_controller: Some(ObjectController::default()),
         }
@@ -136,6 +175,8 @@ impl ScenarioObject {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: None,
+            misc_object: None,
+            external_object_reference: None,
             entity_catalog_reference: Some(ScenarioEntityReference::Pedestrian(catalog_reference)),
             object_controller: Some(ObjectController::default()),
         }
@@ -173,10 +214,12 @@ impl ScenarioObject {
     pub fn get_entity_object(&self) -> Option<EntityObject> {
         if let Some(vehicle) = &self.vehicle {
             Some(EntityObject::Vehicle(Box::new(vehicle.clone())))
+        } else if let Some(pedestrian) = &self.pedestrian {
+            Some(EntityObject::Pedestrian(Box::new(pedestrian.clone())))
         } else {
-            self.pedestrian
+            self.misc_object
                 .as_ref()
-                .map(|pedestrian| EntityObject::Pedestrian(Box::new(pedestrian.clone())))
+                .map(|misc_object| EntityObject::MiscObject(Box::new(misc_object.clone())))
         }
     }
 
@@ -249,6 +292,43 @@ mod tests {
 
         let not_found = entities.find_object("NonExistent");
         assert!(not_found.is_none());
+    }
+
+    #[test]
+    fn test_scenario_object_misc_object_roundtrip() {
+        let misc = MiscObject::new(
+            "Barrier1".to_string(),
+            100.0,
+            crate::types::enums::MiscObjectCategory::Barrier,
+        );
+        let obj = ScenarioObject::new_misc_object("Barrier1".to_string(), misc);
+
+        assert!(obj.misc_object.is_some());
+        assert!(obj.vehicle.is_none());
+        assert!(obj.pedestrian.is_none());
+
+        match obj.get_entity_object() {
+            Some(EntityObject::MiscObject(m)) => {
+                assert_eq!(m.name.as_literal().unwrap(), "Barrier1");
+            }
+            _ => panic!("Expected misc object"),
+        }
+
+        let xml = quick_xml::se::to_string(&obj).unwrap();
+        assert!(xml.contains("MiscObject"));
+        assert!(xml.contains("miscObjectCategory=\"barrier\""));
+
+        let deserialized: ScenarioObject = quick_xml::de::from_str(&xml).unwrap();
+        assert!(deserialized.misc_object.is_some());
+        assert_eq!(
+            deserialized
+                .misc_object
+                .unwrap()
+                .name
+                .as_literal()
+                .unwrap(),
+            "Barrier1"
+        );
     }
 
     #[test]
