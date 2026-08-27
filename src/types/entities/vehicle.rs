@@ -1,8 +1,8 @@
 //! Vehicle entity definition
 
 use super::axles::Axles;
-use crate::types::basic::{Double, OSString};
-use crate::types::enums::VehicleCategory;
+use crate::types::basic::{Double, OSString, ParameterDeclarations};
+use crate::types::enums::{Role, VehicleCategory};
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +13,38 @@ pub struct Performance {
     pub max_speed: Double,
     #[serde(rename = "@maxAcceleration")]
     pub max_acceleration: Double,
+    #[serde(
+        rename = "@maxAccelerationRate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_acceleration_rate: Option<Double>,
     #[serde(rename = "@maxDeceleration")]
     pub max_deceleration: Double,
+    #[serde(
+        rename = "@maxDecelerationRate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_deceleration_rate: Option<Double>,
+}
+
+/// Attachment point for a towing vehicle's trailer hitch
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrailerHitch {
+    #[serde(rename = "@dx")]
+    pub dx: Double,
+    #[serde(rename = "@dz", default, skip_serializing_if = "Option::is_none")]
+    pub dz: Option<Double>,
+}
+
+/// Attachment point for a trailer's coupler
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrailerCoupler {
+    #[serde(rename = "@dx")]
+    pub dx: Double,
+    #[serde(rename = "@dz", default, skip_serializing_if = "Option::is_none")]
+    pub dz: Option<Double>,
 }
 
 /// Vehicle properties container
@@ -53,6 +83,30 @@ pub struct Vehicle {
     #[serde(rename = "@vehicleCategory")]
     pub vehicle_category: VehicleCategory,
 
+    /// Role of the vehicle (e.g. ambulance, police)
+    #[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<Role>,
+
+    /// Mass of the vehicle in kg
+    #[serde(rename = "@mass", default, skip_serializing_if = "Option::is_none")]
+    pub mass: Option<Double>,
+
+    /// Path to an external 3D model
+    #[serde(
+        rename = "@model3d",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub model3d: Option<OSString>,
+
+    /// Parameter declarations
+    #[serde(
+        rename = "ParameterDeclarations",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_declarations: Option<ParameterDeclarations>,
+
     /// Bounding box defining the vehicle's spatial extents
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
@@ -68,16 +122,22 @@ pub struct Vehicle {
     /// Vehicle properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
     pub properties: Option<Properties>,
-}
 
-impl Default for Performance {
-    fn default() -> Self {
-        Self {
-            max_speed: Double::literal(200.0),
-            max_acceleration: Double::literal(10.0),
-            max_deceleration: Double::literal(10.0),
-        }
-    }
+    /// Trailer hitch attachment point
+    #[serde(
+        rename = "TrailerHitch",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer_hitch: Option<TrailerHitch>,
+
+    /// Trailer coupler attachment point
+    #[serde(
+        rename = "TrailerCoupler",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer_coupler: Option<TrailerCoupler>,
 }
 
 impl Vehicle {
@@ -86,10 +146,22 @@ impl Vehicle {
         Self {
             name: crate::types::basic::Value::literal(name),
             vehicle_category: VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Performance::default(),
+            performance: Performance {
+                max_speed: Double::literal(200.0),
+                max_acceleration: Double::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Double::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Axles::car(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         }
     }
 
@@ -98,6 +170,10 @@ impl Vehicle {
         Self {
             name: crate::types::basic::Value::literal(name),
             vehicle_category: VehicleCategory::Truck,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::default(),
                 dimensions: crate::types::geometry::Dimensions::truck_default(),
@@ -105,10 +181,14 @@ impl Vehicle {
             performance: Performance {
                 max_speed: Double::literal(120.0),
                 max_acceleration: Double::literal(3.0),
+                max_acceleration_rate: None,
                 max_deceleration: Double::literal(8.0),
+                max_deceleration_rate: None,
             },
             axles: Axles::truck(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         }
     }
 
@@ -117,6 +197,10 @@ impl Vehicle {
         Self {
             name: crate::types::basic::Value::literal(name),
             vehicle_category: VehicleCategory::Motorbike,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::default(),
                 dimensions: crate::types::geometry::Dimensions::motorcycle(),
@@ -124,10 +208,14 @@ impl Vehicle {
             performance: Performance {
                 max_speed: Double::literal(180.0),
                 max_acceleration: Double::literal(8.0),
+                max_acceleration_rate: None,
                 max_deceleration: Double::literal(12.0),
+                max_deceleration_rate: None,
             },
             axles: Axles::motorcycle(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         }
     }
 
@@ -166,10 +254,22 @@ impl Default for Vehicle {
         Self {
             name: crate::types::basic::Value::literal("DefaultVehicle".to_string()),
             vehicle_category: VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Performance::default(),
+            performance: Performance {
+                max_speed: Double::literal(200.0),
+                max_acceleration: Double::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Double::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Axles::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         }
     }
 }
@@ -197,10 +297,22 @@ mod tests {
         let vehicle = Vehicle {
             name: crate::types::basic::Value::literal("TestCar".to_string()),
             vehicle_category: VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Performance::default(),
+            performance: Performance {
+                max_speed: Double::literal(200.0),
+                max_acceleration: Double::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Double::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Axles::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");

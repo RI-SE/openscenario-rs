@@ -70,16 +70,17 @@ impl PositionBuilder for RelativePositionBuilder {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
                     dx: Double::literal(self.dx.unwrap()),
                     dy: Double::literal(self.dy.unwrap()),
-                    dz: Double::literal(self.dz.unwrap()),
+                    dz: Some(Double::literal(self.dz.unwrap())),
                 };
                 position.relative_world_position = Some(relative_world_position);
             }
             RelativePositionType::Lane => {
                 let relative_lane_position = RelativeLanePosition {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                    ds: Double::literal(self.ds.unwrap()),
+                    ds: Some(Double::literal(self.ds.unwrap())),
                     d_lane: Int::literal(self.d_lane.unwrap()),
-                    offset: Double::literal(self.offset.unwrap()),
+                    offset: Some(Double::literal(self.offset.unwrap())),
+                    ds_lane: None,
                     orientation: None,
                 };
                 position.relative_lane_position = Some(relative_lane_position);
@@ -143,8 +144,8 @@ mod tests {
             .unwrap();
         let rlp = pos.relative_lane_position.unwrap();
         assert_eq!(rlp.entity_ref.as_literal(), Some(&"lead".to_string()));
-        assert_eq!(rlp.ds.as_literal(), Some(&20.0));
-        assert_eq!(rlp.offset.as_literal(), Some(&0.5));
+        assert_eq!(rlp.ds.as_ref().unwrap().as_literal(), Some(&20.0));
+        assert_eq!(rlp.offset.as_ref().unwrap().as_literal(), Some(&0.5));
     }
 
     #[test]

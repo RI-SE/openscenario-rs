@@ -116,8 +116,12 @@ pub struct CatalogPerformance {
 /// Axles with parameter support
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogAxles {
-    #[serde(rename = "FrontAxle")]
-    pub front_axle: CatalogFrontAxle,
+    #[serde(
+        rename = "FrontAxle",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub front_axle: Option<CatalogFrontAxle>,
     #[serde(rename = "RearAxle")]
     pub rear_axle: CatalogRearAxle,
 }
@@ -163,6 +167,10 @@ impl CatalogEntity for CatalogVehicle {
         let resolved_vehicle = vehicle::Vehicle {
             name: Value::literal(self.resolve_parameter(&self.name, &parameters)?),
             vehicle_category: self.resolve_vehicle_category(&self.vehicle_category, &parameters)?,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
             performance: vehicle::Performance {
                 max_speed: crate::types::basic::Double::literal(
@@ -171,28 +179,33 @@ impl CatalogEntity for CatalogVehicle {
                 max_acceleration: crate::types::basic::Double::literal(
                     self.performance.max_acceleration.resolve(&parameters)?,
                 ),
+                max_acceleration_rate: None,
                 max_deceleration: crate::types::basic::Double::literal(
                     self.performance.max_deceleration.resolve(&parameters)?,
                 ),
+                max_deceleration_rate: None,
             },
             axles: crate::types::Axles {
-                front_axle: Some(crate::types::Axle {
-                    max_steering: crate::types::basic::Double::literal(
-                        self.axles.front_axle.max_steering.resolve(&parameters)?,
-                    ),
-                    wheel_diameter: crate::types::basic::Double::literal(
-                        self.axles.front_axle.wheel_diameter.resolve(&parameters)?,
-                    ),
-                    track_width: crate::types::basic::Double::literal(
-                        self.axles.front_axle.track_width.resolve(&parameters)?,
-                    ),
-                    position_x: crate::types::basic::Double::literal(
-                        self.axles.front_axle.position_x.resolve(&parameters)?,
-                    ),
-                    position_z: crate::types::basic::Double::literal(
-                        self.axles.front_axle.position_z.resolve(&parameters)?,
-                    ),
-                }),
+                front_axle: match self.axles.front_axle {
+                    Some(front_axle) => Some(crate::types::Axle {
+                        max_steering: crate::types::basic::Double::literal(
+                            front_axle.max_steering.resolve(&parameters)?,
+                        ),
+                        wheel_diameter: crate::types::basic::Double::literal(
+                            front_axle.wheel_diameter.resolve(&parameters)?,
+                        ),
+                        track_width: crate::types::basic::Double::literal(
+                            front_axle.track_width.resolve(&parameters)?,
+                        ),
+                        position_x: crate::types::basic::Double::literal(
+                            front_axle.position_x.resolve(&parameters)?,
+                        ),
+                        position_z: crate::types::basic::Double::literal(
+                            front_axle.position_z.resolve(&parameters)?,
+                        ),
+                    }),
+                    None => None,
+                },
                 rear_axle: crate::types::Axle {
                     max_steering: crate::types::basic::Double::literal(
                         self.axles.rear_axle.max_steering.resolve(&parameters)?,
@@ -213,6 +226,8 @@ impl CatalogEntity for CatalogVehicle {
                 additional_axles: Vec::new(),
             },
             properties: self.properties,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         Ok(resolved_vehicle)
@@ -864,13 +879,13 @@ mod tests {
                 max_deceleration: Value::Literal(12.0),
             },
             axles: CatalogAxles {
-                front_axle: CatalogFrontAxle {
+                front_axle: Some(CatalogFrontAxle {
                     max_steering: Value::Literal(0.6),
                     wheel_diameter: Value::Literal(0.65),
                     track_width: Value::Literal(1.8),
                     position_x: Value::Literal(3.0),
                     position_z: Value::Literal(0.3),
-                },
+                }),
                 rear_axle: CatalogRearAxle {
                     max_steering: Value::Literal(0.0),
                     wheel_diameter: Value::Literal(0.65),
@@ -898,13 +913,13 @@ mod tests {
                 max_deceleration: Value::Literal(8.0),
             },
             axles: CatalogAxles {
-                front_axle: CatalogFrontAxle {
+                front_axle: Some(CatalogFrontAxle {
                     max_steering: Value::Literal(0.5),
                     wheel_diameter: Value::Literal(0.6),
                     track_width: Value::Literal(1.7),
                     position_x: Value::Literal(2.8),
                     position_z: Value::Literal(0.25),
-                },
+                }),
                 rear_axle: CatalogRearAxle {
                     max_steering: Value::Literal(0.0),
                     wheel_diameter: Value::Literal(0.6),

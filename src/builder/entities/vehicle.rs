@@ -68,7 +68,13 @@ impl<'parent> VehicleBuilder<'parent> {
         });
 
         // Default car performance
-        self.vehicle_data.performance = Some(Performance::default());
+        self.vehicle_data.performance = Some(Performance {
+            max_speed: Double::literal(200.0),
+            max_acceleration: Double::literal(10.0),
+            max_acceleration_rate: None,
+            max_deceleration: Double::literal(10.0),
+            max_deceleration_rate: None,
+        });
 
         // Default car axles
         self.vehicle_data.axles = Some(Axles::car());
@@ -99,7 +105,9 @@ impl<'parent> VehicleBuilder<'parent> {
         self.vehicle_data.performance = Some(Performance {
             max_speed: Double::literal(120.0),
             max_acceleration: Double::literal(3.0),
+            max_acceleration_rate: None,
             max_deceleration: Double::literal(8.0),
+            max_deceleration_rate: None,
         });
 
         // Default truck axles
@@ -134,7 +142,9 @@ impl<'parent> VehicleBuilder<'parent> {
         self.vehicle_data.performance = Some(Performance {
             max_speed: Double::literal(max_speed),
             max_acceleration: Double::literal(max_acceleration),
+            max_acceleration_rate: None,
             max_deceleration: Double::literal(max_deceleration),
+            max_deceleration_rate: None,
         });
         self
     }
@@ -154,10 +164,22 @@ impl<'parent> VehicleBuilder<'parent> {
                 .vehicle_data
                 .vehicle_category
                 .unwrap_or(VehicleCategory::Car),
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: self.vehicle_data.bounding_box.unwrap_or_default(),
-            performance: self.vehicle_data.performance.unwrap_or_default(),
+            performance: self.vehicle_data.performance.unwrap_or_else(|| Performance {
+                max_speed: Double::literal(200.0),
+                max_acceleration: Double::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Double::literal(10.0),
+                max_deceleration_rate: None,
+            }),
             axles: self.vehicle_data.axles.unwrap_or_else(|| Axles::car()),
             properties: self.vehicle_data.properties,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         let scenario_object = ScenarioObject::new_vehicle(self.name.clone(), vehicle);
@@ -208,7 +230,13 @@ impl DetachedVehicleBuilder {
         });
 
         // Default car performance
-        self.vehicle_data.performance = Some(Performance::default());
+        self.vehicle_data.performance = Some(Performance {
+            max_speed: Double::literal(200.0),
+            max_acceleration: Double::literal(10.0),
+            max_acceleration_rate: None,
+            max_deceleration: Double::literal(10.0),
+            max_deceleration_rate: None,
+        });
 
         // Default car axles
         self.vehicle_data.axles = Some(Axles::car());
@@ -239,7 +267,9 @@ impl DetachedVehicleBuilder {
         self.vehicle_data.performance = Some(Performance {
             max_speed: Double::literal(120.0),
             max_acceleration: Double::literal(3.0),
+            max_acceleration_rate: None,
             max_deceleration: Double::literal(8.0),
+            max_deceleration_rate: None,
         });
 
         // Default truck axles
@@ -274,7 +304,9 @@ impl DetachedVehicleBuilder {
         self.vehicle_data.performance = Some(Performance {
             max_speed: Double::literal(max_speed),
             max_acceleration: Double::literal(max_acceleration),
+            max_acceleration_rate: None,
             max_deceleration: Double::literal(max_deceleration),
+            max_deceleration_rate: None,
         });
         self
     }
@@ -291,10 +323,22 @@ impl DetachedVehicleBuilder {
                 .vehicle_data
                 .vehicle_category
                 .unwrap_or(VehicleCategory::Car),
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: self.vehicle_data.bounding_box.unwrap_or_default(),
-            performance: self.vehicle_data.performance.unwrap_or_default(),
+            performance: self.vehicle_data.performance.unwrap_or_else(|| Performance {
+                max_speed: Double::literal(200.0),
+                max_acceleration: Double::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Double::literal(10.0),
+                max_deceleration_rate: None,
+            }),
             axles: self.vehicle_data.axles.unwrap_or_else(|| Axles::car()),
             properties: self.vehicle_data.properties,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         ScenarioObject::new_vehicle(self.name.clone(), vehicle)

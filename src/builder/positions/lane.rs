@@ -62,7 +62,7 @@ impl PositionBuilder for LanePositionBuilder {
             road_id: OSString::literal(self.road_id.unwrap()),
             lane_id: OSString::literal(self.lane_id.unwrap()),
             s: Double::literal(self.s.unwrap()),
-            offset: Double::literal(self.offset.unwrap()),
+            offset: Some(Double::literal(self.offset.unwrap())),
             orientation: None,
         };
 
@@ -138,6 +138,6 @@ mod tests {
         let lp = pos.lane_position.unwrap();
         assert_eq!(lp.lane_id.as_literal(), Some(&"-2".to_string()));
         assert_eq!(lp.s.as_literal(), Some(&100.0));
-        assert_eq!(lp.offset.as_literal(), Some(&0.0));
+        assert_eq!(lp.offset.as_ref().unwrap().as_literal(), Some(&0.0));
     }
 }

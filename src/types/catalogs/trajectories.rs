@@ -47,9 +47,9 @@ pub struct CatalogTrajectory {
     #[serde(rename = "@name")]
     pub name: String,
 
-    /// Whether the trajectory is closed (forms a loop)
-    #[serde(rename = "@closed", skip_serializing_if = "Option::is_none")]
-    pub closed: Option<Boolean>,
+    /// Whether the trajectory is closed (forms a loop) — required per XSD
+    #[serde(rename = "@closed")]
+    pub closed: Boolean,
 
     /// Parameter declarations for this trajectory
     #[serde(
@@ -67,7 +67,7 @@ impl Default for CatalogTrajectory {
     fn default() -> Self {
         Self {
             name: "DefaultCatalogTrajectory".to_string(),
-            closed: None,
+            closed: Value::Literal(false),
             parameter_declarations: None,
             shape: CatalogTrajectoryShape::Polyline(CatalogPolyline {
                 vertices: Vec::new(),
@@ -121,17 +121,17 @@ pub struct CatalogClothoid {
     #[serde(rename = "@curvature")]
     pub curvature: Double,
 
-    /// Curvature derivative - clothoid parameter (can be parameterized)
-    #[serde(rename = "@curvatureDot")]
-    pub curvature_dot: Double,
+    /// Curvature derivative - clothoid parameter (can be parameterized) — deprecated per XSD
+    #[serde(rename = "@curvatureDot", default, skip_serializing_if = "Option::is_none")]
+    pub curvature_dot: Option<Double>,
 
     /// Length of the clothoid (can be parameterized)
     #[serde(rename = "@length")]
     pub length: Double,
 
-    /// Start position (optional)
-    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
-    pub start_position: Option<Position>,
+    /// Start position (required per XSD)
+    #[serde(rename = "Position")]
+    pub start_position: Position,
 }
 
 /// NURBS (Non-Uniform Rational B-Spline) trajectory definition
@@ -208,7 +208,7 @@ impl CatalogTrajectory {
     pub fn new(name: String, shape: CatalogTrajectoryShape) -> Self {
         Self {
             name,
-            closed: None,
+            closed: Value::Literal(false),
             parameter_declarations: None,
             shape,
         }
@@ -222,7 +222,7 @@ impl CatalogTrajectory {
     ) -> Self {
         Self {
             name,
-            closed: None,
+            closed: Value::Literal(false),
             parameter_declarations: Some(parameters),
             shape,
         }
@@ -232,7 +232,7 @@ impl CatalogTrajectory {
     pub fn with_closed(name: String, shape: CatalogTrajectoryShape, closed: bool) -> Self {
         Self {
             name,
-            closed: Some(Value::Literal(closed)),
+            closed: Value::Literal(closed),
             parameter_declarations: None,
             shape,
         }
@@ -267,10 +267,11 @@ impl CatalogTrajectory {
                     curvature: Value::Literal(
                         clothoid.curvature.as_literal().copied().unwrap_or(0.0),
                     ),
-                    curvature_dot: Value::Literal(
-                        clothoid.curvature_dot.as_literal().copied().unwrap_or(0.0),
-                    ),
+                    curvature_dot: clothoid.curvature_dot.clone(),
+                    curvature_prime: None,
                     length: Value::Literal(clothoid.length.as_literal().copied().unwrap_or(1.0)),
+                    start_time: None,
+                    stop_time: None,
                     start_position: clothoid.start_position.clone(),
                 })
             }
@@ -283,8 +284,8 @@ impl CatalogTrajectory {
         };
 
         Trajectory {
-            name: Some(OSString::literal(self.name.clone())),
-            closed: self.closed.as_ref().and_then(|c| c.as_literal().copied()),
+            name: OSString::literal(self.name.clone()),
+            closed: self.closed.as_literal().copied().unwrap_or(false),
             shape: scenario_shape,
         }
     }
@@ -315,9 +316,9 @@ impl CatalogClothoid {
     pub fn new(curvature: Double, curvature_dot: Double, length: Double) -> Self {
         Self {
             curvature,
-            curvature_dot,
+            curvature_dot: Some(curvature_dot),
             length,
-            start_position: None,
+            start_position: Position::default(),
         }
     }
 
@@ -330,9 +331,9 @@ impl CatalogClothoid {
     ) -> Self {
         Self {
             curvature,
-            curvature_dot,
+            curvature_dot: Some(curvature_dot),
             length,
-            start_position: Some(start_position),
+            start_position,
         }
     }
 }
@@ -407,7 +408,7 @@ mod tests {
         let trajectory = CatalogTrajectory::new("TestTrajectory".to_string(), shape);
 
         assert_eq!(trajectory.name, "TestTrajectory");
-        assert!(trajectory.closed.is_none());
+        assert_eq!(trajectory.closed.as_literal(), Some(&false));
         assert!(trajectory.parameter_declarations.is_none());
     }
 
@@ -465,7 +466,10 @@ mod tests {
         );
 
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.1);
-        assert!(matches!(clothoid.curvature_dot, Value::Parameter(_)));
+        assert!(matches!(
+            clothoid.curvature_dot,
+            Some(Value::Parameter(_))
+        ));
         assert_eq!(clothoid.length.as_literal().unwrap(), &50.0);
     }
 
@@ -532,7 +536,7 @@ mod tests {
             CatalogTrajectory::with_closed("ClosedTrajectory".to_string(), shape, true);
 
         assert_eq!(
-            trajectory.closed.as_ref().unwrap().as_literal().unwrap(),
+            trajectory.closed.as_literal().unwrap(),
             &true
         );
     }
@@ -570,12 +574,7 @@ mod tests {
         let scenario_trajectory = catalog_trajectory.to_scenario_trajectory();
 
         assert_eq!(
-            scenario_trajectory
-                .name
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
+            scenario_trajectory.name.as_literal().unwrap(),
             "TestTrajectory"
         );
 

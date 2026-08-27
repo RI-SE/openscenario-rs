@@ -49,9 +49,9 @@ pub struct Condition {
     #[serde(rename = "@conditionEdge")]
     pub condition_edge: ConditionEdge,
 
-    /// Optional delay before condition fires
-    #[serde(rename = "@delay", skip_serializing_if = "Option::is_none")]
-    pub delay: Option<Double>,
+    /// Delay before condition fires (required by XSD Condition complexType)
+    #[serde(rename = "@delay")]
+    pub delay: Double,
 
     /// Value-based condition (time, parameter, variable, etc.)
     #[serde(rename = "ByValueCondition", skip_serializing_if = "Option::is_none")]
@@ -117,7 +117,7 @@ impl Default for Condition {
         Self {
             name: OSString::literal("DefaultCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: None,
+            delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition::default()),
             by_entity_condition: None,
         }
@@ -201,7 +201,7 @@ impl Condition {
         Self {
             name: OSString::literal(name.into()),
             condition_edge: ConditionEdge::Rising,
-            delay: None,
+            delay: Double::literal(0.0),
             by_value_condition,
             by_entity_condition,
         }
@@ -215,7 +215,7 @@ impl Condition {
 
     /// Set a delay for this condition
     pub fn with_delay(mut self, delay: Double) -> Self {
-        self.delay = Some(delay);
+        self.delay = delay;
         self
     }
 }
@@ -312,10 +312,7 @@ mod tests {
 
         assert_eq!(condition.name.as_literal().unwrap(), "TimedCondition");
         assert_eq!(condition.condition_edge, ConditionEdge::Falling);
-        assert_eq!(
-            condition.delay.as_ref().unwrap().as_literal().unwrap(),
-            &2.5
-        );
+        assert_eq!(condition.delay.as_literal().unwrap(), &2.5);
     }
 
     #[test]

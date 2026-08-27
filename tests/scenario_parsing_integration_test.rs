@@ -952,7 +952,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let condition = Condition {
         name: Value::literal("StartCondition".to_string()),
         condition_edge: ConditionEdge::Rising,
-        delay: Some(Value::literal(1.0)),
+        delay: Value::literal(1.0),
         by_value_condition: Some(ByValueCondition {
             simulation_time_condition: Some(time_condition),
             parameter_condition: None,
@@ -995,7 +995,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let event = Event {
         name: Value::literal("SpeedEvent".to_string()),
         maximum_execution_count: Some(Value::literal(1)),
-        priority: Some(Priority::Override),
+        priority: Priority::Override,
         actions: vec![StoryAction {
             name: Value::literal("SpeedAction1".to_string()),
             private_action: Some(StoryPrivateAction {
@@ -1026,7 +1026,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     // Create actors for the maneuver group
     let actors = Actors {
-        select_triggering_entities: Some(false),
+        select_triggering_entities: false,
         entity_refs: vec![EntityRef {
             entity_ref: Value::literal("Ego".to_string()),
         }],
@@ -1035,9 +1035,9 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     // Create a maneuver group with the maneuver
     let maneuver_group = ManeuverGroup {
         name: Value::literal("MainManeuverGroup".to_string()),
-        maximum_execution_count: Some(Value::literal(1)),
+        maximum_execution_count: Value::literal(1),
         actors,
-        catalog_reference: None,
+        catalog_reference: Vec::new(),
         maneuvers: vec![maneuver],
     };
 
@@ -1088,7 +1088,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     let event = &maneuver.events[0];
     assert_eq!(event.name.as_literal().unwrap(), "SpeedEvent");
-    assert_eq!(event.priority.as_ref().unwrap(), &Priority::Override);
+    assert_eq!(event.priority, Priority::Override);
 
     // Verify the trigger system
     let trigger = event.start_trigger.as_ref().unwrap();
@@ -1100,10 +1100,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let condition = &condition_group.conditions[0];
     assert_eq!(condition.name.as_literal().unwrap(), "StartCondition");
     assert_eq!(condition.condition_edge, ConditionEdge::Rising);
-    assert_eq!(
-        condition.delay.as_ref().unwrap().as_literal().unwrap(),
-        &1.0
-    );
+    assert_eq!(condition.delay.as_literal().unwrap(), &1.0);
 
     // Verify the action system
     assert_eq!(event.actions[0].name.as_literal().unwrap(), "SpeedAction1");

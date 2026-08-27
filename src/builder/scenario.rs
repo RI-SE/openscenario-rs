@@ -145,6 +145,8 @@ impl ScenarioBuilder<Empty> {
             date: OSString::literal(now),
             description: OSString::literal(description.to_string()),
             author: OSString::literal(author.to_string()),
+            license: None,
+            properties: None,
         });
 
         ScenarioBuilder {
@@ -235,6 +237,8 @@ impl ScenarioBuilder<HasHeader> {
                 filepath: OSString::literal(file_path.to_string()),
             }),
             scene_graph_file: None,
+            traffic_signals: None,
+            used_area: None,
         });
         self
     }

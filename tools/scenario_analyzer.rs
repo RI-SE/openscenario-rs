@@ -1022,11 +1022,17 @@ fn analyze_init_detailed(
     // Analyze global actions (environment setup)
     for global_action in &init.actions.global_actions {
         if let Some(env_action) = &global_action.environment_action {
-            analysis.environment_setup = Some(EnvironmentSetup {
-                time_of_day: env_action.environment.time_of_day.date_time.clone(),
-                weather_description: format!("{:?}", env_action.environment.weather),
-                road_conditions: format!("{:?}", env_action.environment.road_condition),
-            });
+            if let Some(environment) = &env_action.environment {
+                analysis.environment_setup = Some(EnvironmentSetup {
+                    time_of_day: environment
+                        .time_of_day
+                        .as_ref()
+                        .map(|t| t.date_time.clone())
+                        .unwrap_or_default(),
+                    weather_description: format!("{:?}", environment.weather),
+                    road_conditions: format!("{:?}", environment.road_condition),
+                });
+            }
         }
     }
 
@@ -1216,8 +1222,7 @@ fn analyze_acts_detailed(
                         .collect(),
                     maximum_execution_count: maneuver_group
                         .maximum_execution_count
-                        .as_ref()
-                        .and_then(|v| v.as_literal())
+                        .as_literal()
                         .copied(),
                     maneuvers: Vec::new(),
                 };
@@ -1244,7 +1249,7 @@ fn analyze_acts_detailed(
 
                         let mut detailed_event = DetailedEventAnalysis {
                             event_name: event_name.clone(),
-                            priority: event.priority.as_ref().map(|p| format!("{:?}", p)),
+                            priority: Some(format!("{:?}", event.priority)),
                             maximum_execution_count: event
                                 .maximum_execution_count
                                 .as_ref()

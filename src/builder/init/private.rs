@@ -299,14 +299,24 @@ impl GlobalActionBuilder {
 
     /// Add an environment action with custom environment
     pub fn add_environment_action(mut self, environment: Environment) -> Self {
-        self.environment_action = Some(EnvironmentAction { environment });
+        self.environment_action = Some(EnvironmentAction {
+            environment: Some(environment),
+            catalog_reference: None,
+        });
         self
     }
 
     /// Add an environment action with default environment
     pub fn add_default_environment_action(mut self) -> Self {
         self.environment_action = Some(EnvironmentAction {
-            environment: Environment::default(),
+            environment: Some(Environment {
+                name: crate::types::basic::OSString::literal("DefaultEnvironment".to_string()),
+                parameter_declarations: None,
+                time_of_day: None,
+                weather: None,
+                road_condition: None,
+            }),
+            catalog_reference: None,
         });
         self
     }

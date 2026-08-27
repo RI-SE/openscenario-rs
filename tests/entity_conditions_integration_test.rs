@@ -10,7 +10,7 @@ use openscenario_rs::types::{
         RelativeDistanceCondition,
     },
     enums::{RelativeDistanceType, Rule},
-    positions::Position,
+    positions::{Position, WorldPosition},
     scenario::triggers::TriggeringEntities,
 };
 
@@ -36,7 +36,10 @@ fn test_by_entity_condition_speed() {
 #[test]
 fn test_by_entity_condition_reach_position() {
     let triggering_entities = TriggeringEntities::default();
-    let position = Position::default();
+    let position = Position {
+        world_position: Some(WorldPosition::new(100.0, 200.0)),
+        ..Default::default()
+    };
     let reach_condition = ByEntityCondition::reach_position(triggering_entities, position, 3.0);
 
     match reach_condition.entity_condition {

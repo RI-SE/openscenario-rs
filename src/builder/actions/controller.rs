@@ -86,6 +86,7 @@ impl ActionBuilder for ActivateControllerActionBuilder {
             longitudinal: Some(Boolean::literal(self.longitudinal)),
             lighting: Some(Boolean::literal(self.lighting)),
             animation: Some(Boolean::literal(self.animation)),
+            ..Default::default()
         };
 
         Ok(PrivateAction::ControllerAction(ControllerAction {

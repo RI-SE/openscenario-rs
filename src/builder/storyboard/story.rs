@@ -308,14 +308,14 @@ impl<'parent> ActBuilder<'parent> {
         if self.maneuver_groups.is_empty() {
             self.maneuver_groups.push(ManeuverGroup {
                 name: OSString::literal(format!("{}_Group", self.name)),
-                maximum_execution_count: Some(UnsignedInt::literal(1)),
+                maximum_execution_count: UnsignedInt::literal(1),
                 actors: Actors {
-                    select_triggering_entities: Some(false),
+                    select_triggering_entities: false,
                     entity_refs: vec![crate::types::scenario::story::EntityRef {
                         entity_ref: crate::types::basic::Value::literal(entity_ref.to_string()),
                     }],
                 },
-                catalog_reference: None,
+                catalog_reference: Vec::new(),
                 maneuvers: Vec::new(),
             });
         } else {
@@ -403,14 +403,14 @@ impl DetachedActBuilder {
         if self.maneuver_groups.is_empty() {
             self.maneuver_groups.push(ManeuverGroup {
                 name: OSString::literal(format!("{}_Group", self.name)),
-                maximum_execution_count: Some(UnsignedInt::literal(1)),
+                maximum_execution_count: UnsignedInt::literal(1),
                 actors: Actors {
-                    select_triggering_entities: Some(false),
+                    select_triggering_entities: false,
                     entity_refs: vec![crate::types::scenario::story::EntityRef {
                         entity_ref: crate::types::basic::Value::literal(entity_ref.to_string()),
                     }],
                 },
-                catalog_reference: None,
+                catalog_reference: Vec::new(),
                 maneuvers: Vec::new(),
             });
         } else {
@@ -454,14 +454,14 @@ impl DetachedActBuilder {
         if self.maneuver_groups.is_empty() {
             self.maneuver_groups.push(ManeuverGroup {
                 name: OSString::literal(format!("{}_Group", self.name)),
-                maximum_execution_count: Some(UnsignedInt::literal(1)),
+                maximum_execution_count: UnsignedInt::literal(1),
                 actors: Actors {
-                    select_triggering_entities: Some(false),
+                    select_triggering_entities: false,
                     entity_refs: vec![crate::types::scenario::story::EntityRef {
                         entity_ref: crate::types::basic::Value::literal(entity_ref.to_string()),
                     }],
                 },
-                catalog_reference: None,
+                catalog_reference: Vec::new(),
                 maneuvers: Vec::new(),
             });
         } else {

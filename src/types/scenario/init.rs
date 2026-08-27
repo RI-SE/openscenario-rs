@@ -41,11 +41,21 @@ pub struct GlobalAction {
     // EntityAction and InfrastructureAction can be added later as Option fields
 }
 
-/// Environment setup action containing complete environment definition
+/// Environment setup action: XSD choice of an inline Environment or a CatalogReference
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct EnvironmentAction {
-    #[serde(rename = "Environment")]
-    pub environment: Environment,
+    #[serde(rename = "Environment", default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<Environment>,
+    #[serde(
+        rename = "CatalogReference",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub catalog_reference: Option<
+        crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::entities::CatalogEnvironment,
+        >,
+    >,
 }
 
 /// Private actions specific to individual entities
@@ -245,7 +255,7 @@ pub enum LongitudinalActionType {
 impl Default for GlobalAction {
     fn default() -> Self {
         Self {
-            environment_action: Some(EnvironmentAction::default()),
+            environment_action: None,
         }
     }
 }
@@ -287,7 +297,14 @@ mod tests {
             actions: Actions {
                 global_actions: vec![GlobalAction {
                     environment_action: Some(EnvironmentAction {
-                        environment: Environment::default(),
+                        environment: Some(Environment {
+                            name: Value::literal("TestEnvironment".to_string()),
+                            parameter_declarations: None,
+                            time_of_day: None,
+                            weather: None,
+                            road_condition: None,
+                        }),
+                        catalog_reference: None,
                     }),
                 }],
                 private_actions: vec![Private::new("Ego")],
@@ -348,23 +365,42 @@ mod tests {
     #[test]
     fn test_environment_action_creation() {
         let env_action = EnvironmentAction {
-            environment: Environment {
+            environment: Some(Environment {
                 name: Value::literal("TestEnvironment".to_string()),
-                time_of_day: TimeOfDay {
+                parameter_declarations: None,
+                time_of_day: Some(TimeOfDay {
                     animation: Value::literal(false),
                     date_time: "2021-12-10T11:00:00".to_string(),
-                },
-                weather: Weather::default(),
-                road_condition: RoadCondition::default(),
-            },
+                }),
+                weather: Some(Weather::default()),
+                road_condition: Some(RoadCondition {
+                    friction_scale_factor: crate::types::basic::Double::literal(1.0),
+                    wetness: None,
+                    properties: None,
+                }),
+            }),
+            catalog_reference: None,
         };
 
         assert_eq!(
-            env_action.environment.name.as_literal().unwrap(),
+            env_action
+                .environment
+                .as_ref()
+                .unwrap()
+                .name
+                .as_literal()
+                .unwrap(),
             "TestEnvironment"
         );
         assert_eq!(
-            env_action.environment.time_of_day.date_time,
+            env_action
+                .environment
+                .as_ref()
+                .unwrap()
+                .time_of_day
+                .as_ref()
+                .unwrap()
+                .date_time,
             "2021-12-10T11:00:00"
         );
     }
@@ -374,7 +410,16 @@ mod tests {
         let init = Init {
             actions: Actions {
                 global_actions: vec![GlobalAction {
-                    environment_action: Some(EnvironmentAction::default()),
+                    environment_action: Some(EnvironmentAction {
+                        environment: Some(Environment {
+                            name: Value::literal("TestEnvironment".to_string()),
+                            parameter_declarations: None,
+                            time_of_day: None,
+                            weather: None,
+                            road_condition: None,
+                        }),
+                        catalog_reference: None,
+                    }),
                 }],
                 private_actions: vec![Private::new("Ego")],
             },

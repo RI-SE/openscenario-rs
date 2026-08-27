@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 /// Trajectory definition with shape and parameters
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Trajectory {
-    /// Name of the trajectory — XSD attribute `name` (required in spec, kept Option for compat)
-    #[serde(rename = "@name", default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<OSString>,
-    /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`
-    #[serde(rename = "@closed", default, skip_serializing_if = "Option::is_none")]
-    pub closed: Option<bool>,
+    /// Name of the trajectory — XSD attribute `name`, `use="required"`
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`, `use="required"`
+    #[serde(rename = "@closed")]
+    pub closed: bool,
     /// Shape definition of the trajectory — XSD child element `<Shape>`
     #[serde(rename = "Shape")]
     pub shape: TrajectoryShape,
@@ -52,15 +52,28 @@ pub struct Clothoid {
     /// Curvature at start
     #[serde(rename = "@curvature")]
     pub curvature: Double,
-    /// Curvature derivative (clothoid parameter)
-    #[serde(rename = "@curvatureDot")]
-    pub curvature_dot: Double,
+    /// Curvature derivative (clothoid parameter) — deprecated, use `curvature_prime`
+    #[serde(rename = "@curvatureDot", default, skip_serializing_if = "Option::is_none")]
+    pub curvature_dot: Option<Double>,
+    /// Curvature derivative (current replacement for `curvatureDot`)
+    #[serde(
+        rename = "@curvaturePrime",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub curvature_prime: Option<Double>,
     /// Length of the clothoid
     #[serde(rename = "@length")]
     pub length: Double,
-    /// Start position
-    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
-    pub start_position: Option<crate::types::positions::Position>,
+    /// Start time
+    #[serde(rename = "@startTime", default, skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<Double>,
+    /// Stop time
+    #[serde(rename = "@stopTime", default, skip_serializing_if = "Option::is_none")]
+    pub stop_time: Option<Double>,
+    /// Start position — required per XSD (`<xsd:sequence>` mandates exactly one `<Position>` child)
+    #[serde(rename = "Position")]
+    pub start_position: crate::types::positions::Position,
 }
 
 /// Trajectory following mode
@@ -146,8 +159,8 @@ impl Default for TrajectoryPosition {
 impl Default for Trajectory {
     fn default() -> Self {
         Self {
-            name: None,
-            closed: None,
+            name: OSString::literal(String::new()),
+            closed: false,
             shape: TrajectoryShape::Polyline(Polyline { vertex: Vec::new() }),
         }
     }
@@ -184,8 +197,8 @@ mod tests {
     #[test]
     fn test_trajectory_default_is_empty_polyline() {
         let traj = Trajectory::default();
-        assert!(traj.name.is_none());
-        assert!(traj.closed.is_none());
+        assert_eq!(traj.name.as_literal(), Some(&String::new()));
+        assert!(!traj.closed);
         match &traj.shape {
             TrajectoryShape::Polyline(p) => assert!(p.vertex.is_empty()),
             _ => panic!("Expected Polyline shape"),
@@ -236,7 +249,7 @@ mod tests {
         let vertex = Vertex {
             time: None,
             position: Position {
-                world_position: Some(WorldPosition::default()),
+                world_position: Some(WorldPosition::new(0.0, 0.0)),
                 ..Position::empty()
             },
         };
@@ -287,12 +300,15 @@ mod tests {
 
         let clothoid = Clothoid {
             curvature: Double::literal(0.1),
-            curvature_dot: Double::literal(0.01),
+            curvature_dot: Some(Double::literal(0.01)),
+            curvature_prime: None,
             length: Double::literal(50.0),
-            start_position: Some(Position {
+            start_time: None,
+            stop_time: None,
+            start_position: Position {
                 world_position: Some(WorldPosition::new(1.0, 2.0)),
                 ..Position::empty()
-            }),
+            },
         };
         let xml = quick_xml::se::to_string(&clothoid).unwrap();
         assert!(xml.contains(r#"curvature="0.1""#),    "serialized: {xml}");
@@ -304,17 +320,26 @@ mod tests {
         assert_eq!(clothoid, deserialized);
     }
 
-    /// Clothoid without a start position must not emit a Position element.
+    /// Clothoid without curvatureDot must not emit a curvatureDot attribute,
+    /// and the required Position element must still round-trip.
     #[test]
     fn test_clothoid_no_position_not_serialized() {
+        use crate::types::positions::{Position, WorldPosition};
+
         let clothoid = Clothoid {
             curvature: Double::literal(0.2),
-            curvature_dot: Double::literal(0.0),
+            curvature_dot: None,
+            curvature_prime: None,
             length: Double::literal(10.0),
-            start_position: None,
+            start_time: None,
+            stop_time: None,
+            start_position: Position {
+                world_position: Some(WorldPosition::new(0.0, 0.0)),
+                ..Position::empty()
+            },
         };
         let xml = quick_xml::se::to_string(&clothoid).unwrap();
-        assert!(!xml.contains("<Position"), "Position element must be absent: {xml}");
+        assert!(!xml.contains("curvatureDot"), "curvatureDot attr must be absent: {xml}");
         let deserialized: Clothoid = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(clothoid, deserialized);
     }

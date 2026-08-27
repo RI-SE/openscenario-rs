@@ -9,7 +9,7 @@ fn test_event_multiple_actions_struct() {
     let event = Event {
         name: Value::literal("MultiActionEvent".to_string()),
         maximum_execution_count: Some(Value::literal(1)),
-        priority: Some(Priority::Override),
+        priority: Priority::Override,
         actions: vec![
             StoryAction {
                 name: Value::literal("Action1".to_string()),
@@ -82,7 +82,7 @@ fn test_event_serialization_with_multiple_actions() {
     let event = Event {
         name: Value::literal("TestEvent".to_string()),
         maximum_execution_count: None,
-        priority: Some(Priority::Parallel),
+        priority: Priority::Parallel,
         actions: vec![
             StoryAction {
                 name: Value::literal("FirstAction".to_string()),

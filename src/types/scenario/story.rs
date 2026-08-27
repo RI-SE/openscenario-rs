@@ -67,7 +67,18 @@ pub struct StoryPrivateAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CatalogReference;
+pub struct CatalogReference {
+    #[serde(rename = "@catalogName")]
+    pub catalog_name: OSString,
+    #[serde(rename = "@entryName")]
+    pub entry_name: OSString,
+    #[serde(
+        rename = "ParameterAssignments",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_assignments: Option<crate::types::controllers::ParameterAssignments>,
+}
 
 /// Story definition with parameter scope and act sequences
 ///
@@ -125,19 +136,16 @@ pub struct ManeuverGroup {
     pub name: OSString,
 
     /// Maximum number of times this group can execute
-    #[serde(
-        rename = "@maximumExecutionCount",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub maximum_execution_count: Option<UnsignedInt>,
+    #[serde(rename = "@maximumExecutionCount")]
+    pub maximum_execution_count: UnsignedInt,
 
     /// Actors (entities) assigned to this maneuver group
     #[serde(rename = "Actors")]
     pub actors: Actors,
 
-    /// Optional catalog reference instead of direct maneuvers
-    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub catalog_reference: Option<CatalogReference>,
+    /// Optional catalog references instead of direct maneuvers
+    #[serde(rename = "CatalogReference", default, skip_serializing_if = "Vec::is_empty")]
+    pub catalog_reference: Vec<CatalogReference>,
 
     /// Direct maneuver definitions
     #[serde(rename = "Maneuver")]
@@ -184,8 +192,8 @@ pub struct Event {
     pub maximum_execution_count: Option<UnsignedInt>,
 
     /// Priority of this event
-    #[serde(rename = "@priority", skip_serializing_if = "Option::is_none")]
-    pub priority: Option<Priority>,
+    #[serde(rename = "@priority")]
+    pub priority: Priority,
 
     /// The actions to execute when this event triggers
     #[serde(rename = "Action")]
@@ -203,11 +211,8 @@ pub struct Event {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Actors {
     /// Whether to select entities that triggered the maneuver group
-    #[serde(
-        rename = "@selectTriggeringEntities",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub select_triggering_entities: Option<bool>,
+    #[serde(rename = "@selectTriggeringEntities")]
+    pub select_triggering_entities: bool,
 
     /// Direct entity references for actors
     #[serde(rename = "EntityRef")]
@@ -279,9 +284,9 @@ impl Default for ManeuverGroup {
     fn default() -> Self {
         Self {
             name: OSString::literal("DefaultManeuverGroup".to_string()),
-            maximum_execution_count: None,
+            maximum_execution_count: UnsignedInt::literal(1),
             actors: Actors::default(),
-            catalog_reference: None,
+            catalog_reference: Vec::new(),
             maneuvers: Vec::new(),
         }
     }
@@ -302,7 +307,7 @@ impl Default for Event {
         Self {
             name: OSString::literal("DefaultEvent".to_string()),
             maximum_execution_count: None,
-            priority: None,
+            priority: Priority::Overwrite,
             actions: vec![StoryAction::default()],
             start_trigger: None,
         }
@@ -351,7 +356,7 @@ mod tests {
     #[test]
     fn test_maneuver_group_with_actors() {
         let actors = Actors {
-            select_triggering_entities: Some(true),
+            select_triggering_entities: true,
             entity_refs: vec![
                 EntityRef {
                     entity_ref: Value::literal("Ego".to_string()),
@@ -364,9 +369,9 @@ mod tests {
 
         let maneuver_group = ManeuverGroup {
             name: Value::literal("TestGroup".to_string()),
-            maximum_execution_count: Some(Value::literal(3)),
+            maximum_execution_count: Value::literal(3),
             actors,
-            catalog_reference: None,
+            catalog_reference: Vec::new(),
             maneuvers: vec![Maneuver::default()],
         };
 
@@ -374,14 +379,12 @@ mod tests {
         assert_eq!(
             maneuver_group
                 .maximum_execution_count
-                .as_ref()
-                .unwrap()
                 .as_literal()
                 .unwrap(),
             &3
         );
         assert_eq!(maneuver_group.actors.entity_refs.len(), 2);
-        assert_eq!(maneuver_group.actors.select_triggering_entities, Some(true));
+        assert_eq!(maneuver_group.actors.select_triggering_entities, true);
     }
 
     #[test]
@@ -393,14 +396,14 @@ mod tests {
                 Event {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
-                    priority: Some(Priority::Override),
+                    priority: Priority::Override,
                     actions: vec![StoryAction::default()],
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
-                    priority: None,
+                    priority: Priority::Overwrite,
                     actions: vec![StoryAction::default()],
                     start_trigger: None,
                 },
@@ -418,7 +421,7 @@ mod tests {
         let event = Event {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
-            priority: Some(Priority::Parallel),
+            priority: Priority::Parallel,
             actions: vec![StoryAction::default()],
             start_trigger: None,
         };
@@ -433,19 +436,19 @@ mod tests {
                 .unwrap(),
             &5
         );
-        assert_eq!(event.priority.as_ref().unwrap(), &Priority::Parallel);
+        assert_eq!(event.priority, Priority::Parallel);
     }
 
     #[test]
     fn test_actors_entity_selection() {
         let actors = Actors {
-            select_triggering_entities: Some(false),
+            select_triggering_entities: false,
             entity_refs: vec![EntityRef {
                 entity_ref: Value::literal("Vehicle1".to_string()),
             }],
         };
 
-        assert_eq!(actors.select_triggering_entities, Some(false));
+        assert_eq!(actors.select_triggering_entities, false);
         assert_eq!(actors.entity_refs.len(), 1);
         assert_eq!(
             actors.entity_refs[0].entity_ref.as_literal().unwrap(),
@@ -458,5 +461,31 @@ mod tests {
         let story = ScenarioStory::default();
         let serialized = quick_xml::se::to_string(&story).expect("Serialization should succeed");
         assert!(serialized.contains("DefaultStory"));
+    }
+
+    #[test]
+    fn test_event_missing_priority_fails() {
+        let xml = r#"<Event name="TestEvent">
+            <Action name="Action1">
+                <PrivateAction/>
+            </Action>
+        </Event>"#;
+        let result = quick_xml::de::from_str::<Event>(xml);
+        assert!(
+            result.is_err(),
+            "Event without @priority must fail to parse since it is required by the XSD"
+        );
+    }
+
+    #[test]
+    fn test_event_with_priority_succeeds() {
+        let xml = r#"<Event name="TestEvent" priority="override">
+            <Action name="Action1">
+                <PrivateAction/>
+            </Action>
+        </Event>"#;
+        let result = quick_xml::de::from_str::<Event>(xml);
+        assert!(result.is_ok(), "Event with @priority should parse: {:?}", result.err());
+        assert_eq!(result.unwrap().priority, Priority::Override);
     }
 }

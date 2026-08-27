@@ -19,6 +19,14 @@ A Rust library for parsing, validating, and manipulating [OpenSCENARIO](https://
 - Optional builder API for programmatic scenario construction (`--features builder`)
 - CLI tools: `xosc-validate`, `scenario_analyzer`
 
+## Supported OpenSCENARIO version
+
+This crate targets **OpenSCENARIO 1.3**, as defined by the bundled schema in
+[`Schema/OpenSCENARIO.xsd`](Schema/OpenSCENARIO.xsd) (1.4 support is planned). Field
+optionality follows the XSD: attributes and elements the schema marks optional are `Option<T>`
+in the Rust model, and no default values are invented beyond what the schema defines. Known
+remaining gaps against the XSD are tracked in [docs/xsd_gaps.md](docs/xsd_gaps.md).
+
 ## Status
 
 Core parsing and serialization is functional. Actions and conditions have broad but not complete coverage — see the implementation table in [docs/user_guide.md](docs/user_guide.md) for details.

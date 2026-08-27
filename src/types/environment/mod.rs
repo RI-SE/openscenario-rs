@@ -7,7 +7,7 @@
 //! - Road conditions with friction and surface properties
 //! - Integration with rendering and physics systems
 //!
-use crate::types::basic::{Boolean, OSString};
+use crate::types::basic::{Boolean, OSString, ParameterDeclarations};
 use serde::{Deserialize, Serialize};
 
 pub mod road;
@@ -21,12 +21,22 @@ pub use weather::*;
 pub struct Environment {
     #[serde(rename = "@name")]
     pub name: OSString,
-    #[serde(rename = "TimeOfDay")]
-    pub time_of_day: TimeOfDay,
-    #[serde(rename = "Weather")]
-    pub weather: Weather,
-    #[serde(rename = "RoadCondition")]
-    pub road_condition: RoadCondition,
+    #[serde(
+        rename = "ParameterDeclarations",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_declarations: Option<ParameterDeclarations>,
+    #[serde(rename = "TimeOfDay", default, skip_serializing_if = "Option::is_none")]
+    pub time_of_day: Option<TimeOfDay>,
+    #[serde(rename = "Weather", default, skip_serializing_if = "Option::is_none")]
+    pub weather: Option<Weather>,
+    #[serde(
+        rename = "RoadCondition",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub road_condition: Option<RoadCondition>,
 }
 
 /// Time of day settings for lighting and animation
@@ -38,26 +48,6 @@ pub struct TimeOfDay {
     pub date_time: String, // ISO 8601 datetime format: "2021-12-10T11:00:00"
 }
 
-impl Default for Environment {
-    fn default() -> Self {
-        Self {
-            name: crate::types::basic::Value::literal("DefaultEnvironment".to_string()),
-            time_of_day: TimeOfDay::default(),
-            weather: Weather::default(),
-            road_condition: RoadCondition::default(),
-        }
-    }
-}
-
-impl Default for TimeOfDay {
-    fn default() -> Self {
-        Self {
-            animation: crate::types::basic::Value::literal(false),
-            date_time: "2021-01-01T12:00:00".to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,26 +57,44 @@ mod tests {
     fn test_environment_creation() {
         let environment = Environment {
             name: Value::literal("TestEnvironment".to_string()),
-            time_of_day: TimeOfDay {
+            parameter_declarations: None,
+            time_of_day: Some(TimeOfDay {
                 animation: Value::literal(false),
                 date_time: "2021-12-10T11:00:00".to_string(),
-            },
-            weather: Weather::default(),
-            road_condition: RoadCondition::default(),
+            }),
+            weather: Some(Weather::default()),
+            road_condition: Some(RoadCondition {
+                friction_scale_factor: crate::types::basic::Double::literal(1.0),
+                wetness: None,
+                properties: None,
+            }),
         };
 
         assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
-        assert_eq!(environment.time_of_day.date_time, "2021-12-10T11:00:00");
-        assert!(!environment.time_of_day.animation.as_literal().unwrap());
+        assert_eq!(
+            environment.time_of_day.as_ref().unwrap().date_time,
+            "2021-12-10T11:00:00"
+        );
+        assert!(
+            !environment
+                .time_of_day
+                .as_ref()
+                .unwrap()
+                .animation
+                .as_literal()
+                .unwrap()
+        );
     }
 
     #[test]
-    fn test_environment_default() {
-        let environment = Environment::default();
-
-        assert_eq!(environment.name.as_literal().unwrap(), "DefaultEnvironment");
-        assert_eq!(environment.time_of_day.date_time, "2021-01-01T12:00:00");
-        assert!(!environment.time_of_day.animation.as_literal().unwrap());
+    fn test_environment_minimal() {
+        let xml = r#"<Environment name="e"/>"#;
+        let environment: Environment = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(environment.name.as_literal().unwrap(), "e");
+        assert!(environment.parameter_declarations.is_none());
+        assert!(environment.time_of_day.is_none());
+        assert!(environment.weather.is_none());
+        assert!(environment.road_condition.is_none());
     }
 
     #[test]
@@ -105,12 +113,17 @@ mod tests {
     fn test_environment_serialization() {
         let environment = Environment {
             name: Value::literal("TestEnvironment".to_string()),
-            time_of_day: TimeOfDay {
+            parameter_declarations: None,
+            time_of_day: Some(TimeOfDay {
                 animation: Value::literal(false),
                 date_time: "2021-12-10T11:00:00".to_string(),
-            },
-            weather: Weather::default(),
-            road_condition: RoadCondition::default(),
+            }),
+            weather: Some(Weather::default()),
+            road_condition: Some(RoadCondition {
+                friction_scale_factor: crate::types::basic::Double::literal(1.0),
+                wetness: None,
+                properties: None,
+            }),
         };
 
         let serialized = quick_xml::se::to_string(&environment).unwrap();

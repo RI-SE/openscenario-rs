@@ -43,8 +43,8 @@ fn test_trajectory_position_default() {
 #[test]
 fn test_geographic_position_new() {
     let position = GeographicPosition::new(37.7749, -122.4194); // San Francisco
-    assert_eq!(position.latitude, Double::literal(37.7749));
-    assert_eq!(position.longitude, Double::literal(-122.4194));
+    assert_eq!(position.latitude, Some(Double::literal(37.7749)));
+    assert_eq!(position.longitude, Some(Double::literal(-122.4194)));
     assert_eq!(position.height, None);
     assert_eq!(position.orientation, None);
 }
@@ -52,8 +52,8 @@ fn test_geographic_position_new() {
 #[test]
 fn test_geographic_position_with_height() {
     let position = GeographicPosition::with_height(40.7128, -74.0060, 10.0); // NYC with height
-    assert_eq!(position.latitude, Double::literal(40.7128));
-    assert_eq!(position.longitude, Double::literal(-74.0060));
+    assert_eq!(position.latitude, Some(Double::literal(40.7128)));
+    assert_eq!(position.longitude, Some(Double::literal(-74.0060)));
     assert_eq!(position.height, Some(Double::literal(10.0)));
     assert_eq!(position.orientation, None);
 }
@@ -61,8 +61,8 @@ fn test_geographic_position_with_height() {
 #[test]
 fn test_geographic_position_default() {
     let position = GeographicPosition::default();
-    assert_eq!(position.latitude, Double::literal(0.0));
-    assert_eq!(position.longitude, Double::literal(0.0));
+    assert_eq!(position.latitude, Some(Double::literal(0.0)));
+    assert_eq!(position.longitude, Some(Double::literal(0.0)));
     assert_eq!(position.height, None);
     assert_eq!(position.orientation, None);
 }
@@ -204,7 +204,7 @@ fn test_advanced_positions_completeness() {
 
     // Verify they have all expected methods
     assert_eq!(_trajectory.s, Double::literal(0.0));
-    assert_eq!(_geographic.latitude, Double::literal(0.0));
+    assert_eq!(_geographic.latitude, Some(Double::literal(0.0)));
     assert_eq!(_relative_object.dx, Double::literal(0.0));
 }
 
@@ -223,7 +223,7 @@ fn test_complex_positioning_scenarios() {
 
     // Verify all complex scenarios work
     assert_eq!(complex_trajectory.s, Double::literal(500.0));
-    assert_eq!(complex_geographic.latitude, Double::literal(59.9311));
+    assert_eq!(complex_geographic.latitude, Some(Double::literal(59.9311)));
     assert_eq!(
         complex_relative.entity_ref,
         OSString::literal("convoy_leader".to_string())

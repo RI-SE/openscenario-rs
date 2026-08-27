@@ -844,15 +844,29 @@ mod tests {
             date: Value::literal("2024-01-01T00:00:00".to_string()),
             description: Value::literal("Test scenario".to_string()),
             author: Value::literal("Test Author".to_string()),
+            license: None,
+            properties: None,
         };
 
         let vehicle = Vehicle {
             name: Value::literal("TestVehicle".to_string()),
             vehicle_category: VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Default::default(),
+            performance: crate::types::entities::vehicle::Performance {
+                max_speed: Value::literal(200.0),
+                max_acceleration: Value::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Value::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Default::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         let entities = Entities {
@@ -908,15 +922,29 @@ mod tests {
             date: Value::literal("2024-01-01T00:00:00".to_string()),
             description: Value::literal("Test scenario".to_string()),
             author: Value::literal("".to_string()), // Empty author
+            license: None,
+            properties: None,
         };
 
         let vehicle = Vehicle {
             name: Value::literal("TestVehicle".to_string()),
             vehicle_category: VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Default::default(),
+            performance: crate::types::entities::vehicle::Performance {
+                max_speed: Value::literal(200.0),
+                max_acceleration: Value::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Value::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Default::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         let entities = Entities {
@@ -968,19 +996,43 @@ mod tests {
         let vehicle1 = Vehicle {
             name: Value::literal("Car1".to_string()),
             vehicle_category: VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Default::default(),
+            performance: crate::types::entities::vehicle::Performance {
+                max_speed: Value::literal(200.0),
+                max_acceleration: Value::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Value::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Default::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         let vehicle2 = Vehicle {
             name: Value::literal("Car1".to_string()), // Duplicate name
             vehicle_category: VehicleCategory::Truck,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: BoundingBox::default(),
-            performance: Default::default(),
+            performance: crate::types::entities::vehicle::Performance {
+                max_speed: Value::literal(200.0),
+                max_acceleration: Value::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: Value::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Default::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         let entities = Entities {
@@ -1019,6 +1071,8 @@ mod tests {
                 description: Value::literal("Test scenario".to_string()),
                 rev_major: Value::literal(1),
                 rev_minor: Value::literal(2),
+                license: None,
+                properties: None,
             },
             parameter_declarations: None,
             variable_declarations: None,
@@ -1068,10 +1122,22 @@ mod tests {
         let vehicle = crate::types::entities::vehicle::Vehicle {
             name: crate::types::basic::Value::literal("TestCar".to_string()),
             vehicle_category: crate::types::enums::VehicleCategory::Car,
+            role: None,
+            mass: None,
+            model3d: None,
+            parameter_declarations: None,
             bounding_box: crate::types::geometry::BoundingBox::default(),
-            performance: Default::default(),
+            performance: crate::types::entities::vehicle::Performance {
+                max_speed: crate::types::basic::Value::literal(200.0),
+                max_acceleration: crate::types::basic::Value::literal(10.0),
+                max_acceleration_rate: None,
+                max_deceleration: crate::types::basic::Value::literal(10.0),
+                max_deceleration_rate: None,
+            },
             axles: Default::default(),
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
         };
 
         let scenario_object = crate::types::entities::ScenarioObject {

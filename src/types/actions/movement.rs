@@ -456,8 +456,8 @@ pub struct LongitudinalDistanceAction {
     #[serde(rename = "@displacement", skip_serializing_if = "Option::is_none")]
     pub displacement: Option<OSString>,
 
-    #[serde(rename = "@freespace", skip_serializing_if = "Option::is_none")]
-    pub freespace: Option<Boolean>,
+    #[serde(rename = "@freespace")]
+    pub freespace: Boolean,
     #[serde(rename = "@continuous")]
     pub continuous: Boolean,
     #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
@@ -478,8 +478,8 @@ pub struct SpeedProfileAction {
 /// Speed profile entry with time and speed
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedProfileEntry {
-    #[serde(rename = "@time")]
-    pub time: Double,
+    #[serde(rename = "@time", default, skip_serializing_if = "Option::is_none")]
+    pub time: Option<Double>,
     #[serde(rename = "@speed")]
     pub speed: Double,
 }
@@ -488,9 +488,15 @@ pub struct SpeedProfileEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct DynamicConstraints {
-    #[serde(rename = "@maxLateralAcc", skip_serializing_if = "Option::is_none")]
-    pub max_lateral_acc: Option<Double>,
-    #[serde(rename = "@maxSpeed", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "@maxAcceleration", default, skip_serializing_if = "Option::is_none")]
+    pub max_acceleration: Option<Double>,
+    #[serde(rename = "@maxAccelerationRate", default, skip_serializing_if = "Option::is_none")]
+    pub max_acceleration_rate: Option<Double>,
+    #[serde(rename = "@maxDeceleration", default, skip_serializing_if = "Option::is_none")]
+    pub max_deceleration: Option<Double>,
+    #[serde(rename = "@maxDecelerationRate", default, skip_serializing_if = "Option::is_none")]
+    pub max_deceleration_rate: Option<Double>,
+    #[serde(rename = "@maxSpeed", default, skip_serializing_if = "Option::is_none")]
     pub max_speed: Option<Double>,
 }
 
@@ -1110,7 +1116,7 @@ impl Default for LongitudinalDistanceAction {
             time_gap: None,
             coordinate_system: None,
             displacement: None,
-            freespace: Some(Boolean::literal(true)),
+            freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
             dynamic_constraints: None,
         }
@@ -1130,7 +1136,7 @@ impl Default for SpeedProfileAction {
 impl Default for SpeedProfileEntry {
     fn default() -> Self {
         Self {
-            time: Double::literal(0.0),
+            time: Some(Double::literal(0.0)),
             speed: Double::literal(10.0),
         }
     }
@@ -1452,8 +1458,9 @@ mod tests {
             freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
             dynamic_constraints: Some(DynamicConstraints {
-                max_lateral_acc: Some(Double::literal(2.0)),
+                max_acceleration: Some(Double::literal(2.0)),
                 max_speed: Some(Double::literal(50.0)),
+                ..Default::default()
             }),
         };
 
@@ -1467,7 +1474,7 @@ mod tests {
 
         let constraints = action.dynamic_constraints.unwrap();
         assert_eq!(
-            constraints.max_lateral_acc.unwrap().as_literal(),
+            constraints.max_acceleration.unwrap().as_literal(),
             Some(&2.0)
         );
         assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&50.0));
@@ -1507,19 +1514,20 @@ mod tests {
     #[test]
     fn test_speed_profile_action_creation() {
         let entry1 = SpeedProfileEntry {
-            time: Double::literal(0.0),
+            time: Some(Double::literal(0.0)),
             speed: Double::literal(10.0),
         };
         let entry2 = SpeedProfileEntry {
-            time: Double::literal(5.0),
+            time: Some(Double::literal(5.0)),
             speed: Double::literal(20.0),
         };
 
         let action = SpeedProfileAction {
             entity_ref: Some(OSString::literal("RefEntity".to_string())),
             dynamic_constraints: Some(DynamicConstraints {
-                max_lateral_acc: Some(Double::literal(1.5)),
+                max_acceleration: Some(Double::literal(1.5)),
                 max_speed: Some(Double::literal(30.0)),
+                ..Default::default()
             }),
             entries: vec![entry1, entry2],
         };
@@ -1529,9 +1537,15 @@ mod tests {
             Some(&"RefEntity".to_string())
         );
         assert_eq!(action.entries.len(), 2);
-        assert_eq!(action.entries[0].time.as_literal(), Some(&0.0));
+        assert_eq!(
+            action.entries[0].time.as_ref().unwrap().as_literal(),
+            Some(&0.0)
+        );
         assert_eq!(action.entries[0].speed.as_literal(), Some(&10.0));
-        assert_eq!(action.entries[1].time.as_literal(), Some(&5.0));
+        assert_eq!(
+            action.entries[1].time.as_ref().unwrap().as_literal(),
+            Some(&5.0)
+        );
         assert_eq!(action.entries[1].speed.as_literal(), Some(&20.0));
     }
 
@@ -1580,19 +1594,43 @@ mod tests {
     #[test]
     fn test_dynamic_constraints_creation() {
         let constraints = DynamicConstraints {
-            max_lateral_acc: Some(Double::literal(3.0)),
+            max_acceleration: Some(Double::literal(3.0)),
+            max_deceleration: Some(Double::literal(4.0)),
             max_speed: Some(Double::literal(80.0)),
+            ..Default::default()
         };
 
         assert_eq!(
-            constraints.max_lateral_acc.unwrap().as_literal(),
+            constraints.max_acceleration.unwrap().as_literal(),
             Some(&3.0)
+        );
+        assert_eq!(
+            constraints.max_deceleration.unwrap().as_literal(),
+            Some(&4.0)
         );
         assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&80.0));
 
         let empty_constraints = DynamicConstraints::default();
-        assert!(empty_constraints.max_lateral_acc.is_none());
+        assert!(empty_constraints.max_acceleration.is_none());
+        assert!(empty_constraints.max_acceleration_rate.is_none());
+        assert!(empty_constraints.max_deceleration.is_none());
+        assert!(empty_constraints.max_deceleration_rate.is_none());
         assert!(empty_constraints.max_speed.is_none());
+    }
+
+    #[test]
+    fn test_dynamic_constraints_parse_absent_serialize_none() {
+        // Parsing an element with no attributes should produce all-None constraints.
+        let xml = r#"<DynamicConstraints/>"#;
+        let constraints: DynamicConstraints = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(constraints, DynamicConstraints::default());
+
+        // Serializing default constraints should not emit any attributes.
+        let serialized = quick_xml::se::to_string(&constraints).unwrap();
+        assert!(!serialized.contains("maxAcceleration"));
+        assert!(!serialized.contains("maxDeceleration"));
+        assert!(!serialized.contains("maxSpeed"));
+        assert!(!serialized.contains("maxLateralAcc"));
     }
 
     #[test]

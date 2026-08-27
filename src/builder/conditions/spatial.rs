@@ -104,7 +104,7 @@ impl DistanceConditionBuilder {
         Ok(Condition {
             name: OSString::literal("DistanceCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
@@ -226,7 +226,7 @@ impl RelativeDistanceConditionBuilder {
         Ok(Condition {
             name: OSString::literal("RelativeDistanceCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
@@ -294,7 +294,7 @@ impl CollisionConditionBuilder {
         Ok(Condition {
             name: OSString::literal("CollisionCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {

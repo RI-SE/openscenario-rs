@@ -131,6 +131,9 @@ impl PolylineBuilder {
         };
         self.parent.shape = Some(Shape {
             polyline: Some(polyline),
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: None,
         });
         self.parent
     }
@@ -456,7 +459,7 @@ mod tests {
         assert_eq!(vertices.len(), 3);
 
         // Check first vertex
-        assert_eq!(vertices[0].time.as_literal(), Some(&0.0));
+        assert_eq!(vertices[0].time.as_ref().unwrap().as_literal(), Some(&0.0));
         if let Some(ref pos) = vertices[0].position.world_position {
             assert_eq!(pos.x.as_literal(), Some(&0.0));
             assert_eq!(pos.y.as_literal(), Some(&0.0));
@@ -465,7 +468,7 @@ mod tests {
         }
 
         // Check last vertex
-        assert_eq!(vertices[2].time.as_literal(), Some(&2.0));
+        assert_eq!(vertices[2].time.as_ref().unwrap().as_literal(), Some(&2.0));
         if let Some(ref pos) = vertices[2].position.world_position {
             assert_eq!(pos.x.as_literal(), Some(&20.0));
             assert_eq!(pos.y.as_literal(), Some(&10.0));

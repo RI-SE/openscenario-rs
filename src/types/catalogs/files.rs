@@ -76,6 +76,8 @@ impl CatalogFile {
                 date: Value::Literal("2024-01-01T00:00:00".to_string()),
                 description: Value::Literal(description),
                 author: Value::Literal(author),
+                license: None,
+                properties: None,
             },
             catalog: CatalogContent {
                 name: Value::Literal(name),

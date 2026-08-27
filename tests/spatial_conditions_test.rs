@@ -204,7 +204,7 @@ fn test_relative_distance_condition_with_options() {
 fn test_spatial_condition_defaults() {
     let reach_pos = ReachPositionCondition::default();
     assert_eq!(reach_pos.tolerance, Double::literal(1.0));
-    assert!(reach_pos.position.world_position.is_some());
+    assert!(reach_pos.position.world_position.is_none());
 
     let distance = DistanceCondition::default();
     assert_eq!(distance.value, Double::literal(10.0));

@@ -273,8 +273,7 @@ mod condition_builder_tests {
         let time_condition = TimeConditionBuilder::new().at_time(5.0).build().unwrap();
 
         // Verify delay attribute is present with default value of 0.0
-        assert!(time_condition.delay.is_some());
-        assert_eq!(time_condition.delay.unwrap().as_literal().unwrap(), &0.0);
+        assert_eq!(time_condition.delay.as_literal().unwrap(), &0.0);
 
         let speed_condition = SpeedConditionBuilder::new()
             .for_entity("ego")
@@ -283,7 +282,6 @@ mod condition_builder_tests {
             .unwrap();
 
         // Verify delay attribute is present with default value of 0.0
-        assert!(speed_condition.delay.is_some());
-        assert_eq!(speed_condition.delay.unwrap().as_literal().unwrap(), &0.0);
+        assert_eq!(speed_condition.delay.as_literal().unwrap(), &0.0);
     }
 }

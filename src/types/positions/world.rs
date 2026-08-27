@@ -76,34 +76,45 @@ impl WorldPosition {
     }
 }
 
-impl Default for WorldPosition {
-    fn default() -> Self {
-        Self {
-            x: Double::literal(0.0),
-            y: Double::literal(0.0),
-            z: None,
-            h: None,
-            p: None,
-            r: None,
-        }
-    }
-}
-
-/// Geographic position using latitude/longitude coordinates
+/// Geographic position using latitude/longitude coordinates.
+///
+/// Corresponds to XSD complexType `GeoPosition`. `latitude`/`longitude`/`height`
+/// are deprecated in favor of `latitudeDeg`/`longitudeDeg`/`altitude`; all are
+/// optional per the XSD (none use `use="required"`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "GeographicPosition")]
 pub struct GeographicPosition {
-    /// Latitude in degrees
-    #[serde(rename = "@latitude")]
-    pub latitude: Double,
+    /// Latitude in degrees (deprecated — XSD attribute `latitude`)
+    #[serde(rename = "@latitude", default, skip_serializing_if = "Option::is_none")]
+    pub latitude: Option<Double>,
 
-    /// Longitude in degrees
-    #[serde(rename = "@longitude")]
-    pub longitude: Double,
+    /// Longitude in degrees (deprecated — XSD attribute `longitude`)
+    #[serde(rename = "@longitude", default, skip_serializing_if = "Option::is_none")]
+    pub longitude: Option<Double>,
 
-    /// Height above sea level in meters (optional)
-    #[serde(rename = "@height", skip_serializing_if = "Option::is_none")]
+    /// Height above sea level in meters (deprecated — XSD attribute `height`)
+    #[serde(rename = "@height", default, skip_serializing_if = "Option::is_none")]
     pub height: Option<Double>,
+
+    /// Latitude in degrees — XSD attribute `latitudeDeg` (current)
+    #[serde(rename = "@latitudeDeg", default, skip_serializing_if = "Option::is_none")]
+    pub latitude_deg: Option<Double>,
+
+    /// Longitude in degrees — XSD attribute `longitudeDeg` (current)
+    #[serde(rename = "@longitudeDeg", default, skip_serializing_if = "Option::is_none")]
+    pub longitude_deg: Option<Double>,
+
+    /// Altitude in meters — XSD attribute `altitude` (current)
+    #[serde(rename = "@altitude", default, skip_serializing_if = "Option::is_none")]
+    pub altitude: Option<Double>,
+
+    /// Vertical road selection — XSD attribute `verticalRoadSelection`
+    #[serde(
+        rename = "@verticalRoadSelection",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub vertical_road_selection: Option<crate::types::basic::Int>,
 
     /// Orientation in geographic coordinate system
     #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
@@ -112,11 +123,16 @@ pub struct GeographicPosition {
 
 impl GeographicPosition {
     /// Create a new geographic position with latitude and longitude
+    /// (uses the deprecated `latitude`/`longitude` attributes for backward compatibility)
     pub fn new(latitude: f64, longitude: f64) -> Self {
         Self {
-            latitude: Double::literal(latitude),
-            longitude: Double::literal(longitude),
+            latitude: Some(Double::literal(latitude)),
+            longitude: Some(Double::literal(longitude)),
             height: None,
+            latitude_deg: None,
+            longitude_deg: None,
+            altitude: None,
+            vertical_road_selection: None,
             orientation: None,
         }
     }
@@ -124,9 +140,13 @@ impl GeographicPosition {
     /// Create geographic position with height
     pub fn with_height(latitude: f64, longitude: f64, height: f64) -> Self {
         Self {
-            latitude: Double::literal(latitude),
-            longitude: Double::literal(longitude),
+            latitude: Some(Double::literal(latitude)),
+            longitude: Some(Double::literal(longitude)),
             height: Some(Double::literal(height)),
+            latitude_deg: None,
+            longitude_deg: None,
+            altitude: None,
+            vertical_road_selection: None,
             orientation: None,
         }
     }
@@ -157,9 +177,13 @@ impl GeographicPosition {
 impl Default for GeographicPosition {
     fn default() -> Self {
         Self {
-            latitude: Double::literal(0.0),
-            longitude: Double::literal(0.0),
+            latitude: Some(Double::literal(0.0)),
+            longitude: Some(Double::literal(0.0)),
             height: None,
+            latitude_deg: None,
+            longitude_deg: None,
+            altitude: None,
+            vertical_road_selection: None,
             orientation: None,
         }
     }
@@ -198,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_world_position_optional_fields_not_serialized() {
-        let pos = WorldPosition::default();
+        let pos = WorldPosition::new(0.0, 0.0);
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(!xml.contains("z="));
         assert!(!xml.contains("h="));
@@ -207,9 +231,35 @@ mod tests {
     #[test]
     fn test_geographic_position_new() {
         let pos = GeographicPosition::new(48.137, 11.576);
-        assert_eq!(pos.latitude.as_literal().unwrap(), &48.137);
-        assert_eq!(pos.longitude.as_literal().unwrap(), &11.576);
+        assert_eq!(pos.latitude.unwrap().as_literal().unwrap(), &48.137);
+        assert_eq!(pos.longitude.unwrap().as_literal().unwrap(), &11.576);
         assert!(pos.height.is_none());
+        assert!(pos.latitude_deg.is_none());
+    }
+
+    #[test]
+    fn test_geographic_position_deg_fields() {
+        let pos = GeographicPosition {
+            latitude_deg: Some(Double::literal(48.137)),
+            longitude_deg: Some(Double::literal(11.576)),
+            altitude: Some(Double::literal(500.0)),
+            ..GeographicPosition::default()
+        };
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(xml.contains("latitudeDeg=\"48.137\""), "serialized: {xml}");
+        assert!(xml.contains("longitudeDeg=\"11.576\""), "serialized: {xml}");
+        assert!(xml.contains("altitude=\"500\""), "serialized: {xml}");
+        let deserialized: GeographicPosition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+    }
+
+    #[test]
+    fn test_geographic_position_parse_without_lat_lon() {
+        let xml = r#"<GeographicPosition latitudeDeg="1" longitudeDeg="2"/>"#;
+        let pos: GeographicPosition = quick_xml::de::from_str(xml).unwrap();
+        assert!(pos.latitude.is_none());
+        assert!(pos.longitude.is_none());
+        assert_eq!(pos.latitude_deg.unwrap().as_literal().unwrap(), &1.0);
     }
 
     #[test]

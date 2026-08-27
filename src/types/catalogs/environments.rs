@@ -7,6 +7,7 @@ use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations,
 use crate::types::environment::{
     Environment, Fog, Precipitation, RoadCondition, Sun, TimeOfDay, Weather,
 };
+use crate::types::enums::{CloudState, FractionalCloudCover, Wetness};
 use serde::{Deserialize, Serialize};
 
 /// Environment catalog containing reusable environment definitions
@@ -56,34 +57,25 @@ pub struct CatalogEnvironment {
     )]
     pub parameter_declarations: Option<ParameterDeclarations>,
 
-    /// Time of day configuration (can be parameterized)
-    #[serde(rename = "TimeOfDay")]
-    pub time_of_day: CatalogTimeOfDay,
+    /// Time of day configuration (can be parameterized) — optional per XSD
+    #[serde(rename = "TimeOfDay", default, skip_serializing_if = "Option::is_none")]
+    pub time_of_day: Option<CatalogTimeOfDay>,
 
-    /// Weather conditions (can be parameterized)
-    #[serde(rename = "Weather")]
-    pub weather: CatalogWeather,
+    /// Weather conditions (can be parameterized) — optional per XSD
+    #[serde(rename = "Weather", default, skip_serializing_if = "Option::is_none")]
+    pub weather: Option<CatalogWeather>,
 
-    /// Road conditions (can be parameterized)
-    #[serde(rename = "RoadCondition")]
-    pub road_condition: CatalogRoadCondition,
+    /// Road conditions (can be parameterized) — optional per XSD
+    #[serde(
+        rename = "RoadCondition",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub road_condition: Option<CatalogRoadCondition>,
 
     /// Optional road network reference
     #[serde(rename = "RoadNetwork", skip_serializing_if = "Option::is_none")]
     pub road_network: Option<RoadNetworkReference>,
-}
-
-impl Default for CatalogEnvironment {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogEnvironment".to_string(),
-            parameter_declarations: None,
-            time_of_day: CatalogTimeOfDay::default(),
-            weather: CatalogWeather::default(),
-            road_condition: CatalogRoadCondition::default(),
-            road_network: None,
-        }
-    }
 }
 
 /// Time of day configuration with parameterizable properties
@@ -109,44 +101,62 @@ impl Default for CatalogTimeOfDay {
 }
 
 /// Weather conditions with parameterizable atmospheric properties
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename = "Weather")]
 pub struct CatalogWeather {
-    /// Cloud state (can be parameterized)
-    #[serde(rename = "@cloudState")]
-    pub cloud_state: OSString,
+    /// Cloud state (can be parameterized) — deprecated per XSD
+    #[serde(
+        rename = "@cloudState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[allow(deprecated)]
+    pub cloud_state: Option<CloudState>,
+
+    /// Atmospheric pressure in hPa (optional, can be parameterized)
+    #[serde(
+        rename = "@atmosphericPressure",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub atmospheric_pressure: Option<Double>,
+
+    /// Temperature in Kelvin (optional, can be parameterized)
+    #[serde(rename = "@temperature", default, skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<Double>,
+
+    /// Fractional cloud cover (optional)
+    #[serde(
+        rename = "FractionalCloudCover",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub fractional_cloud_cover: Option<FractionalCloudCover>,
 
     /// Sun lighting conditions
-    #[serde(rename = "Sun")]
-    pub sun: CatalogSun,
+    #[serde(rename = "Sun", default, skip_serializing_if = "Option::is_none")]
+    pub sun: Option<CatalogSun>,
 
     /// Fog conditions
-    #[serde(rename = "Fog")]
-    pub fog: CatalogFog,
+    #[serde(rename = "Fog", default, skip_serializing_if = "Option::is_none")]
+    pub fog: Option<CatalogFog>,
 
     /// Precipitation conditions
-    #[serde(rename = "Precipitation")]
-    pub precipitation: CatalogPrecipitation,
-}
-
-impl Default for CatalogWeather {
-    fn default() -> Self {
-        Self {
-            cloud_state: Value::Literal("free".to_string()),
-            sun: CatalogSun::default(),
-            fog: CatalogFog::default(),
-            precipitation: CatalogPrecipitation::default(),
-        }
-    }
+    #[serde(
+        rename = "Precipitation",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub precipitation: Option<CatalogPrecipitation>,
 }
 
 /// Sun lighting configuration with parameterizable properties
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Sun")]
 pub struct CatalogSun {
-    /// Light intensity (0.0-1.0, can be parameterized)
-    #[serde(rename = "@intensity")]
-    pub intensity: Double,
+    /// Light intensity (0.0-1.0, can be parameterized) — deprecated per XSD
+    #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
+    pub intensity: Option<Double>,
 
     /// Sun azimuth angle in radians (can be parameterized)
     #[serde(rename = "@azimuth")]
@@ -155,16 +165,10 @@ pub struct CatalogSun {
     /// Sun elevation angle in radians (can be parameterized)
     #[serde(rename = "@elevation")]
     pub elevation: Double,
-}
 
-impl Default for CatalogSun {
-    fn default() -> Self {
-        Self {
-            intensity: Value::Literal(1.0),
-            azimuth: Value::Literal(0.0),
-            elevation: Value::Literal(1.571), // π/2 radians (90 degrees)
-        }
-    }
+    /// Illuminance in lux (optional, current replacement for `intensity`)
+    #[serde(rename = "@illuminance", default, skip_serializing_if = "Option::is_none")]
+    pub illuminance: Option<Double>,
 }
 
 /// Fog conditions with parameterizable visibility
@@ -197,18 +201,17 @@ pub struct CatalogPrecipitation {
     #[serde(rename = "@precipitationType")]
     pub precipitation_type: OSString,
 
-    /// Precipitation intensity (0.0-1.0, can be parameterized)
-    #[serde(rename = "@intensity")]
-    pub intensity: Double,
-}
+    /// Precipitation intensity (0.0-1.0, can be parameterized) — deprecated per XSD
+    #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
+    pub intensity: Option<Double>,
 
-impl Default for CatalogPrecipitation {
-    fn default() -> Self {
-        Self {
-            precipitation_type: Value::Literal("dry".to_string()),
-            intensity: Value::Literal(0.0),
-        }
-    }
+    /// Precipitation intensity (current replacement for `intensity`)
+    #[serde(
+        rename = "@precipitationIntensity",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub precipitation_intensity: Option<Double>,
 }
 
 /// Road conditions with parameterizable surface properties
@@ -219,23 +222,17 @@ pub struct CatalogRoadCondition {
     #[serde(rename = "@frictionScaleFactor")]
     pub friction_scale_factor: Double,
 
-    /// Optional wetness factor (0.0-1.0, can be parameterized)
+    /// Optional wetness factor (can be parameterized)
     #[serde(rename = "@wetness", skip_serializing_if = "Option::is_none")]
-    pub wetness: Option<Double>,
+    pub wetness: Option<Wetness>,
 
-    /// Optional surface roughness (can be parameterized)
-    #[serde(rename = "@roughness", skip_serializing_if = "Option::is_none")]
-    pub roughness: Option<Double>,
-}
-
-impl Default for CatalogRoadCondition {
-    fn default() -> Self {
-        Self {
-            friction_scale_factor: Value::Literal(1.0), // Normal dry road conditions
-            wetness: None,
-            roughness: None,
-        }
-    }
+    /// Optional properties
+    #[serde(
+        rename = "Properties",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub properties: Option<crate::types::entities::vehicle::Properties>,
 }
 
 /// Reference to a road network file
@@ -301,9 +298,9 @@ impl CatalogEnvironment {
         Self {
             name,
             parameter_declarations: None,
-            time_of_day: CatalogTimeOfDay::default(),
-            weather: CatalogWeather::default(),
-            road_condition: CatalogRoadCondition::default(),
+            time_of_day: None,
+            weather: None,
+            road_condition: None,
             road_network: None,
         }
     }
@@ -313,26 +310,26 @@ impl CatalogEnvironment {
         Self {
             name,
             parameter_declarations: Some(parameters),
-            time_of_day: CatalogTimeOfDay::default(),
-            weather: CatalogWeather::default(),
-            road_condition: CatalogRoadCondition::default(),
+            time_of_day: None,
+            weather: None,
+            road_condition: None,
             road_network: None,
         }
     }
 
     /// Sets the time of day for this environment
     pub fn set_time_of_day(&mut self, time_of_day: CatalogTimeOfDay) {
-        self.time_of_day = time_of_day;
+        self.time_of_day = Some(time_of_day);
     }
 
     /// Sets the weather conditions for this environment
     pub fn set_weather(&mut self, weather: CatalogWeather) {
-        self.weather = weather;
+        self.weather = Some(weather);
     }
 
     /// Sets the road conditions for this environment
     pub fn set_road_condition(&mut self, road_condition: CatalogRoadCondition) {
-        self.road_condition = road_condition;
+        self.road_condition = Some(road_condition);
     }
 
     /// Sets the road network reference for this environment
@@ -343,93 +340,69 @@ impl CatalogEnvironment {
     /// Converts this catalog environment to a scenario environment
     /// with parameter substitution (placeholder for future implementation)
     pub fn to_scenario_environment(&self) -> Environment {
+        let time_of_day = self.time_of_day.as_ref().map(|tod| TimeOfDay {
+            animation: Boolean::literal(tod.animation.as_literal().copied().unwrap_or(false)),
+            date_time: tod
+                .date_time
+                .as_literal()
+                .unwrap_or(&"2021-01-01T12:00:00".to_string())
+                .clone(),
+        });
+
+        let weather = self.weather.as_ref().map(|w| {
+            let precipitation_type = w.precipitation.as_ref().map(|p| {
+                match p
+                    .precipitation_type
+                    .as_literal()
+                    .map(|s| s.as_str())
+                    .unwrap_or("dry")
+                {
+                    "rain" => crate::types::enums::PrecipitationType::Rain,
+                    "snow" => crate::types::enums::PrecipitationType::Snow,
+                    _ => crate::types::enums::PrecipitationType::Dry,
+                }
+            });
+
+            Weather {
+                cloud_state: None,
+                atmospheric_pressure: None,
+                temperature: None,
+                fractional_cloud_cover: None,
+                sun: w.sun.as_ref().map(|s| Sun {
+                    intensity: s.intensity.clone(),
+                    azimuth: s.azimuth.clone(),
+                    elevation: s.elevation.clone(),
+                    illuminance: s.illuminance.clone(),
+                }),
+                fog: w.fog.as_ref().map(|f| Fog {
+                    visual_range: f.visual_range.clone(),
+                    bounding_box: f.bounding_box.clone(),
+                }),
+                precipitation: w.precipitation.as_ref().map(|p| Precipitation {
+                    precipitation_type: precipitation_type
+                        .unwrap_or(crate::types::enums::PrecipitationType::Dry),
+                    intensity: None,
+                    precipitation_intensity: p.intensity.clone(),
+                }),
+                wind: None,
+                dome_image: None,
+            }
+        });
+
+        let road_condition = self.road_condition.as_ref().map(|rc| RoadCondition {
+            friction_scale_factor: Double::literal(
+                rc.friction_scale_factor.as_literal().copied().unwrap_or(1.0),
+            ),
+            wetness: rc.wetness.clone(),
+            properties: rc.properties.clone(),
+        });
+
         Environment {
             name: OSString::literal(self.name.clone()),
-            time_of_day: TimeOfDay {
-                animation: Boolean::literal(
-                    self.time_of_day
-                        .animation
-                        .as_literal()
-                        .copied()
-                        .unwrap_or(false),
-                ),
-                date_time: self
-                    .time_of_day
-                    .date_time
-                    .as_literal()
-                    .unwrap_or(&"2021-01-01T12:00:00".to_string())
-                    .clone(),
-            },
-            weather: Weather {
-                cloud_state: self
-                    .weather
-                    .cloud_state
-                    .as_literal()
-                    .unwrap_or(&"free".to_string())
-                    .clone(),
-                sun: Sun {
-                    intensity: Double::literal(
-                        self.weather
-                            .sun
-                            .intensity
-                            .as_literal()
-                            .copied()
-                            .unwrap_or(1.0),
-                    ),
-                    azimuth: Double::literal(
-                        self.weather
-                            .sun
-                            .azimuth
-                            .as_literal()
-                            .copied()
-                            .unwrap_or(0.0),
-                    ),
-                    elevation: Double::literal(
-                        self.weather
-                            .sun
-                            .elevation
-                            .as_literal()
-                            .copied()
-                            .unwrap_or(1.571),
-                    ),
-                },
-                fog: Fog {
-                    visual_range: Double::literal(
-                        self.weather
-                            .fog
-                            .visual_range
-                            .as_literal()
-                            .copied()
-                            .unwrap_or(100000.0),
-                    ),
-                },
-                precipitation: Precipitation {
-                    precipitation_type: self
-                        .weather
-                        .precipitation
-                        .precipitation_type
-                        .as_literal()
-                        .unwrap_or(&"dry".to_string())
-                        .clone(),
-                    intensity: Double::literal(
-                        self.weather
-                            .precipitation
-                            .intensity
-                            .as_literal()
-                            .copied()
-                            .unwrap_or(0.0),
-                    ),
-                },
-            },
-            road_condition: RoadCondition {
-                friction_scale_factor: Double::literal(
-                    self.road_condition
-                        .friction_scale_factor
-                        .as_literal()
-                        .copied()
-                        .unwrap_or(1.0),
-                ),
-            },
+            parameter_declarations: None,
+            time_of_day,
+            weather,
+            road_condition,
         }
     }
 }
@@ -454,52 +427,77 @@ impl CatalogTimeOfDay {
 
 impl CatalogWeather {
     /// Creates weather with the specified cloud state
-    pub fn new(cloud_state: OSString) -> Self {
+    #[allow(deprecated)]
+    pub fn new(cloud_state: CloudState) -> Self {
         Self {
-            cloud_state,
-            sun: CatalogSun::default(),
-            fog: CatalogFog::default(),
-            precipitation: CatalogPrecipitation::default(),
+            cloud_state: Some(cloud_state),
+            atmospheric_pressure: None,
+            temperature: None,
+            fractional_cloud_cover: None,
+            sun: Some(CatalogSun {
+                intensity: Some(Value::Literal(1.0)),
+                azimuth: Value::Literal(0.0),
+                elevation: Value::Literal(1.571),
+                illuminance: None,
+            }),
+            fog: Some(CatalogFog::default()),
+            precipitation: Some(CatalogPrecipitation {
+                precipitation_type: Value::Literal("dry".to_string()),
+                intensity: Some(Value::Literal(0.0)),
+                precipitation_intensity: None,
+            }),
         }
     }
 
     /// Creates sunny weather conditions
+    #[allow(deprecated)]
     pub fn sunny() -> Self {
         Self {
-            cloud_state: Value::Literal("free".to_string()),
-            sun: CatalogSun {
-                intensity: Value::Literal(1.0),
+            cloud_state: Some(CloudState::Free),
+            atmospheric_pressure: None,
+            temperature: None,
+            fractional_cloud_cover: None,
+            sun: Some(CatalogSun {
+                intensity: Some(Value::Literal(1.0)),
                 azimuth: Value::Literal(0.0),
                 elevation: Value::Literal(1.571),
-            },
-            fog: CatalogFog {
+                illuminance: None,
+            }),
+            fog: Some(CatalogFog {
                 visual_range: Value::Literal(100000.0),
                 bounding_box: None,
-            },
-            precipitation: CatalogPrecipitation {
+            }),
+            precipitation: Some(CatalogPrecipitation {
                 precipitation_type: Value::Literal("dry".to_string()),
-                intensity: Value::Literal(0.0),
-            },
+                intensity: Some(Value::Literal(0.0)),
+                precipitation_intensity: None,
+            }),
         }
     }
 
     /// Creates rainy weather conditions
+    #[allow(deprecated)]
     pub fn rainy(intensity: Double) -> Self {
         Self {
-            cloud_state: Value::Literal("rainy".to_string()),
-            sun: CatalogSun {
-                intensity: Value::Literal(0.3),
+            cloud_state: Some(CloudState::Rainy),
+            atmospheric_pressure: None,
+            temperature: None,
+            fractional_cloud_cover: None,
+            sun: Some(CatalogSun {
+                intensity: Some(Value::Literal(0.3)),
                 azimuth: Value::Literal(0.0),
                 elevation: Value::Literal(1.571),
-            },
-            fog: CatalogFog {
+                illuminance: None,
+            }),
+            fog: Some(CatalogFog {
                 visual_range: Value::Literal(5000.0), // Reduced visibility in rain
                 bounding_box: None,
-            },
-            precipitation: CatalogPrecipitation {
+            }),
+            precipitation: Some(CatalogPrecipitation {
                 precipitation_type: Value::Literal("rain".to_string()),
-                intensity,
-            },
+                intensity: Some(intensity),
+                precipitation_intensity: None,
+            }),
         }
     }
 }
@@ -552,10 +550,7 @@ mod tests {
 
         assert_eq!(environment.name, "TestEnvironment");
         assert!(environment.parameter_declarations.is_none());
-        assert_eq!(
-            environment.time_of_day.animation.as_literal().unwrap(),
-            &false
-        );
+        assert!(environment.time_of_day.is_none());
     }
 
     #[test]
@@ -582,19 +577,45 @@ mod tests {
         let sunny = CatalogWeather::sunny();
         let rainy = CatalogWeather::rainy(Value::Literal(0.8));
 
-        assert_eq!(sunny.cloud_state.as_literal().unwrap(), "free");
-        assert_eq!(sunny.sun.intensity.as_literal().unwrap(), &1.0);
+        assert_eq!(sunny.cloud_state, Some(CloudState::Free));
         assert_eq!(
-            sunny.precipitation.precipitation_type.as_literal().unwrap(),
+            sunny.sun.as_ref().unwrap().intensity.as_ref().unwrap().as_literal().unwrap(),
+            &1.0
+        );
+        assert_eq!(
+            sunny
+                .precipitation
+                .as_ref()
+                .unwrap()
+                .precipitation_type
+                .as_literal()
+                .unwrap(),
             "dry"
         );
 
-        assert_eq!(rainy.cloud_state.as_literal().unwrap(), "rainy");
+        assert_eq!(rainy.cloud_state, Some(CloudState::Rainy));
         assert_eq!(
-            rainy.precipitation.precipitation_type.as_literal().unwrap(),
+            rainy
+                .precipitation
+                .as_ref()
+                .unwrap()
+                .precipitation_type
+                .as_literal()
+                .unwrap(),
             "rain"
         );
-        assert_eq!(rainy.precipitation.intensity.as_literal().unwrap(), &0.8);
+        assert_eq!(
+            rainy
+                .precipitation
+                .as_ref()
+                .unwrap()
+                .intensity
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap(),
+            &0.8
+        );
     }
 
     #[test]
@@ -656,13 +677,13 @@ mod tests {
             bounding_box: None,
         };
         let mut weather = CatalogWeather::default();
-        weather.fog = fog;
+        weather.fog = Some(fog);
         environment.set_weather(weather);
 
         assert_eq!(environment.name, "ParameterizedEnvironment");
         assert!(environment.parameter_declarations.is_some());
         assert!(matches!(
-            environment.weather.fog.visual_range,
+            environment.weather.as_ref().unwrap().fog.as_ref().unwrap().visual_range,
             Value::Parameter(_)
         ));
     }
@@ -671,27 +692,15 @@ mod tests {
     fn test_road_condition_parameters() {
         let road_condition = CatalogRoadCondition {
             friction_scale_factor: Value::Parameter("frictionFactor".to_string()),
-            wetness: Some(Value::Literal(0.3)),
-            roughness: Some(Value::Parameter("surfaceRoughness".to_string())),
+            wetness: Some(Wetness::Moist),
+            properties: None,
         };
 
         assert!(matches!(
             road_condition.friction_scale_factor,
             Value::Parameter(_)
         ));
-        assert_eq!(
-            road_condition
-                .wetness
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &0.3
-        );
-        assert!(matches!(
-            road_condition.roughness.as_ref().unwrap(),
-            Value::Parameter(_)
-        ));
+        assert_eq!(road_condition.wetness, Some(Wetness::Moist));
     }
 
     #[test]
@@ -721,10 +730,25 @@ mod tests {
         let scenario_env = catalog_env.to_scenario_environment();
 
         assert_eq!(scenario_env.name.as_literal().unwrap(), "TestEnvironment");
-        assert_eq!(scenario_env.time_of_day.date_time, "2021-06-21T12:00:00");
-        assert_eq!(scenario_env.weather.cloud_state, "free");
         assert_eq!(
-            scenario_env.weather.sun.intensity.as_literal().unwrap(),
+            scenario_env.time_of_day.as_ref().unwrap().date_time,
+            "2021-06-21T12:00:00"
+        );
+        // cloud_state is not propagated by to_scenario_environment (deprecated field)
+        assert!(scenario_env.weather.as_ref().unwrap().cloud_state.is_none());
+        assert_eq!(
+            scenario_env
+                .weather
+                .as_ref()
+                .unwrap()
+                .sun
+                .as_ref()
+                .unwrap()
+                .intensity
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap(),
             &1.0
         );
     }
@@ -732,21 +756,13 @@ mod tests {
     #[test]
     fn test_defaults() {
         let catalog = EnvironmentCatalog::default();
-        let environment = CatalogEnvironment::default();
-        let time_of_day = CatalogTimeOfDay::default();
+        let environment = CatalogEnvironment::new("DefaultCatalogEnvironment".to_string());
         let weather = CatalogWeather::default();
-        let road_condition = CatalogRoadCondition::default();
 
         assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
         assert_eq!(environment.name, "DefaultCatalogEnvironment");
-        assert_eq!(
-            time_of_day.date_time.as_literal().unwrap(),
-            "2021-01-01T12:00:00"
-        );
-        assert_eq!(weather.cloud_state.as_literal().unwrap(), "free");
-        assert_eq!(
-            road_condition.friction_scale_factor.as_literal().unwrap(),
-            &1.0
-        );
+        assert!(environment.time_of_day.is_none());
+        assert!(weather.cloud_state.is_none());
+        assert!(weather.sun.is_none());
     }
 }

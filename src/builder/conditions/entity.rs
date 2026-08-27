@@ -103,7 +103,7 @@ impl AccelerationConditionBuilder {
         Ok(Condition {
             name: OSString::literal("AccelerationCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
         })
@@ -192,7 +192,7 @@ impl EnhancedSpeedConditionBuilder {
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
         })
@@ -278,7 +278,7 @@ impl TraveledDistanceConditionBuilder {
         Ok(Condition {
             name: OSString::literal("TraveledDistanceCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
         })
@@ -349,7 +349,7 @@ impl ReachPositionConditionBuilder {
         Ok(Condition {
             name: OSString::literal("ReachPositionCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
         })
@@ -409,7 +409,7 @@ impl EndOfRoadConditionBuilder {
         Ok(Condition {
             name: OSString::literal("EndOfRoadCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
         })

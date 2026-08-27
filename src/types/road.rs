@@ -3,7 +3,9 @@
 //! This module defines types for road network definitions including
 //! logic files and road network references.
 
+use crate::types::actions::traffic::TrafficSignalController;
 use crate::types::basic::OSString;
+use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
 /// Road network definition for scenario
@@ -17,6 +19,32 @@ pub struct RoadNetwork {
     /// Scene graph file reference (optional)
     #[serde(rename = "SceneGraphFile", skip_serializing_if = "Option::is_none")]
     pub scene_graph_file: Option<SceneGraphFile>,
+
+    /// Traffic signal controllers defined for this road network (optional)
+    #[serde(
+        rename = "TrafficSignals",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub traffic_signals: Option<TrafficSignals>,
+
+    /// Region of the road network actually used by the scenario (optional)
+    #[serde(rename = "UsedArea", default, skip_serializing_if = "Option::is_none")]
+    pub used_area: Option<UsedArea>,
+}
+
+/// Wrapper for the set of traffic signal controllers on the road network
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TrafficSignals {
+    #[serde(rename = "TrafficSignalController", default)]
+    pub traffic_signal_controller: Vec<TrafficSignalController>,
+}
+
+/// Region of the road network actually used by the scenario
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct UsedArea {
+    #[serde(rename = "Position", default)]
+    pub position: Vec<Position>,
 }
 
 /// Logic file containing road network definition
@@ -41,6 +69,8 @@ impl RoadNetwork {
         Self {
             logic_file: Some(logic_file),
             scene_graph_file: None,
+            traffic_signals: None,
+            used_area: None,
         }
     }
 
@@ -124,5 +154,30 @@ mod tests {
         assert!(xml.contains("RoadNetwork"));
         assert!(xml.contains("LogicFile"));
         assert!(xml.contains("filepath=\"test.xodr\""));
+    }
+
+    #[test]
+    fn test_road_network_traffic_signals_and_used_area_roundtrip() {
+        use crate::types::positions::{Position, WorldPosition};
+
+        let road_network = RoadNetwork {
+            logic_file: Some(LogicFile::new("test.xodr".to_string())),
+            scene_graph_file: None,
+            traffic_signals: Some(TrafficSignals {
+                traffic_signal_controller: vec![TrafficSignalController::new(
+                    "intersection_1",
+                )],
+            }),
+            used_area: Some(UsedArea {
+                position: vec![Position {
+                    world_position: Some(WorldPosition::new(0.0, 0.0)),
+                    ..Position::empty()
+                }],
+            }),
+        };
+
+        let xml = quick_xml::se::to_string(&road_network).unwrap();
+        let deserialized: RoadNetwork = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(road_network, deserialized);
     }
 }

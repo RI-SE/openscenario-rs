@@ -358,9 +358,77 @@ impl Dimensions {
 /// Shape definition for trajectories and paths
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Shape {
-    #[serde(rename = "Polyline", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "Polyline", default, skip_serializing_if = "Option::is_none")]
     pub polyline: Option<Polyline>,
-    // Other shape types can be added later as optional fields
+    #[serde(rename = "Clothoid", default, skip_serializing_if = "Option::is_none")]
+    pub clothoid: Option<crate::types::positions::trajectory::Clothoid>,
+    #[serde(
+        rename = "ClothoidSpline",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub clothoid_spline: Option<ClothoidSpline>,
+    #[serde(rename = "Nurbs", default, skip_serializing_if = "Option::is_none")]
+    pub nurbs: Option<Nurbs>,
+}
+
+/// A sequence of clothoid segments forming a spline
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct ClothoidSpline {
+    #[serde(rename = "ClothoidSplineSegment", default)]
+    pub segments: Vec<ClothoidSplineSegment>,
+    #[serde(rename = "@timeEnd", default, skip_serializing_if = "Option::is_none")]
+    pub time_end: Option<Double>,
+}
+
+/// A single segment within a ClothoidSpline
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClothoidSplineSegment {
+    #[serde(
+        rename = "PositionStart",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub position_start: Option<Position>,
+    #[serde(rename = "@curvatureStart")]
+    pub curvature_start: Double,
+    #[serde(rename = "@curvatureEnd")]
+    pub curvature_end: Double,
+    #[serde(rename = "@length")]
+    pub length: Double,
+    #[serde(rename = "@hOffset", default, skip_serializing_if = "Option::is_none")]
+    pub h_offset: Option<Double>,
+    #[serde(rename = "@timeStart", default, skip_serializing_if = "Option::is_none")]
+    pub time_start: Option<Double>,
+}
+
+/// Non-uniform rational B-spline (NURBS) shape
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Nurbs {
+    #[serde(rename = "@order")]
+    pub order: crate::types::basic::UnsignedInt,
+    #[serde(rename = "ControlPoint", default)]
+    pub control_points: Vec<ControlPoint>,
+    #[serde(rename = "Knot", default)]
+    pub knots: Vec<Knot>,
+}
+
+/// A single control point on a NURBS curve
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ControlPoint {
+    #[serde(rename = "Position")]
+    pub position: Position,
+    #[serde(rename = "@time", default, skip_serializing_if = "Option::is_none")]
+    pub time: Option<Double>,
+    #[serde(rename = "@weight", default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<Double>,
+}
+
+/// A single knot value on a NURBS curve
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Knot {
+    #[serde(rename = "@value")]
+    pub value: Double,
 }
 
 /// Polyline shape with time-positioned vertices
@@ -384,6 +452,9 @@ impl Default for Shape {
     fn default() -> Self {
         Self {
             polyline: Some(Polyline::default()),
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: None,
         }
     }
 }
@@ -431,7 +502,7 @@ mod tests {
         let vertex = Vertex {
             time: Some(crate::types::basic::Value::literal(0.04)),
             position: Position {
-                world_position: Some(WorldPosition::default()),
+                world_position: Some(WorldPosition::new(0.0, 0.0)),
                 relative_world_position: None,
                 road_position: None,
                 relative_road_position: None,
@@ -494,6 +565,9 @@ mod tests {
                     position: Position::default(),
                 }],
             }),
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: None,
         };
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
@@ -513,10 +587,87 @@ mod tests {
                     position: Position::default(),
                 }],
             }),
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: None,
         };
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(!xml.contains("time="), "time attr must be absent when None: {xml}");
+    }
+
+    #[test]
+    fn test_shape_clothoid_roundtrip() {
+        use crate::types::positions::trajectory::Clothoid;
+        use crate::types::positions::{Position, WorldPosition};
+
+        let shape = Shape {
+            polyline: None,
+            clothoid: Some(Clothoid {
+                curvature: crate::types::basic::Value::literal(0.1),
+                curvature_dot: None,
+                curvature_prime: None,
+                length: crate::types::basic::Value::literal(20.0),
+                start_time: None,
+                stop_time: None,
+                start_position: Position {
+                    world_position: Some(WorldPosition::new(0.0, 0.0)),
+                    ..Position::empty()
+                },
+            }),
+            clothoid_spline: None,
+            nurbs: None,
+        };
+
+        let xml = quick_xml::se::to_string(&shape).unwrap();
+        assert!(xml.contains("<Clothoid"), "serialized: {xml}");
+        let deserialized: Shape = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(shape, deserialized);
+    }
+
+    #[test]
+    fn test_shape_nurbs_roundtrip() {
+        use crate::types::positions::{Position, WorldPosition};
+
+        let shape = Shape {
+            polyline: None,
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: Some(Nurbs {
+                order: crate::types::basic::Value::literal(3),
+                control_points: vec![
+                    ControlPoint {
+                        position: Position {
+                            world_position: Some(WorldPosition::new(0.0, 0.0)),
+                            ..Position::empty()
+                        },
+                        time: None,
+                        weight: None,
+                    },
+                    ControlPoint {
+                        position: Position {
+                            world_position: Some(WorldPosition::new(1.0, 1.0)),
+                            ..Position::empty()
+                        },
+                        time: None,
+                        weight: None,
+                    },
+                ],
+                knots: vec![
+                    Knot {
+                        value: crate::types::basic::Value::literal(0.0),
+                    },
+                    Knot {
+                        value: crate::types::basic::Value::literal(1.0),
+                    },
+                ],
+            }),
+        };
+
+        let xml = quick_xml::se::to_string(&shape).unwrap();
+        assert!(xml.contains("<Nurbs"), "serialized: {xml}");
+        let deserialized: Shape = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(shape, deserialized);
     }
 
     #[test]

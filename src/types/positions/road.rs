@@ -62,9 +62,9 @@ pub struct LanePosition {
     #[serde(rename = "@s")]
     pub s: Double,
 
-    /// Offset from lane center
-    #[serde(rename = "@offset")]
-    pub offset: Double,
+    /// Offset from lane center (XSD: optional attribute)
+    #[serde(rename = "@offset", default, skip_serializing_if = "Option::is_none")]
+    pub offset: Option<Double>,
 
     /// Orientation relative to lane direction
     #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
@@ -102,13 +102,17 @@ pub struct RelativeLanePosition {
     #[serde(rename = "@dLane")]
     pub d_lane: Int,
 
-    /// Delta S-coordinate along the reference line
-    #[serde(rename = "@ds")]
-    pub ds: Double,
+    /// Delta S-coordinate along the reference line (XSD: optional attribute)
+    #[serde(rename = "@ds", default, skip_serializing_if = "Option::is_none")]
+    pub ds: Option<Double>,
 
-    /// Offset from lane center
-    #[serde(rename = "@offset")]
-    pub offset: Double,
+    /// Offset from lane center (XSD: optional attribute)
+    #[serde(rename = "@offset", default, skip_serializing_if = "Option::is_none")]
+    pub offset: Option<Double>,
+
+    /// Delta S-coordinate along the target lane (XSD: optional attribute `dsLane`)
+    #[serde(rename = "@dsLane", default, skip_serializing_if = "Option::is_none")]
+    pub ds_lane: Option<Double>,
 
     /// Orientation relative to lane direction
     #[serde(rename = "Orientation", skip_serializing_if = "Option::is_none")]
@@ -176,7 +180,7 @@ impl LanePosition {
             road_id: OSString::literal(road_id),
             lane_id: OSString::literal(lane_id),
             s: Double::literal(s),
-            offset: Double::literal(offset),
+            offset: Some(Double::literal(offset)),
             orientation: None,
         }
     }
@@ -193,7 +197,7 @@ impl LanePosition {
             road_id: OSString::literal(road_id),
             lane_id: OSString::literal(lane_id),
             s: Double::literal(s),
-            offset: Double::literal(offset),
+            offset: Some(Double::literal(offset)),
             orientation: Some(orientation),
         }
     }
@@ -232,8 +236,9 @@ impl RelativeLanePosition {
         Self {
             entity_ref: OSString::literal(entity_ref),
             d_lane: Int::literal(d_lane),
-            ds: Double::literal(ds),
-            offset: Double::literal(offset),
+            ds: Some(Double::literal(ds)),
+            offset: Some(Double::literal(offset)),
+            ds_lane: None,
             orientation: None,
         }
     }
@@ -249,8 +254,9 @@ impl RelativeLanePosition {
         Self {
             entity_ref: OSString::literal(entity_ref),
             d_lane: Int::literal(d_lane),
-            ds: Double::literal(ds),
-            offset: Double::literal(offset),
+            ds: Some(Double::literal(ds)),
+            offset: Some(Double::literal(offset)),
+            ds_lane: None,
             orientation: Some(orientation),
         }
     }
@@ -373,8 +379,9 @@ impl Default for RelativeLanePosition {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
             d_lane: Int::literal(0),
-            ds: Double::literal(0.0),
-            offset: Double::literal(0.0),
+            ds: Some(Double::literal(0.0)),
+            offset: Some(Double::literal(0.0)),
+            ds_lane: None,
             orientation: None,
         }
     }
@@ -401,7 +408,7 @@ mod tests {
         assert_eq!(pos.road_id.as_literal().unwrap(), "0");
         assert_eq!(pos.lane_id.as_literal().unwrap(), "-4");
         assert_eq!(pos.s.as_literal().unwrap(), &5.0);
-        assert_eq!(pos.offset.as_literal().unwrap(), &0.0);
+        assert_eq!(pos.offset.unwrap().as_literal().unwrap(), &0.0);
         assert!(pos.orientation.is_none());
     }
 
@@ -473,8 +480,8 @@ mod tests {
 
         assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
         assert_eq!(pos.d_lane, Int::literal(-1));
-        assert_eq!(pos.ds.as_literal().unwrap(), &15.0);
-        assert_eq!(pos.offset.as_literal().unwrap(), &0.5);
+        assert_eq!(pos.ds.unwrap().as_literal().unwrap(), &15.0);
+        assert_eq!(pos.offset.unwrap().as_literal().unwrap(), &0.5);
         assert!(pos.orientation.is_none());
     }
 
@@ -491,8 +498,8 @@ mod tests {
 
         assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
         assert_eq!(pos.d_lane, Int::literal(1));
-        assert_eq!(pos.ds.as_literal().unwrap(), &20.0);
-        assert_eq!(pos.offset.as_literal().unwrap(), &-1.0);
+        assert_eq!(pos.ds.unwrap().as_literal().unwrap(), &20.0);
+        assert_eq!(pos.offset.unwrap().as_literal().unwrap(), &-1.0);
         assert!(pos.orientation.is_some());
         let orient = pos.orientation.unwrap();
         assert_eq!(orient.h.unwrap().as_literal().unwrap(), &1.57);
@@ -533,7 +540,60 @@ mod tests {
         let rel_lane = RelativeLanePosition::default();
         assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "DefaultEntity");
         assert_eq!(rel_lane.d_lane, Int::literal(0));
-        assert_eq!(rel_lane.ds.as_literal().unwrap(), &0.0);
-        assert_eq!(rel_lane.offset.as_literal().unwrap(), &0.0);
+        assert_eq!(rel_lane.ds.unwrap().as_literal().unwrap(), &0.0);
+        assert_eq!(rel_lane.offset.unwrap().as_literal().unwrap(), &0.0);
+    }
+
+    #[test]
+    fn test_lane_position_parse_without_offset() {
+        let xml = r#"<LanePosition roadId="0" laneId="-4" s="5"/>"#;
+        let pos: LanePosition = quick_xml::de::from_str(xml).unwrap();
+        assert!(pos.offset.is_none());
+        assert_eq!(pos.road_id.as_literal().unwrap(), "0");
+    }
+
+    #[test]
+    fn test_lane_position_serialize_none_offset_omitted() {
+        let pos = LanePosition {
+            road_id: OSString::literal("0".to_string()),
+            lane_id: OSString::literal("-4".to_string()),
+            s: Double::literal(5.0),
+            offset: None,
+            orientation: None,
+        };
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(!xml.contains("offset="), "serialized: {xml}");
+    }
+
+    #[test]
+    fn test_relative_lane_position_parse_without_ds_offset() {
+        let xml = r#"<RelativeLanePosition entityRef="Ego" dLane="-1"/>"#;
+        let pos: RelativeLanePosition = quick_xml::de::from_str(xml).unwrap();
+        assert!(pos.ds.is_none());
+        assert!(pos.offset.is_none());
+        assert!(pos.ds_lane.is_none());
+    }
+
+    #[test]
+    fn test_relative_lane_position_parse_with_ds_lane() {
+        let xml = r#"<RelativeLanePosition entityRef="Ego" dLane="-1" dsLane="3.5"/>"#;
+        let pos: RelativeLanePosition = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(pos.ds_lane.unwrap().as_literal().unwrap(), &3.5);
+    }
+
+    #[test]
+    fn test_relative_lane_position_serialize_none_fields_omitted() {
+        let pos = RelativeLanePosition {
+            entity_ref: OSString::literal("Ego".to_string()),
+            d_lane: Int::literal(-1),
+            ds: None,
+            offset: None,
+            ds_lane: None,
+            orientation: None,
+        };
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(!xml.contains("ds="), "serialized: {xml}");
+        assert!(!xml.contains("offset="), "serialized: {xml}");
+        assert!(!xml.contains("dsLane="), "serialized: {xml}");
     }
 }

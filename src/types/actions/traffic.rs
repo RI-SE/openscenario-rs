@@ -8,6 +8,8 @@
 //! - Background traffic definition and distribution specifications
 //!
 use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
+use crate::types::catalogs::references::ControllerCatalogReference;
+use crate::types::controllers::Controller;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -31,8 +33,9 @@ pub struct TrafficSourceAction {
     pub velocity: Option<Double>,
     #[serde(rename = "Position")]
     pub position: Position,
-    #[serde(rename = "TrafficDefinition")]
-    pub traffic_definition: TrafficDefinition,
+    /// Deprecated in favor of TrafficDistribution; kept optional per XSD (minOccurs=0)
+    #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
+    pub traffic_definition: Option<TrafficDefinition>,
 }
 
 /// Traffic sink action for traffic removal with radius control
@@ -48,13 +51,13 @@ pub struct TrafficSourceAction {
 /// * `traffic_definition` - Optional traffic definition to filter which vehicles are removed
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSinkAction {
-    #[serde(rename = "@rate")]
-    pub rate: Double,
+    #[serde(rename = "@rate", default, skip_serializing_if = "Option::is_none")]
+    pub rate: Option<Double>,
     #[serde(rename = "@radius")]
     pub radius: Double,
     #[serde(rename = "Position")]
     pub position: Position,
-    #[serde(rename = "TrafficDefinition")]
+    #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
     pub traffic_definition: Option<TrafficDefinition>,
 }
 
@@ -178,7 +181,11 @@ pub struct Phase {
     pub duration: Double,
     #[serde(rename = "TrafficSignalState", default)]
     pub traffic_signal_states: Vec<TrafficSignalState>,
-    #[serde(rename = "TrafficSignalGroupState")]
+    #[serde(
+        rename = "TrafficSignalGroupState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_signal_group_state: Option<TrafficSignalGroupState>,
 }
 
@@ -217,10 +224,34 @@ pub struct TrafficStopAction {
 /// * `controller_distribution` - Distribution of controller behaviors
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficDefinition {
+    #[serde(rename = "@name")]
+    pub name: OSString,
     #[serde(rename = "VehicleCategoryDistribution")]
-    pub vehicle_category_distribution: Option<VehicleCategoryDistribution>,
+    pub vehicle_category_distribution: VehicleCategoryDistribution,
+    #[serde(
+        rename = "VehicleRoleDistribution",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub vehicle_role_distribution: Option<VehicleRoleDistribution>,
     #[serde(rename = "ControllerDistribution")]
-    pub controller_distribution: Option<ControllerDistribution>,
+    pub controller_distribution: ControllerDistribution,
+}
+
+/// Vehicle role distribution for traffic composition
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct VehicleRoleDistribution {
+    #[serde(rename = "VehicleRoleDistributionEntry", default)]
+    pub entries: Vec<VehicleRoleDistributionEntry>,
+}
+
+/// Vehicle role distribution entry
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct VehicleRoleDistributionEntry {
+    #[serde(rename = "@weight")]
+    pub weight: Double,
+    #[serde(rename = "@role")]
+    pub role: crate::types::enums::Role,
 }
 
 /// Vehicle category distribution for traffic composition
@@ -274,8 +305,14 @@ pub struct ControllerDistribution {
 pub struct ControllerDistributionEntry {
     #[serde(rename = "@weight")]
     pub weight: Double,
-    #[serde(rename = "Controller")]
-    pub controller: OSString,
+    #[serde(rename = "Controller", default, skip_serializing_if = "Option::is_none")]
+    pub controller: Option<Controller>,
+    #[serde(
+        rename = "CatalogReference",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub catalog_reference: Option<ControllerCatalogReference>,
 }
 
 /// Central swarm object specification
@@ -310,7 +347,7 @@ impl Default for TrafficSourceAction {
             rate: Double::literal(10.0),           // 10 vehicles per minute
             velocity: Some(Double::literal(50.0)), // 50 km/h default velocity
             position: Position::default(),
-            traffic_definition: TrafficDefinition::default(),
+            traffic_definition: Some(TrafficDefinition::default()),
         }
     }
 }
@@ -318,8 +355,8 @@ impl Default for TrafficSourceAction {
 impl Default for TrafficSinkAction {
     fn default() -> Self {
         Self {
-            rate: Double::literal(10.0),   // 10 vehicles per minute
-            radius: Double::literal(50.0), // 50 meter radius
+            rate: Some(Double::literal(10.0)), // 10 vehicles per minute
+            radius: Double::literal(50.0),     // 50 meter radius
             position: Position::default(),
             traffic_definition: None,
         }
@@ -420,8 +457,10 @@ impl Default for TrafficStopAction {
 impl Default for TrafficDefinition {
     fn default() -> Self {
         Self {
-            vehicle_category_distribution: Some(VehicleCategoryDistribution::default()),
-            controller_distribution: None,
+            name: OSString::literal("DefaultTrafficDefinition".to_string()),
+            vehicle_category_distribution: VehicleCategoryDistribution::default(),
+            vehicle_role_distribution: None,
+            controller_distribution: ControllerDistribution::default(),
         }
     }
 }
@@ -452,7 +491,11 @@ impl Default for ControllerDistribution {
         Self {
             entries: vec![ControllerDistributionEntry {
                 weight: Double::literal(1.0),
-                controller: OSString::literal("DefaultTrafficController".to_string()),
+                controller: Some(Controller::new(
+                    "DefaultTrafficController".to_string(),
+                    crate::types::enums::ControllerType::Movement,
+                )),
+                catalog_reference: None,
             }],
         }
     }
@@ -498,7 +541,7 @@ impl TrafficSourceAction {
             rate: Double::literal(rate),
             velocity: None,
             position,
-            traffic_definition,
+            traffic_definition: Some(traffic_definition),
         }
     }
 
@@ -513,7 +556,7 @@ impl TrafficSourceAction {
             rate: Double::literal(rate),
             velocity: Some(Double::literal(velocity)),
             position,
-            traffic_definition,
+            traffic_definition: Some(traffic_definition),
         }
     }
 }
@@ -522,7 +565,7 @@ impl TrafficSinkAction {
     /// Create traffic sink with rate, radius and position
     pub fn new(rate: f64, radius: f64, position: Position) -> Self {
         Self {
-            rate: Double::literal(rate),
+            rate: Some(Double::literal(rate)),
             radius: Double::literal(radius),
             position,
             traffic_definition: None,
@@ -537,7 +580,7 @@ impl TrafficSinkAction {
         traffic_definition: TrafficDefinition,
     ) -> Self {
         Self {
-            rate: Double::literal(rate),
+            rate: Some(Double::literal(rate)),
             radius: Double::literal(radius),
             position,
             traffic_definition: Some(traffic_definition),
@@ -775,16 +818,20 @@ impl TrafficDefinition {
     /// Create traffic definition with vehicle categories only
     pub fn with_vehicles(distribution: VehicleCategoryDistribution) -> Self {
         Self {
-            vehicle_category_distribution: Some(distribution),
-            controller_distribution: None,
+            name: OSString::literal("DefaultTrafficDefinition".to_string()),
+            vehicle_category_distribution: distribution,
+            vehicle_role_distribution: None,
+            controller_distribution: ControllerDistribution::default(),
         }
     }
 
     /// Create traffic definition with controllers only
     pub fn with_controllers(distribution: ControllerDistribution) -> Self {
         Self {
-            vehicle_category_distribution: None,
-            controller_distribution: Some(distribution),
+            name: OSString::literal("DefaultTrafficDefinition".to_string()),
+            vehicle_category_distribution: VehicleCategoryDistribution::default(),
+            vehicle_role_distribution: None,
+            controller_distribution: distribution,
         }
     }
 
@@ -794,8 +841,10 @@ impl TrafficDefinition {
         controllers: ControllerDistribution,
     ) -> Self {
         Self {
-            vehicle_category_distribution: Some(vehicles),
-            controller_distribution: Some(controllers),
+            name: OSString::literal("DefaultTrafficDefinition".to_string()),
+            vehicle_category_distribution: vehicles,
+            vehicle_role_distribution: None,
+            controller_distribution: controllers,
         }
     }
 }
@@ -843,7 +892,11 @@ impl ControllerDistribution {
         Self {
             entries: vec![ControllerDistributionEntry {
                 weight: Double::literal(weight),
-                controller: OSString::literal(controller),
+                controller: Some(Controller::new(
+                    controller,
+                    crate::types::enums::ControllerType::Movement,
+                )),
+                catalog_reference: None,
             }],
         }
     }
@@ -947,7 +1000,7 @@ mod tests {
     fn test_traffic_sink_action_creation() {
         let sink = TrafficSinkAction::new(10.0, 30.0, Position::default());
 
-        assert_eq!(sink.rate.as_literal(), Some(&10.0));
+        assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
         assert_eq!(sink.radius.as_literal(), Some(&30.0));
         assert!(sink.traffic_definition.is_none());
     }
@@ -961,7 +1014,7 @@ mod tests {
             TrafficDefinition::default(),
         );
 
-        assert_eq!(sink.rate.as_literal(), Some(&12.0));
+        assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&12.0));
         assert_eq!(sink.radius.as_literal(), Some(&40.0));
         assert!(sink.traffic_definition.is_some());
     }
@@ -1067,8 +1120,8 @@ mod tests {
 
         let definition = TrafficDefinition::with_both(vehicles, controllers);
 
-        assert!(definition.vehicle_category_distribution.is_some());
-        assert!(definition.controller_distribution.is_some());
+        assert!(!definition.vehicle_category_distribution.entries.is_empty());
+        assert!(!definition.controller_distribution.entries.is_empty());
     }
 
     #[test]
@@ -1123,7 +1176,7 @@ mod tests {
         );
 
         let sink = TrafficSinkAction::default();
-        assert_eq!(sink.rate.as_literal(), Some(&10.0));
+        assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
         assert_eq!(sink.radius.as_literal(), Some(&50.0));
 
         let swarm = TrafficSwarmAction::default();

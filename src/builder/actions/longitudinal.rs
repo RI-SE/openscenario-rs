@@ -107,7 +107,7 @@ impl ActionBuilder for LongitudinalDistanceActionBuilder {
             time_gap: self.time_gap.map(Double::literal),
             coordinate_system: None,
             displacement: None,
-            freespace: Some(Boolean::literal(self.freespace)),
+            freespace: Boolean::literal(self.freespace),
             continuous: Boolean::literal(self.continuous),
             dynamic_constraints: None,
         };
@@ -169,7 +169,7 @@ impl SpeedProfileActionBuilder {
     /// Add a speed profile entry directly (convenience method)
     pub fn add_entry_direct(mut self, time: f64, speed: f64) -> Self {
         self.entries.push(SpeedProfileEntry {
-            time: Double::literal(time),
+            time: Some(Double::literal(time)),
             speed: Double::literal(speed),
         });
         self
@@ -203,8 +203,8 @@ impl ActionBuilder for SpeedProfileActionBuilder {
 
         // Verify chronological order
         for i in 1..self.entries.len() {
-            let prev_time = self.entries[i - 1].time.as_literal().unwrap();
-            let curr_time = self.entries[i].time.as_literal().unwrap();
+            let prev_time = self.entries[i - 1].time.as_ref().unwrap().as_literal().unwrap();
+            let curr_time = self.entries[i].time.as_ref().unwrap().as_literal().unwrap();
             if curr_time <= prev_time {
                 return Err(BuilderError::validation_error(
                     "Speed profile entries must be in chronological order",
@@ -260,7 +260,7 @@ impl SpeedProfileEntryBuilder {
         }
 
         let entry = SpeedProfileEntry {
-            time: Double::literal(self.time.unwrap()),
+            time: Some(Double::literal(self.time.unwrap())),
             speed: Double::literal(self.speed.unwrap()),
         };
 
@@ -358,9 +358,9 @@ mod tests {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {
                         assert_eq!(profile.entries.len(), 3);
-                        assert_eq!(profile.entries[0].time.as_literal(), Some(&0.0));
+                        assert_eq!(profile.entries[0].time.as_ref().unwrap().as_literal(), Some(&0.0));
                         assert_eq!(profile.entries[0].speed.as_literal(), Some(&0.0));
-                        assert_eq!(profile.entries[2].time.as_literal(), Some(&10.0));
+                        assert_eq!(profile.entries[2].time.as_ref().unwrap().as_literal(), Some(&10.0));
                         assert_eq!(profile.entries[2].speed.as_literal(), Some(&50.0));
                     }
                     _ => panic!("Expected SpeedProfileAction"),

@@ -24,7 +24,7 @@ pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition, Tr
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Position {
     #[serde(rename = "WorldPosition", skip_serializing_if = "Option::is_none")]
     pub world_position: Option<WorldPosition>,
@@ -68,25 +68,9 @@ pub struct RelativeWorldPosition {
     pub dx: Double,
     #[serde(rename = "@dy")]
     pub dy: Double,
-    #[serde(rename = "@dz")]
-    pub dz: Double,
-}
-
-// Default implementations
-impl Default for Position {
-    fn default() -> Self {
-        Position {
-            world_position: Some(WorldPosition::default()),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        }
-    }
+    /// XSD: optional attribute
+    #[serde(rename = "@dz", default, skip_serializing_if = "Option::is_none")]
+    pub dz: Option<Double>,
 }
 
 impl Default for RelativeWorldPosition {
@@ -95,7 +79,7 @@ impl Default for RelativeWorldPosition {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
             dx: Double::literal(0.0),
             dy: Double::literal(0.0),
-            dz: Double::literal(0.0),
+            dz: None,
         }
     }
 }
@@ -197,11 +181,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_position_default_has_world_position() {
+    fn test_position_default_is_all_none() {
         let pos = Position::default();
-        assert!(pos.world_position.is_some());
+        assert!(pos.world_position.is_none());
         assert!(pos.lane_position.is_none());
         assert!(pos.road_position.is_none());
+        assert_eq!(pos, Position::empty());
     }
 
     #[test]
@@ -237,11 +222,29 @@ mod tests {
         let rwp = RelativeWorldPosition::default();
         assert_eq!(rwp.entity_ref.as_literal().unwrap(), "DefaultEntity");
         assert_eq!(rwp.dx.as_literal().unwrap(), &0.0);
+        assert!(rwp.dz.is_none());
+    }
+
+    #[test]
+    fn test_relative_world_position_parse_without_dz() {
+        let xml = r#"<RelativeWorldPosition entityRef="Ego" dx="1" dy="2"/>"#;
+        let pos: RelativeWorldPosition = quick_xml::de::from_str(xml).unwrap();
+        assert!(pos.dz.is_none());
+    }
+
+    #[test]
+    fn test_relative_world_position_serialize_none_dz_omitted() {
+        let pos = RelativeWorldPosition::default();
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(!xml.contains("dz="), "serialized: {xml}");
     }
 
     #[test]
     fn test_position_xml_roundtrip() {
-        let pos = Position::default();
+        let pos = Position {
+            world_position: Some(WorldPosition::new(1.0, 2.0)),
+            ..Position::empty()
+        };
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(xml.contains("WorldPosition"));
         let deserialized: Position = quick_xml::de::from_str(&xml).unwrap();

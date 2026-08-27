@@ -38,7 +38,8 @@ impl EnvironmentActionBuilder {
         self.validate()?;
 
         let environment_action = EnvironmentAction {
-            environment: self.environment.unwrap(),
+            environment: Some(self.environment.unwrap()),
+            catalog_reference: None,
         };
 
         Ok(GlobalAction {
@@ -154,9 +155,17 @@ mod tests {
     fn test_environment_action_builder() {
         let environment = Environment {
             name: Value::literal("TestEnvironment".to_string()),
-            time_of_day: TimeOfDay::default(),
-            weather: Weather::default(),
-            road_condition: RoadCondition::default(),
+            parameter_declarations: None,
+            time_of_day: Some(TimeOfDay {
+                animation: crate::types::basic::Boolean::literal(false),
+                date_time: "2021-01-01T12:00:00".to_string(),
+            }),
+            weather: Some(Weather::default()),
+            road_condition: Some(RoadCondition {
+                friction_scale_factor: crate::types::basic::Double::literal(1.0),
+                wetness: None,
+                properties: None,
+            }),
         };
 
         let action = EnvironmentActionBuilder::new()
@@ -172,6 +181,7 @@ mod tests {
                 .environment_action
                 .unwrap()
                 .environment
+                .unwrap()
                 .name
                 .as_literal()
                 .unwrap(),

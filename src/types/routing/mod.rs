@@ -394,7 +394,7 @@ impl Waypoint {
             road_id: OSString::literal(road_id.into()),
             lane_id: OSString::literal(lane_id.into()),
             s: Double::literal(s),
-            offset: Double::literal(0.0),
+            offset: Some(Double::literal(0.0)),
             orientation: Some(Orientation {
                 h: Some(Double::literal(0.0)),
                 p: Some(Double::literal(0.0)),
@@ -421,7 +421,7 @@ impl Waypoint {
             entity_ref: OSString::literal(entity_ref.into()),
             dx: Double::literal(dx),
             dy: Double::literal(dy),
-            dz: Double::literal(dz),
+            dz: Some(Double::literal(dz)),
         });
         position.road_position = None;
         position.lane_position = None;

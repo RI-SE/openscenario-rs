@@ -96,9 +96,17 @@ mod tests {
         // Test EnvironmentAction
         let environment = Environment {
             name: Value::literal("TestEnvironment".to_string()),
-            time_of_day: TimeOfDay::default(),
-            weather: Weather::default(),
-            road_condition: RoadCondition::default(),
+            parameter_declarations: None,
+            time_of_day: Some(TimeOfDay {
+                animation: openscenario_rs::types::basic::Boolean::literal(false),
+                date_time: "2021-01-01T12:00:00".to_string(),
+            }),
+            weather: Some(Weather::default()),
+            road_condition: Some(RoadCondition {
+                friction_scale_factor: openscenario_rs::types::basic::Double::literal(1.0),
+                wetness: None,
+                properties: None,
+            }),
         };
 
         let environment_action = EnvironmentActionBuilder::new()

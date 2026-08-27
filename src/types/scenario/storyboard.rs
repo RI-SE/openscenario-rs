@@ -162,6 +162,27 @@ pub struct FileHeader {
     pub rev_major: UnsignedShort,
     #[serde(rename = "@revMinor")]
     pub rev_minor: UnsignedShort,
+    #[serde(rename = "License", default, skip_serializing_if = "Option::is_none")]
+    pub license: Option<License>,
+    #[serde(
+        rename = "Properties",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub properties: Option<crate::types::entities::vehicle::Properties>,
+}
+
+/// License information for a scenario file (XSD 1.3)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct License {
+    #[serde(rename = "@name")]
+    pub name: OSString,
+    #[serde(rename = "@resource", default, skip_serializing_if = "Option::is_none")]
+    pub resource: Option<OSString>,
+    #[serde(rename = "@spdxId", default, skip_serializing_if = "Option::is_none")]
+    pub spdx_id: Option<OSString>,
+    #[serde(rename = "$text", default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
 }
 
 // Entities is now imported from entities module
@@ -194,6 +215,8 @@ impl Default for OpenScenario {
                 description: crate::types::basic::Value::literal("".to_string()),
                 rev_major: crate::types::basic::Value::literal(1),
                 rev_minor: crate::types::basic::Value::literal(0),
+                license: None,
+                properties: None,
             },
             // Scenario elements
             parameter_declarations: Some(ParameterDeclarations::default()),

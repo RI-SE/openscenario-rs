@@ -46,8 +46,8 @@ fn test_relative_lane_position_xml_roundtrip() {
     assert_eq!(original, deserialized);
     assert_eq!(deserialized.entity_ref.as_literal().unwrap(), "EgoVehicle");
     assert_eq!(deserialized.d_lane.as_literal().unwrap(), &-1);
-    assert_eq!(deserialized.ds.as_literal().unwrap(), &15.0);
-    assert_eq!(deserialized.offset.as_literal().unwrap(), &0.5);
+    assert_eq!(deserialized.ds.as_ref().unwrap().as_literal().unwrap(), &15.0);
+    assert_eq!(deserialized.offset.as_ref().unwrap().as_literal().unwrap(), &0.5);
 }
 
 #[test]
@@ -221,8 +221,8 @@ fn test_default_implementations() {
         "DefaultEntity"
     );
     assert_eq!(rel_lane_default.d_lane.as_literal().unwrap(), &0);
-    assert_eq!(rel_lane_default.ds.as_literal().unwrap(), &0.0);
-    assert_eq!(rel_lane_default.offset.as_literal().unwrap(), &0.0);
+    assert_eq!(rel_lane_default.ds.as_ref().unwrap().as_literal().unwrap(), &0.0);
+    assert_eq!(rel_lane_default.offset.as_ref().unwrap().as_literal().unwrap(), &0.0);
     assert!(rel_lane_default.orientation.is_none());
 }
 
@@ -247,8 +247,8 @@ fn test_builder_methods() {
     let pos3 = RelativeLanePosition::new("Vehicle3".to_string(), 1, 15.0, 0.5);
     assert_eq!(pos3.entity_ref.as_literal().unwrap(), "Vehicle3");
     assert_eq!(pos3.d_lane.as_literal().unwrap(), &1);
-    assert_eq!(pos3.ds.as_literal().unwrap(), &15.0);
-    assert_eq!(pos3.offset.as_literal().unwrap(), &0.5);
+    assert_eq!(pos3.ds.as_ref().unwrap().as_literal().unwrap(), &15.0);
+    assert_eq!(pos3.offset.as_ref().unwrap().as_literal().unwrap(), &0.5);
     assert!(pos3.orientation.is_none());
 
     let orientation2 = Orientation::new(1.57, 0.0, 0.0);
@@ -261,7 +261,7 @@ fn test_builder_methods() {
     );
     assert_eq!(pos4.entity_ref.as_literal().unwrap(), "Vehicle4");
     assert_eq!(pos4.d_lane.as_literal().unwrap(), &-2);
-    assert_eq!(pos4.ds.as_literal().unwrap(), &20.0);
-    assert_eq!(pos4.offset.as_literal().unwrap(), &-0.5);
+    assert_eq!(pos4.ds.as_ref().unwrap().as_literal().unwrap(), &20.0);
+    assert_eq!(pos4.offset.as_ref().unwrap().as_literal().unwrap(), &-0.5);
     assert!(pos4.orientation.is_some());
 }

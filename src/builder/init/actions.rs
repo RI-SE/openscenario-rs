@@ -25,7 +25,16 @@ impl InitActionBuilder {
     pub fn add_global_environment_action(mut self) -> Self {
         let global_action = GlobalAction {
             environment_action: Some(EnvironmentAction {
-                environment: Environment::default(),
+                environment: Some(Environment {
+                    name: crate::types::basic::OSString::literal(
+                        "DefaultEnvironment".to_string(),
+                    ),
+                    parameter_declarations: None,
+                    time_of_day: None,
+                    weather: None,
+                    road_condition: None,
+                }),
+                catalog_reference: None,
             }),
         };
         self.global_actions.push(global_action);

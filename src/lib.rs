@@ -3,6 +3,10 @@
 //! This library provides a type-safe, serde-based implementation for parsing,
 //! manipulating, and generating OpenSCENARIO files in Rust.
 //!
+//! Targets **OpenSCENARIO 1.3** (the schema bundled at `Schema/OpenSCENARIO.xsd`).
+//! Optionality follows the XSD: schema-optional fields are `Option<T>`, and no defaults are
+//! invented beyond what the schema defines. Known gaps are listed in `docs/xsd_gaps.md`.
+//!
 //! # Features
 //!
 //! - **Type-safe parsing** - Full type system for OpenSCENARIO specification

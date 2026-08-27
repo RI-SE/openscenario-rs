@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2026-08-27T12:00:00" description="Minimal sparse scenario exercising XSD-optional omissions" author="openscenario-rs tests" />
+  <CatalogLocations />
+  <RoadNetwork />
+  <Entities>
+    <ScenarioObject name="Ego">
+      <Vehicle name="car" vehicleCategory="car">
+        <BoundingBox>
+          <Center x="1.4" y="0.0" z="0.9" />
+          <Dimensions width="2.0" length="4.5" height="1.8" />
+        </BoundingBox>
+        <Performance maxSpeed="69.0" maxAcceleration="10.0" maxDeceleration="10.0" />
+        <Axles>
+          <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="3.1" positionZ="0.3" />
+          <RearAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.8" positionX="0.0" positionZ="0.3" />
+        </Axles>
+      </Vehicle>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init>
+      <Actions>
+        <GlobalAction>
+          <EnvironmentAction>
+            <Environment name="SparseEnvironment">
+              <Weather fractionalCloudCover="threeOktas" />
+            </Environment>
+          </EnvironmentAction>
+        </GlobalAction>
+        <Private entityRef="Ego">
+          <PrivateAction>
+            <TeleportAction>
+              <Position>
+                <LanePosition roadId="0" laneId="-1" s="10.0" />
+              </Position>
+            </TeleportAction>
+          </PrivateAction>
+        </Private>
+      </Actions>
+    </Init>
+  </Storyboard>
+</OpenSCENARIO>

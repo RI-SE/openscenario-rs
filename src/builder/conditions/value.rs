@@ -79,7 +79,7 @@ impl TimeConditionBuilder {
         Ok(Condition {
             name: OSString::literal("TimeCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
                 time_of_day_condition: None,
@@ -173,7 +173,7 @@ impl SpeedConditionBuilder {
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
@@ -260,7 +260,7 @@ impl ParameterConditionBuilder {
         Ok(Condition {
             name: OSString::literal("ParameterCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: Some(ParameterCondition {
                     parameter_ref: OSString::literal(self.parameter_ref.unwrap()),
@@ -345,7 +345,7 @@ impl VariableConditionBuilder {
         Ok(Condition {
             name: OSString::literal("VariableCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
                 time_of_day_condition: None,
@@ -437,7 +437,7 @@ impl StoryboardElementStateConditionBuilder {
         Ok(Condition {
             name: OSString::literal("StoryboardElementStateCondition".to_string()),
             condition_edge: ConditionEdge::Rising,
-            delay: Some(Double::literal(0.0)),
+            delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
                 time_of_day_condition: None,
