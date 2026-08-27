@@ -148,7 +148,7 @@ pub struct ManeuverGroup {
     pub catalog_reference: Vec<CatalogReference>,
 
     /// Direct maneuver definitions
-    #[serde(rename = "Maneuver")]
+    #[serde(rename = "Maneuver", default, skip_serializing_if = "Vec::is_empty")]
     pub maneuvers: Vec<Maneuver>,
 }
 
