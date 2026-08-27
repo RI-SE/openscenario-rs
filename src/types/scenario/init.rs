@@ -53,7 +53,7 @@ pub struct EnvironmentAction {
     )]
     pub catalog_reference: Option<
         crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogEnvironment,
+            crate::types::catalogs::environments::CatalogEnvironment,
         >,
     >,
 }

@@ -529,6 +529,48 @@ impl RoadNetworkReference {
     }
 }
 
+/// Catalog entity integration so `CatalogEnvironment` can be used as the entry type
+/// in `CatalogContent` and behind a `CatalogReference`.
+impl crate::types::catalogs::entities::CatalogEntity for CatalogEnvironment {
+    // Resolution into a scenario `Environment` is not implemented yet; the
+    // catalog entry itself is fully parsed and preserved.
+    type ResolvedType = String;
+
+    fn into_scenario_entity(
+        self,
+        _parameters: std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<Self::ResolvedType> {
+        Ok(format!("Environment:{}", self.name))
+    }
+
+    fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
+        vec![
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "TimeOfDay".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("12:00:00".to_string()),
+                description: Some("Time of day in HH:MM:SS format".to_string()),
+            },
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "WeatherCondition".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("dry".to_string()),
+                description: Some("Weather condition (dry, wet, snow, fog)".to_string()),
+            },
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "RoadCondition".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("dry".to_string()),
+                description: Some("Road surface condition (dry, wet, snow, ice)".to_string()),
+            },
+        ]
+    }
+
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

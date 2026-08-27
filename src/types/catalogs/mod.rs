@@ -29,17 +29,20 @@ pub use entities::{
     CatalogPedestrian, CatalogPerformance, CatalogRearAxle, CatalogVehicle, ParameterDefinition,
 };
 
-// Qualified re-exports to avoid conflicts - use entities module as primary
 pub use entities::CatalogController;
-pub use entities::CatalogEnvironment;
-pub use entities::CatalogRoute;
-pub use entities::CatalogTrajectory;
+
+// Fully-featured catalog entry types live in their specialized modules; these are
+// the definitions used by `CatalogContent`, so re-export them from there.
+pub use environments::CatalogEnvironment;
+pub use routes::CatalogRoute;
+pub use trajectories::CatalogTrajectory;
 
 // Supporting types from specialized modules
 pub use environments::{
     CatalogFog, CatalogPrecipitation, CatalogRoadCondition, CatalogSun, CatalogTimeOfDay,
     CatalogWeather,
 };
+pub use routes::RouteWaypoint;
 pub use trajectories::{
     CatalogClothoid, CatalogNurbs, CatalogPolyline, CatalogTrajectoryShape, CatalogVertex,
 };

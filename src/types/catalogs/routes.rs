@@ -48,9 +48,9 @@ pub struct CatalogRoute {
     #[serde(rename = "@name")]
     pub name: String,
 
-    /// Whether the route is closed (forms a loop)
-    #[serde(rename = "@closed", skip_serializing_if = "Option::is_none")]
-    pub closed: Option<Boolean>,
+    /// Whether the route is closed (forms a loop) — required per XSD
+    #[serde(rename = "@closed")]
+    pub closed: Boolean,
 
     /// Parameter declarations for this route
     #[serde(
@@ -68,7 +68,7 @@ impl Default for CatalogRoute {
     fn default() -> Self {
         Self {
             name: "DefaultCatalogRoute".to_string(),
-            closed: None,
+            closed: Value::Literal(false),
             parameter_declarations: None,
             waypoints: Vec::new(),
         }
@@ -256,7 +256,7 @@ impl CatalogRoute {
     pub fn new(name: String) -> Self {
         Self {
             name,
-            closed: None,
+            closed: Value::Literal(false),
             parameter_declarations: None,
             waypoints: Vec::new(),
         }
@@ -266,7 +266,7 @@ impl CatalogRoute {
     pub fn with_parameters(name: String, parameters: ParameterDeclarations) -> Self {
         Self {
             name,
-            closed: None,
+            closed: Value::Literal(false),
             parameter_declarations: Some(parameters),
             waypoints: Vec::new(),
         }
@@ -276,7 +276,7 @@ impl CatalogRoute {
     pub fn with_closed(name: String, closed: bool) -> Self {
         Self {
             name,
-            closed: Some(Value::Literal(closed)),
+            closed: Value::Literal(closed),
             parameter_declarations: None,
             waypoints: Vec::new(),
         }
@@ -449,6 +449,48 @@ impl RouteParameterAssignment {
     }
 }
 
+/// Catalog entity integration so `CatalogRoute` can be used as the entry type
+/// in `CatalogContent` and behind a `CatalogReference`.
+impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
+    // Resolution into a scenario `Route` is not implemented yet; the
+    // catalog entry itself is fully parsed and preserved.
+    type ResolvedType = String;
+
+    fn into_scenario_entity(
+        self,
+        _parameters: std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<Self::ResolvedType> {
+        Ok(format!("Route:{}", self.name))
+    }
+
+    fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
+        vec![
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "StartRoadId".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("road_1".to_string()),
+                description: Some("ID of the starting road".to_string()),
+            },
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "EndRoadId".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("road_2".to_string()),
+                description: Some("ID of the ending road".to_string()),
+            },
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "Closed".to_string(),
+                parameter_type: "Boolean".to_string(),
+                default_value: Some("false".to_string()),
+                description: Some("Whether the route is closed (loops back to start)".to_string()),
+            },
+        ]
+    }
+
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -469,7 +511,7 @@ mod tests {
         let route = CatalogRoute::new("TestRoute".to_string());
 
         assert_eq!(route.name, "TestRoute");
-        assert!(route.closed.is_none());
+        assert_eq!(route.closed.as_literal().unwrap(), &false);
         assert!(route.parameter_declarations.is_none());
         assert!(route.waypoints.is_empty());
     }
@@ -588,7 +630,7 @@ mod tests {
     fn test_closed_route() {
         let route = CatalogRoute::with_closed("ClosedRoute".to_string(), true);
 
-        assert_eq!(route.closed.as_ref().unwrap().as_literal().unwrap(), &true);
+        assert_eq!(route.closed.as_literal().unwrap(), &true);
     }
 
     #[test]

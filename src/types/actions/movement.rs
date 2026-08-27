@@ -8,7 +8,7 @@
 //! - Trajectory following and path planning actions
 //!
 use crate::types::basic::{Boolean, Double, Int, OSString};
-use crate::types::catalogs::entities::CatalogTrajectory;
+use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode, SpeedTargetValueType};
 use crate::types::geometry::shapes::Shape;

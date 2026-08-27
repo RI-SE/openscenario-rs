@@ -598,45 +598,9 @@ pub struct CatalogMiscObject {
     pub parameter_declarations: Option<ParameterDeclarationsBlock>,
 }
 
-/// Environment entity definition for catalogs
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CatalogEnvironment {
-    #[serde(rename = "@name")]
-    pub name: String,
-    #[serde(
-        rename = "ParameterDeclarations",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
-}
-
 /// Maneuver entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogManeuver {
-    #[serde(rename = "@name")]
-    pub name: String,
-    #[serde(
-        rename = "ParameterDeclarations",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
-}
-
-/// Trajectory entity definition for catalogs
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CatalogTrajectory {
-    #[serde(rename = "@name")]
-    pub name: String,
-    #[serde(
-        rename = "ParameterDeclarations",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
-}
-
-/// Route entity definition for catalogs
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CatalogRoute {
     #[serde(rename = "@name")]
     pub name: String,
     #[serde(
@@ -687,44 +651,6 @@ impl CatalogEntity for CatalogMiscObject {
     }
 }
 
-impl CatalogEntity for CatalogEnvironment {
-    type ResolvedType = String; // Placeholder - will be Environment when implemented
-
-    fn into_scenario_entity(
-        self,
-        _parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        Ok(format!("Environment:{}", self.name)) // Placeholder implementation
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "TimeOfDay".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("12:00:00".to_string()),
-                description: Some("Time of day in HH:MM:SS format".to_string()),
-            },
-            ParameterDefinition {
-                name: "WeatherCondition".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("dry".to_string()),
-                description: Some("Weather condition (dry, wet, snow, fog)".to_string()),
-            },
-            ParameterDefinition {
-                name: "RoadCondition".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("dry".to_string()),
-                description: Some("Road surface condition (dry, wet, snow, ice)".to_string()),
-            },
-        ]
-    }
-
-    fn entity_name(&self) -> &str {
-        &self.name
-    }
-}
-
 impl CatalogEntity for CatalogManeuver {
     type ResolvedType = String; // Placeholder - will be Maneuver when implemented
 
@@ -756,84 +682,6 @@ impl CatalogEntity for CatalogManeuver {
                 description: Some(
                     "Type of maneuver (lane_change, overtake, merge, etc.)".to_string(),
                 ),
-            },
-        ]
-    }
-
-    fn entity_name(&self) -> &str {
-        &self.name
-    }
-}
-
-impl CatalogEntity for CatalogTrajectory {
-    type ResolvedType = String; // Placeholder - will be Trajectory when implemented
-
-    fn into_scenario_entity(
-        self,
-        _parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        Ok(format!("Trajectory:{}", self.name)) // Placeholder implementation
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "StartTime".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("0.0".to_string()),
-                description: Some("Start time of the trajectory in seconds".to_string()),
-            },
-            ParameterDefinition {
-                name: "Duration".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("60.0".to_string()),
-                description: Some("Duration of the trajectory in seconds".to_string()),
-            },
-            ParameterDefinition {
-                name: "Closed".to_string(),
-                parameter_type: "Boolean".to_string(),
-                default_value: Some("false".to_string()),
-                description: Some(
-                    "Whether the trajectory is closed (loops back to start)".to_string(),
-                ),
-            },
-        ]
-    }
-
-    fn entity_name(&self) -> &str {
-        &self.name
-    }
-}
-
-impl CatalogEntity for CatalogRoute {
-    type ResolvedType = String; // Placeholder - will be Route when implemented
-
-    fn into_scenario_entity(
-        self,
-        _parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        Ok(format!("Route:{}", self.name)) // Placeholder implementation
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "StartRoadId".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("road_1".to_string()),
-                description: Some("ID of the starting road".to_string()),
-            },
-            ParameterDefinition {
-                name: "EndRoadId".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("road_2".to_string()),
-                description: Some("ID of the ending road".to_string()),
-            },
-            ParameterDefinition {
-                name: "Closed".to_string(),
-                parameter_type: "Boolean".to_string(),
-                default_value: Some("false".to_string()),
-                description: Some("Whether the route is closed (loops back to start)".to_string()),
             },
         ]
     }
@@ -1075,21 +923,6 @@ mod tests {
             .into_scenario_entity(HashMap::new())
             .unwrap();
         assert_eq!(resolved, "MiscObject:TrafficCone");
-    }
-
-    #[test]
-    fn test_catalog_environment_placeholder() {
-        let catalog_environment = CatalogEnvironment {
-            name: "SunnyDay".to_string(),
-            parameter_declarations: None,
-        };
-
-        assert_eq!(catalog_environment.entity_name(), "SunnyDay");
-
-        let resolved = catalog_environment
-            .into_scenario_entity(HashMap::new())
-            .unwrap();
-        assert_eq!(resolved, "Environment:SunnyDay");
     }
 
     #[test]

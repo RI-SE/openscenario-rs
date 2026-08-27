@@ -60,7 +60,7 @@ pub struct CatalogTrajectory {
 
     /// Shape definition of the trajectory
     #[serde(rename = "Shape")]
-    pub shape: CatalogTrajectoryShape,
+    pub shape: CatalogShape,
 }
 
 impl Default for CatalogTrajectory {
@@ -69,10 +69,37 @@ impl Default for CatalogTrajectory {
             name: "DefaultCatalogTrajectory".to_string(),
             closed: Value::Literal(false),
             parameter_declarations: None,
-            shape: CatalogTrajectoryShape::Polyline(CatalogPolyline {
+            shape: CatalogShape::new(CatalogTrajectoryShape::Polyline(CatalogPolyline {
                 vertices: Vec::new(),
-            }),
+            })),
         }
+    }
+}
+
+/// Wrapper for the `<Shape>` element of a catalog trajectory.
+///
+/// The XSD models `<Shape>` as a container holding exactly one of
+/// `<Polyline>`, `<Clothoid>` or `<Nurbs>`.  quick-xml maps an externally
+/// tagged enum onto the *field's* element name, so the enum needs this
+/// `$value` wrapper to be nested inside `<Shape>` rather than replacing it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename = "Shape")]
+pub struct CatalogShape {
+    /// The concrete shape variant carried by this `<Shape>` element
+    #[serde(rename = "$value")]
+    pub shape: CatalogTrajectoryShape,
+}
+
+impl CatalogShape {
+    /// Wraps a shape variant in a `<Shape>` container
+    pub fn new(shape: CatalogTrajectoryShape) -> Self {
+        Self { shape }
+    }
+}
+
+impl From<CatalogTrajectoryShape> for CatalogShape {
+    fn from(shape: CatalogTrajectoryShape) -> Self {
+        Self { shape }
     }
 }
 
@@ -87,6 +114,8 @@ pub enum CatalogTrajectoryShape {
     Polyline(CatalogPolyline),
     /// Clothoid-based trajectory with parameterizable curvature
     Clothoid(CatalogClothoid),
+    /// Spline of chained clothoid segments
+    ClothoidSpline(crate::types::geometry::shapes::ClothoidSpline),
     /// NURBS-based trajectory with control points
     Nurbs(CatalogNurbs),
 }
@@ -210,7 +239,7 @@ impl CatalogTrajectory {
             name,
             closed: Value::Literal(false),
             parameter_declarations: None,
-            shape,
+            shape: shape.into(),
         }
     }
 
@@ -224,7 +253,7 @@ impl CatalogTrajectory {
             name,
             closed: Value::Literal(false),
             parameter_declarations: Some(parameters),
-            shape,
+            shape: shape.into(),
         }
     }
 
@@ -234,7 +263,7 @@ impl CatalogTrajectory {
             name,
             closed: Value::Literal(closed),
             parameter_declarations: None,
-            shape,
+            shape: shape.into(),
         }
     }
 
@@ -243,7 +272,7 @@ impl CatalogTrajectory {
     pub fn to_scenario_trajectory(&self) -> crate::types::positions::trajectory::Trajectory {
         use crate::types::positions::trajectory::{Trajectory, TrajectoryShape};
 
-        let scenario_shape = match &self.shape {
+        let scenario_shape = match &self.shape.shape {
             CatalogTrajectoryShape::Polyline(polyline) => {
                 let vertices = polyline
                     .vertices
@@ -275,8 +304,9 @@ impl CatalogTrajectory {
                     start_position: clothoid.start_position.clone(),
                 })
             }
-            CatalogTrajectoryShape::Nurbs(_) => {
-                // NURBS not yet supported in scenario trajectories, fallback to empty polyline
+            CatalogTrajectoryShape::ClothoidSpline(_) | CatalogTrajectoryShape::Nurbs(_) => {
+                // ClothoidSpline/NURBS not yet supported in scenario trajectories,
+                // fallback to empty polyline
                 TrajectoryShape::Polyline(crate::types::positions::trajectory::Polyline {
                     vertex: Vec::new(),
                 })
@@ -385,11 +415,86 @@ impl NurbsKnot {
     }
 }
 
+/// Catalog entity integration so `CatalogTrajectory` can be used as the entry type
+/// in `CatalogContent` and behind a `CatalogReference`.
+impl crate::types::catalogs::entities::CatalogEntity for CatalogTrajectory {
+    // Resolution into a scenario `Trajectory` is not implemented yet; the
+    // catalog entry itself is fully parsed and preserved.
+    type ResolvedType = String;
+
+    fn into_scenario_entity(
+        self,
+        _parameters: std::collections::HashMap<String, String>,
+    ) -> crate::error::Result<Self::ResolvedType> {
+        Ok(format!("Trajectory:{}", self.name))
+    }
+
+    fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
+        vec![
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "StartTime".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("0.0".to_string()),
+                description: Some("Start time of the trajectory in seconds".to_string()),
+            },
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "Duration".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("60.0".to_string()),
+                description: Some("Duration of the trajectory in seconds".to_string()),
+            },
+            crate::types::catalogs::entities::ParameterDefinition {
+                name: "Closed".to_string(),
+                parameter_type: "Boolean".to_string(),
+                default_value: Some("false".to_string()),
+                description: Some("Whether the trajectory is closed (loops back to start)".to_string()),
+            },
+        ]
+    }
+
+    fn entity_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::types::basic::ParameterDeclaration;
     use crate::types::enums::ParameterType;
+
+    /// Regression: `<Trajectory><Shape><Polyline>` must deserialize.  The shape
+    /// enum is externally tagged, so quick-xml matched the variant against the
+    /// `Shape` field element itself and rejected the nested `<Polyline>`.
+    #[test]
+    fn test_catalog_trajectory_shape_polyline_round_trip() {
+        let xml = r#"<Trajectory closed="false" name="VRU_CPx">
+    <Shape>
+        <Polyline>
+            <Vertex>
+                <Position>
+                    <WorldPosition x="1" y="2" z="3"/>
+                </Position>
+            </Vertex>
+        </Polyline>
+    </Shape>
+</Trajectory>"#;
+
+        let trajectory: CatalogTrajectory = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(trajectory.name, "VRU_CPx");
+        match &trajectory.shape.shape {
+            CatalogTrajectoryShape::Polyline(polyline) => {
+                assert_eq!(polyline.vertices.len(), 1);
+            }
+            other => panic!("expected Polyline, got {other:?}"),
+        }
+
+        let serialized = quick_xml::se::to_string(&trajectory).unwrap();
+        assert!(
+            serialized.contains("<Shape><Polyline>"),
+            "Shape nesting lost on serialize: {serialized}"
+        );
+    }
 
     #[test]
     fn test_trajectory_catalog_creation() {
@@ -519,7 +624,7 @@ mod tests {
         assert_eq!(trajectory.name, "ParameterizedTrajectory");
         assert!(trajectory.parameter_declarations.is_some());
 
-        match &trajectory.shape {
+        match &trajectory.shape.shape {
             CatalogTrajectoryShape::Clothoid(clothoid) => {
                 assert!(matches!(clothoid.length, Value::Parameter(_)));
             }

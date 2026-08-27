@@ -4,9 +4,11 @@
 //! matching the XML schema used in OpenSCENARIO catalog files.
 
 use super::entities::{
-    CatalogController, CatalogEnvironment, CatalogManeuver, CatalogMiscObject, CatalogPedestrian,
-    CatalogRoute, CatalogTrajectory, CatalogVehicle,
+    CatalogController, CatalogManeuver, CatalogMiscObject, CatalogPedestrian, CatalogVehicle,
 };
+use super::environments::CatalogEnvironment;
+use super::routes::CatalogRoute;
+use super::trajectories::CatalogTrajectory;
 use crate::types::basic::Value;
 use crate::FileHeader;
 use serde::{Deserialize, Serialize};
@@ -253,5 +255,38 @@ mod tests {
         let content = CatalogContent::default();
         assert_eq!(content.name.as_literal().unwrap(), "DefaultCatalog");
         assert_eq!(content.entity_count(), 0);
+    }
+
+    /// Regression: inline `<Environment>` entries in a catalog file used to be
+    /// parsed into a placeholder carrying only @name, silently dropping the
+    /// Weather/TimeOfDay/RoadCondition children on load and on serialization.
+    #[test]
+    fn test_catalog_environment_entry_preserves_weather_round_trip() {
+        let xml = r#"<Catalog name="EnvironmentCatalog">
+    <Environment name="Sunny">
+        <Weather fractionalCloudCover="zeroOktas">
+            <Sun azimuth="0" elevation="1.571" illuminance="100000"/>
+        </Weather>
+    </Environment>
+</Catalog>"#;
+
+        let catalog: CatalogContent = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(catalog.environments.len(), 1);
+
+        let env = &catalog.environments[0];
+        assert_eq!(env.name, "Sunny");
+        let weather = env.weather.as_ref().expect("Weather must be preserved");
+        let sun = weather.sun.as_ref().expect("Sun must be preserved");
+        assert_eq!(sun.illuminance.as_ref().unwrap().as_literal().unwrap(), &100000.0);
+
+        let serialized = quick_xml::se::to_string(&catalog).unwrap();
+        assert!(
+            serialized.contains("<Weather"),
+            "Weather lost on serialize: {serialized}"
+        );
+        assert!(
+            serialized.contains("illuminance=\"100000\""),
+            "Sun illuminance lost on serialize: {serialized}"
+        );
     }
 }
