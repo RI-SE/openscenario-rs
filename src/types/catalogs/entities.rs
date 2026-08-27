@@ -30,41 +30,23 @@ pub trait CatalogEntity: Clone + Send + Sync {
     fn entity_name(&self) -> &str;
 }
 
-/// Parameter definition for catalog entities.
+/// In-memory description of a parameter accepted by a catalog entity.
 ///
-/// Maps to an individual `<ParameterDeclaration>` XML element, e.g.:
-/// ```xml
-/// <ParameterDeclaration name="MaxDeceleration" parameterType="double" value="10.0"/>
-/// ```
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// This is *not* an XML type: the wire representation of
+/// `<ParameterDeclarations>` is [`crate::types::basic::ParameterDeclarations`].
+/// `ParameterDefinition` is only used by [`CatalogEntity::parameter_schema`] and
+/// the parameter substitution engine in `crate::catalog::parameters` to describe
+/// and validate the parameters an entity understands.
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParameterDefinition {
-    /// Parameter name — XML attribute `name`
-    #[serde(rename = "@name")]
+    /// Parameter name
     pub name: String,
-    /// Parameter type (string, double, integer, boolean) — XML attribute `parameterType`
-    #[serde(rename = "@parameterType")]
+    /// Parameter type (e.g. "String", "Double", "Boolean")
     pub parameter_type: String,
-    /// Default value — XML attribute `value`
-    #[serde(rename = "@value", skip_serializing_if = "Option::is_none")]
+    /// Default value, if any
     pub default_value: Option<String>,
-    /// Human-readable description (not an XML attribute; used only in parameter_schema())
-    #[serde(skip)]
+    /// Human-readable description
     pub description: Option<String>,
-}
-
-/// Wrapper for the `<ParameterDeclarations>` XML element.
-///
-/// The XML structure nests individual declarations inside a container:
-/// ```xml
-/// <ParameterDeclarations>
-///   <ParameterDeclaration name="MaxDeceleration" parameterType="double" value="10.0"/>
-/// </ParameterDeclarations>
-/// ```
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-pub struct ParameterDeclarationsBlock {
-    /// Individual `<ParameterDeclaration>` children
-    #[serde(rename = "ParameterDeclaration", default)]
-    pub declarations: Vec<ParameterDefinition>,
 }
 
 /// Vehicle entity definition for catalogs
@@ -97,9 +79,10 @@ pub struct CatalogVehicle {
     /// Parameter declarations for this catalog vehicle
     #[serde(
         rename = "ParameterDeclarations",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
+    pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 }
 
 /// Performance characteristics with parameter support
@@ -325,9 +308,10 @@ pub struct CatalogController {
     /// Parameter declarations for this catalog controller
     #[serde(
         rename = "ParameterDeclarations",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
+    pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 
     /// Additional properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
@@ -451,9 +435,10 @@ pub struct CatalogPedestrian {
     /// Parameter declarations for this catalog pedestrian
     #[serde(
         rename = "ParameterDeclarations",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
+    pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 }
 
 impl CatalogEntity for CatalogPedestrian {
@@ -612,9 +597,10 @@ pub struct CatalogMiscObject {
 
     #[serde(
         rename = "ParameterDeclarations",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
+    pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 }
 
 /// Maneuver entity definition for catalogs
@@ -624,9 +610,10 @@ pub struct CatalogManeuver {
     pub name: String,
     #[serde(
         rename = "ParameterDeclarations",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_declarations: Option<ParameterDeclarationsBlock>,
+    pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 
     /// Events making up this maneuver — XSD `<Event>`, `maxOccurs="unbounded"`
     #[serde(rename = "Event", default, skip_serializing_if = "Vec::is_empty")]
@@ -1097,27 +1084,102 @@ mod tests {
             .as_ref()
             .expect("vehicle should have a ParameterDeclarations block");
 
-        assert_eq!(decls.declarations.len(), 2, "expected two parameter declarations");
+        assert_eq!(
+            decls.parameter_declarations.len(),
+            2,
+            "expected two parameter declarations"
+        );
 
         let max_decel = decls
-            .declarations
+            .parameter_declarations
             .iter()
-            .find(|p| p.name == "MaxDeceleration")
+            .find(|p| p.name.as_literal().map(|n| n == "MaxDeceleration") == Some(true))
             .expect("MaxDeceleration declaration must be present");
-        assert_eq!(max_decel.parameter_type, "double");
         assert_eq!(
-            max_decel.default_value.as_deref(),
+            max_decel.parameter_type,
+            crate::types::enums::ParameterType::Double
+        );
+        assert_eq!(
+            max_decel.value.as_literal().map(String::as_str),
             Some("10.0"),
-            "default_value should map to the 'value' XML attribute"
+            "value should map to the 'value' XML attribute"
         );
 
         let max_speed = decls
-            .declarations
+            .parameter_declarations
             .iter()
-            .find(|p| p.name == "MaxSpeed")
+            .find(|p| p.name.as_literal().map(|n| n == "MaxSpeed") == Some(true))
             .expect("MaxSpeed declaration must be present");
-        assert_eq!(max_speed.parameter_type, "double");
-        assert_eq!(max_speed.default_value.as_deref(), Some("50.0"));
+        assert_eq!(
+            max_speed.parameter_type,
+            crate::types::enums::ParameterType::Double
+        );
+        assert_eq!(max_speed.value.as_literal().map(String::as_str), Some("50.0"));
+    }
+
+    /// Regression: catalog entities previously used a bespoke
+    /// `ParameterDeclarationsBlock` whose declarations had no `<ConstraintGroup>`
+    /// field, so constraints were silently dropped on every catalog round-trip.
+    #[test]
+    fn test_catalog_vehicle_parameter_declarations_constraint_group_round_trip() {
+        let xml = r#"<Vehicle name="ConstrainedCar" vehicleCategory="car">
+  <ParameterDeclarations>
+    <ParameterDeclaration name="x" parameterType="double" value="1.0">
+      <ConstraintGroup>
+        <ValueConstraint rule="greaterThan" value="0"/>
+      </ConstraintGroup>
+    </ParameterDeclaration>
+  </ParameterDeclarations>
+  <BoundingBox>
+    <Center x="0.0" y="0.0" z="0.75"/>
+    <Dimensions width="2.0" length="4.5" height="1.5"/>
+  </BoundingBox>
+  <Performance maxSpeed="50.0" maxAcceleration="10.0" maxDeceleration="8.0"/>
+  <Axles>
+    <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.7" positionX="2.8" positionZ="0.3"/>
+    <RearAxle  maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="0.0" positionZ="0.3"/>
+  </Axles>
+</Vehicle>"#;
+
+        let check = |vehicle: &CatalogVehicle| {
+            let decls = vehicle
+                .parameter_declarations
+                .as_ref()
+                .expect("ParameterDeclarations must be present");
+            assert_eq!(decls.parameter_declarations.len(), 1);
+            let decl = &decls.parameter_declarations[0];
+            assert_eq!(decl.name.as_literal().map(String::as_str), Some("x"));
+            assert_eq!(
+                decl.parameter_type,
+                crate::types::enums::ParameterType::Double
+            );
+            assert_eq!(decl.value.as_literal().map(String::as_str), Some("1.0"));
+            assert_eq!(
+                decl.constraint_groups.len(),
+                1,
+                "ConstraintGroup must survive"
+            );
+            let constraints = &decl.constraint_groups[0].value_constraints;
+            assert_eq!(constraints.len(), 1);
+            assert_eq!(constraints[0].rule, crate::types::enums::Rule::GreaterThan);
+            assert_eq!(
+                constraints[0].value.as_literal().map(String::as_str),
+                Some("0")
+            );
+        };
+
+        let vehicle: CatalogVehicle = quick_xml::de::from_str(xml).unwrap();
+        check(&vehicle);
+
+        let serialized = quick_xml::se::to_string(&vehicle).unwrap();
+        assert!(
+            serialized.contains("<ConstraintGroup>"),
+            "ConstraintGroup lost on serialize: {serialized}"
+        );
+
+        let reparsed: CatalogVehicle = quick_xml::de::from_str(&serialized).unwrap();
+        check(&reparsed);
+        assert_eq!(vehicle, reparsed);
     }
 
     /// Verify that a Vehicle WITHOUT a <ParameterDeclarations> block still
