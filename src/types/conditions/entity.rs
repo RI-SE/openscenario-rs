@@ -43,11 +43,6 @@ pub struct SpeedCondition {
     #[serde(rename = "@rule")]
     pub rule: Rule,
 
-    /// Entity reference (library extension beyond the XSD, which identifies the
-    /// entity via TriggeringEntities instead; optional so schema-valid XML parses)
-    #[serde(rename = "@entityRef", default, skip_serializing_if = "Option::is_none")]
-    pub entity_ref: Option<OSString>,
-
     /// Direction of speed measurement (optional)
     #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
     pub direction: Option<DirectionalDimension>,
@@ -573,7 +568,6 @@ impl Default for SpeedCondition {
         Self {
             value: Double::literal(10.0),
             rule: Rule::GreaterThan,
-            entity_ref: None,
             direction: None,
         }
     }
@@ -1016,18 +1010,20 @@ impl ByEntityCondition {
     }
 
     /// Create a speed condition
+    ///
+    /// The entity is identified via `triggering_entities`; `entity_ref` is accepted
+    /// for backward-compatible call sites but no longer duplicated onto the condition.
     pub fn speed(
         triggering_entities: TriggeringEntities,
         value: f64,
         rule: Rule,
-        entity_ref: &str,
+        _entity_ref: &str,
     ) -> Self {
         Self::new(
             triggering_entities,
             EntityCondition::Speed(SpeedCondition {
                 value: Double::literal(value),
                 rule,
-                entity_ref: Some(OSString::Literal(entity_ref.to_string())),
                 direction: None,
             }),
         )

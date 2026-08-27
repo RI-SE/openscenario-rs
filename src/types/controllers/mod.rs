@@ -189,20 +189,12 @@ pub struct ActivateControllerAction {
     /// Reference to the controller to activate
     #[serde(rename = "@controllerRef")]
     pub controller_ref: OSString,
-
-    /// Parameter assignments for controller activation
-    #[serde(
-        rename = "ParameterAssignments",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_assignments: Option<ParameterAssignments>,
 }
 
 impl Default for ActivateControllerAction {
     fn default() -> Self {
         Self {
             controller_ref: Value::Literal("DefaultController".to_string()),
-            parameter_assignments: None,
         }
     }
 }
@@ -429,18 +421,6 @@ impl ActivateControllerAction {
     pub fn new(controller_ref: String) -> Self {
         Self {
             controller_ref: Value::Literal(controller_ref),
-            parameter_assignments: None,
-        }
-    }
-
-    /// Creates an action to activate a controller with parameter assignments.
-    pub fn with_parameters(
-        controller_ref: String,
-        parameter_assignments: ParameterAssignments,
-    ) -> Self {
-        Self {
-            controller_ref: Value::Literal(controller_ref),
-            parameter_assignments: Some(parameter_assignments),
         }
     }
 }
@@ -500,7 +480,6 @@ mod tests {
             action.controller_ref.as_literal().unwrap(),
             "MainController"
         );
-        assert!(action.parameter_assignments.is_none());
     }
 
     #[test]

@@ -185,7 +185,6 @@ impl SpeedConditionBuilder {
                 entity_condition: EntityCondition::Speed(EntitySpeedCondition {
                     value: Double::literal(self.speed.unwrap()),
                     rule: self.rule,
-                    entity_ref: Some(OSString::literal(entity_ref.clone())),
                     direction: None,
                 }),
             }),
@@ -499,19 +498,18 @@ mod tests {
         assert!(condition.by_entity_condition.is_some());
         let by_entity = condition.by_entity_condition.unwrap();
 
+        assert_eq!(
+            by_entity.triggering_entities.entity_refs[0]
+                .entity_ref
+                .as_literal()
+                .unwrap(),
+            "ego"
+        );
+
         match by_entity.entity_condition {
             EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &30.0);
                 assert_eq!(speed_condition.rule, Rule::GreaterThan);
-                assert_eq!(
-                    speed_condition
-                        .entity_ref
-                        .as_ref()
-                        .unwrap()
-                        .as_literal()
-                        .unwrap(),
-                    "ego"
-                );
             }
             _ => panic!("Expected Speed condition"),
         }

@@ -8,7 +8,7 @@
 
 use openscenario_rs::parse_str;
 use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
-use openscenario_rs::types::{OSString, OpenScenario};
+use openscenario_rs::types::OpenScenario;
 use std::fs;
 
 /// Helper function to extract entities and storyboard from OpenScenario
@@ -256,7 +256,6 @@ fn can_create_and_serialize_conditions() {
     let speed_condition = SpeedCondition {
         value: openscenario_rs::types::Double::literal(25.0),
         rule: Rule::LessThan,
-        entity_ref: Some(OSString::Literal("Ego".to_string())),
         direction: None,
     };
 

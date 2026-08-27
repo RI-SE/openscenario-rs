@@ -5,7 +5,6 @@ use openscenario_rs::types::{
     conditions::{ByEntityCondition, EntityCondition, SpeedCondition},
     enums::Rule,
     scenario::triggers::TriggeringEntities,
-    OSString,
 };
 
 #[test]
@@ -17,7 +16,6 @@ fn test_by_entity_condition_basic() {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(speed.entity_ref, None);
         }
         _ => panic!("Expected default to be Speed condition"),
     }
@@ -29,7 +27,6 @@ fn test_by_entity_condition_variants() {
     let speed_condition = EntityCondition::Speed(SpeedCondition {
         value: Double::literal(25.0),
         rule: Rule::GreaterThan,
-        entity_ref: Some(OSString::Literal("test_vehicle".to_string())),
         direction: None,
     });
 

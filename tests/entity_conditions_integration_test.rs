@@ -24,10 +24,6 @@ fn test_by_entity_condition_speed() {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(
-                speed.entity_ref.as_ref().and_then(|v| v.as_literal()),
-                Some("ego_vehicle".to_string()).as_ref()
-            );
         }
         _ => panic!("Expected Speed condition"),
     }
@@ -106,7 +102,6 @@ fn test_by_entity_condition_default() {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(speed.entity_ref, None);
         }
         _ => panic!("Expected default to be Speed condition"),
     }
@@ -236,7 +231,7 @@ fn test_entity_condition_xml_deserialization_speed() {
     // Test XML deserialization with SpeedCondition
     let xml = r#"
     <EntityCondition>
-        <SpeedCondition value="25.0" rule="greaterThan" entityRef="ego_vehicle" />
+        <SpeedCondition value="25.0" rule="greaterThan" />
     </EntityCondition>
     "#;
 
@@ -252,10 +247,6 @@ fn test_entity_condition_xml_deserialization_speed() {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(
-                speed.entity_ref.as_ref().and_then(|v| v.as_literal()),
-                Some("ego_vehicle".to_string()).as_ref()
-            );
         }
         _ => panic!("Expected SpeedCondition, got: {:?}", condition),
     }
@@ -266,8 +257,8 @@ fn test_entity_condition_xml_deserialization_error_multiple_conditions() {
     // Test that multiple conditions in one EntityCondition cause an error
     let xml = r#"
     <EntityCondition>
-        <SpeedCondition value="25.0" rule="greaterThan" entityRef="ego_vehicle" />
-        <RelativeDistanceCondition entityRef="CutInVehicle" relativeDistanceType="longitudinal" 
+        <SpeedCondition value="25.0" rule="greaterThan" />
+        <RelativeDistanceCondition entityRef="CutInVehicle" relativeDistanceType="longitudinal"
                                  value="10.0" freespace="true" rule="lessThan" coordinateSystem="entity" />
     </EntityCondition>
     "#;

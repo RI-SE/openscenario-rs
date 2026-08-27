@@ -175,7 +175,6 @@ impl EnhancedSpeedConditionBuilder {
         let speed_condition = SpeedCondition {
             value: Double::literal(self.value.unwrap()),
             rule: self.rule,
-            entity_ref: Some(OSString::literal(self.entity_ref.clone().unwrap())),
             direction: None,
         };
 
