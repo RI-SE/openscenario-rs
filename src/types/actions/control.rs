@@ -222,7 +222,7 @@ pub enum Gear {
 impl Default for AssignControllerAction {
     fn default() -> Self {
         Self {
-            controller: Some(Controller::default()),
+            controller: None,
             catalog_reference: None,
         }
     }
@@ -475,7 +475,10 @@ mod tests {
 
     #[test]
     fn test_assign_controller_action_creation() {
-        let controller = Controller::default();
+        let controller = Controller::new(
+            "TestController".to_string(),
+            crate::types::enums::ControllerType::Movement,
+        );
         let action = AssignControllerAction::with_controller(controller);
 
         assert!(action.controller.is_some());
@@ -544,7 +547,8 @@ mod tests {
     #[test]
     fn test_controller_action_defaults() {
         let assign = AssignControllerAction::default();
-        assert!(assign.controller.is_some());
+        assert!(assign.controller.is_none());
+        assert!(assign.catalog_reference.is_none());
 
         let activate = ActivateControllerAction::default();
         assert_eq!(activate.longitudinal.unwrap().as_literal(), Some(&true));

@@ -54,17 +54,6 @@ pub struct Controller {
     pub properties: Option<Properties>,
 }
 
-impl Default for Controller {
-    fn default() -> Self {
-        Self {
-            name: Value::Literal("DefaultController".to_string()),
-            controller_type: Some(ControllerType::Movement),
-            parameter_declarations: None,
-            properties: None,
-        }
-    }
-}
-
 /// Object controller wrapper that can reference a controller definition or catalog.
 ///
 /// This is the controller structure used in ScenarioObject entities.
@@ -172,7 +161,7 @@ impl Default for ObjectController {
     fn default() -> Self {
         Self {
             name: None,
-            controller: Some(Controller::default()),
+            controller: None,
             catalog_reference: None,
         }
     }
@@ -579,7 +568,6 @@ mod tests {
 
     #[test]
     fn test_controller_defaults() {
-        let controller = Controller::default();
         let object_controller = ObjectController::default();
         let properties = ControllerProperties::default();
         let activate_action = ActivateControllerAction::default();
@@ -587,8 +575,8 @@ mod tests {
         let assignment = ControllerAssignment::default();
 
         // All defaults should be valid
-        assert!(controller.name.as_literal().is_some());
-        assert!(object_controller.controller.is_some());
+        assert!(object_controller.controller.is_none());
+        assert!(object_controller.catalog_reference.is_none());
         assert!(properties.properties.is_empty());
         assert!(activate_action.controller_ref.as_literal().is_some());
         assert!(override_action.active.as_literal().is_some());
@@ -600,7 +588,10 @@ mod tests {
         // Test valid controller with direct controller
         let valid_direct = ObjectController {
             name: None,
-            controller: Some(Controller::default()),
+            controller: Some(Controller::new(
+                "TestController".to_string(),
+                ControllerType::Movement,
+            )),
             catalog_reference: None,
         };
         assert!(valid_direct.validate().is_ok());
@@ -629,7 +620,10 @@ mod tests {
         // Test invalid controller with both controller and reference
         let invalid_both = ObjectController {
             name: None,
-            controller: Some(Controller::default()),
+            controller: Some(Controller::new(
+                "TestController".to_string(),
+                ControllerType::Movement,
+            )),
             catalog_reference: Some(ControllerCatalogReference::new(
                 "catalog".to_string(),
                 "entry".to_string(),
@@ -640,7 +634,7 @@ mod tests {
         // Test named controller
         let named_controller = ObjectController::with_named_controller(
             "TestController".to_string(),
-            Controller::default(),
+            Controller::new("TestController".to_string(), ControllerType::Movement),
         );
         assert!(named_controller.validate().is_ok());
         assert_eq!(

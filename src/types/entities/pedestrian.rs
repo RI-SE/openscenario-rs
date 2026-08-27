@@ -45,28 +45,6 @@ pub struct Pedestrian {
     pub parameter_declarations: Option<ParameterDeclarations>,
 }
 
-impl Default for Pedestrian {
-    fn default() -> Self {
-        Self {
-            name: crate::types::basic::Value::literal("DefaultPedestrian".to_string()),
-            pedestrian_category: PedestrianCategory::Pedestrian,
-            mass: Double::literal(75.0),
-            role: None,
-            model3d: None,
-            bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
-                dimensions: crate::types::geometry::Dimensions {
-                    width: crate::types::basic::Value::literal(0.6),
-                    length: crate::types::basic::Value::literal(0.6),
-                    height: crate::types::basic::Value::literal(1.8),
-                },
-            },
-            properties: None,
-            parameter_declarations: None,
-        }
-    }
-}
-
 impl Pedestrian {
     pub fn new_pedestrian(name: String) -> Self {
         Self {
@@ -135,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_pedestrian_default() {
-        let pedestrian = Pedestrian::default();
+        let pedestrian = Pedestrian::new_pedestrian("DefaultPedestrian".to_string());
 
         assert_eq!(pedestrian.name.as_literal().unwrap(), "DefaultPedestrian");
         assert_eq!(
@@ -186,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_pedestrian_serialization() {
-        let pedestrian = Pedestrian::default();
+        let pedestrian = Pedestrian::new_pedestrian("DefaultPedestrian".to_string());
 
         // Test that serialization works
         let xml = quick_xml::se::to_string(&pedestrian).unwrap();

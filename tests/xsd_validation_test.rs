@@ -15,7 +15,7 @@ use openscenario_rs::types::actions::movement::{
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;
 use openscenario_rs::types::controllers::{Controller, ObjectController};
-use openscenario_rs::types::enums::FollowingMode;
+use openscenario_rs::types::enums::{ControllerType, FollowingMode};
 use openscenario_rs::types::scenario::init::{LongitudinalAction, PrivateAction};
 
 #[test]
@@ -191,7 +191,10 @@ fn test_object_controller_choice_group() {
     // Test valid ObjectController with direct controller
     let direct_controller = ObjectController {
         name: None,
-        controller: Some(Controller::default()),
+        controller: Some(Controller::new(
+            "TestController".to_string(),
+            ControllerType::Movement,
+        )),
         catalog_reference: None,
     };
     assert!(direct_controller.validate().is_ok());
@@ -222,7 +225,10 @@ fn test_object_controller_choice_group() {
     // Test invalid ObjectController with both
     let both_controller = ObjectController {
         name: None,
-        controller: Some(Controller::default()),
+        controller: Some(Controller::new(
+            "TestController".to_string(),
+            ControllerType::Movement,
+        )),
         catalog_reference: Some(
             openscenario_rs::types::catalogs::references::ControllerCatalogReference::new(
                 "ControllerCatalog".to_string(),

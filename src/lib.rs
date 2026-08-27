@@ -169,11 +169,20 @@ pub fn parse_str(xml: &str) -> Result<OpenScenario> {
 ///
 /// This is a convenience function that wraps `parser::xml::serialize_to_string`.
 ///
-/// # Example  
+/// # Example
 /// ```rust
-/// use openscenario_rs::{serialize_str, OpenScenario};
+/// use openscenario_rs::{parse_str, serialize_str};
 ///
-/// let scenario = OpenScenario::default();
+/// let xml = r#"
+/// <?xml version="1.0" encoding="UTF-8"?>
+/// <OpenSCENARIO>
+///   <FileHeader author="Test" date="2024-01-01" description="Test" revMajor="1" revMinor="0"/>
+///   <Entities/>
+///   <Storyboard><Init><Actions/></Init></Storyboard>
+/// </OpenSCENARIO>
+/// "#;
+///
+/// let scenario = parse_str(xml)?;
 /// let xml = serialize_str(&scenario)?;
 /// println!("{}", xml);
 /// # Ok::<(), openscenario_rs::Error>(())

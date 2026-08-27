@@ -1113,7 +1113,7 @@ mod tests {
     #[test]
     fn test_validation_metrics() {
         let mut validator = ScenarioValidator::new();
-        let scenario = OpenScenario::default();
+        let scenario = crate::types::scenario::storyboard::test_scenario_document();
 
         let result = validator.validate_scenario(&scenario);
 
@@ -1167,7 +1167,7 @@ mod tests {
             scenario_objects: vec![scenario_object],
         };
 
-        let mut scenario = OpenScenario::default();
+        let mut scenario = crate::types::scenario::storyboard::test_scenario_document();
         scenario.entities = Some(entities);
 
         let result = validator.validate_scenario(&scenario);

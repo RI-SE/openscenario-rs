@@ -205,32 +205,35 @@ pub use super::init::Init;
 // Story is now imported from story.rs module
 
 
-impl Default for OpenScenario {
-    /// Default creates a concrete scenario document
-    fn default() -> Self {
-        Self {
-            file_header: FileHeader {
-                author: crate::types::basic::Value::literal("Unknown".to_string()),
-                date: crate::types::basic::Value::literal("1970-01-01T00:00:00".to_string()),
-                description: crate::types::basic::Value::literal("".to_string()),
-                rev_major: crate::types::basic::Value::literal(1),
-                rev_minor: crate::types::basic::Value::literal(0),
-                license: None,
-                properties: None,
-            },
-            // Scenario elements
-            parameter_declarations: Some(ParameterDeclarations::default()),
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
-            road_network: Some(crate::types::road::RoadNetwork::default()),
-            entities: Some(Entities::default()),
-            storyboard: Some(Storyboard::default()),
-            // Parameter variation elements
-            parameter_value_distribution: None,
-            // Catalog elements
-            catalog: None,
-        }
+/// Constructs a concrete scenario document with explicit, non-invented test data.
+///
+/// Used by tests (in this module and elsewhere in the crate) that need a minimal
+/// but valid `OpenScenario` scenario document without relying on a fabricated
+/// `Default` impl for XSD-required fields such as `FileHeader`.
+#[cfg(test)]
+pub(crate) fn test_scenario_document() -> OpenScenario {
+    OpenScenario {
+        file_header: FileHeader {
+            author: crate::types::basic::Value::literal("Test Author".to_string()),
+            date: crate::types::basic::Value::literal("2024-01-01T00:00:00".to_string()),
+            description: crate::types::basic::Value::literal("Test scenario".to_string()),
+            rev_major: crate::types::basic::Value::literal(1),
+            rev_minor: crate::types::basic::Value::literal(0),
+            license: None,
+            properties: None,
+        },
+        // Scenario elements
+        parameter_declarations: Some(ParameterDeclarations::default()),
+        variable_declarations: None,
+        monitor_declarations: None,
+        catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
+        road_network: Some(crate::types::road::RoadNetwork::default()),
+        entities: Some(Entities::default()),
+        storyboard: Some(Storyboard::default()),
+        // Parameter variation elements
+        parameter_value_distribution: None,
+        // Catalog elements
+        catalog: None,
     }
 }
 
@@ -240,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_open_scenario_default_is_scenario_type() {
-        let doc = OpenScenario::default();
+        let doc = test_scenario_document();
         assert_eq!(doc.document_type(), OpenScenarioDocumentType::Scenario);
         assert!(doc.is_scenario());
         assert!(!doc.is_catalog());
@@ -249,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_document_type_unknown_when_no_content() {
-        let mut doc = OpenScenario::default();
+        let mut doc = test_scenario_document();
         doc.entities = None;
         doc.storyboard = None;
         doc.catalog = None;
@@ -259,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_document_type_catalog() {
-        let mut doc = OpenScenario::default();
+        let mut doc = test_scenario_document();
         doc.entities = None;
         doc.storyboard = None;
         doc.catalog = Some(CatalogDefinition::default());
@@ -276,7 +279,7 @@ mod tests {
 
     #[test]
     fn test_open_scenario_xml_roundtrip() {
-        let doc = OpenScenario::default();
+        let doc = test_scenario_document();
         let xml = quick_xml::se::to_string(&doc).unwrap();
         assert!(xml.contains("OpenSCENARIO"));
         assert!(xml.contains("FileHeader"));
