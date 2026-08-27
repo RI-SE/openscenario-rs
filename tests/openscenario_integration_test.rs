@@ -256,7 +256,7 @@ fn can_create_and_serialize_conditions() {
     let speed_condition = SpeedCondition {
         value: openscenario_rs::types::Double::literal(25.0),
         rule: Rule::LessThan,
-        entity_ref: OSString::Literal("Ego".to_string()),
+        entity_ref: Some(OSString::Literal("Ego".to_string())),
         direction: None,
     };
 

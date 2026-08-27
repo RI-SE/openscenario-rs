@@ -43,11 +43,10 @@ pub struct SpeedCondition {
     #[serde(rename = "@rule")]
     pub rule: Rule,
 
-    /// Entity reference (library extension for convenience)
-    //#[serde(rename = "@entityRef")]
-    //
-    #[serde(rename = "@entityRef")]
-    pub entity_ref: OSString,
+    /// Entity reference (library extension beyond the XSD, which identifies the
+    /// entity via TriggeringEntities instead; optional so schema-valid XML parses)
+    #[serde(rename = "@entityRef", default, skip_serializing_if = "Option::is_none")]
+    pub entity_ref: Option<OSString>,
 
     /// Direction of speed measurement (optional)
     #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
@@ -574,7 +573,7 @@ impl Default for SpeedCondition {
         Self {
             value: Double::literal(10.0),
             rule: Rule::GreaterThan,
-            entity_ref: OSString::Literal("DefaultEntity".to_string()),
+            entity_ref: None,
             direction: None,
         }
     }
@@ -1028,7 +1027,7 @@ impl ByEntityCondition {
             EntityCondition::Speed(SpeedCondition {
                 value: Double::literal(value),
                 rule,
-                entity_ref: OSString::Literal(entity_ref.to_string()),
+                entity_ref: Some(OSString::Literal(entity_ref.to_string())),
                 direction: None,
             }),
         )

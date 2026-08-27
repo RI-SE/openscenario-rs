@@ -25,7 +25,7 @@ fn test_by_entity_condition_speed() {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
             assert_eq!(
-                speed.entity_ref.as_literal(),
+                speed.entity_ref.as_ref().and_then(|v| v.as_literal()),
                 Some("ego_vehicle".to_string()).as_ref()
             );
         }
@@ -106,10 +106,7 @@ fn test_by_entity_condition_default() {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
-            assert_eq!(
-                speed.entity_ref.as_literal(),
-                Some("DefaultEntity".to_string()).as_ref()
-            );
+            assert_eq!(speed.entity_ref, None);
         }
         _ => panic!("Expected default to be Speed condition"),
     }
@@ -256,7 +253,7 @@ fn test_entity_condition_xml_deserialization_speed() {
             assert_eq!(speed.value, Double::literal(25.0));
             assert_eq!(speed.rule, Rule::GreaterThan);
             assert_eq!(
-                speed.entity_ref.as_literal(),
+                speed.entity_ref.as_ref().and_then(|v| v.as_literal()),
                 Some("ego_vehicle".to_string()).as_ref()
             );
         }
