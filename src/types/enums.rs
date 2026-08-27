@@ -794,10 +794,12 @@ impl FromStr for Role {
 /// Angle type enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AngleType {
-    #[serde(rename = "relative")]
-    Relative,
-    #[serde(rename = "absolute")]
-    Absolute,
+    #[serde(rename = "heading")]
+    Heading,
+    #[serde(rename = "pitch")]
+    Pitch,
+    #[serde(rename = "roll")]
+    Roll,
 }
 
 /// Directional dimension enumeration
@@ -1001,8 +1003,9 @@ pub enum RoutingAlgorithm {
 impl fmt::Display for AngleType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            AngleType::Relative => "relative",
-            AngleType::Absolute => "absolute",
+            AngleType::Heading => "heading",
+            AngleType::Pitch => "pitch",
+            AngleType::Roll => "roll",
         };
         write!(f, "{}", s)
     }
@@ -1013,8 +1016,9 @@ impl FromStr for AngleType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "relative" => Ok(AngleType::Relative),
-            "absolute" => Ok(AngleType::Absolute),
+            "heading" => Ok(AngleType::Heading),
+            "pitch" => Ok(AngleType::Pitch),
+            "roll" => Ok(AngleType::Roll),
             _ => Err(format!("Invalid angle type: {}", s)),
         }
     }
@@ -1543,20 +1547,16 @@ mod tests {
 
     #[test]
     fn test_angle_type_display() {
-        assert_eq!(AngleType::Relative.to_string(), "relative");
-        assert_eq!(AngleType::Absolute.to_string(), "absolute");
+        assert_eq!(AngleType::Heading.to_string(), "heading");
+        assert_eq!(AngleType::Pitch.to_string(), "pitch");
+        assert_eq!(AngleType::Roll.to_string(), "roll");
     }
 
     #[test]
     fn test_angle_type_from_str() {
-        assert_eq!(
-            "relative".parse::<AngleType>().unwrap(),
-            AngleType::Relative
-        );
-        assert_eq!(
-            "absolute".parse::<AngleType>().unwrap(),
-            AngleType::Absolute
-        );
+        assert_eq!("heading".parse::<AngleType>().unwrap(), AngleType::Heading);
+        assert_eq!("pitch".parse::<AngleType>().unwrap(), AngleType::Pitch);
+        assert_eq!("roll".parse::<AngleType>().unwrap(), AngleType::Roll);
         assert!("invalid".parse::<AngleType>().is_err());
     }
 

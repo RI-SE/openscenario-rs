@@ -231,7 +231,7 @@ fn test_time_to_collision_condition_serializes_correct_target_element() {
 #[test]
 fn test_angle_condition_xml_round_trip() {
     let original = AngleCondition {
-        angle_type: AngleType::Relative,
+        angle_type: AngleType::Heading,
         angle: Double::literal(1.57),
         angle_tolerance: Double::literal(0.1),
         coordinate_system: None,
@@ -243,7 +243,7 @@ fn test_angle_condition_xml_round_trip() {
 #[test]
 fn test_angle_condition_with_coordinate_system_xml_round_trip() {
     let original = AngleCondition {
-        angle_type: AngleType::Absolute,
+        angle_type: AngleType::Pitch,
         angle: Double::literal(3.14),
         angle_tolerance: Double::literal(0.05),
         coordinate_system: Some(CoordinateSystem::Entity),
@@ -256,10 +256,10 @@ fn test_angle_condition_with_coordinate_system_xml_round_trip() {
 /// are accepted by the deserialiser (not the snake_case field names).
 #[test]
 fn test_angle_condition_raw_xml_deserialize_attributes() {
-    let xml = r#"<AngleCondition angleType="relative" angle="1.57" angleTolerance="0.1"/>"#;
+    let xml = r#"<AngleCondition angleType="heading" angle="1.57" angleTolerance="0.1"/>"#;
     let condition: AngleCondition = quick_xml::de::from_str(xml)
         .expect("failed to deserialise AngleCondition from raw XML");
-    assert_eq!(condition.angle_type, AngleType::Relative);
+    assert_eq!(condition.angle_type, AngleType::Heading);
     assert_eq!(condition.angle, Double::literal(1.57));
     assert_eq!(condition.angle_tolerance, Double::literal(0.1));
     assert_eq!(condition.coordinate_system, None);
@@ -268,10 +268,10 @@ fn test_angle_condition_raw_xml_deserialize_attributes() {
 /// Confirm optional `coordinateSystem` attribute is accepted.
 #[test]
 fn test_angle_condition_raw_xml_deserialize_with_coordinate_system() {
-    let xml = r#"<AngleCondition angleType="absolute" angle="3.14" angleTolerance="0.05" coordinateSystem="entity"/>"#;
+    let xml = r#"<AngleCondition angleType="pitch" angle="3.14" angleTolerance="0.05" coordinateSystem="entity"/>"#;
     let condition: AngleCondition = quick_xml::de::from_str(xml)
         .expect("failed to deserialise AngleCondition with coordinateSystem");
-    assert_eq!(condition.angle_type, AngleType::Absolute);
+    assert_eq!(condition.angle_type, AngleType::Pitch);
     assert_eq!(condition.angle, Double::literal(3.14));
     assert_eq!(condition.angle_tolerance, Double::literal(0.05));
     assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Entity));
@@ -280,7 +280,7 @@ fn test_angle_condition_raw_xml_deserialize_with_coordinate_system() {
 #[test]
 fn test_angle_condition_serializes_correct_attribute_names() {
     let condition = AngleCondition {
-        angle_type: AngleType::Relative,
+        angle_type: AngleType::Heading,
         angle: Double::literal(1.0),
         angle_tolerance: Double::literal(0.2),
         coordinate_system: Some(CoordinateSystem::Road),
@@ -458,7 +458,7 @@ fn test_relative_clearance_condition_serializes_correct_attribute_names() {
 fn test_relative_angle_condition_xml_round_trip() {
     let original = RelativeAngleCondition {
         entity_ref: OSString::literal("lead_vehicle".to_string()),
-        angle_type: AngleType::Relative,
+        angle_type: AngleType::Heading,
         angle: Double::literal(0.5),
         angle_tolerance: Double::literal(0.1),
         coordinate_system: None,
@@ -471,7 +471,7 @@ fn test_relative_angle_condition_xml_round_trip() {
 fn test_relative_angle_condition_with_coordinate_system_xml_round_trip() {
     let original = RelativeAngleCondition {
         entity_ref: OSString::literal("ref_entity".to_string()),
-        angle_type: AngleType::Absolute,
+        angle_type: AngleType::Pitch,
         angle: Double::literal(1.0),
         angle_tolerance: Double::literal(0.2),
         coordinate_system: Some(CoordinateSystem::Lane),
@@ -484,7 +484,7 @@ fn test_relative_angle_condition_with_coordinate_system_xml_round_trip() {
 fn test_relative_angle_condition_serializes_correct_attribute_names() {
     let condition = RelativeAngleCondition {
         entity_ref: OSString::literal("car".to_string()),
-        angle_type: AngleType::Relative,
+        angle_type: AngleType::Heading,
         angle: Double::literal(0.0),
         angle_tolerance: Double::literal(0.1),
         coordinate_system: None,

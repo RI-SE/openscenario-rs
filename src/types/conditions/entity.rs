@@ -938,7 +938,7 @@ impl Default for TimeToCollisionTarget {
 impl Default for AngleCondition {
     fn default() -> Self {
         Self {
-            angle_type: AngleType::Relative,
+            angle_type: AngleType::Heading,
             angle: Double::literal(0.0),
             angle_tolerance: Double::literal(0.1),
             coordinate_system: None,
@@ -983,7 +983,7 @@ impl Default for RelativeAngleCondition {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            angle_type: AngleType::Relative,
+            angle_type: AngleType::Heading,
             angle: Double::literal(0.0),
             angle_tolerance: Double::literal(0.1),
             coordinate_system: None,
