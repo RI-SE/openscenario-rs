@@ -626,6 +626,10 @@ pub struct CatalogManeuver {
         skip_serializing_if = "Option::is_none"
     )]
     pub parameter_declarations: Option<ParameterDeclarationsBlock>,
+
+    /// Events making up this maneuver — XSD `<Event>`, `maxOccurs="unbounded"`
+    #[serde(rename = "Event", default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<crate::types::scenario::story::Event>,
 }
 
 // Placeholder implementations for remaining catalog entities
@@ -989,6 +993,45 @@ mod tests {
         assert!(
             serialized.contains("miscObjectCategory=\"obstacle\""),
             "category lost on serialize: {serialized}"
+        );
+    }
+
+    /// Regression: the XSD Maneuver type is ParameterDeclarations? followed by
+    /// one or more <Event>. The catalog entry modelled only @name, so every
+    /// event in an inline catalog <Maneuver> was silently discarded.
+    #[test]
+    fn test_catalog_maneuver_parses_events() {
+        let xml = r#"<Maneuver name="LogAndSetVariables">
+    <ParameterDeclarations>
+        <ParameterDeclaration name="collidingEntity" parameterType="string" value="VRU"/>
+    </ParameterDeclarations>
+    <Event name="AtCollision" priority="parallel" maximumExecutionCount="1">
+        <Action name="SetCollisionVariable">
+            <GlobalAction>
+                <VariableAction variableRef="collisionDetected">
+                    <SetAction value="true"/>
+                </VariableAction>
+            </GlobalAction>
+        </Action>
+    </Event>
+</Maneuver>"#;
+
+        let maneuver: CatalogManeuver = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(maneuver.name, "LogAndSetVariables");
+        assert_eq!(maneuver.events.len(), 1);
+
+        let event = &maneuver.events[0];
+        assert_eq!(event.name.as_literal().unwrap(), "AtCollision");
+        assert_eq!(event.actions.len(), 1);
+
+        let serialized = quick_xml::se::to_string(&maneuver).unwrap();
+        assert!(
+            serialized.contains("<Event"),
+            "Event lost on serialize: {serialized}"
+        );
+        assert!(
+            serialized.contains("SetCollisionVariable"),
+            "Action lost on serialize: {serialized}"
         );
     }
 
