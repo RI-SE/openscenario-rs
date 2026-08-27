@@ -102,7 +102,7 @@ impl<'parent> CatalogVehicleReferenceBuilder<'parent> {
             pedestrian: None,
             misc_object: None,
             external_object_reference: None,
-            object_controller: None,
+            object_controller: Vec::new(),
         };
 
         // Add to parent's entities
@@ -205,7 +205,7 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
             pedestrian: Some(pedestrian),
             misc_object: None,
             external_object_reference: None,
-            object_controller: None,
+            object_controller: Vec::new(),
         };
 
         // Add to parent's entities

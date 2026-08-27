@@ -11,6 +11,7 @@
 //! - ByType: Generic type-based selection criteria
 
 use crate::types::basic::{Double, OSString};
+use crate::types::controllers::ObjectController;
 use crate::types::enums::ObjectType;
 use crate::types::scenario::triggers::EntityRef;
 use serde::{Deserialize, Serialize};
@@ -76,6 +77,14 @@ pub struct ScenarioObjectTemplate {
         skip_serializing_if = "Option::is_none"
     )]
     pub external_object_reference: Option<ExternalObjectReference>,
+
+    /// Object controller configuration (optional, may occur multiple times)
+    #[serde(
+        rename = "ObjectController",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub object_controller: Vec<ObjectController>,
 }
 
 /// Reference to external object definitions
@@ -176,6 +185,7 @@ impl Default for ScenarioObjectTemplate {
             object_type: ObjectType::Vehicle,
             properties: None,
             external_object_reference: None,
+            object_controller: Vec::new(),
         }
     }
 }
@@ -339,6 +349,7 @@ impl ScenarioObjectTemplate {
             object_type,
             properties: None,
             external_object_reference: None,
+            object_controller: Vec::new(),
         }
     }
 
@@ -357,6 +368,7 @@ impl ScenarioObjectTemplate {
                 file: OSString::literal(file.into()),
                 name: OSString::literal(object_name.into()),
             }),
+            object_controller: Vec::new(),
         }
     }
 

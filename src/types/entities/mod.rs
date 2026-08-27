@@ -93,9 +93,13 @@ pub struct ScenarioObject {
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
     pub entity_catalog_reference: Option<ScenarioEntityReference>,
 
-    /// Object controller configuration (optional)
-    #[serde(rename = "ObjectController", skip_serializing_if = "Option::is_none")]
-    pub object_controller: Option<ObjectController>,
+    /// Object controller configuration (optional, may occur multiple times)
+    #[serde(
+        rename = "ObjectController",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub object_controller: Vec<ObjectController>,
 }
 
 /// Container for all entities in the scenario
@@ -116,7 +120,7 @@ impl ScenarioObject {
             misc_object: None,
             external_object_reference: None,
             entity_catalog_reference: None,
-            object_controller: Some(ObjectController::default()),
+            object_controller: Vec::new(),
         }
     }
 
@@ -129,7 +133,7 @@ impl ScenarioObject {
             misc_object: None,
             external_object_reference: None,
             entity_catalog_reference: None,
-            object_controller: Some(ObjectController::default()),
+            object_controller: Vec::new(),
         }
     }
 
@@ -142,7 +146,7 @@ impl ScenarioObject {
             misc_object: Some(misc_object),
             external_object_reference: None,
             entity_catalog_reference: None,
-            object_controller: Some(ObjectController::default()),
+            object_controller: Vec::new(),
         }
     }
 
@@ -160,7 +164,7 @@ impl ScenarioObject {
             misc_object: None,
             external_object_reference: None,
             entity_catalog_reference: Some(ScenarioEntityReference::Vehicle(catalog_reference)),
-            object_controller: Some(ObjectController::default()),
+            object_controller: Vec::new(),
         }
     }
 
@@ -178,7 +182,7 @@ impl ScenarioObject {
             misc_object: None,
             external_object_reference: None,
             entity_catalog_reference: Some(ScenarioEntityReference::Pedestrian(catalog_reference)),
-            object_controller: Some(ObjectController::default()),
+            object_controller: Vec::new(),
         }
     }
 
@@ -328,6 +332,60 @@ mod tests {
                 .as_literal()
                 .unwrap(),
             "Barrier1"
+        );
+    }
+
+    #[test]
+    fn test_scenario_object_multiple_object_controllers_roundtrip() {
+        use crate::types::catalogs::references::ControllerCatalogReference;
+        use crate::types::controllers::Controller;
+        use crate::types::enums::ControllerType;
+
+        let mut obj =
+            ScenarioObject::new_vehicle("TestVehicle".to_string(), Vehicle::default());
+
+        obj.object_controller.push(ObjectController::with_controller(Controller::new(
+            "InlineController".to_string(),
+            ControllerType::Movement,
+        )));
+        obj.object_controller
+            .push(ObjectController::with_catalog_reference(
+                ControllerCatalogReference::new(
+                    "ControllerCatalog".to_string(),
+                    "CatalogedController".to_string(),
+                ),
+            ));
+
+        assert_eq!(obj.object_controller.len(), 2);
+
+        let xml = quick_xml::se::to_string(&obj).unwrap();
+        assert_eq!(xml.matches("<ObjectController").count(), 2);
+
+        let deserialized: ScenarioObject = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(deserialized.object_controller.len(), 2);
+        assert!(deserialized.object_controller[0].controller.is_some());
+        assert_eq!(
+            deserialized.object_controller[0]
+                .controller
+                .as_ref()
+                .unwrap()
+                .name
+                .as_literal()
+                .unwrap(),
+            "InlineController"
+        );
+        assert!(deserialized.object_controller[1]
+            .catalog_reference
+            .is_some());
+        assert_eq!(
+            deserialized.object_controller[1]
+                .catalog_reference
+                .as_ref()
+                .unwrap()
+                .entry_name
+                .as_literal()
+                .unwrap(),
+            "CatalogedController"
         );
     }
 

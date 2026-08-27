@@ -3011,7 +3011,7 @@ fn resolve_catalog_references_in_scenario(
             }
 
             // Check controller references
-            if let Some(object_controller) = &entity.object_controller {
+            for object_controller in &entity.object_controller {
                 if let Some(controller_ref) = &object_controller.catalog_reference {
                     result.resolution_attempts += 1;
 

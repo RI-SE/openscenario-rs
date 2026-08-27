@@ -587,7 +587,7 @@ fn resolve_catalog_references_simple(
                 }
 
                 // Check controller references
-                if let Some(object_controller) = &entity.object_controller {
+                for object_controller in &entity.object_controller {
                     if let Some(controller_ref) = &object_controller.catalog_reference {
                         println!("      🎮 Resolving controller reference...");
 
@@ -651,7 +651,7 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                     if entity.entity_catalog_reference.is_some() {
                         catalog_refs += 1;
                     }
-                    if let Some(object_controller) = &entity.object_controller {
+                    for object_controller in &entity.object_controller {
                         if object_controller.catalog_reference.is_some() {
                             controller_refs += 1;
                         }
