@@ -7,7 +7,7 @@ use crate::error::Result;
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::controllers::Controller;
 use crate::types::entities::{pedestrian, vehicle};
-use crate::types::enums::{ControllerType, PedestrianCategory};
+use crate::types::enums::{ControllerType, MiscObjectCategory, PedestrianCategory};
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -589,8 +589,26 @@ impl CatalogPedestrian {
 pub struct CatalogMiscObject {
     #[serde(rename = "@name")]
     pub name: String,
+
+    /// Mass of the object in kg — XSD attribute `mass`, `use="required"`
+    #[serde(rename = "@mass")]
+    pub mass: Double,
+
+    /// Category of the object — XSD attribute `miscObjectCategory`, `use="required"`
+    #[serde(rename = "@miscObjectCategory")]
+    pub misc_object_category: MiscObjectCategory,
+
+    /// Optional reference to a 3D model — XSD attribute `model3d`
+    #[serde(rename = "@model3d", default, skip_serializing_if = "Option::is_none")]
+    pub model3d: Option<OSString>,
+
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
+
+    /// Optional additional properties — XSD child element `<Properties>`
+    #[serde(rename = "Properties", default, skip_serializing_if = "Option::is_none")]
+    pub properties: Option<vehicle::Properties>,
+
     #[serde(
         rename = "ParameterDeclarations",
         skip_serializing_if = "Option::is_none"
@@ -642,6 +660,18 @@ impl CatalogEntity for CatalogMiscObject {
                 parameter_type: "Double".to_string(),
                 default_value: Some("1.0".to_string()),
                 description: Some("Height of the miscellaneous object in meters".to_string()),
+            },
+            ParameterDefinition {
+                name: "Mass".to_string(),
+                parameter_type: "Double".to_string(),
+                default_value: Some("1.0".to_string()),
+                description: Some("Mass of the miscellaneous object in kg".to_string()),
+            },
+            ParameterDefinition {
+                name: "MiscObjectCategory".to_string(),
+                parameter_type: "String".to_string(),
+                default_value: Some("obstacle".to_string()),
+                description: Some("Category of the miscellaneous object".to_string()),
             },
         ]
     }
@@ -913,7 +943,11 @@ mod tests {
     fn test_catalog_misc_object_placeholder() {
         let catalog_misc_object = CatalogMiscObject {
             name: "TrafficCone".to_string(),
+            mass: Value::Literal(5.0),
+            misc_object_category: MiscObjectCategory::Obstacle,
+            model3d: None,
             bounding_box: BoundingBox::default(),
+            properties: None,
             parameter_declarations: None,
         };
 
@@ -923,6 +957,39 @@ mod tests {
             .into_scenario_entity(HashMap::new())
             .unwrap();
         assert_eq!(resolved, "MiscObject:TrafficCone");
+    }
+
+    /// Regression: `mass`, `miscObjectCategory` and `<Properties>` are part of
+    /// the XSD MiscObject type but were absent from the catalog entry struct,
+    /// so a real misc object catalog failed to parse at all.
+    #[test]
+    fn test_catalog_misc_object_round_trip() {
+        let xml = r#"<MiscObject miscObjectCategory="obstacle" mass="70" name="obstacle">
+    <BoundingBox>
+        <Center x="0.5" y="0.0" z="0.5"/>
+        <Dimensions width="1.0" length="1.0" height="1.0"/>
+    </BoundingBox>
+    <Properties/>
+</MiscObject>"#;
+
+        let misc_object: CatalogMiscObject = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(misc_object.name, "obstacle");
+        assert_eq!(misc_object.mass.as_literal().unwrap(), &70.0);
+        assert_eq!(
+            misc_object.misc_object_category,
+            MiscObjectCategory::Obstacle
+        );
+        assert!(misc_object.properties.is_some());
+
+        let serialized = quick_xml::se::to_string(&misc_object).unwrap();
+        assert!(
+            serialized.contains("mass=\"70\""),
+            "mass lost on serialize: {serialized}"
+        );
+        assert!(
+            serialized.contains("miscObjectCategory=\"obstacle\""),
+            "category lost on serialize: {serialized}"
+        );
     }
 
     #[test]
