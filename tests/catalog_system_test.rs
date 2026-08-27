@@ -208,6 +208,7 @@ fn test_catalog_reference_creation() {
             .parameter_assignments
             .as_ref()
             .unwrap()
+            .assignments
             .len(),
         2
     );
@@ -361,7 +362,12 @@ fn test_catalog_reference_with_many_parameters() {
     );
 
     assert_eq!(
-        vehicle_ref.parameter_assignments.as_ref().unwrap().len(),
+        vehicle_ref
+            .parameter_assignments
+            .as_ref()
+            .unwrap()
+            .assignments
+            .len(),
         50
     );
     assert_eq!(

@@ -153,7 +153,7 @@ impl CatalogManager {
         // Resolve parameters if any
         let mut parameters = std::collections::HashMap::new();
         if let Some(assignments) = &reference.parameter_assignments {
-            for assignment in assignments.iter() {
+            for assignment in assignments.assignments.iter() {
                 let resolved_name = assignment.parameter_ref.as_literal().ok_or_else(|| {
                     crate::error::Error::catalog_error(
                         "Cannot resolve parameterized parameter names",
@@ -240,7 +240,7 @@ impl CatalogManager {
         // Resolve parameters
         let mut parameters = std::collections::HashMap::new();
         if let Some(assignments) = &reference.parameter_assignments {
-            for assignment in assignments.iter() {
+            for assignment in assignments.assignments.iter() {
                 let resolved_name = assignment.parameter_ref.as_literal().ok_or_else(|| {
                     crate::error::Error::catalog_error(
                         "Cannot resolve parameterized parameter names",
@@ -328,7 +328,7 @@ impl CatalogManager {
         // Resolve parameters
         let mut parameters = std::collections::HashMap::new();
         if let Some(assignments) = &reference.parameter_assignments {
-            for assignment in assignments.iter() {
+            for assignment in assignments.assignments.iter() {
                 let resolved_name = assignment.parameter_ref.as_literal().ok_or_else(|| {
                     crate::error::Error::catalog_error(
                         "Cannot resolve parameterized parameter names",

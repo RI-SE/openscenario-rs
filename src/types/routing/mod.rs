@@ -32,27 +32,7 @@ pub struct CatalogReference {
     pub parameter_assignments: Option<ParameterAssignments>,
 }
 
-/// Parameter assignments for catalog references
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "ParameterAssignments")]
-pub struct ParameterAssignments {
-    /// List of parameter assignments
-    #[serde(rename = "ParameterAssignment")]
-    pub assignments: Vec<ParameterAssignment>,
-}
-
-/// Individual parameter assignment
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "ParameterAssignment")]
-pub struct ParameterAssignment {
-    /// Parameter name to assign
-    #[serde(rename = "@parameterRef")]
-    pub parameter_ref: OSString,
-
-    /// Value to assign to the parameter
-    #[serde(rename = "@value")]
-    pub value: OSString,
-}
+pub use crate::types::catalogs::references::{ParameterAssignment, ParameterAssignments};
 
 /// Simple parameter declarations for routes
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]

@@ -124,8 +124,9 @@ impl VehicleCatalogReferenceBuilder {
         let parameter_assignments = if self.parameters.is_empty() {
             None
         } else {
-            Some(
-                self.parameters
+            Some(crate::types::catalogs::references::ParameterAssignments {
+                assignments: self
+                    .parameters
                     .into_iter()
                     .map(
                         |(name, value)| crate::types::catalogs::references::ParameterAssignment {
@@ -134,7 +135,7 @@ impl VehicleCatalogReferenceBuilder {
                         },
                     )
                     .collect(),
-            )
+            })
         };
 
         let mut reference = VehicleCatalogReference::new(catalog_name, entry_name);
@@ -187,8 +188,9 @@ impl PedestrianCatalogReferenceBuilder {
         let parameter_assignments = if self.parameters.is_empty() {
             None
         } else {
-            Some(
-                self.parameters
+            Some(crate::types::catalogs::references::ParameterAssignments {
+                assignments: self
+                    .parameters
                     .into_iter()
                     .map(
                         |(name, value)| crate::types::catalogs::references::ParameterAssignment {
@@ -197,7 +199,7 @@ impl PedestrianCatalogReferenceBuilder {
                         },
                     )
                     .collect(),
-            )
+            })
         };
 
         let mut reference = PedestrianCatalogReference::new(catalog_name, entry_name);

@@ -27,13 +27,21 @@ pub struct CatalogReference<T: CatalogEntity> {
     /// Parameter assignments for this reference
     #[serde(
         rename = "ParameterAssignments",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub parameter_assignments: Option<Vec<ParameterAssignment>>,
+    pub parameter_assignments: Option<ParameterAssignments>,
 
     /// Phantom data to maintain type safety
     #[serde(skip)]
     phantom: PhantomData<T>,
+}
+
+/// Container for a catalog reference's parameter assignments.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct ParameterAssignments {
+    #[serde(rename = "ParameterAssignment", default)]
+    pub assignments: Vec<ParameterAssignment>,
 }
 
 /// Parameter assignment for catalog reference resolution
@@ -74,7 +82,9 @@ impl<T: CatalogEntity> CatalogReference<T> {
         Self {
             catalog_name: Value::Literal(catalog_name),
             entry_name: Value::Literal(entry_name),
-            parameter_assignments: Some(parameter_assignments),
+            parameter_assignments: Some(ParameterAssignments {
+                assignments: parameter_assignments,
+            }),
             phantom: PhantomData,
         }
     }
@@ -97,7 +107,7 @@ impl<T: CatalogEntity> CatalogReference<T> {
         let mut parameters = HashMap::new();
 
         if let Some(assignments) = &self.parameter_assignments {
-            for assignment in assignments {
+            for assignment in &assignments.assignments {
                 let param_name = assignment.parameter_ref.resolve(context_params)?;
                 let param_value = assignment.value.resolve(context_params)?;
                 parameters.insert(param_name, param_value);

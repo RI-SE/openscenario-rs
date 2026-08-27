@@ -39,7 +39,7 @@ mod catalog_builder_tests {
         assert!(reference.parameter_assignments.is_some());
 
         let params = reference.parameter_assignments.unwrap();
-        assert_eq!(params.len(), 2);
+        assert_eq!(params.assignments.len(), 2);
     }
 
     #[test]

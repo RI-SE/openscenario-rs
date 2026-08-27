@@ -10,27 +10,7 @@ use crate::types::entities::vehicle::{File, Properties, Property};
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
-pub struct ParameterAssignments {
-    pub assignments: Vec<ParameterAssignment>,
-}
-
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ParameterAssignment {
-    pub parameter_ref: OSString,
-    pub value: OSString,
-}
-
-impl Default for ParameterAssignment {
-    fn default() -> Self {
-        Self {
-            parameter_ref: Value::Literal("defaultParam".to_string()),
-            value: Value::Literal("defaultValue".to_string()),
-        }
-    }
-}
+pub use crate::types::catalogs::references::{ParameterAssignment, ParameterAssignments};
 
 // CatalogReference is now imported from crate::types::catalogs::references
 
