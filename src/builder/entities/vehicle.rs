@@ -180,6 +180,7 @@ impl<'parent> VehicleBuilder<'parent> {
             properties: self.vehicle_data.properties,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         let scenario_object = ScenarioObject::new_vehicle(self.name.clone(), vehicle);
@@ -339,6 +340,7 @@ impl DetachedVehicleBuilder {
             properties: self.vehicle_data.properties,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         ScenarioObject::new_vehicle(self.name.clone(), vehicle)

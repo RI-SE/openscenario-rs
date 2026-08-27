@@ -867,6 +867,7 @@ mod tests {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         let entities = Entities {
@@ -947,6 +948,7 @@ mod tests {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         let entities = Entities {
@@ -1016,6 +1018,7 @@ mod tests {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         let vehicle2 = Vehicle {
@@ -1037,6 +1040,7 @@ mod tests {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         let entities = Entities {
@@ -1146,6 +1150,7 @@ mod tests {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         let scenario_object = crate::types::entities::ScenarioObject {

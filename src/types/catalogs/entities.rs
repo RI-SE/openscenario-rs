@@ -228,6 +228,7 @@ impl CatalogEntity for CatalogVehicle {
             properties: self.properties,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         Ok(resolved_vehicle)

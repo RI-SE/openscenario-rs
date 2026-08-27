@@ -19,7 +19,7 @@ pub use selection::{
     ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities, TemplateProperties,
     TemplateProperty,
 };
-pub use vehicle::{Properties, Vehicle};
+pub use vehicle::{Properties, Trailer, Vehicle};
 
 /// Union type for all entity objects
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

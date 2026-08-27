@@ -4,6 +4,7 @@ use super::axles::Axles;
 use crate::types::basic::{Double, OSString, ParameterDeclarations};
 use crate::types::enums::{Role, VehicleCategory};
 use crate::types::geometry::BoundingBox;
+use crate::types::scenario::story::EntityRef;
 use serde::{Deserialize, Serialize};
 
 /// Vehicle performance characteristics
@@ -45,6 +46,27 @@ pub struct TrailerCoupler {
     pub dx: Double,
     #[serde(rename = "@dz", default, skip_serializing_if = "Option::is_none")]
     pub dz: Option<Double>,
+}
+
+/// Trailer attached to a vehicle: either an inline nested ScenarioObject or a
+/// reference to an existing entity acting as the trailer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Trailer {
+    /// Inline scenario object defining the trailer (boxed to break recursion)
+    #[serde(
+        rename = "Trailer",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer: Option<Box<crate::types::entities::ScenarioObject>>,
+
+    /// Reference to an existing entity acting as the trailer
+    #[serde(
+        rename = "TrailerRef",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer_ref: Option<EntityRef>,
 }
 
 /// Vehicle properties container
@@ -138,6 +160,14 @@ pub struct Vehicle {
         skip_serializing_if = "Option::is_none"
     )]
     pub trailer_coupler: Option<TrailerCoupler>,
+
+    /// Attached trailer (inline definition or reference)
+    #[serde(
+        rename = "Trailer",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer: Option<Trailer>,
 }
 
 impl Vehicle {
@@ -162,6 +192,7 @@ impl Vehicle {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         }
     }
 
@@ -189,6 +220,7 @@ impl Vehicle {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         }
     }
 
@@ -216,6 +248,7 @@ impl Vehicle {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         }
     }
 
@@ -270,6 +303,7 @@ impl Default for Vehicle {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         }
     }
 }
@@ -313,6 +347,7 @@ mod tests {
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,
+            trailer: None,
         };
 
         assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
@@ -387,5 +422,53 @@ mod tests {
 
         let area = car.footprint_area(&params).unwrap();
         assert!(area > 0.0);
+    }
+
+    #[test]
+    fn test_vehicle_trailer_ref_roundtrip() {
+        let mut car = Vehicle::new_car("TowCar".to_string());
+        car.trailer = Some(Trailer {
+            trailer: None,
+            trailer_ref: Some(EntityRef {
+                entity_ref: crate::types::basic::Value::literal("trailer1".to_string()),
+            }),
+        });
+
+        let xml = quick_xml::se::to_string(&car).unwrap();
+        assert!(xml.contains("<Trailer>"));
+        assert!(xml.contains("TrailerRef"));
+        assert!(xml.contains("entityRef=\"trailer1\""));
+
+        let deserialized: Vehicle = quick_xml::de::from_str(&xml).unwrap();
+        let trailer = deserialized.trailer.expect("expected trailer");
+        assert!(trailer.trailer.is_none());
+        let trailer_ref = trailer.trailer_ref.expect("expected trailer ref");
+        assert_eq!(trailer_ref.entity_ref.as_literal().unwrap(), "trailer1");
+    }
+
+    #[test]
+    fn test_vehicle_nested_trailer_roundtrip() {
+        let mut towed_car = Vehicle::new_car("TrailerVehicle".to_string());
+        towed_car.trailer = None;
+
+        let nested_scenario_object =
+            crate::types::entities::ScenarioObject::new_vehicle("Trailer1".to_string(), towed_car);
+
+        let mut tow_car = Vehicle::new_car("TowCar".to_string());
+        tow_car.trailer = Some(Trailer {
+            trailer: Some(Box::new(nested_scenario_object)),
+            trailer_ref: None,
+        });
+
+        let xml = quick_xml::se::to_string(&tow_car).unwrap();
+        assert!(xml.contains("<Trailer>"));
+        assert!(xml.contains("Trailer1"));
+
+        let deserialized: Vehicle = quick_xml::de::from_str(&xml).unwrap();
+        let trailer = deserialized.trailer.expect("expected trailer");
+        assert!(trailer.trailer_ref.is_none());
+        let nested = trailer.trailer.expect("expected nested scenario object");
+        assert_eq!(nested.get_name(), Some("Trailer1"));
+        assert!(nested.vehicle.is_some());
     }
 }
