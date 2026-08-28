@@ -7,8 +7,6 @@
 //! - Condition group logic (AND/OR combinations)
 //! - Condition validation and constraint checking
 //!
-use crate::types::enums::ConditionEdge;
-
 pub mod entity; // Entity-based conditions
 pub mod spatial; // Spatial conditions
 pub mod value; // Value-based conditions
@@ -30,27 +28,9 @@ pub use value::{
     UserDefinedValueCondition, VariableCondition,
 };
 
-use crate::types::basic::Double;
-use serde::{Deserialize, Serialize};
-
-// Define base condition enum for polymorphic handling
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum Condition {
-    SimulationTime(SimulationTimeCondition),
-    Speed(SpeedCondition),
-}
-
-// Define condition wrapper with common attributes
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionWrapper {
-    #[serde(rename = "@name")]
-    pub name: String,
-    #[serde(rename = "@conditionEdge")]
-    pub edge: ConditionEdge,
-    #[serde(rename = "@delay")]
-    pub delay: Double,
-    #[serde(flatten)]
-    pub condition: Condition,
-}
+// The XSD `Condition` (`:953-961`) is modelled by `scenario::triggers::Condition`, which
+// carries `@name`/`@conditionEdge`/`@delay` and the full ByEntity/ByValue choice. A local
+// `Condition`/`ConditionWrapper` pair used to live here with an internally-tagged
+// `#[serde(tag = "type")]` representation and only two variants; it matched no schema type
+// and shadowed the real one on import, so it was removed.
 

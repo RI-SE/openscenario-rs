@@ -243,7 +243,6 @@ fn can_create_and_serialize_actions() {
 fn can_create_and_serialize_conditions() {
     use openscenario_rs::types::conditions::entity::SpeedCondition;
     use openscenario_rs::types::conditions::value::SimulationTimeCondition;
-    use openscenario_rs::types::conditions::Condition;
     use openscenario_rs::types::enums::Rule;
 
     // Test creating a SimulationTimeCondition
@@ -259,12 +258,16 @@ fn can_create_and_serialize_conditions() {
         direction: None,
     };
 
-    // Test creating Condition enum variants
-    let _simulation_time_condition_enum = Condition::SimulationTime(simulation_time_condition);
-    let _speed_condition_enum = Condition::Speed(speed_condition);
-
-    // If we get here without compile errors, the conditions are working
-    assert!(true);
+    assert_eq!(simulation_time_condition.rule, Rule::GreaterThan);
+    assert_eq!(
+        simulation_time_condition.value,
+        openscenario_rs::types::Double::literal(10.0)
+    );
+    assert_eq!(speed_condition.rule, Rule::LessThan);
+    assert_eq!(
+        speed_condition.value,
+        openscenario_rs::types::Double::literal(25.0)
+    );
 }
 
 #[test]
