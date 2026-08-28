@@ -285,7 +285,7 @@ fn parameter_modify_action_multiply_round_trip() {
 
 #[test]
 fn named_action_user_defined_action_round_trip() {
-    let xml = r#"<Action name="a1"><UserDefinedAction><CustomCommandAction/></UserDefinedAction></Action>"#;
+    let xml = r#"<Action name="a1"><UserDefinedAction><CustomCommandAction type="myCommand"/></UserDefinedAction></Action>"#;
     let action: NamedAction = de(xml);
     assert_eq!(action.name.to_string(), "a1");
     assert!(matches!(action.action, Action::UserDefinedAction(_)));

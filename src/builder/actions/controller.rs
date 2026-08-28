@@ -3,13 +3,9 @@
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
-    actions::control::{
-        ActivateControllerAction, AssignControllerAction, ControllerAction, ManualGear,
-        OverrideBrakeAction, OverrideClutchAction, OverrideGearAction, OverrideParkingBrakeAction,
-        OverrideSteeringWheelAction, OverrideThrottleAction,
-    },
+    actions::control::{ActivateControllerAction, AssignControllerAction, ControllerAction},
     actions::wrappers::PrivateAction,
-    basic::{Boolean, Double, Int, Value},
+    basic::{Boolean, Value},
     controllers::Controller,
     enums::ControllerType,
 };
@@ -91,12 +87,7 @@ impl ActionBuilder for ActivateControllerActionBuilder {
 
         Ok(PrivateAction::ControllerAction(ControllerAction {
             assign_controller_action: None,
-            override_throttle_action: None,
-            override_brake_action: None,
-            override_clutch_action: None,
-            override_parking_brake_action: None,
-            override_steering_wheel_action: None,
-            override_gear_action: None,
+            override_controller_value_action: None,
             activate_controller_action: Some(activate_action),
         }))
     }
@@ -166,12 +157,7 @@ impl ActionBuilder for AssignControllerActionBuilder {
 
         Ok(PrivateAction::ControllerAction(ControllerAction {
             assign_controller_action: Some(assign_action),
-            override_throttle_action: None,
-            override_brake_action: None,
-            override_clutch_action: None,
-            override_parking_brake_action: None,
-            override_steering_wheel_action: None,
-            override_gear_action: None,
+            override_controller_value_action: None,
             activate_controller_action: None,
         }))
     }

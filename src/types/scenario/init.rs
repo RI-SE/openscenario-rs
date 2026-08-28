@@ -24,10 +24,19 @@ pub struct Init {
 }
 
 /// Actions container holding all initialization actions
+///
+/// XSD `InitActions` (:1316-1321): a sequence of `GlobalAction*`,
+/// `UserDefinedAction*`, `Private*` (all `minOccurs=0 maxOccurs=unbounded`).
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct Actions {
     #[serde(rename = "GlobalAction", default)]
     pub global_actions: Vec<GlobalAction>,
+    #[serde(
+        rename = "UserDefinedAction",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub user_defined_actions: Vec<crate::types::actions::wrappers::UserDefinedAction>,
     #[serde(rename = "Private", default)]
     pub private_actions: Vec<Private>,
 }
@@ -307,6 +316,7 @@ mod tests {
                         catalog_reference: None,
                     }),
                 }],
+                user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
             },
         };
@@ -359,7 +369,30 @@ mod tests {
         let init = Init::default();
 
         assert!(init.actions.global_actions.is_empty());
+        assert!(init.actions.user_defined_actions.is_empty());
         assert!(init.actions.private_actions.is_empty());
+    }
+
+    #[test]
+    fn test_actions_user_defined_action_round_trip() {
+        // XSD `InitActions` (:1316-1321): sequence of GlobalAction*, UserDefinedAction*, Private*.
+        let xml = r#"<Actions><UserDefinedAction><CustomCommandAction type="myCommand">payload</CustomCommandAction></UserDefinedAction></Actions>"#;
+        let actions: Actions = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(actions.user_defined_actions.len(), 1);
+        assert_eq!(
+            actions.user_defined_actions[0]
+                .custom_command_action
+                .command_type
+                .as_literal()
+                .unwrap(),
+            &"myCommand".to_string()
+        );
+
+        let serialized = quick_xml::se::to_string(&actions).unwrap();
+        assert!(serialized.contains("UserDefinedAction"));
+        assert!(serialized.contains("CustomCommandAction"));
+        let reparsed: Actions = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(actions, reparsed);
     }
 
     #[test]
@@ -421,6 +454,7 @@ mod tests {
                         catalog_reference: None,
                     }),
                 }],
+                user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
             },
         };

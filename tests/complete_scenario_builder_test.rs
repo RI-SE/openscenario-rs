@@ -45,6 +45,7 @@ mod complete_scenario_tests {
         let empty_init = Init {
             actions: Actions {
                 global_actions: vec![],
+                user_defined_actions: vec![],
                 private_actions: vec![],
             },
         };

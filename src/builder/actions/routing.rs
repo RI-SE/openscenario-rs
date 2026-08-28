@@ -86,6 +86,8 @@ impl ActionBuilder for AssignRouteActionBuilder {
         Ok(PrivateAction::RoutingAction(RoutingAction {
             assign_route_action: Some(action),
             follow_trajectory_action: None,
+            acquire_position_action: None,
+            random_route_action: None,
         }))
     }
 

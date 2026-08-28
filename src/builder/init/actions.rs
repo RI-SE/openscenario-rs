@@ -177,6 +177,7 @@ impl InitActionBuilder {
         Ok(Init {
             actions: Actions {
                 global_actions: self.global_actions,
+                user_defined_actions: Vec::new(),
                 private_actions: self.private_actions,
             },
         })

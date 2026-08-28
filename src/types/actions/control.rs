@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 
 
 /// Main controller action wrapper containing all controller action types
+///
+/// XSD `ControllerAction` (:978-984): a 3-way choice of `AssignControllerAction`
+/// | `OverrideControllerValueAction` | `ActivateControllerAction`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct ControllerAction {
@@ -24,44 +27,12 @@ pub struct ControllerAction {
     )]
     pub assign_controller_action: Option<AssignControllerAction>,
 
-    /// Override throttle action
+    /// Override controller value action
     #[serde(
-        rename = "OverrideThrottleAction",
+        rename = "OverrideControllerValueAction",
         skip_serializing_if = "Option::is_none"
     )]
-    pub override_throttle_action: Option<OverrideThrottleAction>,
-
-    /// Override brake action
-    #[serde(
-        rename = "OverrideBrakeAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub override_brake_action: Option<OverrideBrakeAction>,
-
-    /// Override clutch action
-    #[serde(
-        rename = "OverrideClutchAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub override_clutch_action: Option<OverrideClutchAction>,
-
-    /// Override parking brake action
-    #[serde(
-        rename = "OverrideParkingBrakeAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub override_parking_brake_action: Option<OverrideParkingBrakeAction>,
-
-    /// Override steering wheel action
-    #[serde(
-        rename = "OverrideSteeringWheelAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub override_steering_wheel_action: Option<OverrideSteeringWheelAction>,
-
-    /// Override gear action
-    #[serde(rename = "OverrideGearAction", skip_serializing_if = "Option::is_none")]
-    pub override_gear_action: Option<OverrideGearAction>,
+    pub override_controller_value_action: Option<OverrideControllerValueAction>,
 
     /// Activate controller action (deprecated in OpenSCENARIO 1.2)
     #[serde(
@@ -69,6 +40,35 @@ pub struct ControllerAction {
         skip_serializing_if = "Option::is_none"
     )]
     pub activate_controller_action: Option<ActivateControllerAction>,
+}
+
+/// XSD `OverrideControllerValueAction` (:1565-1574): `xsd:all` of six optional
+/// children, whose element names differ from their type names.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct OverrideControllerValueAction {
+    /// `<Throttle>` element of type `OverrideThrottleAction`
+    #[serde(rename = "Throttle", skip_serializing_if = "Option::is_none")]
+    pub throttle: Option<OverrideThrottleAction>,
+
+    /// `<Brake>` element of type `OverrideBrakeAction`
+    #[serde(rename = "Brake", skip_serializing_if = "Option::is_none")]
+    pub brake: Option<OverrideBrakeAction>,
+
+    /// `<Clutch>` element of type `OverrideClutchAction`
+    #[serde(rename = "Clutch", skip_serializing_if = "Option::is_none")]
+    pub clutch: Option<OverrideClutchAction>,
+
+    /// `<ParkingBrake>` element of type `OverrideParkingBrakeAction`
+    #[serde(rename = "ParkingBrake", skip_serializing_if = "Option::is_none")]
+    pub parking_brake: Option<OverrideParkingBrakeAction>,
+
+    /// `<SteeringWheel>` element of type `OverrideSteeringWheelAction`
+    #[serde(rename = "SteeringWheel", skip_serializing_if = "Option::is_none")]
+    pub steering_wheel: Option<OverrideSteeringWheelAction>,
+
+    /// `<Gear>` element of type `OverrideGearAction`
+    #[serde(rename = "Gear", skip_serializing_if = "Option::is_none")]
+    pub gear: Option<OverrideGearAction>,
 }
 
 /// Assign controller action for controller assignment with catalog support
@@ -600,8 +600,8 @@ mod tests {
 
         let controller_action = ControllerAction::default();
         assert!(controller_action.assign_controller_action.is_none());
-        assert!(controller_action.override_brake_action.is_none());
-        assert!(controller_action.override_throttle_action.is_none());
+        assert!(controller_action.override_controller_value_action.is_none());
+        assert!(controller_action.activate_controller_action.is_none());
     }
 
     // Tests for new group types
@@ -756,6 +756,30 @@ mod tests {
         assert!(serialized.contains(r#"objectControllerRef="ObjController""#));
         let reparsed: ActivateControllerAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action2, reparsed);
+    }
+
+    #[test]
+    fn test_controller_action_override_controller_value_round_trip() {
+        // XSD `OverrideControllerValueAction` (:1565-1574): xsd:all of six
+        // optionally-present, differently-named children.
+        let xml = r#"<ControllerAction><OverrideControllerValueAction><Brake active="true" value="0.5"/></OverrideControllerValueAction></ControllerAction>"#;
+
+        let action: ControllerAction = quick_xml::de::from_str(xml).unwrap();
+        let ov = action
+            .override_controller_value_action
+            .as_ref()
+            .expect("OverrideControllerValueAction should be present");
+        assert!(ov.brake.is_some());
+        assert!(ov.throttle.is_none());
+        let brake = ov.brake.as_ref().unwrap();
+        assert_eq!(brake.active.as_literal(), Some(&true));
+        assert_eq!(brake.value.clone().unwrap().as_literal(), Some(&0.5));
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains("OverrideControllerValueAction"));
+        assert!(serialized.contains("<Brake"));
+        let reparsed: ControllerAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
     }
 
     #[test]

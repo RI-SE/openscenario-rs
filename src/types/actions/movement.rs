@@ -275,7 +275,6 @@ pub struct AssignRouteAction {
 ///
 /// XSD `RoutingAction` (:1981-1988) is a choice of `AssignRouteAction` |
 /// `FollowTrajectoryAction` | `AcquirePositionAction` | `RandomRouteAction`.
-/// `AcquirePositionAction`/`RandomRouteAction` are not yet wired in here.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct RoutingAction {
@@ -289,6 +288,17 @@ pub struct RoutingAction {
         skip_serializing_if = "Option::is_none"
     )]
     pub follow_trajectory_action: Option<FollowTrajectoryAction>,
+
+    /// Acquire position action
+    #[serde(
+        rename = "AcquirePositionAction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub acquire_position_action: Option<AcquirePositionAction>,
+
+    /// Random route action
+    #[serde(rename = "RandomRouteAction", skip_serializing_if = "Option::is_none")]
+    pub random_route_action: Option<crate::types::actions::wrappers::RandomRouteAction>,
 }
 
 
@@ -425,7 +435,7 @@ pub struct LateralDistanceAction {
     pub displacement: Option<LateralDisplacement>,
     #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
-    #[serde(rename = "DynamicConstraints")]
+    #[serde(rename = "DynamicConstraints", default, skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
 }
 
@@ -860,6 +870,8 @@ impl RoutingAction {
         Self {
             assign_route_action: Some(action),
             follow_trajectory_action: None,
+            acquire_position_action: None,
+            random_route_action: None,
         }
     }
     /// Create a routing action with trajectory following
@@ -867,6 +879,8 @@ impl RoutingAction {
         Self {
             assign_route_action: None,
             follow_trajectory_action: Some(action),
+            acquire_position_action: None,
+            random_route_action: None,
         }
     }
 
@@ -1858,17 +1872,45 @@ mod tests {
             Some(crate::types::enums::CoordinateSystem::Road)
         );
 
-        // Note: `dynamic_constraints` is not compared here — it lacks
-        // `skip_serializing_if` (a pre-existing gap unrelated to this XSD
-        // addition), so a `None` there does not round-trip byte-for-byte.
         let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(
+            !serialized.contains("<DynamicConstraints"),
+            "None DynamicConstraints must not serialize as an empty element: {serialized}"
+        );
         let reparsed: LateralDistanceAction = quick_xml::de::from_str(&serialized).unwrap();
-        assert_eq!(action.displacement, reparsed.displacement);
-        assert_eq!(action.coordinate_system, reparsed.coordinate_system);
-        assert_eq!(action.entity_ref, reparsed.entity_ref);
-        assert_eq!(action.distance, reparsed.distance);
-        assert_eq!(action.freespace, reparsed.freespace);
-        assert_eq!(action.continuous, reparsed.continuous);
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_routing_action_acquire_position_round_trip() {
+        // XSD `RoutingAction` (:1981-1988) choice branch `AcquirePositionAction`.
+        let xml = r#"<RoutingAction><AcquirePositionAction><Position><WorldPosition x="1.0" y="2.0" z="0.0"/></Position></AcquirePositionAction></RoutingAction>"#;
+        let action: RoutingAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(action.acquire_position_action.is_some());
+        assert!(action.assign_route_action.is_none());
+        assert!(action.follow_trajectory_action.is_none());
+        assert!(action.random_route_action.is_none());
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains("AcquirePositionAction"));
+        let reparsed: RoutingAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_routing_action_random_route_round_trip() {
+        // XSD `RoutingAction` (:1981-1988) choice branch `RandomRouteAction` (empty complexType).
+        let xml = r#"<RoutingAction><RandomRouteAction/></RoutingAction>"#;
+        let action: RoutingAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(action.random_route_action.is_some());
+        assert!(action.assign_route_action.is_none());
+        assert!(action.follow_trajectory_action.is_none());
+        assert!(action.acquire_position_action.is_none());
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains("RandomRouteAction"));
+        let reparsed: RoutingAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
     }
 }
 

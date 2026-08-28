@@ -109,24 +109,58 @@ pub struct AddEntityAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct DeleteEntityAction {}
 
-// UserDefinedAction placeholder
+// XSD `UserDefinedAction` (:2416-2420): sequence containing exactly one
+// required `CustomCommandAction` element.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
 pub struct UserDefinedAction {
     #[serde(rename = "CustomCommandAction")]
     pub custom_command_action: CustomCommandAction,
 }
 
-// CustomCommandAction placeholder
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct CustomCommandAction {
-    // Implementation depends on specific use case
+impl Default for UserDefinedAction {
+    fn default() -> Self {
+        Self {
+            custom_command_action: CustomCommandAction::default(),
+        }
+    }
 }
 
-// Environment Action (placeholder for now)
+/// XSD `CustomCommandAction` (:1009-1015): `simpleContent` extending
+/// `xsd:string` with a required `@type` attribute — the text body is not a
+/// child element.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomCommandAction {
+    #[serde(rename = "@type")]
+    pub command_type: OSString,
+    #[serde(rename = "$text", default)]
+    pub content: String,
+}
+
+impl Default for CustomCommandAction {
+    fn default() -> Self {
+        Self {
+            command_type: OSString::literal("default".to_string()),
+            content: String::new(),
+        }
+    }
+}
+
+/// XSD `EnvironmentAction` (:1195-1200): choice of `Environment` |
+/// `CatalogReference` (to a `CatalogEnvironment` catalog entry).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct EnvironmentAction {
-    // Will be implemented when environment types are available
+    #[serde(rename = "Environment", default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<crate::types::environment::Environment>,
+    #[serde(
+        rename = "CatalogReference",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub catalog_reference: Option<
+        crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::environments::CatalogEnvironment,
+        >,
+    >,
 }
 
 // Monitor Action - Set monitor state
@@ -504,6 +538,65 @@ mod tests {
     #[test]
     fn test_random_route_action_default() {
         let _rra = RandomRouteAction::default();
+    }
+
+    #[test]
+    fn test_custom_command_action_round_trip() {
+        // XSD: simpleContent extension of xsd:string with required @type attribute.
+        let xml = r#"<CustomCommandAction type="myCommand">do something</CustomCommandAction>"#;
+        let action: CustomCommandAction = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            action.command_type.as_literal().unwrap(),
+            &"myCommand".to_string()
+        );
+        assert_eq!(action.content, "do something");
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains(r#"type="myCommand""#));
+        assert!(serialized.contains("do something"));
+        let reparsed: CustomCommandAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_user_defined_action_round_trip() {
+        let xml = r#"<UserDefinedAction><CustomCommandAction type="myCommand">payload</CustomCommandAction></UserDefinedAction>"#;
+        let action: UserDefinedAction = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            action.custom_command_action.command_type.as_literal().unwrap(),
+            &"myCommand".to_string()
+        );
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains("CustomCommandAction"));
+        let reparsed: UserDefinedAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_environment_action_with_environment_round_trip() {
+        let xml = r#"<EnvironmentAction><Environment name="Env1"/></EnvironmentAction>"#;
+        let action: EnvironmentAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(action.environment.is_some());
+        assert!(action.catalog_reference.is_none());
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains("<Environment"));
+        let reparsed: EnvironmentAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_environment_action_with_catalog_reference_round_trip() {
+        let xml = r#"<EnvironmentAction><CatalogReference catalogName="EnvCatalog" entryName="Sunny"/></EnvironmentAction>"#;
+        let action: EnvironmentAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(action.environment.is_none());
+        assert!(action.catalog_reference.is_some());
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains("<CatalogReference"));
+        let reparsed: EnvironmentAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
     }
 }
 
