@@ -6,7 +6,8 @@
 //! - Private actions for entity-specific initialization
 //! - Integration with existing action and environment systems
 //!
-use crate::types::actions::appearance::VisibilityAction;
+use crate::types::actions::appearance::{AppearanceAction, VisibilityAction};
+use crate::types::actions::trailer::TrailerAction;
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{
     LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction,
@@ -42,12 +43,105 @@ pub struct Actions {
 }
 
 /// Global actions that affect the entire scenario
-/// The XML structure has explicit action type elements inside GlobalAction
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// XSD `GlobalAction` (:1282-1296) is a choice of exactly one of:
+/// `EnvironmentAction | EntityAction | InfrastructureAction | SetMonitorAction |
+/// ParameterAction (deprecated) | TrafficAction | VariableAction`.
+///
+/// Modelled as parallel `Option` fields (crate convention for choice groups);
+/// exactly one must be `Some` — see [`GlobalAction::validate`].
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct GlobalAction {
-    #[serde(rename = "EnvironmentAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "EnvironmentAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub environment_action: Option<EnvironmentAction>,
-    // EntityAction and InfrastructureAction can be added later as Option fields
+    #[serde(
+        rename = "EntityAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub entity_action: Option<crate::types::actions::wrappers::EntityAction>,
+    #[serde(
+        rename = "InfrastructureAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub infrastructure_action: Option<crate::types::actions::wrappers::InfrastructureAction>,
+    #[serde(
+        rename = "SetMonitorAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub set_monitor_action: Option<crate::types::actions::wrappers::SetMonitorAction>,
+    /// Deprecated in the schema (XSD:1288) but still valid OpenSCENARIO 1.3.
+    #[serde(
+        rename = "ParameterAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_action: Option<crate::types::actions::wrappers::ParameterAction>,
+    #[serde(
+        rename = "TrafficAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub traffic_action: Option<crate::types::actions::wrappers::TrafficAction>,
+    #[serde(
+        rename = "VariableAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub variable_action: Option<crate::types::actions::wrappers::VariableAction>,
+}
+
+impl GlobalAction {
+    /// Get the action type contained in this GlobalAction
+    pub fn get_action_type(&self) -> Option<&str> {
+        if self.environment_action.is_some() {
+            Some("EnvironmentAction")
+        } else if self.entity_action.is_some() {
+            Some("EntityAction")
+        } else if self.infrastructure_action.is_some() {
+            Some("InfrastructureAction")
+        } else if self.set_monitor_action.is_some() {
+            Some("SetMonitorAction")
+        } else if self.parameter_action.is_some() {
+            Some("ParameterAction")
+        } else if self.traffic_action.is_some() {
+            Some("TrafficAction")
+        } else if self.variable_action.is_some() {
+            Some("VariableAction")
+        } else {
+            None
+        }
+    }
+
+    /// Validates that exactly one action type is present (XSD choice group requirement)
+    pub fn validate(&self) -> Result<(), String> {
+        let action_count = [
+            self.environment_action.is_some(),
+            self.entity_action.is_some(),
+            self.infrastructure_action.is_some(),
+            self.set_monitor_action.is_some(),
+            self.parameter_action.is_some(),
+            self.traffic_action.is_some(),
+            self.variable_action.is_some(),
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+        match action_count {
+            1 => Ok(()),
+            0 => Err("GlobalAction must contain exactly one action type, found none".to_string()),
+            _ => {
+                Err("GlobalAction must contain exactly one action type, found multiple".to_string())
+            }
+        }
+    }
 }
 
 /// Environment setup action: XSD choice of an inline Environment or a CatalogReference
@@ -131,7 +225,18 @@ pub struct PrivateAction {
         default
     )]
     pub controller_action: Option<ControllerAction>,
-    // Note: Other action types like AppearanceAction, TrailerAction can be added when implemented
+    #[serde(
+        rename = "AppearanceAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub appearance_action: Option<AppearanceAction>,
+    #[serde(
+        rename = "TrailerAction",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub trailer_action: Option<TrailerAction>,
 }
 
 impl PrivateAction {
@@ -153,6 +258,10 @@ impl PrivateAction {
             Some("VisibilityAction")
         } else if self.controller_action.is_some() {
             Some("ControllerAction")
+        } else if self.appearance_action.is_some() {
+            Some("AppearanceAction")
+        } else if self.trailer_action.is_some() {
+            Some("TrailerAction")
         } else {
             None
         }
@@ -169,6 +278,8 @@ impl PrivateAction {
             self.activate_controller_action.is_some(),
             self.visibility_action.is_some(),
             self.controller_action.is_some(),
+            self.appearance_action.is_some(),
+            self.trailer_action.is_some(),
         ]
         .iter()
         .filter(|&&x| x)
@@ -261,14 +372,6 @@ pub enum LongitudinalActionType {
     // SpeedProfileAction, SynchronizeAction, etc. can be added later
 }
 
-impl Default for GlobalAction {
-    fn default() -> Self {
-        Self {
-            environment_action: None,
-        }
-    }
-}
-
 impl Default for Private {
     fn default() -> Self {
         Self {
@@ -315,6 +418,7 @@ mod tests {
                         }),
                         catalog_reference: None,
                     }),
+                    ..Default::default()
                 }],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
@@ -348,6 +452,7 @@ mod tests {
                 activate_controller_action: None,
                 visibility_action: None,
                 controller_action: None,
+                ..Default::default()
             })
             .add_action(PrivateAction {
                 longitudinal_action: None,
@@ -358,6 +463,7 @@ mod tests {
                 activate_controller_action: None,
                 visibility_action: None,
                 controller_action: None,
+                ..Default::default()
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
@@ -453,6 +559,7 @@ mod tests {
                         }),
                         catalog_reference: None,
                     }),
+                    ..Default::default()
                 }],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
@@ -521,6 +628,7 @@ mod tests {
             activate_controller_action: None,
             visibility_action: None,
             controller_action: None,
+            ..Default::default()
         };
         assert!(valid_longitudinal.validate().is_ok());
 
@@ -539,6 +647,7 @@ mod tests {
             activate_controller_action: None,
             visibility_action: None,
             controller_action: None,
+            ..Default::default()
         };
         assert!(invalid_multiple.validate().is_err());
     }

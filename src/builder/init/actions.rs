@@ -36,6 +36,7 @@ impl InitActionBuilder {
                 }),
                 catalog_reference: None,
             }),
+            ..Default::default()
         };
         self.global_actions.push(global_action);
         self

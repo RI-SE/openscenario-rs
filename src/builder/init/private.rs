@@ -314,6 +314,7 @@ impl GlobalActionBuilder {
     pub fn finish(self) -> InitActionBuilder {
         let global_action = GlobalAction {
             environment_action: self.environment_action,
+            ..Default::default()
         };
         self.parent.add_global(global_action)
     }
@@ -322,6 +323,7 @@ impl GlobalActionBuilder {
     pub fn build(self) -> BuilderResult<GlobalAction> {
         Ok(GlobalAction {
             environment_action: self.environment_action,
+            ..Default::default()
         })
     }
 }

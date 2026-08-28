@@ -44,6 +44,7 @@ impl EnvironmentActionBuilder {
 
         Ok(GlobalAction {
             environment_action: Some(environment_action),
+            ..Default::default()
         })
     }
 

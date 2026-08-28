@@ -319,6 +319,7 @@ fn test_private_action_choice_group() {
         activate_controller_action: None,
         visibility_action: None,
         controller_action: None,
+        ..Default::default()
     };
     assert!(valid_private.validate().is_ok());
 
@@ -332,6 +333,7 @@ fn test_private_action_choice_group() {
         activate_controller_action: None,
         visibility_action: None,
         controller_action: None,
+        ..Default::default()
     };
     assert!(invalid_private.validate().is_err());
 }
