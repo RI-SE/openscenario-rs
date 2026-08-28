@@ -110,6 +110,7 @@ impl Default for RouteWaypoint {
                 relative_road_position: None,
                 lane_position: None,
                 relative_lane_position: None,
+                route_position: None,
                 trajectory_position: None,
                 geographic_position: None,
                 relative_object_position: None,

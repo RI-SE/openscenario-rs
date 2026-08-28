@@ -12,10 +12,15 @@ use serde::{Deserialize, Serialize};
 
 pub mod relative;
 pub mod road;
+pub mod route;
 pub mod trajectory;
 pub mod world;
 
 pub use relative::RelativeObjectPosition;
+pub use route::{
+    InRoutePosition, PositionInLaneCoordinates, PositionInRoadCoordinates, PositionOfCurrentEntity,
+    RoutePosition, RouteRefElement,
+};
 pub use road::{
     LaneCoordinate, LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition,
     RoadCoordinate, RoadPosition,
@@ -48,6 +53,8 @@ pub struct Position {
         skip_serializing_if = "Option::is_none"
     )]
     pub relative_lane_position: Option<RelativeLanePosition>,
+    #[serde(rename = "RoutePosition", skip_serializing_if = "Option::is_none")]
+    pub route_position: Option<RoutePosition>,
     #[serde(rename = "TrajectoryPosition", skip_serializing_if = "Option::is_none")]
     pub trajectory_position: Option<TrajectoryPosition>,
     #[serde(rename = "GeoPosition", skip_serializing_if = "Option::is_none")]
@@ -96,6 +103,7 @@ impl Position {
             relative_road_position: None,
             lane_position: None,
             relative_lane_position: None,
+            route_position: None,
             trajectory_position: None,
             geographic_position: None,
             relative_object_position: None,
@@ -104,75 +112,40 @@ impl Position {
     /// Create a Position with RelativeRoadPosition
     pub fn relative_road(relative_road_position: RelativeRoadPosition) -> Self {
         Self {
-            world_position: None,
-            relative_world_position: None,
-            road_position: None,
             relative_road_position: Some(relative_road_position),
-            lane_position: None,
-            relative_lane_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
+            ..Self::empty()
         }
     }
 
     /// Create a Position with RelativeLanePosition
     pub fn relative_lane(relative_lane_position: RelativeLanePosition) -> Self {
         Self {
-            world_position: None,
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
             relative_lane_position: Some(relative_lane_position),
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
+            ..Self::empty()
         }
     }
 
     /// Create a Position with TrajectoryPosition
     pub fn trajectory(trajectory_position: TrajectoryPosition) -> Self {
         Self {
-            world_position: None,
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
             trajectory_position: Some(trajectory_position),
-            geographic_position: None,
-            relative_object_position: None,
+            ..Self::empty()
         }
     }
 
     /// Create a Position with GeographicPosition
     pub fn geographic(geographic_position: GeographicPosition) -> Self {
         Self {
-            world_position: None,
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            trajectory_position: None,
             geographic_position: Some(geographic_position),
-            relative_object_position: None,
+            ..Self::empty()
         }
     }
 
     /// Create a Position with RelativeObjectPosition
     pub fn relative_object(relative_object_position: RelativeObjectPosition) -> Self {
         Self {
-            world_position: None,
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            trajectory_position: None,
-            geographic_position: None,
             relative_object_position: Some(relative_object_position),
+            ..Self::empty()
         }
     }
 }

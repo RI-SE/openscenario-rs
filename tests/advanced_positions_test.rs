@@ -162,6 +162,7 @@ fn test_position_constructors() {
         relative_road_position: None,
         lane_position: None,
         relative_lane_position: None,
+        route_position: None,
         trajectory_position: Some(trajectory_pos.clone()),
         geographic_position: None,
         relative_object_position: None,
