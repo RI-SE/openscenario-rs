@@ -241,7 +241,9 @@ fn test_variable_action_system() {
     };
 
     let var_modify = VariableModifyAction {
-        rule: VariableModifyRule::VariableAddValueRule(add_rule),
+        rule: VariableModifyRule {
+            rule: VariableModifyRuleChoice::VariableAddValueRule(add_rule),
+        },
     };
 
     let var_action = VariableAction {
@@ -251,7 +253,7 @@ fn test_variable_action_system() {
 
     let serialized = serde_json::to_string(&var_action).unwrap();
     assert!(serialized.contains("modifyVar"));
-    assert!(serialized.contains("VariableAddValueRule"));
+    assert!(serialized.contains("AddValue"));
 
     // Test VariableMultiplyByValueRule
     let multiply_rule = VariableMultiplyByValueRule {
@@ -259,7 +261,9 @@ fn test_variable_action_system() {
     };
 
     let var_modify = VariableModifyAction {
-        rule: VariableModifyRule::VariableMultiplyByValueRule(multiply_rule),
+        rule: VariableModifyRule {
+            rule: VariableModifyRuleChoice::VariableMultiplyByValueRule(multiply_rule),
+        },
     };
 
     let var_action = VariableAction {
@@ -269,7 +273,7 @@ fn test_variable_action_system() {
 
     let serialized = serde_json::to_string(&var_action).unwrap();
     assert!(serialized.contains("multiplyVar"));
-    assert!(serialized.contains("VariableMultiplyByValueRule"));
+    assert!(serialized.contains("MultiplyByValue"));
 }
 
 #[test]
@@ -294,7 +298,9 @@ fn test_parameter_action_system() {
     };
 
     let param_modify = ParameterModifyAction {
-        rule: ModifyRule::ParameterAddValueRule(add_rule),
+        rule: ModifyRule {
+            rule: ModifyRuleChoice::ParameterAddValueRule(add_rule),
+        },
     };
 
     let param_action = ParameterAction {
@@ -304,7 +310,7 @@ fn test_parameter_action_system() {
 
     let serialized = serde_json::to_string(&param_action).unwrap();
     assert!(serialized.contains("modifyParam"));
-    assert!(serialized.contains("ParameterAddValueRule"));
+    assert!(serialized.contains("AddValue"));
 
     // Test ParameterMultiplyByValueRule
     let multiply_rule = ParameterMultiplyByValueRule {
@@ -312,7 +318,9 @@ fn test_parameter_action_system() {
     };
 
     let param_modify = ParameterModifyAction {
-        rule: ModifyRule::ParameterMultiplyByValueRule(multiply_rule),
+        rule: ModifyRule {
+            rule: ModifyRuleChoice::ParameterMultiplyByValueRule(multiply_rule),
+        },
     };
 
     let param_action = ParameterAction {
@@ -322,7 +330,7 @@ fn test_parameter_action_system() {
 
     let serialized = serde_json::to_string(&param_action).unwrap();
     assert!(serialized.contains("multiplyParam"));
-    assert!(serialized.contains("ParameterMultiplyByValueRule"));
+    assert!(serialized.contains("MultiplyByValue"));
 }
 
 #[test]

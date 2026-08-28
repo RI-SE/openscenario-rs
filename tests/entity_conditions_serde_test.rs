@@ -119,14 +119,14 @@ fn test_collision_condition_serializes_entity_ref_element() {
 fn test_collision_condition_serializes_by_object_type_element() {
     let condition = CollisionCondition::with_type("pedestrian");
     let xml = quick_xml::se::to_string(&condition).expect("serialize failed");
-    // The child element must be named ByObjectType, not "by_type"
+    // XSD:926 - the child element is named `ByType` (of XSD type `ByObjectType`)
     assert!(
-        xml.contains("ByObjectType"),
-        "Expected <ByObjectType ...> in XML, got: {xml}"
+        xml.contains("ByType"),
+        "Expected <ByType ...> in XML, got: {xml}"
     );
     assert!(
-        xml.contains("objectType"),
-        "Expected attribute 'objectType' in XML, got: {xml}"
+        xml.contains("type=\"pedestrian\""),
+        "Expected attribute 'type' in XML, got: {xml}"
     );
     assert!(
         !xml.contains("<by_type"),
@@ -151,10 +151,10 @@ fn test_collision_target_serializes_object_type_attribute() {
         target_type: OSString::literal("pedestrian".to_string()),
     };
     let xml = quick_xml::se::to_string(&target).expect("serialize failed");
-    // Must use attribute name `objectType`, not `target_type`
+    // XSD:832 - complexType ByObjectType has required attribute `type`
     assert!(
-        xml.contains("objectType=\"pedestrian\""),
-        "Expected objectType attribute, got: {xml}"
+        xml.contains("type=\"pedestrian\""),
+        "Expected type attribute, got: {xml}"
     );
     assert!(
         !xml.contains("target_type"),

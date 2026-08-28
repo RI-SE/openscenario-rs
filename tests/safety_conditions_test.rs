@@ -20,7 +20,6 @@ fn test_collision_condition_with_target() {
         })
     );
     assert_eq!(condition.by_type, None);
-    assert_eq!(condition.position, None);
 }
 
 #[test]
@@ -34,16 +33,6 @@ fn test_collision_condition_with_type() {
             OSString::literal("pedestrian".to_string())
         );
     }
-    assert_eq!(condition.position, None);
-}
-
-#[test]
-fn test_collision_condition_at_position() {
-    let position = Position::default();
-    let condition = CollisionCondition::at_position(position.clone());
-    assert_eq!(condition.target, None);
-    assert_eq!(condition.by_type, None);
-    assert_eq!(condition.position, Some(position));
 }
 
 #[test]
@@ -51,7 +40,6 @@ fn test_collision_condition_any_collision() {
     let condition = CollisionCondition::any_collision();
     assert_eq!(condition.target, None);
     assert_eq!(condition.by_type, None);
-    assert_eq!(condition.position, None);
 }
 
 #[test]
@@ -59,7 +47,6 @@ fn test_collision_condition_default() {
     let condition = CollisionCondition::default();
     assert_eq!(condition.target, None);
     assert_eq!(condition.by_type, None);
-    assert_eq!(condition.position, None);
 }
 
 #[test]
@@ -134,21 +121,6 @@ fn test_by_entity_condition_collision_variants() {
 
     match collision_any.entity_condition {
         EntityCondition::Collision(_) => (),
-        _ => panic!("Expected Collision variant"),
-    }
-}
-
-#[test]
-fn test_by_entity_condition_collision_at_position() {
-    let triggering_entities = TriggeringEntities::default();
-    let position = Position::default();
-    let collision_pos =
-        ByEntityCondition::collision_at_position(triggering_entities, position.clone());
-
-    match collision_pos.entity_condition {
-        EntityCondition::Collision(condition) => {
-            assert_eq!(condition.position, Some(position));
-        }
         _ => panic!("Expected Collision variant"),
     }
 }

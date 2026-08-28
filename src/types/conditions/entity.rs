@@ -80,20 +80,17 @@ pub struct CollisionCondition {
     #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
     pub target: Option<EntityRef>,
 
-    /// Collision detection by entity type — XSD child `<ByObjectType objectType="..."/>`
-    #[serde(rename = "ByObjectType", skip_serializing_if = "Option::is_none")]
+    /// Collision detection by entity type — XSD:926 child `<ByType type="..."/>`
+    /// (element name `ByType`, of XSD type `ByObjectType`)
+    #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<CollisionTarget>,
-
-    /// Position-based collision detection — XSD child `<Position>`
-    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
-    pub position: Option<Position>,
 }
 
-/// Target specification for collision detection — wraps XSD `<ByObjectType objectType="..."/>`
+/// Target specification for collision detection — wraps XSD `<ByType type="..."/>`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CollisionTarget {
-    /// XSD required attribute `objectType` on `<ByObjectType>`
-    #[serde(rename = "@objectType")]
+    /// XSD:832 required attribute `type` on complexType `ByObjectType`
+    #[serde(rename = "@type")]
     pub target_type: OSString,
 }
 
@@ -637,7 +634,6 @@ impl CollisionCondition {
                 entity_ref: OSString::literal(target.to_string()),
             }),
             by_type: None,
-            position: None,
         }
     }
 
@@ -648,16 +644,6 @@ impl CollisionCondition {
             by_type: Some(CollisionTarget {
                 target_type: OSString::literal(entity_type.to_string()),
             }),
-            position: None,
-        }
-    }
-
-    /// Create collision condition at specific position
-    pub fn at_position(position: Position) -> Self {
-        Self {
-            target: None,
-            by_type: None,
-            position: Some(position),
         }
     }
 
@@ -666,7 +652,6 @@ impl CollisionCondition {
         Self {
             target: None,
             by_type: None,
-            position: None,
         }
     }
 }
@@ -1123,17 +1108,6 @@ impl ByEntityCondition {
         )
     }
 
-    /// Create a collision condition at position
-    pub fn collision_at_position(
-        triggering_entities: TriggeringEntities,
-        position: Position,
-    ) -> Self {
-        Self::new(
-            triggering_entities,
-            EntityCondition::Collision(CollisionCondition::at_position(position)),
-        )
-    }
-
     /// Create a general collision condition
     pub fn collision(triggering_entities: TriggeringEntities) -> Self {
         Self::new(
@@ -1494,7 +1468,6 @@ mod tests {
             })
         );
         assert_eq!(condition.by_type, None);
-        assert_eq!(condition.position, None);
     }
 
     #[test]
@@ -1508,7 +1481,6 @@ mod tests {
                 OSString::literal("pedestrian".to_string())
             );
         }
-        assert_eq!(condition.position, None);
     }
 
     #[test]
@@ -1516,7 +1488,6 @@ mod tests {
         let condition = CollisionCondition::any_collision();
         assert_eq!(condition.target, None);
         assert_eq!(condition.by_type, None);
-        assert_eq!(condition.position, None);
     }
 
     #[test]
@@ -1524,7 +1495,6 @@ mod tests {
         let condition = CollisionCondition::default();
         assert_eq!(condition.target, None);
         assert_eq!(condition.by_type, None);
-        assert_eq!(condition.position, None);
     }
 
     #[test]

@@ -150,7 +150,11 @@ pub struct VariableAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum VariableActionChoice {
+    /// XSD element `<SetAction>` of type `VariableSetAction` (XSD:2458)
+    #[serde(rename = "SetAction")]
     VariableSetAction(VariableSetAction),
+    /// XSD element `<ModifyAction>` of type `VariableModifyAction` (XSD:2459)
+    #[serde(rename = "ModifyAction")]
     VariableModifyAction(VariableModifyAction),
 }
 
@@ -162,14 +166,25 @@ pub struct VariableSetAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VariableModifyAction {
-    #[serde(flatten)]
+    /// XSD:2482 `<xsd:all><xsd:element name="Rule" type="VariableModifyRule"/></xsd:all>`
+    #[serde(rename = "Rule")]
     pub rule: VariableModifyRule,
 }
 
+/// XSD `VariableModifyRule` (XSD:2486-2491) — wrapper for the `<Rule>` element content
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub enum VariableModifyRule {
+pub struct VariableModifyRule {
+    #[serde(flatten)]
+    pub rule: VariableModifyRuleChoice,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum VariableModifyRuleChoice {
+    /// XSD element `<AddValue>` of type `VariableAddValueRule` (XSD:2488)
+    #[serde(rename = "AddValue")]
     VariableAddValueRule(VariableAddValueRule),
+    /// XSD element `<MultiplyByValue>` of type `VariableMultiplyByValueRule` (XSD:2489)
+    #[serde(rename = "MultiplyByValue")]
     VariableMultiplyByValueRule(VariableMultiplyByValueRule),
 }
 
@@ -197,7 +212,11 @@ pub struct ParameterAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum ParameterActionChoice {
+    /// XSD element `<SetAction>` of type `ParameterSetAction` (XSD:1609)
+    #[serde(rename = "SetAction")]
     ParameterSetAction(ParameterSetAction),
+    /// XSD element `<ModifyAction>` of type `ParameterModifyAction` (XSD:1612)
+    #[serde(rename = "ModifyAction")]
     ParameterModifyAction(ParameterModifyAction),
 }
 
@@ -209,14 +228,25 @@ pub struct ParameterSetAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ParameterModifyAction {
-    #[serde(flatten)]
+    /// XSD:1649 `<xsd:all><xsd:element name="Rule" type="ModifyRule"/></xsd:all>`
+    #[serde(rename = "Rule")]
     pub rule: ModifyRule,
 }
 
+/// XSD `ModifyRule` (XSD:1490-1496) — wrapper for the `<Rule>` element content
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub enum ModifyRule {
+pub struct ModifyRule {
+    #[serde(flatten)]
+    pub rule: ModifyRuleChoice,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ModifyRuleChoice {
+    /// XSD element `<AddValue>` of type `ParameterAddValueRule` (XSD:1493)
+    #[serde(rename = "AddValue")]
     ParameterAddValueRule(ParameterAddValueRule),
+    /// XSD element `<MultiplyByValue>` of type `ParameterMultiplyByValueRule` (XSD:1494)
+    #[serde(rename = "MultiplyByValue")]
     ParameterMultiplyByValueRule(ParameterMultiplyByValueRule),
 }
 
@@ -329,7 +359,11 @@ impl Default for VariableSetAction {
 impl Default for VariableModifyAction {
     fn default() -> Self {
         VariableModifyAction {
-            rule: VariableModifyRule::VariableAddValueRule(VariableAddValueRule::default()),
+            rule: VariableModifyRule {
+                rule: VariableModifyRuleChoice::VariableAddValueRule(
+                    VariableAddValueRule::default(),
+                ),
+            },
         }
     }
 }
@@ -370,7 +404,9 @@ impl Default for ParameterSetAction {
 impl Default for ParameterModifyAction {
     fn default() -> Self {
         ParameterModifyAction {
-            rule: ModifyRule::ParameterAddValueRule(ParameterAddValueRule::default()),
+            rule: ModifyRule {
+                rule: ModifyRuleChoice::ParameterAddValueRule(ParameterAddValueRule::default()),
+            },
         }
     }
 }

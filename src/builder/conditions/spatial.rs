@@ -313,7 +313,6 @@ impl CollisionConditionBuilder {
                                 target_type: OSString::literal(collision_type),
                             }
                         }),
-                        position: None,
                     },
                 ),
             }),
