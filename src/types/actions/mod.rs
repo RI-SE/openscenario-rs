@@ -70,7 +70,10 @@ pub use crate::types::enums::VehicleCategory;
 
 // Export appearance actions
 pub use appearance::{
-    AnimationAction, AppearanceAction, LightStateAction, SensorReference, SensorReferenceSet,
+    AnimationAction, AnimationFile, AnimationState, AnimationType, AppearanceAction, Color,
+    ColorCmyk, ColorRgb, ComponentAnimation, LightState, LightStateAction, LightType,
+    PedestrianAnimation, PedestrianGesture, SensorReference, SensorReferenceSet,
+    UserDefinedAnimation, UserDefinedComponent, UserDefinedLight, VehicleComponent, VehicleLight,
     VisibilityAction,
 };
 
