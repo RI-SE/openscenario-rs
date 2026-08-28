@@ -122,8 +122,9 @@ fn test_entity_distribution_xml_serialization() {
     let xml = quick_xml::se::to_string(&distribution).unwrap();
 
     assert!(xml.contains("EntityDistributionEntry"));
-    assert!(xml.contains("entityRef=\"Car1\""));
-    assert!(xml.contains("entityRef=\"Car2\""));
+    assert!(xml.contains("ScenarioObjectTemplate"));
+    assert!(xml.contains("name=\"Car1\""));
+    assert!(xml.contains("name=\"Car2\""));
     assert!(xml.contains("weight=\"0.5\""));
 }
 
@@ -131,8 +132,12 @@ fn test_entity_distribution_xml_serialization() {
 fn test_entity_distribution_xml_parsing() {
     let xml = r#"
     <EntityDistribution>
-        <EntityDistributionEntry entityRef="Car1" weight="0.6"/>
-        <EntityDistributionEntry entityRef="Car2" weight="0.4"/>
+        <EntityDistributionEntry weight="0.6">
+            <ScenarioObjectTemplate name="Car1" objectType="vehicle"/>
+        </EntityDistributionEntry>
+        <EntityDistributionEntry weight="0.4">
+            <ScenarioObjectTemplate name="Car2" objectType="vehicle"/>
+        </EntityDistributionEntry>
     </EntityDistribution>
     "#;
 
@@ -143,29 +148,33 @@ fn test_entity_distribution_xml_parsing() {
     let car1_entry = distribution
         .entries
         .iter()
-        .find(|e| e.entity_ref.as_literal().map(|s| s.as_str()) == Some("Car1"))
+        .find(|e| e.scenario_object_template.name.as_literal().map(|s| s.as_str()) == Some("Car1"))
         .unwrap();
     assert_eq!(car1_entry.weight.as_literal().unwrap(), &0.6);
 
     let car2_entry = distribution
         .entries
         .iter()
-        .find(|e| e.entity_ref.as_literal().map(|s| s.as_str()) == Some("Car2"))
+        .find(|e| e.scenario_object_template.name.as_literal().map(|s| s.as_str()) == Some("Car2"))
         .unwrap();
     assert_eq!(car2_entry.weight.as_literal().unwrap(), &0.4);
 }
 
 #[test]
 fn test_entity_distribution_entry() {
-    let entry = EntityDistributionEntry::new("TestEntity", 0.75);
-    assert_eq!(entry.entity_ref.as_literal().unwrap(), "TestEntity");
+    let template = ScenarioObjectTemplate::new("TestEntity", ObjectType::Vehicle);
+    let entry = EntityDistributionEntry::new(template, 0.75);
+    assert_eq!(
+        entry.scenario_object_template.name.as_literal().unwrap(),
+        "TestEntity"
+    );
     assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
 
     // Test default
     let default_entry = EntityDistributionEntry::default();
     assert_eq!(
-        default_entry.entity_ref.as_literal().unwrap(),
-        "DefaultEntity"
+        default_entry.scenario_object_template.name.as_literal().unwrap(),
+        "DefaultTemplate"
     );
     assert_eq!(default_entry.weight.as_literal().unwrap(), &1.0);
 }
@@ -300,13 +309,21 @@ fn test_complex_entity_selection_scenario() {
 
 #[test]
 fn test_parameter_support_in_entity_selection() {
-    // Test distribution with parameter weights
+    // Test distribution with parameter weights and name
     let entry = EntityDistributionEntry {
-        entity_ref: OSString::parameter("VehicleName".to_string()),
         weight: Double::parameter("VehicleWeight".to_string()),
+        scenario_object_template: ScenarioObjectTemplate {
+            name: OSString::parameter("VehicleName".to_string()),
+            object_type: ObjectType::Vehicle,
+            external_object_reference: None,
+            object_controller: Vec::new(),
+        },
     };
 
-    assert_eq!(entry.entity_ref.as_parameter().unwrap(), "VehicleName");
+    assert_eq!(
+        entry.scenario_object_template.name.as_parameter().unwrap(),
+        "VehicleName"
+    );
     assert_eq!(entry.weight.as_parameter().unwrap(), "VehicleWeight");
 }
 

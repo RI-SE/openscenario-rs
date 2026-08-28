@@ -50,10 +50,16 @@ pub use movement::{
 pub use traffic::{
     CentralSwarmObject,
     ControllerDistribution,
+    DirectionOfTravelDistribution,
+    Lane,
     Phase,
+    Polygon,
+    RoadCursor,
+    RoadRange,
     TrafficArea,
     TrafficAreaAction,
-    TrafficAreaVertex,
+    TrafficDistribution,
+    TrafficDistributionEntry,
     // Supporting types
     TrafficDefinition,
     TrafficSignalAction,

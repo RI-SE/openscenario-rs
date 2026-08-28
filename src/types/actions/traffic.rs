@@ -7,9 +7,10 @@
 //! - Traffic signal control actions for intersection management
 //! - Background traffic definition and distribution specifications
 //!
-use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
+use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::controllers::Controller;
+use crate::types::entities::{EntityDistribution, Properties};
 use crate::types::enums::VehicleCategory;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
@@ -28,10 +29,12 @@ use serde::{Deserialize, Serialize};
 /// * `traffic_definition` - Definition of traffic properties for generated vehicles
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSourceAction {
+    #[serde(rename = "@radius")]
+    pub radius: Double,
     #[serde(rename = "@rate")]
     pub rate: Double,
     /// Deprecated in favor of `speed`.
-    #[serde(rename = "@velocity", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "@velocity", default, skip_serializing_if = "Option::is_none")]
     pub velocity: Option<Double>,
     /// Speed for generated vehicles (current replacement for `velocity`)
     #[serde(rename = "@speed", default, skip_serializing_if = "Option::is_none")]
@@ -41,6 +44,8 @@ pub struct TrafficSourceAction {
     /// Deprecated in favor of TrafficDistribution; kept optional per XSD (minOccurs=0)
     #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
     pub traffic_definition: Option<TrafficDefinition>,
+    #[serde(rename = "TrafficDistribution", default, skip_serializing_if = "Option::is_none")]
+    pub traffic_distribution: Option<TrafficDistribution>,
 }
 
 /// Traffic sink action for traffic removal with radius control
@@ -99,6 +104,9 @@ pub struct TrafficSinkAction {
 ///     velocity: Some(Double::literal(30.0)),
 ///     central_object: CentralSwarmObject::new("CentralEntity"),
 ///     traffic_definition: None,
+///     traffic_distribution: None,
+///     initial_speed_range: None,
+///     direction_of_travel_distribution: None,
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -113,22 +121,39 @@ pub struct TrafficSwarmAction {
     pub semi_major_axis: Double,
     #[serde(rename = "@semiMinorAxis")]
     pub semi_minor_axis: Double,
-    #[serde(rename = "@velocity", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "@velocity", default, skip_serializing_if = "Option::is_none")]
     pub velocity: Option<Double>,
     #[serde(rename = "CentralObject")]
     pub central_object: CentralSwarmObject,
-    #[serde(rename = "TrafficDefinition", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
     pub traffic_definition: Option<TrafficDefinition>,
+    #[serde(rename = "TrafficDistribution", default, skip_serializing_if = "Option::is_none")]
+    pub traffic_distribution: Option<TrafficDistribution>,
+    #[serde(rename = "InitialSpeedRange", default, skip_serializing_if = "Option::is_none")]
+    pub initial_speed_range: Option<Range>,
+    #[serde(
+        rename = "DirectionOfTravelDistribution",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub direction_of_travel_distribution: Option<DirectionOfTravelDistribution>,
 }
 
 /// Traffic area action for area-based traffic management
+///
+/// XSD `TrafficAreaAction` (`:2220-2227`): `xsd:all` of required
+/// `TrafficDistribution` and required `TrafficArea`; required attributes
+/// `@numberOfEntities` (UnsignedInt) and `@continuous` (Boolean).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
 pub struct TrafficAreaAction {
+    #[serde(rename = "@numberOfEntities")]
+    pub number_of_entities: UnsignedInt,
+    #[serde(rename = "@continuous")]
+    pub continuous: Boolean,
+    #[serde(rename = "TrafficDistribution")]
+    pub traffic_distribution: TrafficDistribution,
     #[serde(rename = "TrafficArea")]
     pub traffic_area: TrafficArea,
-    #[serde(rename = "TrafficDefinition")]
-    pub traffic_definition: TrafficDefinition,
 }
 
 /// Traffic signal action wrapper for all traffic signal operations
@@ -303,33 +328,112 @@ pub struct CentralSwarmObject {
     pub entity_ref: OSString,
 }
 
-/// Traffic area definition with vertices
+/// Traffic area definition as a choice of `Polygon` or a set of `RoadRange`s
+///
+/// XSD `TrafficArea` (`:2214-2219`): choice of `Polygon` or `RoadRange`
+/// (`maxOccurs="unbounded"`). Modeled as parallel `Option` fields per the
+/// crate's XSD-choice convention.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficArea {
-    #[serde(rename = "Vertex", default)]
-    pub vertices: Vec<TrafficAreaVertex>,
+    #[serde(rename = "Polygon", default, skip_serializing_if = "Option::is_none")]
+    pub polygon: Option<Polygon>,
+    #[serde(rename = "RoadRange", default, skip_serializing_if = "Vec::is_empty")]
+    pub road_range: Vec<RoadRange>,
 }
 
-/// Simple vertex for traffic area definition (x, y, z coordinates)
+/// Closed polygon area defined by at least three positions
+///
+/// XSD `Polygon` (`:1728-1732`): sequence of `Position`, `minOccurs="3"`,
+/// unbounded.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TrafficAreaVertex {
-    #[serde(rename = "@x")]
-    pub x: Double,
-    #[serde(rename = "@y")]
-    pub y: Double,
-    #[serde(rename = "@z")]
-    pub z: Double,
+pub struct Polygon {
+    #[serde(rename = "Position")]
+    pub position: Vec<Position>,
+}
+
+/// Range along a road defined by at least two road cursors
+///
+/// XSD `RoadRange` (`:1949-1954`): sequence of `RoadCursor`, `minOccurs="2"`,
+/// unbounded; optional attribute `@length` (Double).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RoadRange {
+    #[serde(rename = "@length", default, skip_serializing_if = "Option::is_none")]
+    pub length: Option<Double>,
+    #[serde(rename = "RoadCursor")]
+    pub road_cursor: Vec<RoadCursor>,
+}
+
+/// A position along a road, optionally restricted to a set of lanes
+///
+/// XSD `RoadCursor` (`:1926-1932`): sequence of `Lane` (minOccurs=0,
+/// unbounded); required attribute `@roadId` (String), optional `@s` (Double).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RoadCursor {
+    #[serde(rename = "@roadId")]
+    pub road_id: OSString,
+    #[serde(rename = "@s", default, skip_serializing_if = "Option::is_none")]
+    pub s: Option<Double>,
+    #[serde(rename = "Lane", default, skip_serializing_if = "Vec::is_empty")]
+    pub lane: Vec<Lane>,
+}
+
+/// Reference to a lane by numeric id
+///
+/// XSD `Lane` (`:1333-1335`): required attribute `@id` (Int).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Lane {
+    #[serde(rename = "@id")]
+    pub id: Int,
+}
+
+/// Weighted distribution of traffic entities
+///
+/// XSD `TrafficDistribution` (`:2236-2240`): sequence of
+/// `TrafficDistributionEntry`, `maxOccurs="unbounded"`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TrafficDistribution {
+    #[serde(rename = "TrafficDistributionEntry")]
+    pub traffic_distribution_entry: Vec<TrafficDistributionEntry>,
+}
+
+/// Single weighted entry in a `TrafficDistribution`
+///
+/// XSD `TrafficDistributionEntry` (`:2241-2247`): sequence of required
+/// `EntityDistribution` and optional `Properties` (minOccurs=0); required
+/// attribute `@weight` (Double).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TrafficDistributionEntry {
+    #[serde(rename = "@weight")]
+    pub weight: Double,
+    #[serde(rename = "EntityDistribution")]
+    pub entity_distribution: EntityDistribution,
+    #[serde(rename = "Properties", default, skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Properties>,
+}
+
+/// Split between vehicles traveling in the same vs. opposite direction
+///
+/// XSD `DirectionOfTravelDistribution` (`:1063-1066`): required attributes
+/// `@same` (Double) and `@opposite` (Double).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DirectionOfTravelDistribution {
+    #[serde(rename = "@same")]
+    pub same: Double,
+    #[serde(rename = "@opposite")]
+    pub opposite: Double,
 }
 
 
 impl Default for TrafficSourceAction {
     fn default() -> Self {
         Self {
+            radius: Double::literal(10.0),         // 10 meter radius
             rate: Double::literal(10.0),           // 10 vehicles per minute
             velocity: Some(Double::literal(50.0)), // 50 km/h default velocity
             speed: None,
             position: Position::default(),
             traffic_definition: Some(TrafficDefinition::default()),
+            traffic_distribution: None,
         }
     }
 }
@@ -356,6 +460,9 @@ impl Default for TrafficSwarmAction {
             velocity: None,
             central_object: CentralSwarmObject::default(),
             traffic_definition: Some(TrafficDefinition::default()),
+            traffic_distribution: None,
+            initial_speed_range: None,
+            direction_of_travel_distribution: None,
         }
     }
 }
@@ -492,22 +599,79 @@ impl Default for CentralSwarmObject {
 impl Default for TrafficArea {
     fn default() -> Self {
         Self {
-            vertices: vec![
-                TrafficAreaVertex::new(0.0, 0.0, 0.0),
-                TrafficAreaVertex::new(100.0, 0.0, 0.0),
-                TrafficAreaVertex::new(100.0, 100.0, 0.0),
-                TrafficAreaVertex::new(0.0, 100.0, 0.0),
-            ],
+            polygon: Some(Polygon::default()),
+            road_range: Vec::new(),
         }
     }
 }
 
-impl Default for TrafficAreaVertex {
+impl Default for Polygon {
     fn default() -> Self {
         Self {
-            x: Double::literal(0.0),
-            y: Double::literal(0.0),
-            z: Double::literal(0.0),
+            position: vec![Position::default(), Position::default(), Position::default()],
+        }
+    }
+}
+
+impl Default for RoadRange {
+    fn default() -> Self {
+        Self {
+            length: None,
+            road_cursor: vec![RoadCursor::default(), RoadCursor::default()],
+        }
+    }
+}
+
+impl Default for RoadCursor {
+    fn default() -> Self {
+        Self {
+            road_id: OSString::literal("DefaultRoad".to_string()),
+            s: None,
+            lane: Vec::new(),
+        }
+    }
+}
+
+impl Default for Lane {
+    fn default() -> Self {
+        Self { id: Int::literal(0) }
+    }
+}
+
+impl Default for TrafficDistribution {
+    fn default() -> Self {
+        Self {
+            traffic_distribution_entry: vec![TrafficDistributionEntry::default()],
+        }
+    }
+}
+
+impl Default for TrafficDistributionEntry {
+    fn default() -> Self {
+        Self {
+            weight: Double::literal(1.0),
+            entity_distribution: EntityDistribution::default(),
+            properties: None,
+        }
+    }
+}
+
+impl Default for DirectionOfTravelDistribution {
+    fn default() -> Self {
+        Self {
+            same: Double::literal(1.0),
+            opposite: Double::literal(0.0),
+        }
+    }
+}
+
+impl Default for TrafficAreaAction {
+    fn default() -> Self {
+        Self {
+            number_of_entities: UnsignedInt::literal(1),
+            continuous: Boolean::literal(false),
+            traffic_distribution: TrafficDistribution::default(),
+            traffic_area: TrafficArea::default(),
         }
     }
 }
@@ -515,31 +679,47 @@ impl Default for TrafficAreaVertex {
 
 
 impl TrafficSourceAction {
-    /// Create traffic source with rate and position
-    pub fn new(rate: f64, position: Position, traffic_definition: TrafficDefinition) -> Self {
+    /// Create traffic source with radius, rate and position
+    pub fn new(
+        radius: f64,
+        rate: f64,
+        position: Position,
+        traffic_definition: TrafficDefinition,
+    ) -> Self {
         Self {
+            radius: Double::literal(radius),
             rate: Double::literal(rate),
             velocity: None,
             speed: None,
             position,
             traffic_definition: Some(traffic_definition),
+            traffic_distribution: None,
         }
     }
 
     /// Create traffic source with velocity
     pub fn with_velocity(
+        radius: f64,
         rate: f64,
         velocity: f64,
         position: Position,
         traffic_definition: TrafficDefinition,
     ) -> Self {
         Self {
+            radius: Double::literal(radius),
             rate: Double::literal(rate),
             velocity: Some(Double::literal(velocity)),
             speed: None,
             position,
             traffic_definition: Some(traffic_definition),
+            traffic_distribution: None,
         }
+    }
+
+    /// Set the traffic distribution for the source
+    pub fn with_traffic_distribution(mut self, traffic_distribution: TrafficDistribution) -> Self {
+        self.traffic_distribution = Some(traffic_distribution);
+        self
     }
 }
 
@@ -589,6 +769,9 @@ impl TrafficSwarmAction {
                 entity_ref: OSString::literal(central_object.into()),
             },
             traffic_definition: None,
+            traffic_distribution: None,
+            initial_speed_range: None,
+            direction_of_travel_distribution: None,
         }
     }
 
@@ -616,6 +799,27 @@ impl TrafficSwarmAction {
         self
     }
 
+    /// Set traffic distribution for the swarm
+    pub fn with_traffic_distribution(mut self, traffic_distribution: TrafficDistribution) -> Self {
+        self.traffic_distribution = Some(traffic_distribution);
+        self
+    }
+
+    /// Set initial speed range for the swarm
+    pub fn with_initial_speed_range(mut self, initial_speed_range: Range) -> Self {
+        self.initial_speed_range = Some(initial_speed_range);
+        self
+    }
+
+    /// Set direction-of-travel distribution for the swarm
+    pub fn with_direction_of_travel_distribution(
+        mut self,
+        direction_of_travel_distribution: DirectionOfTravelDistribution,
+    ) -> Self {
+        self.direction_of_travel_distribution = Some(direction_of_travel_distribution);
+        self
+    }
+
     /// Set central swarm object entity reference
     pub fn with_central_swarm_object(mut self, entity_ref: impl Into<String>) -> Self {
         self.central_object = CentralSwarmObject {
@@ -626,11 +830,18 @@ impl TrafficSwarmAction {
 }
 
 impl TrafficAreaAction {
-    /// Create traffic area with vertices
-    pub fn new(vertices: Vec<TrafficAreaVertex>, traffic_definition: TrafficDefinition) -> Self {
+    /// Create a traffic area action with the required distribution and area
+    pub fn new(
+        number_of_entities: u32,
+        continuous: bool,
+        traffic_distribution: TrafficDistribution,
+        traffic_area: TrafficArea,
+    ) -> Self {
         Self {
-            traffic_area: TrafficArea { vertices },
-            traffic_definition,
+            number_of_entities: UnsignedInt::literal(number_of_entities),
+            continuous: Boolean::literal(continuous),
+            traffic_distribution,
+            traffic_area,
         }
     }
 }
@@ -877,58 +1088,34 @@ impl CentralSwarmObject {
     }
 }
 
-impl TrafficAreaVertex {
-    /// Create new traffic area vertex
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
+impl Polygon {
+    /// Create a rectangular polygon from world-space corners
+    pub fn rectangle(x: f64, y: f64, width: f64, height: f64) -> Self {
+        use crate::types::positions::WorldPosition;
+
+        let corner = |cx: f64, cy: f64| Position {
+            world_position: Some(WorldPosition::new(cx, cy)),
+            ..Position::empty()
+        };
+
         Self {
-            x: Double::literal(x),
-            y: Double::literal(y),
-            z: Double::literal(z),
+            position: vec![
+                corner(x, y),
+                corner(x + width, y),
+                corner(x + width, y + height),
+                corner(x, y + height),
+            ],
         }
-    }
-
-    /// Get x coordinate value
-    pub fn x(&self) -> Option<&f64> {
-        self.x.as_literal()
-    }
-
-    /// Get y coordinate value
-    pub fn y(&self) -> Option<&f64> {
-        self.y.as_literal()
-    }
-
-    /// Get z coordinate value
-    pub fn z(&self) -> Option<&f64> {
-        self.z.as_literal()
     }
 }
 
 impl TrafficArea {
-    /// Create rectangular traffic area
+    /// Create a traffic area bounded by a rectangular polygon
     pub fn rectangle(x: f64, y: f64, width: f64, height: f64) -> Self {
         Self {
-            vertices: vec![
-                TrafficAreaVertex::new(x, y, 0.0),
-                TrafficAreaVertex::new(x + width, y, 0.0),
-                TrafficAreaVertex::new(x + width, y + height, 0.0),
-                TrafficAreaVertex::new(x, y + height, 0.0),
-            ],
+            polygon: Some(Polygon::rectangle(x, y, width, height)),
+            road_range: Vec::new(),
         }
-    }
-
-    /// Create circular traffic area (approximated with polygon)
-    pub fn circle(center_x: f64, center_y: f64, radius: f64, segments: u32) -> Self {
-        let mut vertices = Vec::new();
-        let segment_angle = 2.0 * std::f64::consts::PI / segments as f64;
-
-        for i in 0..segments {
-            let angle = i as f64 * segment_angle;
-            let x = center_x + radius * angle.cos();
-            let y = center_y + radius * angle.sin();
-            vertices.push(TrafficAreaVertex::new(x, y, 0.0));
-        }
-
-        Self { vertices }
     }
 }
 
@@ -939,9 +1126,14 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_creation() {
-        let source =
-            TrafficSourceAction::new(15.0, Position::default(), TrafficDefinition::default());
+        let source = TrafficSourceAction::new(
+            5.0,
+            15.0,
+            Position::default(),
+            TrafficDefinition::default(),
+        );
 
+        assert_eq!(source.radius.as_literal(), Some(&5.0));
         assert_eq!(source.rate.as_literal(), Some(&15.0));
         assert!(source.velocity.is_none());
     }
@@ -949,6 +1141,7 @@ mod tests {
     #[test]
     fn test_traffic_source_with_velocity() {
         let source = TrafficSourceAction::with_velocity(
+            5.0,
             20.0,
             60.0,
             Position::default(),
@@ -1003,18 +1196,14 @@ mod tests {
 
     #[test]
     fn test_traffic_area_action_creation() {
-        let vertices = vec![
-            TrafficAreaVertex::new(0.0, 0.0, 0.0),
-            TrafficAreaVertex::new(50.0, 0.0, 0.0),
-            TrafficAreaVertex::new(50.0, 50.0, 0.0),
-            TrafficAreaVertex::new(0.0, 50.0, 0.0),
-        ];
+        let traffic_area = TrafficArea::rectangle(0.0, 0.0, 50.0, 50.0);
 
-        let area = TrafficAreaAction::new(vertices.clone(), TrafficDefinition::default());
+        let area = TrafficAreaAction::new(3, true, TrafficDistribution::default(), traffic_area);
 
-        assert_eq!(area.traffic_area.vertices.len(), 4);
-        assert_eq!(area.traffic_area.vertices[0].x(), Some(&0.0));
-        assert_eq!(area.traffic_area.vertices[1].x(), Some(&50.0));
+        assert_eq!(area.number_of_entities.as_literal(), Some(&3));
+        assert_eq!(area.continuous.as_literal(), Some(&true));
+        assert_eq!(area.traffic_area.polygon.unwrap().position.len(), 4);
+        assert!(area.traffic_area.road_range.is_empty());
     }
 
     #[test]
@@ -1095,18 +1284,22 @@ mod tests {
     #[test]
     fn test_traffic_area_shapes() {
         let rect = TrafficArea::rectangle(10.0, 20.0, 30.0, 40.0);
-        assert_eq!(rect.vertices.len(), 4);
-        assert_eq!(rect.vertices[0].x(), Some(&10.0));
-        assert_eq!(rect.vertices[0].y(), Some(&20.0));
-        assert_eq!(rect.vertices[2].x(), Some(&40.0)); // 10 + 30
-        assert_eq!(rect.vertices[2].y(), Some(&60.0)); // 20 + 40
+        let polygon = rect.polygon.expect("rectangle should produce a Polygon");
+        assert_eq!(polygon.position.len(), 4);
 
-        let circle = TrafficArea::circle(0.0, 0.0, 10.0, 8);
-        assert_eq!(circle.vertices.len(), 8);
+        let corner0 = polygon.position[0]
+            .world_position
+            .as_ref()
+            .expect("expected a WorldPosition");
+        assert_eq!(corner0.x.as_literal(), Some(&10.0));
+        assert_eq!(corner0.y.as_literal(), Some(&20.0));
 
-        // First vertex should be at (10, 0) for angle 0
-        assert!((circle.vertices[0].x().unwrap() - 10.0).abs() < 1e-10);
-        assert!((circle.vertices[0].y().unwrap() - 0.0).abs() < 1e-10);
+        let corner2 = polygon.position[2]
+            .world_position
+            .as_ref()
+            .expect("expected a WorldPosition");
+        assert_eq!(corner2.x.as_literal(), Some(&40.0)); // 10 + 30
+        assert_eq!(corner2.y.as_literal(), Some(&60.0)); // 20 + 40
     }
 
     #[test]
@@ -1550,7 +1743,7 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_speed_round_trip() {
-        let xml = r#"<TrafficSourceAction rate="10" speed="15.0">
+        let xml = r#"<TrafficSourceAction radius="5" rate="10" speed="15.0">
     <Position><WorldPosition x="0" y="0"/></Position>
 </TrafficSourceAction>"#;
         let action: TrafficSourceAction = quick_xml::de::from_str(xml).unwrap();
@@ -1560,5 +1753,185 @@ mod tests {
         assert!(serialized.contains(r#"speed="15""#), "serialized: {serialized}");
         let reparsed: TrafficSourceAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action, reparsed);
+    }
+
+    // TASK A/B/C: traffic-distribution subtree, TrafficArea, and the three
+    // traffic actions that reference it.
+
+    fn sample_entity_distribution() -> EntityDistribution {
+        use crate::types::entities::ScenarioObjectTemplate;
+        use crate::types::enums::ObjectType;
+
+        EntityDistribution {
+            entries: vec![crate::types::entities::EntityDistributionEntry::new(
+                ScenarioObjectTemplate::new("Vehicle1", ObjectType::Vehicle),
+                1.0,
+            )],
+        }
+    }
+
+    #[test]
+    fn test_traffic_distribution_round_trip() {
+        let distribution = TrafficDistribution {
+            traffic_distribution_entry: vec![
+                TrafficDistributionEntry {
+                    weight: Double::literal(0.6),
+                    entity_distribution: sample_entity_distribution(),
+                    properties: None,
+                },
+                TrafficDistributionEntry {
+                    weight: Double::literal(0.4),
+                    entity_distribution: sample_entity_distribution(),
+                    properties: None,
+                },
+            ],
+        };
+
+        let xml = quick_xml::se::to_string(&distribution).unwrap();
+        let reparsed: TrafficDistribution = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(distribution, reparsed);
+        assert_eq!(reparsed.traffic_distribution_entry.len(), 2);
+        assert_eq!(
+            reparsed.traffic_distribution_entry[0].weight.as_literal(),
+            Some(&0.6)
+        );
+    }
+
+    #[test]
+    fn test_traffic_area_polygon_round_trip() {
+        use crate::types::positions::WorldPosition;
+
+        let traffic_area = TrafficArea {
+            polygon: Some(Polygon {
+                position: vec![
+                    Position {
+                        world_position: Some(WorldPosition::new(0.0, 0.0)),
+                        ..Position::empty()
+                    },
+                    Position {
+                        world_position: Some(WorldPosition::new(10.0, 0.0)),
+                        ..Position::empty()
+                    },
+                    Position {
+                        world_position: Some(WorldPosition::new(10.0, 10.0)),
+                        ..Position::empty()
+                    },
+                ],
+            }),
+            road_range: Vec::new(),
+        };
+
+        let xml = quick_xml::se::to_string(&traffic_area).unwrap();
+        let reparsed: TrafficArea = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(traffic_area, reparsed);
+        assert_eq!(reparsed.polygon.unwrap().position.len(), 3);
+        assert!(reparsed.road_range.is_empty());
+    }
+
+    #[test]
+    fn test_traffic_area_road_range_round_trip() {
+        let traffic_area = TrafficArea {
+            polygon: None,
+            road_range: vec![RoadRange {
+                length: Some(Double::literal(50.0)),
+                road_cursor: vec![
+                    RoadCursor {
+                        road_id: OSString::literal("Road1".to_string()),
+                        s: Some(Double::literal(0.0)),
+                        lane: vec![Lane { id: Int::literal(-1) }],
+                    },
+                    RoadCursor {
+                        road_id: OSString::literal("Road1".to_string()),
+                        s: Some(Double::literal(50.0)),
+                        lane: Vec::new(),
+                    },
+                ],
+            }],
+        };
+
+        let xml = quick_xml::se::to_string(&traffic_area).unwrap();
+        let reparsed: TrafficArea = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(traffic_area, reparsed);
+        assert!(reparsed.polygon.is_none());
+        assert_eq!(reparsed.road_range.len(), 1);
+        assert_eq!(reparsed.road_range[0].road_cursor.len(), 2);
+        assert_eq!(reparsed.road_range[0].road_cursor[0].lane[0].id.as_literal(), Some(&-1));
+    }
+
+    #[test]
+    fn test_traffic_area_action_round_trip() {
+        let action = TrafficAreaAction::new(
+            5,
+            true,
+            TrafficDistribution {
+                traffic_distribution_entry: vec![TrafficDistributionEntry {
+                    weight: Double::literal(1.0),
+                    entity_distribution: sample_entity_distribution(),
+                    properties: None,
+                }],
+            },
+            TrafficArea::rectangle(0.0, 0.0, 20.0, 20.0),
+        );
+
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        let reparsed: TrafficAreaAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(action, reparsed);
+        assert_eq!(reparsed.number_of_entities.as_literal(), Some(&5));
+        assert_eq!(reparsed.continuous.as_literal(), Some(&true));
+    }
+
+    #[test]
+    fn test_traffic_source_action_radius_and_distribution_round_trip() {
+        let action = TrafficSourceAction::new(
+            8.0,
+            12.0,
+            Position {
+                world_position: Some(crate::types::positions::WorldPosition::new(1.0, 2.0)),
+                ..Position::empty()
+            },
+            TrafficDefinition::default(),
+        )
+        .with_traffic_distribution(TrafficDistribution {
+            traffic_distribution_entry: vec![TrafficDistributionEntry {
+                weight: Double::literal(1.0),
+                entity_distribution: sample_entity_distribution(),
+                properties: None,
+            }],
+        });
+
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        let reparsed: TrafficSourceAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(action, reparsed);
+        assert_eq!(reparsed.radius.as_literal(), Some(&8.0));
+        assert!(reparsed.traffic_distribution.is_some());
+    }
+
+    #[test]
+    fn test_traffic_swarm_action_speed_range_and_direction_round_trip() {
+        let swarm = TrafficSwarmAction::new("Ego", 100.0, 50.0, 10)
+            .with_initial_speed_range(Range {
+                lower_limit: Double::literal(5.0),
+                upper_limit: Double::literal(20.0),
+            })
+            .with_direction_of_travel_distribution(DirectionOfTravelDistribution {
+                same: Double::literal(0.8),
+                opposite: Double::literal(0.2),
+            });
+
+        let xml = quick_xml::se::to_string(&swarm).unwrap();
+        let reparsed: TrafficSwarmAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(swarm, reparsed);
+        assert_eq!(
+            reparsed.initial_speed_range.unwrap().lower_limit.as_literal(),
+            Some(&5.0)
+        );
+        assert_eq!(
+            reparsed
+                .direction_of_travel_distribution
+                .unwrap()
+                .same
+                .as_literal(),
+            Some(&0.8)
+        );
     }
 }

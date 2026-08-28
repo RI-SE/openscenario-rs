@@ -40,16 +40,20 @@ pub struct EntityDistribution {
     pub entries: Vec<EntityDistributionEntry>,
 }
 
-/// Individual distribution entry with entity reference and weight
+/// Individual distribution entry with a scenario object template and weight
+///
+/// XSD `EntityDistributionEntry` (`:1162-1167`): sequence of required
+/// `ScenarioObjectTemplate`; required attribute `@weight` (Double). There is
+/// no `@entityRef` attribute in the schema.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityDistributionEntry {
-    /// Reference to the entity
-    #[serde(rename = "@entityRef")]
-    pub entity_ref: OSString,
-
-    /// Probability weight for this entity
+    /// Probability weight for this entry
     #[serde(rename = "@weight")]
     pub weight: Double,
+
+    /// Template describing the scenario object to spawn
+    #[serde(rename = "ScenarioObjectTemplate")]
+    pub scenario_object_template: ScenarioObjectTemplate,
 }
 
 /// Template system for scenario object creation
@@ -131,8 +135,8 @@ impl Default for EntityDistribution {
 impl Default for EntityDistributionEntry {
     fn default() -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
             weight: Double::literal(1.0),
+            scenario_object_template: ScenarioObjectTemplate::default(),
         }
     }
 }
@@ -219,22 +223,25 @@ impl EntityDistribution {
         }
     }
 
-    /// Add a distribution entry
-    pub fn add_entry(&mut self, entity_ref: impl Into<String>, weight: f64) {
+    /// Add a distribution entry from a template name and object type
+    pub fn add_entry(&mut self, template_name: impl Into<String>, weight: f64) {
         self.entries.push(EntityDistributionEntry {
-            entity_ref: OSString::literal(entity_ref.into()),
             weight: Double::literal(weight),
+            scenario_object_template: ScenarioObjectTemplate::new(
+                template_name,
+                ObjectType::Vehicle,
+            ),
         });
     }
 
-    /// Create a uniform distribution from entity names
-    pub fn uniform(entity_names: Vec<impl Into<String>>) -> Self {
-        let weight = 1.0 / entity_names.len() as f64;
-        let entries = entity_names
+    /// Create a uniform distribution from template names
+    pub fn uniform(template_names: Vec<impl Into<String>>) -> Self {
+        let weight = 1.0 / template_names.len() as f64;
+        let entries = template_names
             .into_iter()
             .map(|name| EntityDistributionEntry {
-                entity_ref: OSString::literal(name.into()),
                 weight: Double::literal(weight),
+                scenario_object_template: ScenarioObjectTemplate::new(name, ObjectType::Vehicle),
             })
             .collect();
 
@@ -251,11 +258,11 @@ impl EntityDistribution {
 }
 
 impl EntityDistributionEntry {
-    /// Create a new distribution entry
-    pub fn new(entity_ref: impl Into<String>, weight: f64) -> Self {
+    /// Create a new distribution entry from a template and weight
+    pub fn new(scenario_object_template: ScenarioObjectTemplate, weight: f64) -> Self {
         Self {
-            entity_ref: OSString::literal(entity_ref.into()),
             weight: Double::literal(weight),
+            scenario_object_template,
         }
     }
 }
@@ -368,8 +375,12 @@ mod tests {
 
     #[test]
     fn test_entity_distribution_entry() {
-        let entry = EntityDistributionEntry::new("TestEntity", 0.75);
-        assert_eq!(entry.entity_ref.as_literal().unwrap(), "TestEntity");
+        let template = ScenarioObjectTemplate::new("TestEntity", ObjectType::Vehicle);
+        let entry = EntityDistributionEntry::new(template, 0.75);
+        assert_eq!(
+            entry.scenario_object_template.name.as_literal().unwrap(),
+            "TestEntity"
+        );
         assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
     }
 
@@ -429,7 +440,8 @@ mod tests {
         let distribution = EntityDistribution::uniform(vec!["Car1", "Car2"]);
         let xml = quick_xml::se::to_string(&distribution).unwrap();
         assert!(xml.contains("EntityDistributionEntry"));
-        assert!(xml.contains("entityRef=\"Car1\""));
+        assert!(xml.contains("ScenarioObjectTemplate"));
+        assert!(xml.contains("name=\"Car1\""));
         assert!(xml.contains("weight=\"0.5\""));
     }
 
