@@ -15,7 +15,7 @@ use openscenario_rs::types::actions::movement::{
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;
 use openscenario_rs::types::controllers::{Controller, ObjectController};
-use openscenario_rs::types::enums::{ControllerType, FollowingMode};
+use openscenario_rs::types::enums::{ControllerType, FollowingMode, ReferenceContext};
 use openscenario_rs::types::scenario::init::{LongitudinalAction, PrivateAction};
 
 #[test]
@@ -60,7 +60,7 @@ fn test_follow_trajectory_action_complete() {
         time_reference: TimeReference {
             none: None,
             timing: Some(Timing {
-                domain_absolute_relative: OSString::literal("absolute".to_string()),
+                domain_absolute_relative: ReferenceContext::Absolute,
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
             }),
@@ -80,7 +80,7 @@ fn test_follow_trajectory_action_complete() {
         time_reference: TimeReference {
             none: None,
             timing: Some(Timing {
-                domain_absolute_relative: OSString::literal("absolute".to_string()),
+                domain_absolute_relative: ReferenceContext::Absolute,
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
             }),
@@ -98,7 +98,7 @@ fn test_follow_trajectory_action_complete() {
         time_reference: TimeReference {
             none: None,
             timing: Some(Timing {
-                domain_absolute_relative: OSString::literal("absolute".to_string()),
+                domain_absolute_relative: ReferenceContext::Absolute,
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
             }),

@@ -6,6 +6,7 @@ use openscenario_rs::types::{
         ByEntityCondition, CollisionCondition, CollisionTarget, EndOfRoadCondition,
         EntityCondition, OffroadCondition,
     },
+    enums::ObjectType,
     positions::Position,
     scenario::triggers::{EntityRef, TriggeringEntities},
 };
@@ -24,14 +25,11 @@ fn test_collision_condition_with_target() {
 
 #[test]
 fn test_collision_condition_with_type() {
-    let condition = CollisionCondition::with_type("pedestrian");
+    let condition = CollisionCondition::with_type(ObjectType::Pedestrian);
     assert_eq!(condition.target, None);
     assert!(condition.by_type.is_some());
     if let Some(by_type) = condition.by_type {
-        assert_eq!(
-            by_type.target_type,
-            OSString::literal("pedestrian".to_string())
-        );
+        assert_eq!(by_type.target_type, ObjectType::Pedestrian);
     }
 }
 
@@ -52,7 +50,7 @@ fn test_collision_condition_default() {
 #[test]
 fn test_collision_target_default() {
     let target = CollisionTarget::default();
-    assert_eq!(target.target_type, OSString::literal("vehicle".to_string()));
+    assert_eq!(target.target_type, ObjectType::Vehicle);
 }
 
 #[test]
@@ -96,8 +94,10 @@ fn test_by_entity_condition_collision_variants() {
     let triggering_entities = TriggeringEntities::default();
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-    let collision_type =
-        ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+    let collision_type = ByEntityCondition::collision_with_type(
+        triggering_entities.clone(),
+        ObjectType::Pedestrian,
+    );
     let collision_any = ByEntityCondition::collision(triggering_entities);
 
     match collision_target.entity_condition {
@@ -208,8 +208,10 @@ fn test_by_entity_condition_safety_integration() {
     // Test collision conditions
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-    let collision_type =
-        ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+    let collision_type = ByEntityCondition::collision_with_type(
+        triggering_entities.clone(),
+        ObjectType::Pedestrian,
+    );
     let collision_any = ByEntityCondition::collision(triggering_entities.clone());
 
     // Test safety conditions

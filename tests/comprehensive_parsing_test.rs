@@ -18,6 +18,7 @@ mod tests {
         },
         scenario::ScenarioBuilder,
     };
+    use openscenario_rs::types::enums::ObjectType;
     use openscenario_rs::types::{
         basic::Value,
         enums::{DynamicsShape, Rule},
@@ -238,7 +239,7 @@ mod tests {
         let collision_condition = CollisionConditionBuilder::new()
             .for_entity("ego")
             .with_entity("target")
-            .collision_type("front")
+            .collision_type(ObjectType::Vehicle)
             .build();
 
         assert!(

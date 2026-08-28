@@ -7,7 +7,7 @@ use crate::types::basic::{Boolean, Double, OSString, ParameterDeclarations, Valu
 use crate::types::environment::{
     Environment, Fog, Precipitation, RoadCondition, Sun, TimeOfDay, Weather,
 };
-use crate::types::enums::{CloudState, FractionalCloudCover, Wetness};
+use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType, Wetness};
 use serde::{Deserialize, Serialize};
 
 /// Environment definition within a catalog
@@ -172,9 +172,9 @@ impl Default for CatalogFog {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Precipitation")]
 pub struct CatalogPrecipitation {
-    /// Type of precipitation (can be parameterized)
+    /// Type of precipitation
     #[serde(rename = "@precipitationType")]
-    pub precipitation_type: OSString,
+    pub precipitation_type: PrecipitationType,
 
     /// Precipitation intensity (0.0-1.0, can be parameterized) — deprecated per XSD
     #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
@@ -275,22 +275,8 @@ impl CatalogEnvironment {
                     .precipitation
                     .as_ref()
                     .map(|p| -> crate::error::Result<Precipitation> {
-                        let type_str = p.precipitation_type.resolve(parameters)?;
-                        let precipitation_type = match type_str.as_str() {
-                            "rain" => crate::types::enums::PrecipitationType::Rain,
-                            "snow" => crate::types::enums::PrecipitationType::Snow,
-                            "dry" => crate::types::enums::PrecipitationType::Dry,
-                            other => {
-                                return Err(crate::error::Error::invalid_value(
-                                    "precipitationType",
-                                    other,
-                                    "must be one of: dry, rain, snow",
-                                ))
-                            }
-                        };
-
                         Ok(Precipitation {
-                            precipitation_type,
+                            precipitation_type: p.precipitation_type.clone(),
                             intensity: None,
                             precipitation_intensity: p
                                 .precipitation_intensity
@@ -383,7 +369,7 @@ impl CatalogWeather {
             }),
             fog: Some(CatalogFog::default()),
             precipitation: Some(CatalogPrecipitation {
-                precipitation_type: Value::Literal("dry".to_string()),
+                precipitation_type: PrecipitationType::Dry,
                 intensity: Some(Value::Literal(0.0)),
                 precipitation_intensity: None,
             }),
@@ -411,7 +397,7 @@ impl CatalogWeather {
                 bounding_box: None,
             }),
             precipitation: Some(CatalogPrecipitation {
-                precipitation_type: Value::Literal("dry".to_string()),
+                precipitation_type: PrecipitationType::Dry,
                 intensity: Some(Value::Literal(0.0)),
                 precipitation_intensity: None,
             }),
@@ -439,7 +425,7 @@ impl CatalogWeather {
                 bounding_box: None,
             }),
             precipitation: Some(CatalogPrecipitation {
-                precipitation_type: Value::Literal("rain".to_string()),
+                precipitation_type: PrecipitationType::Rain,
                 intensity: Some(intensity),
                 precipitation_intensity: None,
             }),
@@ -515,26 +501,14 @@ mod tests {
             &1.0
         );
         assert_eq!(
-            sunny
-                .precipitation
-                .as_ref()
-                .unwrap()
-                .precipitation_type
-                .as_literal()
-                .unwrap(),
-            "dry"
+            sunny.precipitation.as_ref().unwrap().precipitation_type,
+            PrecipitationType::Dry
         );
 
         assert_eq!(rainy.cloud_state, Some(CloudState::Rainy));
         assert_eq!(
-            rainy
-                .precipitation
-                .as_ref()
-                .unwrap()
-                .precipitation_type
-                .as_literal()
-                .unwrap(),
-            "rain"
+            rainy.precipitation.as_ref().unwrap().precipitation_type,
+            PrecipitationType::Rain
         );
         assert_eq!(
             rainy

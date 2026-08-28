@@ -7,7 +7,9 @@ use crate::error::Result;
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::controllers::Controller;
 use crate::types::entities::{pedestrian, vehicle};
-use crate::types::enums::{ControllerType, MiscObjectCategory, PedestrianCategory, Role};
+use crate::types::enums::{
+    ControllerType, MiscObjectCategory, PedestrianCategory, Role, VehicleCategory,
+};
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -75,9 +77,9 @@ pub struct CatalogVehicle {
     #[serde(rename = "@name")]
     pub name: String,
 
-    /// Vehicle category (can be parameterized)
+    /// Vehicle category
     #[serde(rename = "@vehicleCategory")]
-    pub vehicle_category: OSString,
+    pub vehicle_category: VehicleCategory,
 
     /// Role of the vehicle (e.g. ambulance, police)
     #[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
@@ -214,7 +216,7 @@ impl CatalogEntity for CatalogVehicle {
         // Resolve parameters in the catalog vehicle
         let resolved_vehicle = vehicle::Vehicle {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
-            vehicle_category: self.resolve_vehicle_category(&self.vehicle_category, &parameters)?,
+            vehicle_category: self.vehicle_category,
             role: self.role,
             mass: self
                 .mass
@@ -357,31 +359,6 @@ impl CatalogEntity for CatalogVehicle {
     }
 }
 
-impl CatalogVehicle {
-    /// Helper method to resolve vehicle category parameter
-    fn resolve_vehicle_category(
-        &self,
-        category: &OSString,
-        parameters: &HashMap<String, String>,
-    ) -> Result<crate::types::enums::VehicleCategory> {
-        let category_str = category.resolve(parameters)?;
-        match category_str.as_str() {
-            "car" => Ok(crate::types::enums::VehicleCategory::Car),
-            "truck" => Ok(crate::types::enums::VehicleCategory::Truck),
-            "bus" => Ok(crate::types::enums::VehicleCategory::Bus),
-            "motorbike" => Ok(crate::types::enums::VehicleCategory::Motorbike),
-            "bicycle" => Ok(crate::types::enums::VehicleCategory::Bicycle),
-            "train" => Ok(crate::types::enums::VehicleCategory::Train),
-            "tram" => Ok(crate::types::enums::VehicleCategory::Tram),
-            _ => Err(crate::error::Error::invalid_value(
-                "vehicle_category",
-                &category_str,
-                "must be one of: car, truck, bus, motorbike, bicycle, train, tram",
-            )),
-        }
-    }
-}
-
 /// Controller entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogController {
@@ -389,9 +366,9 @@ pub struct CatalogController {
     #[serde(rename = "@name")]
     pub name: String,
 
-    /// Type of controller (can be parameterized)
+    /// Type of controller
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
-    pub controller_type: Option<OSString>,
+    pub controller_type: Option<ControllerType>,
 
     /// Parameter declarations for this catalog controller
     #[serde(
@@ -415,12 +392,7 @@ impl CatalogEntity for CatalogController {
     ) -> Result<Self::ResolvedType> {
         let resolved_controller = Controller {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
-            controller_type: match &self.controller_type {
-                Some(controller_type) => {
-                    Some(self.resolve_controller_type(controller_type, &parameters)?)
-                }
-                None => Some(ControllerType::Movement), // Default to Movement when not specified
-            },
+            controller_type: Some(self.controller_type.unwrap_or(ControllerType::Movement)), // Default to Movement when not specified
             parameter_declarations: None,
             properties: self.properties,
         };
@@ -444,29 +416,6 @@ impl CatalogEntity for CatalogController {
     }
 }
 
-impl CatalogController {
-    /// Helper method to resolve controller type parameter
-    fn resolve_controller_type(
-        &self,
-        controller_type: &OSString,
-        parameters: &HashMap<String, String>,
-    ) -> Result<ControllerType> {
-        let type_str = controller_type.resolve(parameters)?;
-        match type_str.as_str() {
-            "movement" => Ok(ControllerType::Movement),
-            "lateral" => Ok(ControllerType::Lateral),
-            "longitudinal" => Ok(ControllerType::Longitudinal),
-            "lighting" => Ok(ControllerType::Lighting),
-            "animation" => Ok(ControllerType::Animation),
-            "appearance" => Ok(ControllerType::Appearance),
-            _ => Err(crate::error::Error::catalog_error(&format!(
-                "Invalid controller type: {}",
-                type_str
-            ))),
-        }
-    }
-}
-
 /// Pedestrian entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogPedestrian {
@@ -474,17 +423,17 @@ pub struct CatalogPedestrian {
     #[serde(rename = "@name")]
     pub name: String,
 
-    /// Category of pedestrian (can be parameterized)
+    /// Category of pedestrian
     #[serde(rename = "@pedestrianCategory")]
-    pub pedestrian_category: OSString,
+    pub pedestrian_category: PedestrianCategory,
 
     /// Mass in kg (can be parameterized) - REQUIRED by XSD
     #[serde(rename = "@mass")]
     pub mass: OSString,
 
-    /// Role (can be parameterized)
+    /// Role
     #[serde(rename = "@role", skip_serializing_if = "Option::is_none")]
-    pub role: Option<OSString>,
+    pub role: Option<Role>,
 
     /// 3D model path (can be parameterized)
     #[serde(rename = "@model3d", skip_serializing_if = "Option::is_none")]
@@ -521,14 +470,9 @@ impl CatalogEntity for CatalogPedestrian {
 
         let resolved_pedestrian = pedestrian::Pedestrian {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
-            pedestrian_category: self
-                .resolve_pedestrian_category(&self.pedestrian_category, &parameters)?,
+            pedestrian_category: self.pedestrian_category,
             mass: crate::types::basic::Double::literal(mass_value),
-            role: self
-                .role
-                .as_ref()
-                .map(|r| self.resolve_role(r, &parameters))
-                .transpose()?,
+            role: self.role,
             model: None,
             model3d: self.model3d,
             bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
@@ -566,49 +510,6 @@ impl CatalogEntity for CatalogPedestrian {
 
     fn entity_name(&self) -> &str {
         &self.name
-    }
-}
-
-impl CatalogPedestrian {
-    /// Helper method to resolve pedestrian category parameter
-    fn resolve_pedestrian_category(
-        &self,
-        category: &OSString,
-        parameters: &HashMap<String, String>,
-    ) -> Result<PedestrianCategory> {
-        let category_str = category.resolve(parameters)?;
-        match category_str.as_str() {
-            "pedestrian" => Ok(PedestrianCategory::Pedestrian),
-            "wheelchair" => Ok(PedestrianCategory::Wheelchair),
-            "animal" => Ok(PedestrianCategory::Animal),
-            _ => Err(crate::error::Error::catalog_error(&format!(
-                "Invalid pedestrian category: {}",
-                category_str
-            ))),
-        }
-    }
-
-    /// Helper method to resolve role parameter
-    fn resolve_role(
-        &self,
-        role: &OSString,
-        parameters: &HashMap<String, String>,
-    ) -> Result<crate::types::enums::Role> {
-        let role_str = role.resolve(parameters)?;
-        match role_str.as_str() {
-            "none" => Ok(crate::types::enums::Role::None),
-            "ambulance" => Ok(crate::types::enums::Role::Ambulance),
-            "civil" => Ok(crate::types::enums::Role::Civil),
-            "fire" => Ok(crate::types::enums::Role::Fire),
-            "military" => Ok(crate::types::enums::Role::Military),
-            "police" => Ok(crate::types::enums::Role::Police),
-            "publicTransport" => Ok(crate::types::enums::Role::PublicTransport),
-            "roadAssistance" => Ok(crate::types::enums::Role::RoadAssistance),
-            _ => Err(crate::error::Error::catalog_error(&format!(
-                "Invalid role: {}",
-                role_str
-            ))),
-        }
     }
 }
 
@@ -812,7 +713,7 @@ mod tests {
     fn test_catalog_vehicle_entity_name() {
         let catalog_vehicle = CatalogVehicle {
             name: "SportsCar".to_string(),
-            vehicle_category: Value::Literal("car".to_string()),
+            vehicle_category: VehicleCategory::Car,
             role: None,
             mass: None,
             model3d: None,
@@ -855,7 +756,7 @@ mod tests {
     fn test_catalog_vehicle_resolution() {
         let catalog_vehicle = CatalogVehicle {
             name: "TestVehicle".to_string(),
-            vehicle_category: Value::Literal("car".to_string()),
+            vehicle_category: VehicleCategory::Car,
             role: None,
             mass: None,
             model3d: None,
@@ -916,7 +817,7 @@ mod tests {
     fn test_catalog_controller_entity_name() {
         let catalog_controller = CatalogController {
             name: "AIDriver".to_string(),
-            controller_type: Some(Value::Literal("movement".to_string())),
+            controller_type: Some(ControllerType::Movement),
             parameter_declarations: None,
             properties: None,
         };
@@ -928,15 +829,14 @@ mod tests {
     fn test_catalog_controller_resolution() {
         let catalog_controller = CatalogController {
             name: "TestController".to_string(),
-            controller_type: Some(Value::Parameter("ControllerTypeParam".to_string())),
+            controller_type: Some(ControllerType::Lateral),
             parameter_declarations: None,
             properties: None,
         };
 
-        let mut parameters = HashMap::new();
-        parameters.insert("ControllerTypeParam".to_string(), "lateral".to_string());
-
-        let resolved = catalog_controller.into_scenario_entity(parameters).unwrap();
+        let resolved = catalog_controller
+            .into_scenario_entity(HashMap::new())
+            .unwrap();
         assert_eq!(resolved.controller_type.unwrap(), ControllerType::Lateral);
         assert_eq!(resolved.name.as_literal().unwrap(), "TestController");
     }
@@ -945,7 +845,7 @@ mod tests {
     fn test_catalog_controller_type_resolution() {
         let catalog_controller = CatalogController {
             name: "FlexController".to_string(),
-            controller_type: Some(Value::Literal("longitudinal".to_string())),
+            controller_type: Some(ControllerType::Longitudinal),
             parameter_declarations: None,
             properties: None,
         };
@@ -955,6 +855,19 @@ mod tests {
         assert_eq!(
             resolved.controller_type.unwrap(),
             ControllerType::Longitudinal
+        );
+    }
+
+    /// Schema-validity guard: `controllerType` is an XSD enumeration
+    /// (`ControllerType`), so an invalid string must be rejected at parse
+    /// time rather than silently round-tripped as a plain string.
+    #[test]
+    fn test_catalog_controller_rejects_invalid_controller_type() {
+        let xml = r#"<Controller name="BadController" controllerType="notARealType"/>"#;
+        let result: std::result::Result<CatalogController, _> = quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "invalid controllerType value should be rejected"
         );
     }
 
@@ -986,9 +899,9 @@ mod tests {
     fn test_catalog_pedestrian_entity_name() {
         let catalog_pedestrian = CatalogPedestrian {
             name: "WalkingPerson".to_string(),
-            pedestrian_category: Value::Literal("pedestrian".to_string()),
+            pedestrian_category: PedestrianCategory::Pedestrian,
             mass: Value::Literal("75.0".to_string()),
-            role: Some(Value::Literal("none".to_string())),
+            role: Some(crate::types::enums::Role::None),
             model3d: None,
             bounding_box: BoundingBox::default(),
             properties: None,
@@ -1002,22 +915,39 @@ mod tests {
     fn test_catalog_pedestrian_resolution() {
         let catalog_pedestrian = CatalogPedestrian {
             name: "TestPedestrian".to_string(),
-            pedestrian_category: Value::Parameter("PedestrianTypeParam".to_string()),
+            pedestrian_category: PedestrianCategory::Wheelchair,
             mass: Value::Literal("75.0".to_string()),
-            role: Some(Value::Literal("civil".to_string())),
+            role: Some(crate::types::enums::Role::Civil),
             model3d: None,
             bounding_box: BoundingBox::default(),
             properties: None,
             parameter_declarations: None,
         };
 
-        let mut parameters = HashMap::new();
-        parameters.insert("PedestrianTypeParam".to_string(), "wheelchair".to_string());
-
-        let resolved = catalog_pedestrian.into_scenario_entity(parameters).unwrap();
+        let resolved = catalog_pedestrian
+            .into_scenario_entity(HashMap::new())
+            .unwrap();
         assert_eq!(resolved.pedestrian_category, PedestrianCategory::Wheelchair);
         assert_eq!(resolved.name.as_literal().unwrap(), "TestPedestrian");
         assert_eq!(resolved.role.unwrap(), crate::types::enums::Role::Civil);
+    }
+
+    /// Schema-validity guard: `pedestrianCategory` is an XSD enumeration
+    /// (`PedestrianCategory`), so an invalid string must be rejected at parse
+    /// time rather than silently round-tripped as a plain string.
+    #[test]
+    fn test_catalog_pedestrian_rejects_invalid_category() {
+        let xml = r#"<Pedestrian name="BadPed" pedestrianCategory="notARealCategory" mass="75.0">
+    <BoundingBox>
+        <Center x="0.0" y="0.0" z="0.5"/>
+        <Dimensions width="0.5" length="0.5" height="1.8"/>
+    </BoundingBox>
+</Pedestrian>"#;
+        let result: std::result::Result<CatalogPedestrian, _> = quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "invalid pedestrianCategory value should be rejected"
+        );
     }
 
     #[test]

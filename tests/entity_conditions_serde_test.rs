@@ -20,7 +20,7 @@ use openscenario_rs::types::{
         RelativeAngleCondition, RelativeClearanceCondition, RelativeLaneRange,
         RelativeSpeedCondition, TimeToCollisionCondition, TimeToCollisionTarget,
     },
-    enums::{AngleType, CoordinateSystem, DirectionalDimension, Rule},
+    enums::{AngleType, CoordinateSystem, DirectionalDimension, ObjectType, Rule},
     positions::Position,
     scenario::triggers::EntityRef,
 };
@@ -84,7 +84,7 @@ fn test_collision_condition_with_entity_ref_xml_round_trip() {
 
 #[test]
 fn test_collision_condition_with_object_type_xml_round_trip() {
-    let original = CollisionCondition::with_type("vehicle");
+    let original = CollisionCondition::with_type(ObjectType::Vehicle);
     let deserialized: CollisionCondition = round_trip(&original);
     assert_eq!(original, deserialized);
 }
@@ -117,7 +117,7 @@ fn test_collision_condition_serializes_entity_ref_element() {
 
 #[test]
 fn test_collision_condition_serializes_by_object_type_element() {
-    let condition = CollisionCondition::with_type("pedestrian");
+    let condition = CollisionCondition::with_type(ObjectType::Pedestrian);
     let xml = quick_xml::se::to_string(&condition).expect("serialize failed");
     // XSD:926 - the child element is named `ByType` (of XSD type `ByObjectType`)
     assert!(
@@ -139,7 +139,7 @@ fn test_collision_condition_serializes_by_object_type_element() {
 #[test]
 fn test_collision_target_xml_round_trip() {
     let original = CollisionTarget {
-        target_type: OSString::literal("vehicle".to_string()),
+        target_type: ObjectType::Vehicle,
     };
     let deserialized: CollisionTarget = round_trip(&original);
     assert_eq!(original, deserialized);
@@ -148,7 +148,7 @@ fn test_collision_target_xml_round_trip() {
 #[test]
 fn test_collision_target_serializes_object_type_attribute() {
     let target = CollisionTarget {
-        target_type: OSString::literal("pedestrian".to_string()),
+        target_type: ObjectType::Pedestrian,
     };
     let xml = quick_xml::se::to_string(&target).expect("serialize failed");
     // XSD:832 - complexType ByObjectType has required attribute `type`

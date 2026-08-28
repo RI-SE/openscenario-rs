@@ -9,7 +9,8 @@
 //!
 use crate::types::basic::{Boolean, Double, Int, OSString};
 use crate::types::enums::{
-    AngleType, CoordinateSystem, DirectionalDimension, RelativeDistanceType, RoutingAlgorithm, Rule,
+    AngleType, CoordinateSystem, DirectionalDimension, ObjectType, RelativeDistanceType,
+    RoutingAlgorithm, Rule,
 };
 use crate::types::positions::Position;
 use crate::types::scenario::triggers::{EntityRef, TriggeringEntities};
@@ -91,7 +92,7 @@ pub struct CollisionCondition {
 pub struct CollisionTarget {
     /// XSD:832 required attribute `type` on complexType `ByObjectType`
     #[serde(rename = "@type")]
-    pub target_type: OSString,
+    pub target_type: ObjectType,
 }
 
 /// Condition for detecting end-of-road state
@@ -646,11 +647,11 @@ impl CollisionCondition {
     }
 
     /// Create collision condition for entity type
-    pub fn with_type(entity_type: &str) -> Self {
+    pub fn with_type(entity_type: ObjectType) -> Self {
         Self {
             target: None,
             by_type: Some(CollisionTarget {
-                target_type: OSString::literal(entity_type.to_string()),
+                target_type: entity_type,
             }),
         }
     }
@@ -864,7 +865,7 @@ impl Default for StandStillCondition {
 impl Default for CollisionTarget {
     fn default() -> Self {
         Self {
-            target_type: OSString::literal("vehicle".to_string()),
+            target_type: ObjectType::Vehicle,
         }
     }
 }
@@ -1114,7 +1115,10 @@ impl ByEntityCondition {
     }
 
     /// Create a collision condition for entity type
-    pub fn collision_with_type(triggering_entities: TriggeringEntities, entity_type: &str) -> Self {
+    pub fn collision_with_type(
+        triggering_entities: TriggeringEntities,
+        entity_type: ObjectType,
+    ) -> Self {
         Self::new(
             triggering_entities,
             EntityCondition::Collision(CollisionCondition::with_type(entity_type)),
@@ -1485,14 +1489,11 @@ mod tests {
 
     #[test]
     fn test_collision_condition_with_type() {
-        let condition = CollisionCondition::with_type("pedestrian");
+        let condition = CollisionCondition::with_type(ObjectType::Pedestrian);
         assert_eq!(condition.target, None);
         assert!(condition.by_type.is_some());
         if let Some(by_type) = condition.by_type {
-            assert_eq!(
-                by_type.target_type,
-                OSString::literal("pedestrian".to_string())
-            );
+            assert_eq!(by_type.target_type, ObjectType::Pedestrian);
         }
     }
 
@@ -1551,8 +1552,10 @@ mod tests {
         let triggering_entities = TriggeringEntities::default();
         let collision_target =
             ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-        let collision_type =
-            ByEntityCondition::collision_with_type(triggering_entities.clone(), "pedestrian");
+        let collision_type = ByEntityCondition::collision_with_type(
+            triggering_entities.clone(),
+            ObjectType::Pedestrian,
+        );
         let collision_any = ByEntityCondition::collision(triggering_entities);
 
         match collision_target.entity_condition {

@@ -65,7 +65,10 @@ fn test_catalog_file_parsing() {
 
     let vehicle = &catalog.vehicles()[0];
     assert_eq!(vehicle.name, "TestCar");
-    assert_eq!(vehicle.vehicle_category.as_literal().unwrap(), "car");
+    assert_eq!(
+        vehicle.vehicle_category,
+        openscenario_rs::types::enums::VehicleCategory::Car
+    );
 }
 
 #[test]

@@ -79,6 +79,9 @@ pub struct RelativeWorldPosition {
     /// XSD: optional attribute
     #[serde(rename = "@dz", default, skip_serializing_if = "Option::is_none")]
     pub dz: Option<Double>,
+    /// Orientation relative to the reference entity — XSD:1912, `minOccurs="0"`
+    #[serde(rename = "Orientation", default, skip_serializing_if = "Option::is_none")]
+    pub orientation: Option<Orientation>,
 }
 
 impl Default for RelativeWorldPosition {
@@ -88,6 +91,7 @@ impl Default for RelativeWorldPosition {
             dx: Double::literal(0.0),
             dy: Double::literal(0.0),
             dz: None,
+            orientation: None,
         }
     }
 }
@@ -223,5 +227,43 @@ mod tests {
         assert!(xml.contains("WorldPosition"));
         let deserialized: Position = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(pos, deserialized);
+    }
+
+    /// XSD:1912 — `RelativeWorldPosition` carries an optional `<Orientation>`
+    /// child element (`minOccurs="0"`), which was previously missing from the
+    /// Rust type. Verify it round-trips through XML serialize/deserialize.
+    #[test]
+    fn test_relative_world_position_orientation_round_trip() {
+        let pos = RelativeWorldPosition {
+            entity_ref: OSString::literal("Ego".to_string()),
+            dx: Double::literal(1.0),
+            dy: Double::literal(2.0),
+            dz: Some(Double::literal(0.5)),
+            orientation: Some(Orientation {
+                h: Some(Double::literal(1.57)),
+                p: None,
+                r: None,
+                reference_context: Some(crate::types::enums::ReferenceContext::Relative),
+            }),
+        };
+
+        let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(
+            xml.contains("<Orientation"),
+            "Orientation element missing from serialized XML: {xml}"
+        );
+
+        let deserialized: RelativeWorldPosition = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(pos, deserialized);
+        assert!(deserialized.orientation.is_some());
+    }
+
+    /// Regression guard: a `RelativeWorldPosition` without an `<Orientation>`
+    /// child must still parse, leaving the field `None`.
+    #[test]
+    fn test_relative_world_position_parse_without_orientation() {
+        let xml = r#"<RelativeWorldPosition entityRef="Ego" dx="1" dy="2"/>"#;
+        let pos: RelativeWorldPosition = quick_xml::de::from_str(xml).unwrap();
+        assert!(pos.orientation.is_none());
     }
 }

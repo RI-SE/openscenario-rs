@@ -256,7 +256,7 @@ impl RelativeDistanceConditionBuilder {
 pub struct CollisionConditionBuilder {
     entity_ref: Option<String>,
     target_entity: Option<String>,
-    collision_type: Option<String>,
+    collision_type: Option<crate::types::enums::ObjectType>,
 }
 
 impl CollisionConditionBuilder {
@@ -278,8 +278,8 @@ impl CollisionConditionBuilder {
     }
 
     /// Set collision type
-    pub fn collision_type(mut self, collision_type: &str) -> Self {
-        self.collision_type = Some(collision_type.to_string());
+    pub fn collision_type(mut self, collision_type: crate::types::enums::ObjectType) -> Self {
+        self.collision_type = Some(collision_type);
         self
     }
 
@@ -310,7 +310,7 @@ impl CollisionConditionBuilder {
                         }),
                         by_type: self.collision_type.map(|collision_type| {
                             crate::types::conditions::entity::CollisionTarget {
-                                target_type: OSString::literal(collision_type),
+                                target_type: collision_type,
                             }
                         }),
                     },

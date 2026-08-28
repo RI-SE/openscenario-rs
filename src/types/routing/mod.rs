@@ -380,6 +380,7 @@ impl Waypoint {
             dx: Double::literal(dx),
             dy: Double::literal(dy),
             dz: Some(Double::literal(dz)),
+            orientation: None,
         });
         position.road_position = None;
         position.lane_position = None;

@@ -71,6 +71,7 @@ impl PositionBuilder for RelativePositionBuilder {
                     dx: Double::literal(self.dx.unwrap()),
                     dy: Double::literal(self.dy.unwrap()),
                     dz: Some(Double::literal(self.dz.unwrap())),
+                    orientation: None,
                 };
                 position.relative_world_position = Some(relative_world_position);
             }

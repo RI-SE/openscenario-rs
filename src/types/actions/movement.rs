@@ -12,7 +12,7 @@ use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::enums::{
     CoordinateSystem, DynamicsDimension, DynamicsShape, FollowingMode, LateralDisplacement,
-    SpeedTargetValueType,
+    LongitudinalDisplacement, ReferenceContext, SpeedTargetValueType,
 };
 use crate::types::geometry::shapes::Shape;
 use crate::types::positions::Position;
@@ -207,7 +207,7 @@ pub struct TimeReference {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Timing {
     #[serde(rename = "@domainAbsoluteRelative")]
-    pub domain_absolute_relative: OSString,
+    pub domain_absolute_relative: ReferenceContext,
     #[serde(rename = "@scale")]
     pub scale: Double,
     #[serde(rename = "@offset")]
@@ -471,11 +471,11 @@ pub struct LongitudinalDistanceAction {
 
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<OSString>,
+    pub coordinate_system: Option<CoordinateSystem>,
 
     /// Displacement type for leading referenced entity
     #[serde(rename = "@displacement", skip_serializing_if = "Option::is_none")]
-    pub displacement: Option<OSString>,
+    pub displacement: Option<LongitudinalDisplacement>,
 
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
@@ -715,7 +715,7 @@ impl Default for TrajectoryFollowingMode {
 impl Default for Timing {
     fn default() -> Self {
         Self {
-            domain_absolute_relative: OSString::literal("absolute".to_string()),
+            domain_absolute_relative: ReferenceContext::Absolute,
             scale: Double::literal(1.0),
             offset: Double::literal(0.0),
         }

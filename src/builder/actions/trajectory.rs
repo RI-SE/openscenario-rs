@@ -25,7 +25,7 @@ use crate::types::{
     },
     actions::wrappers::PrivateAction,
     basic::{Boolean, Double, OSString},
-    enums::FollowingMode,
+    enums::{FollowingMode, ReferenceContext},
     geometry::shapes::{Polyline, Shape, Vertex},
     positions::{world::WorldPosition, Position},
 };
@@ -304,7 +304,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             time_reference: TimeReference {
                 none: None,
                 timing: Some(Timing {
-                    domain_absolute_relative: OSString::literal("absolute".to_string()),
+                    domain_absolute_relative: ReferenceContext::Absolute,
                     scale: Double::literal(1.0),
                     offset: Double::literal(0.0),
                 }),
