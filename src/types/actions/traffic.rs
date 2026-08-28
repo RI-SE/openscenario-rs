@@ -1125,6 +1125,31 @@ mod tests {
     use crate::types::positions::Position;
 
     #[test]
+    fn test_controller_distribution_entries_deserialize() {
+        // XSD `ControllerDistribution` (:990) is a sequence of
+        // `ControllerDistributionEntry` (`maxOccurs="unbounded"`) and has
+        // neither `@controllerType` nor a `ParameterValueDistribution`
+        // child. This previously failed to deserialize because the
+        // shadowed `types::controllers::ControllerDistribution` required
+        // both.
+        let xml = r#"<ControllerDistribution>
+            <ControllerDistributionEntry weight="0.6">
+                <Controller name="AIController"/>
+            </ControllerDistributionEntry>
+            <ControllerDistributionEntry weight="0.4">
+                <CatalogReference catalogName="ControllerCatalog" entryName="Manual"/>
+            </ControllerDistributionEntry>
+        </ControllerDistribution>"#;
+
+        let distribution: ControllerDistribution = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(distribution.entries.len(), 2);
+        assert_eq!(distribution.entries[0].weight.as_literal(), Some(&0.6));
+        assert!(distribution.entries[0].controller.is_some());
+        assert_eq!(distribution.entries[1].weight.as_literal(), Some(&0.4));
+        assert!(distribution.entries[1].catalog_reference.is_some());
+    }
+
+    #[test]
     fn test_traffic_source_action_creation() {
         let source = TrafficSourceAction::new(
             5.0,

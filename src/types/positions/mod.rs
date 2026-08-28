@@ -22,8 +22,7 @@ pub use route::{
     RoutePosition, RouteRefElement,
 };
 pub use road::{
-    LaneCoordinate, LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition,
-    RoadCoordinate, RoadPosition,
+    LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition,
 };
 pub use crate::types::actions::movement::TrajectoryRef;
 pub use trajectory::{Trajectory, TrajectoryPosition};

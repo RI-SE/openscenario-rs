@@ -759,6 +759,25 @@ mod tests {
     }
 
     #[test]
+    fn test_activate_controller_action_without_controller_ref() {
+        // XSD `ActivateControllerAction` (:714): `@controllerRef` is
+        // deprecated and NOT `use="required"`. A schema-valid element may
+        // omit it entirely and use only `@objectControllerRef` plus the
+        // domain flags. This previously failed to deserialize because the
+        // shadowed `types::controllers::ActivateControllerAction` made
+        // `controllerRef` a required field.
+        let xml = r#"<ActivateControllerAction objectControllerRef="c" lateral="true"/>"#;
+
+        let action: ActivateControllerAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(action.controller_ref.is_none());
+        assert_eq!(
+            action.object_controller_ref.unwrap().as_literal(),
+            Some(&"c".to_string())
+        );
+        assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
+    }
+
+    #[test]
     fn test_controller_action_override_controller_value_round_trip() {
         // XSD `OverrideControllerValueAction` (:1565-1574): xsd:all of six
         // optionally-present, differently-named children.

@@ -5,8 +5,7 @@
 
 use crate::types::basic::{Directory, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
-use crate::types::distributions::ParameterValueDistribution;
-use crate::types::entities::vehicle::{File, Properties, Property};
+use crate::types::entities::vehicle::{Properties, Property};
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
 
@@ -167,49 +166,6 @@ pub struct ControllerProperties {
 }
 
 
-/// Action to activate a controller for an entity.
-///
-/// This action enables a controller and optionally sets parameter values.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ActivateControllerAction {
-    /// Reference to the controller to activate
-    #[serde(rename = "@controllerRef")]
-    pub controller_ref: OSString,
-}
-
-impl Default for ActivateControllerAction {
-    fn default() -> Self {
-        Self {
-            controller_ref: Value::Literal("DefaultController".to_string()),
-        }
-    }
-}
-
-/// Assignment of a controller to a specific entity.
-///
-/// Defines the relationship between a controller and the entity it manages.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ControllerAssignment {
-    /// Reference to the controller
-    #[serde(rename = "@controllerRef")]
-    pub controller_ref: OSString,
-
-    /// Target entity for the controller
-    #[serde(rename = "@targetEntity")]
-    pub target_entity: OSString,
-}
-
-impl Default for ControllerAssignment {
-    fn default() -> Self {
-        Self {
-            controller_ref: Value::Literal("DefaultController".to_string()),
-            target_entity: Value::Literal("Ego".to_string()),
-        }
-    }
-}
-
 /// Catalog location for controller definitions.
 ///
 /// Specifies where controller catalog files can be found.
@@ -222,55 +178,6 @@ pub struct ControllerCatalogLocation {
     pub directory: Directory,
 }
 
-
-/// Distribution configuration for controller parameters.
-///
-/// Allows for statistical or deterministic variation of controller parameters
-/// across multiple scenario runs.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ControllerDistribution {
-    /// Type of controller this distribution applies to
-    #[serde(rename = "@controllerType")]
-    pub controller_type: ControllerType,
-
-    /// Parameter distribution specification
-    #[serde(rename = "ParameterValueDistribution")]
-    pub distribution: ParameterValueDistribution,
-}
-
-impl Default for ControllerDistribution {
-    fn default() -> Self {
-        use crate::types::distributions::deterministic::*;
-
-        // Create a simple deterministic distribution
-        let single_param_dist = DeterministicSingleParameterDistribution {
-            parameter_name: Value::Literal("controllerParam".to_string()),
-            distribution_set: Some(DistributionSet {
-                elements: vec![DistributionSetElement {
-                    value: Value::Literal("default".to_string()),
-                }],
-            }),
-            distribution_range: None,
-            user_defined_distribution: None,
-        };
-
-        let deterministic = crate::types::distributions::Deterministic {
-            single_distributions: vec![single_param_dist],
-            multi_distributions: vec![],
-        };
-
-        Self {
-            controller_type: ControllerType::Movement,
-            distribution: ParameterValueDistribution::new_deterministic(
-                File {
-                    filepath: "default.xosc".to_string(),
-                },
-                deterministic,
-            ),
-        }
-    }
-}
 
 // Helper implementations for common controller operations
 
@@ -373,25 +280,6 @@ impl ObjectController {
     }
 }
 
-impl ActivateControllerAction {
-    /// Creates an action to activate a controller by name.
-    pub fn new(controller_ref: String) -> Self {
-        Self {
-            controller_ref: Value::Literal(controller_ref),
-        }
-    }
-}
-
-impl ControllerAssignment {
-    /// Creates a controller assignment.
-    pub fn new(controller_ref: String, target_entity: String) -> Self {
-        Self {
-            controller_ref: Value::Literal(controller_ref),
-            target_entity: Value::Literal(target_entity),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -415,28 +303,6 @@ mod tests {
     }
 
     #[test]
-    fn test_activate_controller_action() {
-        let action = ActivateControllerAction::new("MainController".to_string());
-
-        assert_eq!(
-            action.controller_ref.as_literal().unwrap(),
-            "MainController"
-        );
-    }
-
-    #[test]
-    fn test_controller_assignment() {
-        let assignment =
-            ControllerAssignment::new("AIController".to_string(), "Vehicle1".to_string());
-
-        assert_eq!(
-            assignment.controller_ref.as_literal().unwrap(),
-            "AIController"
-        );
-        assert_eq!(assignment.target_entity.as_literal().unwrap(), "Vehicle1");
-    }
-
-    #[test]
     fn test_controller_serialization() {
         let controller = Controller::new("SerializationTest".to_string(), ControllerType::Movement);
 
@@ -448,17 +314,6 @@ mod tests {
         // Test deserialization
         let deserialized: Controller = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(controller, deserialized);
-    }
-
-    #[test]
-    fn test_controller_distribution() {
-        let distribution = ControllerDistribution::default();
-
-        assert_eq!(distribution.controller_type, ControllerType::Movement);
-        assert!(matches!(
-            distribution.distribution,
-            ParameterValueDistribution { .. }
-        ));
     }
 
     #[test]
@@ -478,15 +333,11 @@ mod tests {
     fn test_controller_defaults() {
         let object_controller = ObjectController::default();
         let properties = ControllerProperties::default();
-        let activate_action = ActivateControllerAction::default();
-        let assignment = ControllerAssignment::default();
 
         // All defaults should be valid
         assert!(object_controller.controller.is_none());
         assert!(object_controller.catalog_reference.is_none());
         assert!(properties.properties.is_empty());
-        assert!(activate_action.controller_ref.as_literal().is_some());
-        assert!(assignment.target_entity.as_literal().is_some());
     }
 
     #[test]

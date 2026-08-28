@@ -1,8 +1,6 @@
-//! Tests for temporal conditions and coordinate system types:
+//! Tests for temporal conditions:
 //! - TimeHeadwayCondition: Time-based following distance measurement
 //! - TimeToCollisionCondition: Collision prediction timing condition
-//! - RoadCoordinate: Road-based coordinate system positioning
-//! - LaneCoordinate: Lane-based coordinate system positioning
 
 use openscenario_rs::types::basic::{Boolean, Double};
 use openscenario_rs::types::conditions::entity::{
@@ -12,8 +10,8 @@ use openscenario_rs::types::conditions::entity::{
 use openscenario_rs::types::enums::{
     CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule,
 };
-use openscenario_rs::types::positions::{LaneCoordinate, Position, RoadCoordinate};
-use openscenario_rs::types::scenario::triggers::{EntityRef, TriggeringEntities};
+use openscenario_rs::types::positions::Position;
+use openscenario_rs::types::scenario::triggers::TriggeringEntities;
 
 // ========== Temporal Condition Tests ==========
 
@@ -291,82 +289,6 @@ fn test_by_entity_condition_time_to_collision_position() {
     }
 }
 
-// ========== Coordinate System Tests ==========
-
-#[test]
-fn test_road_coordinate_new() {
-    let coordinate = RoadCoordinate::new(100.0, -2.5);
-
-    assert_eq!(coordinate.s, Double::literal(100.0));
-    assert_eq!(coordinate.t, Double::literal(-2.5));
-    assert!(coordinate.h.is_none());
-}
-
-#[test]
-fn test_road_coordinate_with_height() {
-    let coordinate = RoadCoordinate::with_height(50.0, 1.0, 10.0);
-
-    assert_eq!(coordinate.s, Double::literal(50.0));
-    assert_eq!(coordinate.t, Double::literal(1.0));
-    assert!(coordinate.h.is_some());
-    assert_eq!(coordinate.h.unwrap(), Double::literal(10.0));
-}
-
-#[test]
-fn test_road_coordinate_center_line() {
-    let coordinate = RoadCoordinate::center_line(75.0);
-
-    assert_eq!(coordinate.s, Double::literal(75.0));
-    assert_eq!(coordinate.t, Double::literal(0.0));
-    assert!(coordinate.h.is_none());
-}
-
-#[test]
-fn test_road_coordinate_with_offset() {
-    let coordinate = RoadCoordinate::with_offset(25.0, -3.0);
-
-    assert_eq!(coordinate.s, Double::literal(25.0));
-    assert_eq!(coordinate.t, Double::literal(-3.0));
-    assert!(coordinate.h.is_none());
-}
-
-#[test]
-fn test_lane_coordinate_new() {
-    let coordinate = LaneCoordinate::new(200.0, 0.5);
-
-    assert_eq!(coordinate.s, Double::literal(200.0));
-    assert_eq!(coordinate.offset, Double::literal(0.5));
-    assert!(coordinate.h.is_none());
-}
-
-#[test]
-fn test_lane_coordinate_with_height() {
-    let coordinate = LaneCoordinate::with_height(150.0, -1.0, 5.0);
-
-    assert_eq!(coordinate.s, Double::literal(150.0));
-    assert_eq!(coordinate.offset, Double::literal(-1.0));
-    assert!(coordinate.h.is_some());
-    assert_eq!(coordinate.h.unwrap(), Double::literal(5.0));
-}
-
-#[test]
-fn test_lane_coordinate_center_line() {
-    let coordinate = LaneCoordinate::center_line(80.0);
-
-    assert_eq!(coordinate.s, Double::literal(80.0));
-    assert_eq!(coordinate.offset, Double::literal(0.0));
-    assert!(coordinate.h.is_none());
-}
-
-#[test]
-fn test_lane_coordinate_with_offset() {
-    let coordinate = LaneCoordinate::with_offset(60.0, 2.0);
-
-    assert_eq!(coordinate.s, Double::literal(60.0));
-    assert_eq!(coordinate.offset, Double::literal(2.0));
-    assert!(coordinate.h.is_none());
-}
-
 // ========== Default Implementation Tests ==========
 
 #[test]
@@ -412,19 +334,6 @@ fn test_temporal_condition_defaults() {
     assert!(target_default.position.is_none());
 }
 
-#[test]
-fn test_coordinate_defaults() {
-    let road_default = RoadCoordinate::default();
-    assert_eq!(road_default.s, Double::literal(0.0));
-    assert_eq!(road_default.t, Double::literal(0.0));
-    assert!(road_default.h.is_none());
-
-    let lane_default = LaneCoordinate::default();
-    assert_eq!(lane_default.s, Double::literal(0.0));
-    assert_eq!(lane_default.offset, Double::literal(0.0));
-    assert!(lane_default.h.is_none());
-}
-
 // ========== Serialization Tests ==========
 
 #[test]
@@ -453,34 +362,4 @@ fn test_time_to_collision_condition_serialization() {
     assert_eq!(condition, deserialized);
     assert_eq!(deserialized.value, Double::literal(3.0));
     assert_eq!(deserialized.rule, Rule::LessThan);
-}
-
-#[test]
-fn test_road_coordinate_serialization() {
-    let coordinate = RoadCoordinate::with_height(100.0, -2.0, 5.0);
-
-    let serialized =
-        serde_json::to_string(&coordinate).expect("Failed to serialize RoadCoordinate");
-    let deserialized: RoadCoordinate =
-        serde_json::from_str(&serialized).expect("Failed to deserialize RoadCoordinate");
-
-    assert_eq!(coordinate, deserialized);
-    assert_eq!(deserialized.s, Double::literal(100.0));
-    assert_eq!(deserialized.t, Double::literal(-2.0));
-    assert_eq!(deserialized.h, Some(Double::literal(5.0)));
-}
-
-#[test]
-fn test_lane_coordinate_serialization() {
-    let coordinate = LaneCoordinate::with_height(200.0, 1.5, 8.0);
-
-    let serialized =
-        serde_json::to_string(&coordinate).expect("Failed to serialize LaneCoordinate");
-    let deserialized: LaneCoordinate =
-        serde_json::from_str(&serialized).expect("Failed to deserialize LaneCoordinate");
-
-    assert_eq!(coordinate, deserialized);
-    assert_eq!(deserialized.s, Double::literal(200.0));
-    assert_eq!(deserialized.offset, Double::literal(1.5));
-    assert_eq!(deserialized.h, Some(Double::literal(8.0)));
 }
