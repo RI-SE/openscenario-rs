@@ -65,9 +65,9 @@ pub use traffic::{
     TrafficSourceAction,
     TrafficStopAction,
     TrafficSwarmAction,
-    VehicleCategory,
     VehicleCategoryDistribution,
 };
+pub use crate::types::enums::VehicleCategory;
 
 // Export appearance actions
 pub use appearance::{

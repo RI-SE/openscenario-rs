@@ -32,6 +32,8 @@ pub enum VehicleCategory {
     Train,
     #[serde(rename = "tram")]
     Tram,
+    #[serde(rename = "trailer")]
+    Trailer,
 }
 
 /// Pedestrian category enumeration
@@ -52,8 +54,10 @@ pub enum ObjectType {
     Vehicle,
     #[serde(rename = "pedestrian")]
     Pedestrian,
-    #[serde(rename = "miscellaneousObject")]
+    #[serde(rename = "miscellaneous")]
     MiscellaneousObject,
+    #[serde(rename = "external")]
+    External,
 }
 
 /// Rule enumeration for conditions
@@ -155,6 +159,8 @@ pub enum ParameterType {
     Double,
     #[serde(rename = "int")]
     Int,
+    #[serde(rename = "integer")]
+    Integer,
     #[serde(rename = "string")]
     String,
     #[serde(rename = "unsignedInt")]
@@ -174,6 +180,8 @@ pub enum CoordinateSystem {
     Road,
     #[serde(rename = "trajectory")]
     Trajectory,
+    #[serde(rename = "world")]
+    World,
 }
 
 /// Reference context enumeration
@@ -190,8 +198,8 @@ pub enum ReferenceContext {
 pub enum SpeedTargetValueType {
     #[serde(rename = "delta")]
     Delta,
-    #[serde(rename = "absolute")]
-    Absolute,
+    #[serde(rename = "factor")]
+    Factor,
 }
 
 /// Dynamics shape enumeration
@@ -227,6 +235,8 @@ pub enum RelativeDistanceType {
     Lateral,
     #[serde(rename = "cartesianDistance")]
     Cartesian,
+    #[serde(rename = "euclidianDistance")]
+    Euclidian,
 }
 
 /// Following mode enumeration
@@ -251,6 +261,7 @@ impl fmt::Display for VehicleCategory {
             VehicleCategory::Bicycle => "bicycle",
             VehicleCategory::Train => "train",
             VehicleCategory::Tram => "tram",
+            VehicleCategory::Trailer => "trailer",
         };
         write!(f, "{}", s)
     }
@@ -270,6 +281,7 @@ impl FromStr for VehicleCategory {
             "bicycle" => Ok(VehicleCategory::Bicycle),
             "train" => Ok(VehicleCategory::Train),
             "tram" => Ok(VehicleCategory::Tram),
+            "trailer" => Ok(VehicleCategory::Trailer),
             _ => Err(format!("Invalid vehicle category: {}", s)),
         }
     }
@@ -360,7 +372,8 @@ impl fmt::Display for ObjectType {
         let s = match self {
             ObjectType::Vehicle => "vehicle",
             ObjectType::Pedestrian => "pedestrian",
-            ObjectType::MiscellaneousObject => "miscellaneousObject",
+            ObjectType::MiscellaneousObject => "miscellaneous",
+            ObjectType::External => "external",
         };
         write!(f, "{}", s)
     }
@@ -373,7 +386,8 @@ impl FromStr for ObjectType {
         match s {
             "vehicle" => Ok(ObjectType::Vehicle),
             "pedestrian" => Ok(ObjectType::Pedestrian),
-            "miscellaneousObject" => Ok(ObjectType::MiscellaneousObject),
+            "miscellaneous" => Ok(ObjectType::MiscellaneousObject),
+            "external" => Ok(ObjectType::External),
             _ => Err(format!("Invalid object type: {}", s)),
         }
     }
@@ -385,6 +399,7 @@ impl fmt::Display for RelativeDistanceType {
             RelativeDistanceType::Longitudinal => "longitudinal",
             RelativeDistanceType::Lateral => "lateral",
             RelativeDistanceType::Cartesian => "cartesianDistance",
+            RelativeDistanceType::Euclidian => "euclidianDistance",
         };
         write!(f, "{}", s)
     }
@@ -398,6 +413,7 @@ impl FromStr for RelativeDistanceType {
             "longitudinal" => Ok(RelativeDistanceType::Longitudinal),
             "lateral" => Ok(RelativeDistanceType::Lateral),
             "cartesianDistance" => Ok(RelativeDistanceType::Cartesian),
+            "euclidianDistance" => Ok(RelativeDistanceType::Euclidian),
             _ => Err(format!("Invalid relative distance type: {}", s)),
         }
     }
@@ -836,31 +852,43 @@ pub enum VehicleComponentType {
     WindowRearLeft,
     #[serde(rename = "windowRearRight")]
     WindowRearRight,
+    #[serde(rename = "sideMirrors")]
+    SideMirrors,
+    #[serde(rename = "sideMirrorRight")]
+    SideMirrorRight,
+    #[serde(rename = "sideMirrorLeft")]
+    SideMirrorLeft,
 }
 
 /// Vehicle light type enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VehicleLightType {
-    #[serde(rename = "headlight")]
-    Headlight,
-    #[serde(rename = "taillight")]
-    Taillight,
-    #[serde(rename = "brakeLight")]
-    BrakeLight,
-    #[serde(rename = "reverseLight")]
-    ReverseLight,
+    #[serde(rename = "daytimeRunningLights")]
+    DaytimeRunningLights,
+    #[serde(rename = "lowBeam")]
+    LowBeam,
+    #[serde(rename = "highBeam")]
+    HighBeam,
+    #[serde(rename = "fogLights")]
+    FogLights,
+    #[serde(rename = "fogLightsFront")]
+    FogLightsFront,
+    #[serde(rename = "fogLightsRear")]
+    FogLightsRear,
+    #[serde(rename = "brakeLights")]
+    BrakeLights,
+    #[serde(rename = "warningLights")]
+    WarningLights,
     #[serde(rename = "indicatorLeft")]
     IndicatorLeft,
     #[serde(rename = "indicatorRight")]
     IndicatorRight,
-    #[serde(rename = "warningLight")]
-    WarningLight,
-    #[serde(rename = "fogLight")]
-    FogLight,
-    #[serde(rename = "highBeam")]
-    HighBeam,
-    #[serde(rename = "licensePlateLight")]
-    LicensePlateLight,
+    #[serde(rename = "reversingLights")]
+    ReversingLights,
+    #[serde(rename = "licensePlateIllumination")]
+    LicensePlateIllumination,
+    #[serde(rename = "specialPurposeLights")]
+    SpecialPurposeLights,
 }
 
 /// Light mode enumeration
@@ -1061,6 +1089,9 @@ impl fmt::Display for VehicleComponentType {
             VehicleComponentType::WindowFrontRight => "windowFrontRight",
             VehicleComponentType::WindowRearLeft => "windowRearLeft",
             VehicleComponentType::WindowRearRight => "windowRearRight",
+            VehicleComponentType::SideMirrors => "sideMirrors",
+            VehicleComponentType::SideMirrorRight => "sideMirrorRight",
+            VehicleComponentType::SideMirrorLeft => "sideMirrorLeft",
         };
         write!(f, "{}", s)
     }
@@ -1081,6 +1112,9 @@ impl FromStr for VehicleComponentType {
             "windowFrontRight" => Ok(VehicleComponentType::WindowFrontRight),
             "windowRearLeft" => Ok(VehicleComponentType::WindowRearLeft),
             "windowRearRight" => Ok(VehicleComponentType::WindowRearRight),
+            "sideMirrors" => Ok(VehicleComponentType::SideMirrors),
+            "sideMirrorRight" => Ok(VehicleComponentType::SideMirrorRight),
+            "sideMirrorLeft" => Ok(VehicleComponentType::SideMirrorLeft),
             _ => Err(format!("Invalid vehicle component type: {}", s)),
         }
     }
@@ -1089,16 +1123,19 @@ impl FromStr for VehicleComponentType {
 impl fmt::Display for VehicleLightType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            VehicleLightType::Headlight => "headlight",
-            VehicleLightType::Taillight => "taillight",
-            VehicleLightType::BrakeLight => "brakeLight",
-            VehicleLightType::ReverseLight => "reverseLight",
+            VehicleLightType::DaytimeRunningLights => "daytimeRunningLights",
+            VehicleLightType::LowBeam => "lowBeam",
+            VehicleLightType::HighBeam => "highBeam",
+            VehicleLightType::FogLights => "fogLights",
+            VehicleLightType::FogLightsFront => "fogLightsFront",
+            VehicleLightType::FogLightsRear => "fogLightsRear",
+            VehicleLightType::BrakeLights => "brakeLights",
+            VehicleLightType::WarningLights => "warningLights",
             VehicleLightType::IndicatorLeft => "indicatorLeft",
             VehicleLightType::IndicatorRight => "indicatorRight",
-            VehicleLightType::WarningLight => "warningLight",
-            VehicleLightType::FogLight => "fogLight",
-            VehicleLightType::HighBeam => "highBeam",
-            VehicleLightType::LicensePlateLight => "licensePlateLight",
+            VehicleLightType::ReversingLights => "reversingLights",
+            VehicleLightType::LicensePlateIllumination => "licensePlateIllumination",
+            VehicleLightType::SpecialPurposeLights => "specialPurposeLights",
         };
         write!(f, "{}", s)
     }
@@ -1109,16 +1146,19 @@ impl FromStr for VehicleLightType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "headlight" => Ok(VehicleLightType::Headlight),
-            "taillight" => Ok(VehicleLightType::Taillight),
-            "brakeLight" => Ok(VehicleLightType::BrakeLight),
-            "reverseLight" => Ok(VehicleLightType::ReverseLight),
+            "daytimeRunningLights" => Ok(VehicleLightType::DaytimeRunningLights),
+            "lowBeam" => Ok(VehicleLightType::LowBeam),
+            "highBeam" => Ok(VehicleLightType::HighBeam),
+            "fogLights" => Ok(VehicleLightType::FogLights),
+            "fogLightsFront" => Ok(VehicleLightType::FogLightsFront),
+            "fogLightsRear" => Ok(VehicleLightType::FogLightsRear),
+            "brakeLights" => Ok(VehicleLightType::BrakeLights),
+            "warningLights" => Ok(VehicleLightType::WarningLights),
             "indicatorLeft" => Ok(VehicleLightType::IndicatorLeft),
             "indicatorRight" => Ok(VehicleLightType::IndicatorRight),
-            "warningLight" => Ok(VehicleLightType::WarningLight),
-            "fogLight" => Ok(VehicleLightType::FogLight),
-            "highBeam" => Ok(VehicleLightType::HighBeam),
-            "licensePlateLight" => Ok(VehicleLightType::LicensePlateLight),
+            "reversingLights" => Ok(VehicleLightType::ReversingLights),
+            "licensePlateIllumination" => Ok(VehicleLightType::LicensePlateIllumination),
+            "specialPurposeLights" => Ok(VehicleLightType::SpecialPurposeLights),
             _ => Err(format!("Invalid vehicle light type: {}", s)),
         }
     }
@@ -1581,8 +1621,11 @@ mod tests {
 
     #[test]
     fn test_vehicle_light_type_display() {
-        assert_eq!(VehicleLightType::Headlight.to_string(), "headlight");
-        assert_eq!(VehicleLightType::BrakeLight.to_string(), "brakeLight");
+        assert_eq!(
+            VehicleLightType::DaytimeRunningLights.to_string(),
+            "daytimeRunningLights"
+        );
+        assert_eq!(VehicleLightType::BrakeLights.to_string(), "brakeLights");
     }
 
     #[test]

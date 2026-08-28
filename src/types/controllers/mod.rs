@@ -3,7 +3,7 @@
 //! This module provides comprehensive controller functionality for entity behavior management,
 //! including controller definitions, activation actions, and parameter management.
 
-use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Boolean, Directory, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::distributions::ParameterValueDistribution;
 use crate::types::entities::vehicle::{File, Properties, Property};
@@ -13,19 +13,6 @@ use serde::{Deserialize, Serialize};
 pub use crate::types::catalogs::references::{ParameterAssignment, ParameterAssignments};
 
 // CatalogReference is now imported from crate::types::catalogs::references
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Directory {
-    pub path: OSString,
-}
-
-impl Default for Directory {
-    fn default() -> Self {
-        Self {
-            path: Value::Literal("./".to_string()),
-        }
-    }
-}
 
 /// Main controller definition with type information and properties.
 ///

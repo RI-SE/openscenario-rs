@@ -449,36 +449,18 @@ impl RouteParameterAssignment {
     }
 }
 
-/// Converts canonical `basic::ParameterDeclarations` into the narrower
+/// Converts canonical `basic::ParameterDeclarations` into the
 /// `routing::ParameterDeclarations` used by the scenario `Route` type.
-///
-/// `routing` carries its own reduced `ParameterType` and stringly-typed
-/// constraint rules, so parameter types it does not model are rejected rather
-/// than silently coerced.
 fn route_parameter_declarations(
     declarations: ParameterDeclarations,
 ) -> crate::error::Result<crate::types::routing::ParameterDeclarations> {
-    use crate::types::enums::{ParameterType, Rule};
+    use crate::types::enums::Rule;
 
     let parameter_declarations = declarations
         .parameter_declarations
         .into_iter()
         .map(|decl| {
-            let parameter_type = match decl.parameter_type {
-                ParameterType::Double => crate::types::routing::ParameterType::Double,
-                ParameterType::Int => crate::types::routing::ParameterType::Int,
-                ParameterType::String => crate::types::routing::ParameterType::String,
-                ParameterType::Boolean => crate::types::routing::ParameterType::Boolean,
-                other => {
-                    return Err(crate::error::Error::validation_error(
-                        "ParameterDeclaration",
-                        &format!(
-                            "route parameter type {:?} is not supported by scenario routes",
-                            other
-                        ),
-                    ))
-                }
-            };
+            let parameter_type = decl.parameter_type;
 
             let constraint_groups = decl
                 .constraint_groups

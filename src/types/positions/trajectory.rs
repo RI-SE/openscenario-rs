@@ -1,6 +1,7 @@
 //! Trajectory and route-based position types for path following
 
 use crate::types::basic::{Double, OSString};
+use crate::types::geometry::shapes::Shape;
 use serde::{Deserialize, Serialize};
 
 /// Trajectory definition with shape and parameters
@@ -12,38 +13,10 @@ pub struct Trajectory {
     /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`, `use="required"`
     #[serde(rename = "@closed")]
     pub closed: bool,
-    /// Shape definition of the trajectory — XSD child element `<Shape>`
+    /// Shape definition of the trajectory — XSD child element `<Shape>`, a choice of
+    /// Polyline | Clothoid | ClothoidSpline | Nurbs. See `geometry::shapes::Shape`.
     #[serde(rename = "Shape")]
-    pub shape: TrajectoryShape,
-}
-
-/// Shape of a trajectory (polyline, clothoid, NURBS, etc.)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum TrajectoryShape {
-    /// Simple polyline trajectory
-    Polyline(Polyline),
-    /// Clothoid-based trajectory
-    Clothoid(Clothoid),
-}
-
-/// Polyline trajectory with vertices
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Polyline {
-    /// Vertices defining the polyline
-    pub vertex: Vec<Vertex>,
-}
-
-/// Vertex in a trajectory
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Vertex {
-    /// Time at this vertex (optional — XSD does not mark it as required)
-    #[serde(rename = "@time", default, skip_serializing_if = "Option::is_none")]
-    pub time: Option<Double>,
-    /// Position at this vertex
-    #[serde(rename = "Position")]
-    pub position: crate::types::positions::Position,
+    pub shape: Shape,
 }
 
 /// Clothoid trajectory segment
@@ -74,17 +47,6 @@ pub struct Clothoid {
     /// Start position — required per XSD (`<xsd:sequence>` mandates exactly one `<Position>` child)
     #[serde(rename = "Position")]
     pub start_position: crate::types::positions::Position,
-}
-
-/// Trajectory following mode
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TrajectoryFollowingMode {
-    /// Follow trajectory position exactly
-    #[serde(rename = "position")]
-    Position,
-    /// Follow trajectory timing
-    #[serde(rename = "timing")]
-    Timing,
 }
 
 /// Reference to a trajectory, either defined inline or via catalog — XSD choice
@@ -153,7 +115,12 @@ impl Default for Trajectory {
         Self {
             name: OSString::literal(String::new()),
             closed: false,
-            shape: TrajectoryShape::Polyline(Polyline { vertex: Vec::new() }),
+            shape: Shape {
+                polyline: Some(crate::types::geometry::shapes::Polyline { vertices: Vec::new() }),
+                clothoid: None,
+                clothoid_spline: None,
+                nurbs: None,
+            },
         }
     }
 }
@@ -191,9 +158,9 @@ mod tests {
         let traj = Trajectory::default();
         assert_eq!(traj.name.as_literal(), Some(&String::new()));
         assert!(!traj.closed);
-        match &traj.shape {
-            TrajectoryShape::Polyline(p) => assert!(p.vertex.is_empty()),
-            _ => panic!("Expected Polyline shape"),
+        match &traj.shape.polyline {
+            Some(p) => assert!(p.vertices.is_empty()),
+            None => panic!("Expected Polyline shape"),
         }
     }
 
@@ -206,6 +173,7 @@ mod tests {
     /// "missing field '@time'" even though the XSD marks `time` as optional.
     #[test]
     fn test_vertex_xml_roundtrip_without_time() {
+        use crate::types::geometry::shapes::Vertex;
         let xml = r#"<Vertex><Position><WorldPosition x="1" y="2"/></Position></Vertex>"#;
         let v: Vertex = quick_xml::de::from_str(xml).unwrap();
         assert!(v.time.is_none());
@@ -216,6 +184,7 @@ mod tests {
     #[test]
     fn test_vertex_xml_roundtrip_with_time() {
         use crate::types::basic::Value;
+        use crate::types::geometry::shapes::Vertex;
         use crate::types::positions::{Position, WorldPosition};
 
         let vertex = Vertex {
@@ -236,6 +205,7 @@ mod tests {
     /// Serializing a Vertex without time must NOT emit a `time` attribute.
     #[test]
     fn test_vertex_no_time_not_serialized() {
+        use crate::types::geometry::shapes::Vertex;
         use crate::types::positions::{Position, WorldPosition};
 
         let vertex = Vertex {
@@ -252,10 +222,11 @@ mod tests {
     /// Polyline with one time-bearing and one time-less vertex must round-trip.
     #[test]
     fn test_polyline_xml_roundtrip_mixed_time() {
+        use crate::types::geometry::shapes::{Polyline, Vertex};
         use crate::types::positions::{Position, WorldPosition};
 
         let polyline = Polyline {
-            vertex: vec![
+            vertices: vec![
                 Vertex {
                     time: Some(Double::literal(0.0)),
                     position: Position {
@@ -275,9 +246,9 @@ mod tests {
         let xml = quick_xml::se::to_string(&polyline).unwrap();
         let deserialized: Polyline = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(polyline, deserialized);
-        assert_eq!(deserialized.vertex.len(), 2);
-        assert!(deserialized.vertex[0].time.is_some());
-        assert!(deserialized.vertex[1].time.is_none());
+        assert_eq!(deserialized.vertices.len(), 2);
+        assert!(deserialized.vertices[0].time.is_some());
+        assert!(deserialized.vertices[1].time.is_none());
     }
 
     // ------------------------------------------------------------------

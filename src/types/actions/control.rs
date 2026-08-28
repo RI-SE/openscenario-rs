@@ -182,13 +182,13 @@ pub struct AutomaticGear {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub enum AutomaticGearType {
-    #[serde(rename = "park")]
+    #[serde(rename = "p")]
     Park,
-    #[serde(rename = "reverse")]
+    #[serde(rename = "r")]
     Reverse,
-    #[serde(rename = "neutral")]
+    #[serde(rename = "n")]
     Neutral,
-    #[serde(rename = "drive")]
+    #[serde(rename = "d")]
     #[default]
     Drive,
 }

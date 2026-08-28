@@ -21,7 +21,7 @@ pub use road::{
     RoadCoordinate, RoadPosition,
 };
 pub use crate::types::actions::movement::TrajectoryRef;
-pub use trajectory::{Trajectory, TrajectoryFollowingMode, TrajectoryPosition};
+pub use trajectory::{Trajectory, TrajectoryPosition};
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants

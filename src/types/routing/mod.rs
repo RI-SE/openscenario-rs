@@ -8,7 +8,7 @@
 //! - Support for parameterizable routes and waypoints
 //!
 use crate::types::basic::{Boolean, Double, OSString};
-use crate::types::enums::RouteStrategy;
+use crate::types::enums::{ParameterType, RouteStrategy};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -66,19 +66,6 @@ pub struct ParameterDeclaration {
         default
     )]
     pub constraint_groups: Vec<ValueConstraintGroup>,
-}
-
-/// Parameter type enumeration (simplified)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum ParameterType {
-    #[serde(rename = "double")]
-    Double,
-    #[serde(rename = "int")]
-    Int,
-    #[serde(rename = "string")]
-    String,
-    #[serde(rename = "boolean")]
-    Boolean,
 }
 
 /// Value constraint group (simplified)

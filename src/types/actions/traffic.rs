@@ -10,6 +10,7 @@
 use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::controllers::Controller;
+use crate::types::enums::VehicleCategory;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -268,29 +269,6 @@ pub struct VehicleCategoryDistributionEntry {
     pub category: VehicleCategory,
     #[serde(rename = "@weight")]
     pub weight: Double,
-}
-
-/// Vehicle category enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
-pub enum VehicleCategory {
-    #[serde(rename = "car")]
-    #[default]
-    Car,
-    #[serde(rename = "van")]
-    Van,
-    #[serde(rename = "truck")]
-    Truck,
-    #[serde(rename = "bus")]
-    Bus,
-    #[serde(rename = "motorbike")]
-    Motorbike,
-    #[serde(rename = "bicycle")]
-    Bicycle,
-    #[serde(rename = "trailer")]
-    Trailer,
-    #[serde(rename = "semitrailer")]
-    Semitrailer,
 }
 
 /// Controller distribution for traffic behavior
