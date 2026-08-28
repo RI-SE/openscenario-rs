@@ -6,10 +6,10 @@
 //! - Controller configuration and parameter setting per OpenSCENARIO XSD schema
 //! - Gear control types (manual/automatic) and supporting enumerations
 //!
-use crate::types::basic::{Boolean, Double, Int};
+use crate::types::basic::{Boolean, Double, Int, OSString};
 use crate::types::catalogs::entities::CatalogController;
 use crate::types::catalogs::references::CatalogReference;
-use crate::types::controllers::Controller;
+use crate::types::controllers::{Controller, ObjectController};
 use serde::{Deserialize, Serialize};
 
 
@@ -74,15 +74,34 @@ pub struct ControllerAction {
 /// Assign controller action for controller assignment with catalog support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AssignControllerAction {
-    #[serde(rename = "Controller")]
+    #[serde(rename = "@activateLateral", skip_serializing_if = "Option::is_none")]
+    pub activate_lateral: Option<Boolean>,
+    #[serde(
+        rename = "@activateLongitudinal",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub activate_longitudinal: Option<Boolean>,
+    #[serde(rename = "@activateAnimation", skip_serializing_if = "Option::is_none")]
+    pub activate_animation: Option<Boolean>,
+    #[serde(rename = "@activateLighting", skip_serializing_if = "Option::is_none")]
+    pub activate_lighting: Option<Boolean>,
+    #[serde(rename = "Controller", skip_serializing_if = "Option::is_none")]
     pub controller: Option<Controller>,
-    #[serde(rename = "CatalogReference")]
+    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
     pub catalog_reference: Option<CatalogReference<CatalogController>>,
+    #[serde(rename = "ObjectController", skip_serializing_if = "Option::is_none")]
+    pub object_controller: Option<ObjectController>,
 }
 
 /// Activate controller action for controller activation control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ActivateControllerAction {
+    /// Deprecated reference to a controller by name — XSD `@controllerRef`
+    #[serde(rename = "@controllerRef", skip_serializing_if = "Option::is_none")]
+    pub controller_ref: Option<OSString>,
+    /// Reference to an object controller — XSD `@objectControllerRef`
+    #[serde(rename = "@objectControllerRef", skip_serializing_if = "Option::is_none")]
+    pub object_controller_ref: Option<OSString>,
     #[serde(rename = "@longitudinal", skip_serializing_if = "Option::is_none")]
     pub longitudinal: Option<Boolean>,
     #[serde(rename = "@lateral", skip_serializing_if = "Option::is_none")]
@@ -198,6 +217,8 @@ pub enum AutomaticGearType {
 pub struct Brake {
     #[serde(rename = "@value")]
     pub value: Double,
+    #[serde(rename = "@maxRate", default, skip_serializing_if = "Option::is_none")]
+    pub max_rate: Option<Double>,
 }
 
 /// BrakeInput group - XSD group wrapper for brake percent/force choice
@@ -224,6 +245,11 @@ impl Default for AssignControllerAction {
         Self {
             controller: None,
             catalog_reference: None,
+            object_controller: None,
+            activate_lateral: None,
+            activate_longitudinal: None,
+            activate_animation: None,
+            activate_lighting: None,
         }
     }
 }
@@ -232,6 +258,8 @@ impl Default for AssignControllerAction {
 impl Default for ActivateControllerAction {
     fn default() -> Self {
         Self {
+            controller_ref: None,
+            object_controller_ref: None,
             longitudinal: Some(Boolean::literal(true)),
             lateral: Some(Boolean::literal(true)),
             lighting: Some(Boolean::literal(false)),
@@ -261,6 +289,7 @@ impl Default for Brake {
     fn default() -> Self {
         Self {
             value: Double::literal(0.0),
+            max_rate: None,
         }
     }
 }
@@ -284,6 +313,11 @@ impl AssignControllerAction {
         Self {
             controller: Some(controller),
             catalog_reference: None,
+            object_controller: None,
+            activate_lateral: None,
+            activate_longitudinal: None,
+            activate_animation: None,
+            activate_lighting: None,
         }
     }
 
@@ -292,6 +326,11 @@ impl AssignControllerAction {
         Self {
             controller: None,
             catalog_reference: Some(catalog_reference),
+            object_controller: None,
+            activate_lateral: None,
+            activate_longitudinal: None,
+            activate_animation: None,
+            activate_lighting: None,
         }
     }
 }
@@ -300,6 +339,8 @@ impl ActivateControllerAction {
     /// Create activation with all control domains
     pub fn all_domains(longitudinal: bool, lateral: bool, lighting: bool, animation: bool) -> Self {
         Self {
+            controller_ref: None,
+            object_controller_ref: None,
             longitudinal: Some(Boolean::literal(longitudinal)),
             lateral: Some(Boolean::literal(lateral)),
             lighting: Some(Boolean::literal(lighting)),
@@ -310,6 +351,8 @@ impl ActivateControllerAction {
     /// Create activation for movement only (longitudinal + lateral)
     pub fn movement_only() -> Self {
         Self {
+            controller_ref: None,
+            object_controller_ref: None,
             longitudinal: Some(Boolean::literal(true)),
             lateral: Some(Boolean::literal(true)),
             lighting: None,
@@ -424,6 +467,7 @@ impl Brake {
     pub fn new(value: f64) -> Self {
         Self {
             value: Double::literal(value),
+            max_rate: None,
         }
     }
 
@@ -656,5 +700,73 @@ mod tests {
         } else {
             panic!("Expected AutomaticGear variant as default");
         }
+    }
+
+    // ------------------------------------------------------------------
+    // XSD field additions: round-trip regression tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_assign_controller_action_object_controller_and_activate_flags_round_trip() {
+        let xml = r#"<AssignControllerAction activateLateral="true" activateLongitudinal="false" activateAnimation="true" activateLighting="false">
+    <ObjectController>
+        <Controller name="AIController" controllerType="movement"/>
+    </ObjectController>
+</AssignControllerAction>"#;
+
+        let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(action.object_controller.is_some());
+        assert_eq!(action.activate_lateral.clone().unwrap().as_literal(), Some(&true));
+        assert_eq!(
+            action.activate_longitudinal.clone().unwrap().as_literal(),
+            Some(&false)
+        );
+        assert_eq!(action.activate_animation.clone().unwrap().as_literal(), Some(&true));
+        assert_eq!(action.activate_lighting.clone().unwrap().as_literal(), Some(&false));
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        let reparsed: AssignControllerAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_activate_controller_action_controller_refs_round_trip() {
+        let xml = r#"<ActivateControllerAction controllerRef="LegacyController" objectControllerRef="ObjController" longitudinal="true" lateral="false"/>"#;
+
+        let action: ActivateControllerAction = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            action.controller_ref.unwrap().as_literal(),
+            Some(&"LegacyController".to_string())
+        );
+        assert_eq!(
+            action.object_controller_ref.unwrap().as_literal(),
+            Some(&"ObjController".to_string())
+        );
+
+        let action2 = ActivateControllerAction {
+            controller_ref: Some(OSString::literal("LegacyController".to_string())),
+            object_controller_ref: Some(OSString::literal("ObjController".to_string())),
+            longitudinal: Some(Boolean::literal(true)),
+            lateral: Some(Boolean::literal(false)),
+            lighting: None,
+            animation: None,
+        };
+        let serialized = quick_xml::se::to_string(&action2).unwrap();
+        assert!(serialized.contains(r#"controllerRef="LegacyController""#));
+        assert!(serialized.contains(r#"objectControllerRef="ObjController""#));
+        let reparsed: ActivateControllerAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action2, reparsed);
+    }
+
+    #[test]
+    fn test_brake_max_rate_round_trip() {
+        let brake = Brake {
+            value: Double::literal(0.5),
+            max_rate: Some(Double::literal(2.0)),
+        };
+        let xml = quick_xml::se::to_string(&brake).unwrap();
+        assert!(xml.contains(r#"maxRate="2""#), "serialized: {xml}");
+        let deserialized: Brake = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(brake, deserialized);
     }
 }

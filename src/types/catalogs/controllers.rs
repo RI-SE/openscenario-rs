@@ -232,6 +232,7 @@ impl ControllerProperties {
         Properties {
             properties: scenario_properties,
             files: vec![],
+            custom_content: vec![],
         }
     }
 }

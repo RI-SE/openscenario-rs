@@ -1,6 +1,6 @@
 //! Trajectory and route-based position types for path following
 
-use crate::types::basic::{Double, OSString};
+use crate::types::basic::{Double, OSString, ParameterDeclarations};
 use crate::types::geometry::shapes::Shape;
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +13,14 @@ pub struct Trajectory {
     /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`, `use="required"`
     #[serde(rename = "@closed")]
     pub closed: bool,
+    /// Parameter declarations for this trajectory — XSD child element
+    /// `<ParameterDeclarations>`, `minOccurs="0"`, precedes `<Shape>`.
+    #[serde(
+        rename = "ParameterDeclarations",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_declarations: Option<ParameterDeclarations>,
     /// Shape definition of the trajectory — XSD child element `<Shape>`, a choice of
     /// Polyline | Clothoid | ClothoidSpline | Nurbs. See `geometry::shapes::Shape`.
     #[serde(rename = "Shape")]
@@ -115,6 +123,7 @@ impl Default for Trajectory {
         Self {
             name: OSString::literal(String::new()),
             closed: false,
+            parameter_declarations: None,
             shape: Shape {
                 polyline: Some(crate::types::geometry::shapes::Polyline { vertices: Vec::new() }),
                 clothoid: None,
@@ -305,5 +314,32 @@ mod tests {
         assert!(!xml.contains("curvatureDot"), "curvatureDot attr must be absent: {xml}");
         let deserialized: Clothoid = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(clothoid, deserialized);
+    }
+
+    /// `Trajectory` in `positions::trajectory` must round-trip its optional
+    /// `<ParameterDeclarations>` element (XSD Trajectory :2356-2363).
+    #[test]
+    fn test_trajectory_parameter_declarations_round_trip() {
+        let xml = r#"<Trajectory name="Traj1" closed="false">
+    <ParameterDeclarations>
+        <ParameterDeclaration name="speed" parameterType="double" value="10.0"/>
+    </ParameterDeclarations>
+    <Shape>
+        <Polyline>
+            <Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex>
+        </Polyline>
+    </Shape>
+</Trajectory>"#;
+        let trajectory: Trajectory = quick_xml::de::from_str(xml).unwrap();
+        let decls = trajectory
+            .parameter_declarations
+            .as_ref()
+            .expect("ParameterDeclarations must be present");
+        assert_eq!(decls.parameter_declarations.len(), 1);
+
+        let serialized = quick_xml::se::to_string(&trajectory).unwrap();
+        assert!(serialized.contains("<ParameterDeclarations>"), "serialized: {serialized}");
+        let reparsed: Trajectory = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(trajectory, reparsed);
     }
 }

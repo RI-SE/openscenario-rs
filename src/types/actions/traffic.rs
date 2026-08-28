@@ -30,8 +30,12 @@ use serde::{Deserialize, Serialize};
 pub struct TrafficSourceAction {
     #[serde(rename = "@rate")]
     pub rate: Double,
+    /// Deprecated in favor of `speed`.
     #[serde(rename = "@velocity", skip_serializing_if = "Option::is_none")]
     pub velocity: Option<Double>,
+    /// Speed for generated vehicles (current replacement for `velocity`)
+    #[serde(rename = "@speed", default, skip_serializing_if = "Option::is_none")]
+    pub speed: Option<Double>,
     #[serde(rename = "Position")]
     pub position: Position,
     /// Deprecated in favor of TrafficDistribution; kept optional per XSD (minOccurs=0)
@@ -323,6 +327,7 @@ impl Default for TrafficSourceAction {
         Self {
             rate: Double::literal(10.0),           // 10 vehicles per minute
             velocity: Some(Double::literal(50.0)), // 50 km/h default velocity
+            speed: None,
             position: Position::default(),
             traffic_definition: Some(TrafficDefinition::default()),
         }
@@ -515,6 +520,7 @@ impl TrafficSourceAction {
         Self {
             rate: Double::literal(rate),
             velocity: None,
+            speed: None,
             position,
             traffic_definition: Some(traffic_definition),
         }
@@ -530,6 +536,7 @@ impl TrafficSourceAction {
         Self {
             rate: Double::literal(rate),
             velocity: Some(Double::literal(velocity)),
+            speed: None,
             position,
             traffic_definition: Some(traffic_definition),
         }
@@ -1539,5 +1546,19 @@ mod tests {
             swarm.central_object.entity_ref.as_literal().unwrap(),
             "NewCentralEntity"
         );
+    }
+
+    #[test]
+    fn test_traffic_source_action_speed_round_trip() {
+        let xml = r#"<TrafficSourceAction rate="10" speed="15.0">
+    <Position><WorldPosition x="0" y="0"/></Position>
+</TrafficSourceAction>"#;
+        let action: TrafficSourceAction = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(action.speed.clone().unwrap().as_literal(), Some(&15.0));
+
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert!(serialized.contains(r#"speed="15""#), "serialized: {serialized}");
+        let reparsed: TrafficSourceAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
     }
 }

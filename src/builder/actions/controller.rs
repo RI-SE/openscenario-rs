@@ -155,8 +155,13 @@ impl ActionBuilder for AssignControllerActionBuilder {
         self.validate()?;
 
         let assign_action = AssignControllerAction {
+            activate_lateral: None,
+            activate_longitudinal: None,
+            activate_animation: None,
+            activate_lighting: None,
             controller: self.controller,
             catalog_reference: None,
+            object_controller: None,
         };
 
         Ok(PrivateAction::ControllerAction(ControllerAction {

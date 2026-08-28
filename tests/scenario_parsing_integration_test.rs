@@ -220,6 +220,7 @@ fn can_create_and_serialize_actions() {
         speed_action_dynamics: TransitionDynamics {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
+            following_mode: None,
             value: openscenario_rs::types::Double::literal(5.0),
         },
         speed_action_target: SpeedActionTarget {
@@ -983,6 +984,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         speed_action_dynamics: TransitionDynamics {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
+            following_mode: None,
             value: Value::literal(3.0),
         },
         speed_action_target: SpeedActionTarget {

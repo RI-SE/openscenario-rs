@@ -72,6 +72,7 @@ impl ActionBuilder for SpeedActionBuilder {
             speed_action_dynamics: TransitionDynamics {
                 dynamics_dimension: DynamicsDimension::Time,
                 dynamics_shape: DynamicsShape::Linear,
+                following_mode: None,
                 value: Double::literal(1.0),
             },
             speed_action_target: SpeedActionTarget {

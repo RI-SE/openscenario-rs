@@ -25,6 +25,10 @@ pub struct Pedestrian {
     #[serde(rename = "@role", skip_serializing_if = "Option::is_none")]
     pub role: Option<Role>,
 
+    /// Deprecated model reference; prefer `model3d`.
+    #[serde(rename = "@model", default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+
     /// 3D model file path
     #[serde(rename = "@model3d", skip_serializing_if = "Option::is_none")]
     pub model3d: Option<String>,
@@ -52,6 +56,7 @@ impl Pedestrian {
             pedestrian_category: PedestrianCategory::Pedestrian,
             mass: Double::literal(75.0),
             role: Some(Role::None),
+            model: None,
             model3d: None,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::default(),
@@ -72,6 +77,7 @@ impl Pedestrian {
             pedestrian_category: PedestrianCategory::Wheelchair,
             mass: Double::literal(85.0),
             role: Some(Role::Civil),
+            model: None,
             model3d: None,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::default(),
@@ -92,6 +98,7 @@ impl Pedestrian {
             pedestrian_category: PedestrianCategory::Animal,
             mass: Double::literal(50.0),
             role: Some(Role::None),
+            model: None,
             model3d: None,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::default(),
@@ -149,6 +156,7 @@ mod tests {
             pedestrian_category: PedestrianCategory::Wheelchair,
             mass: Double::literal(85.0),
             role: Some(Role::Civil),
+            model: None,
             model3d: None,
             bounding_box: BoundingBox::default(),
             properties: None,
@@ -208,5 +216,22 @@ mod tests {
         assert_eq!(pedestrian.pedestrian_category, PedestrianCategory::Animal);
         assert_eq!(pedestrian.mass.as_literal().unwrap(), &50.0);
         assert_eq!(pedestrian.role.unwrap(), Role::None);
+    }
+
+    #[test]
+    fn test_pedestrian_deprecated_model_round_trip() {
+        let xml = r#"<Pedestrian name="P1" pedestrianCategory="pedestrian" mass="75" model="oldModel.osgb">
+    <BoundingBox>
+        <Center x="0" y="0" z="0.9"/>
+        <Dimensions width="0.6" length="0.6" height="1.8"/>
+    </BoundingBox>
+</Pedestrian>"#;
+        let pedestrian: Pedestrian = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(pedestrian.model.as_deref(), Some("oldModel.osgb"));
+
+        let serialized = quick_xml::se::to_string(&pedestrian).unwrap();
+        assert!(serialized.contains(r#"model="oldModel.osgb""#), "serialized: {serialized}");
+        let reparsed: Pedestrian = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(pedestrian, reparsed);
     }
 }

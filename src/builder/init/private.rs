@@ -54,6 +54,7 @@ impl PrivateActionBuilder {
             speed_action_dynamics: TransitionDynamics {
                 dynamics_dimension: DynamicsDimension::Time,
                 dynamics_shape: DynamicsShape::Step,
+                following_mode: None,
                 value: Double::literal(1.0),
             },
             speed_action_target: SpeedActionTarget {

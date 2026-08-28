@@ -8,6 +8,7 @@
 //! - Road network integration and coordinate validation
 //!
 use crate::types::basic::{Double, Int, OSString};
+use crate::types::enums::ReferenceContext;
 use serde::{Deserialize, Serialize};
 
 /// Orientation definition for positions
@@ -25,6 +26,10 @@ pub struct Orientation {
     /// Roll angle (rotation around x-axis)
     #[serde(rename = "@r", skip_serializing_if = "Option::is_none")]
     pub r: Option<Double>,
+
+    /// Whether the orientation is relative or absolute
+    #[serde(rename = "@type", default, skip_serializing_if = "Option::is_none")]
+    pub reference_context: Option<ReferenceContext>,
 }
 
 /// Road-based position definition
@@ -329,6 +334,7 @@ impl Orientation {
             h: Some(Double::literal(h)),
             p: None,
             r: None,
+            reference_context: None,
         }
     }
 
@@ -338,6 +344,7 @@ impl Orientation {
             h: Some(Double::literal(h)),
             p: Some(Double::literal(p)),
             r: Some(Double::literal(r)),
+            reference_context: None,
         }
     }
 }
@@ -579,6 +586,21 @@ mod tests {
         let xml = r#"<RelativeLanePosition entityRef="Ego" dLane="-1" dsLane="3.5"/>"#;
         let pos: RelativeLanePosition = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(pos.ds_lane.unwrap().as_literal().unwrap(), &3.5);
+    }
+
+    #[test]
+    fn test_orientation_type_round_trip() {
+        let xml = r#"<Orientation h="1.0" type="relative"/>"#;
+        let orientation: Orientation = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            orientation.reference_context,
+            Some(crate::types::enums::ReferenceContext::Relative)
+        );
+
+        let serialized = quick_xml::se::to_string(&orientation).unwrap();
+        assert!(serialized.contains(r#"type="relative""#), "serialized: {serialized}");
+        let deserialized: Orientation = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(orientation, deserialized);
     }
 
     #[test]

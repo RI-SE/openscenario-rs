@@ -168,6 +168,7 @@ impl GeographicPosition {
             h: Some(Double::literal(heading)),
             p: None,
             r: None,
+            reference_context: None,
         };
 
         Self::with_height(latitude, longitude, height).with_orientation(orientation)

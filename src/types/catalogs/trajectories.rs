@@ -154,9 +154,25 @@ pub struct CatalogClothoid {
     #[serde(rename = "@curvatureDot", default, skip_serializing_if = "Option::is_none")]
     pub curvature_dot: Option<Double>,
 
+    /// Curvature derivative (current replacement for `curvatureDot`, can be parameterized)
+    #[serde(
+        rename = "@curvaturePrime",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub curvature_prime: Option<Double>,
+
     /// Length of the clothoid (can be parameterized)
     #[serde(rename = "@length")]
     pub length: Double,
+
+    /// Start time (can be parameterized)
+    #[serde(rename = "@startTime", default, skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<Double>,
+
+    /// Stop time (can be parameterized)
+    #[serde(rename = "@stopTime", default, skip_serializing_if = "Option::is_none")]
+    pub stop_time: Option<Double>,
 
     /// Start position (required per XSD)
     #[serde(rename = "Position")]
@@ -189,6 +205,10 @@ pub struct NurbsControlPoint {
     /// Position of the control point
     #[serde(rename = "Position")]
     pub position: Position,
+
+    /// Time at the control point (optional, can be parameterized)
+    #[serde(rename = "@time", default, skip_serializing_if = "Option::is_none")]
+    pub time: Option<Double>,
 
     /// Weight of the control point (for rational NURBS)
     #[serde(rename = "@weight", skip_serializing_if = "Option::is_none")]
@@ -305,10 +325,22 @@ impl CatalogTrajectory {
                 clothoid: Some(crate::types::positions::trajectory::Clothoid {
                     curvature: Double::literal(clothoid.curvature.resolve(parameters)?),
                     curvature_dot: clothoid.curvature_dot.clone(),
-                    curvature_prime: None,
+                    curvature_prime: clothoid
+                        .curvature_prime
+                        .as_ref()
+                        .map(|v| v.resolve(parameters).map(Double::literal))
+                        .transpose()?,
                     length: Double::literal(clothoid.length.resolve(parameters)?),
-                    start_time: None,
-                    stop_time: None,
+                    start_time: clothoid
+                        .start_time
+                        .as_ref()
+                        .map(|v| v.resolve(parameters).map(Double::literal))
+                        .transpose()?,
+                    stop_time: clothoid
+                        .stop_time
+                        .as_ref()
+                        .map(|v| v.resolve(parameters).map(Double::literal))
+                        .transpose()?,
                     start_position: clothoid.start_position.clone(),
                 }),
                 ..empty_shape
@@ -333,12 +365,18 @@ impl CatalogTrajectory {
                         control_points: nurbs
                             .control_points
                             .iter()
-                            .map(|cp| ControlPoint {
-                                position: cp.position.clone(),
-                                time: None,
-                                weight: cp.weight.clone(),
+                            .map(|cp| -> crate::error::Result<ControlPoint> {
+                                Ok(ControlPoint {
+                                    position: cp.position.clone(),
+                                    time: cp
+                                        .time
+                                        .as_ref()
+                                        .map(|v| v.resolve(parameters).map(Double::literal))
+                                        .transpose()?,
+                                    weight: cp.weight.clone(),
+                                })
                             })
-                            .collect(),
+                            .collect::<crate::error::Result<Vec<_>>>()?,
                         knots: nurbs
                             .knots
                             .iter()
@@ -357,6 +395,7 @@ impl CatalogTrajectory {
                 &self.name, parameters,
             )?),
             closed: Boolean::literal(self.closed.resolve(parameters)?),
+            parameter_declarations: self.parameter_declarations.clone(),
             shape,
         })
     }
@@ -388,7 +427,10 @@ impl CatalogClothoid {
         Self {
             curvature,
             curvature_dot: Some(curvature_dot),
+            curvature_prime: None,
             length,
+            start_time: None,
+            stop_time: None,
             start_position: Position::default(),
         }
     }
@@ -403,7 +445,10 @@ impl CatalogClothoid {
         Self {
             curvature,
             curvature_dot: Some(curvature_dot),
+            curvature_prime: None,
             length,
+            start_time: None,
+            stop_time: None,
             start_position,
         }
     }
@@ -421,8 +466,11 @@ impl CatalogNurbs {
 
     /// Adds a control point to this NURBS curve
     pub fn add_control_point(&mut self, position: Position, weight: Option<Double>) {
-        self.control_points
-            .push(NurbsControlPoint { position, weight });
+        self.control_points.push(NurbsControlPoint {
+            position,
+            time: None,
+            weight,
+        });
     }
 
     /// Adds a knot to this NURBS curve
@@ -436,6 +484,7 @@ impl NurbsControlPoint {
     pub fn new(position: Position) -> Self {
         Self {
             position,
+            time: None,
             weight: None,
         }
     }
@@ -444,6 +493,7 @@ impl NurbsControlPoint {
     pub fn with_weight(position: Position, weight: Double) -> Self {
         Self {
             position,
+            time: None,
             weight: Some(weight),
         }
     }
@@ -798,5 +848,38 @@ mod tests {
         assert!(polyline.vertices.is_empty());
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);
         assert_eq!(nurbs.order.as_literal().unwrap(), &2);
+    }
+
+    // ------------------------------------------------------------------
+    // XSD field additions: round-trip regression tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_catalog_clothoid_start_stop_time_and_curvature_prime_round_trip() {
+        let xml = r#"<Clothoid curvature="0.1" curvaturePrime="0.02" length="50" startTime="1.0" stopTime="5.0">
+    <Position><WorldPosition x="0" y="0"/></Position>
+</Clothoid>"#;
+        let clothoid: CatalogClothoid = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(clothoid.curvature_prime.as_ref().unwrap().as_literal(), Some(&0.02));
+        assert_eq!(clothoid.start_time.as_ref().unwrap().as_literal(), Some(&1.0));
+        assert_eq!(clothoid.stop_time.as_ref().unwrap().as_literal(), Some(&5.0));
+
+        let serialized = quick_xml::se::to_string(&clothoid).unwrap();
+        let reparsed: CatalogClothoid = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(clothoid, reparsed);
+    }
+
+    #[test]
+    fn test_nurbs_control_point_time_round_trip() {
+        let xml = r#"<ControlPoint time="2.5" weight="1.0">
+    <Position><WorldPosition x="0" y="0"/></Position>
+</ControlPoint>"#;
+        let cp: NurbsControlPoint = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(cp.time.as_ref().unwrap().as_literal(), Some(&2.5));
+
+        let serialized = quick_xml::se::to_string(&cp).unwrap();
+        assert!(serialized.contains(r#"time="2.5""#), "serialized: {serialized}");
+        let reparsed: NurbsControlPoint = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(cp, reparsed);
     }
 }

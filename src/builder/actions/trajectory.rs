@@ -76,6 +76,7 @@ impl TrajectoryBuilder {
         Ok(Trajectory {
             name: OSString::literal(self.name.unwrap()),
             closed: Boolean::literal(self.closed),
+            parameter_declarations: None,
             shape: self.shape.unwrap(),
         })
     }

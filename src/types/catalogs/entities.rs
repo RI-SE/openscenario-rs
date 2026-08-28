@@ -7,7 +7,7 @@ use crate::error::Result;
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::controllers::Controller;
 use crate::types::entities::{pedestrian, vehicle};
-use crate::types::enums::{ControllerType, MiscObjectCategory, PedestrianCategory};
+use crate::types::enums::{ControllerType, MiscObjectCategory, PedestrianCategory, Role};
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -79,6 +79,18 @@ pub struct CatalogVehicle {
     #[serde(rename = "@vehicleCategory")]
     pub vehicle_category: OSString,
 
+    /// Role of the vehicle (e.g. ambulance, police)
+    #[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<Role>,
+
+    /// Mass of the vehicle in kg (can be parameterized)
+    #[serde(rename = "@mass", default, skip_serializing_if = "Option::is_none")]
+    pub mass: Option<Double>,
+
+    /// Path to an external 3D model (can be parameterized)
+    #[serde(rename = "@model3d", default, skip_serializing_if = "Option::is_none")]
+    pub model3d: Option<OSString>,
+
     /// Bounding box (can have parameterized dimensions)
     #[serde(rename = "BoundingBox")]
     pub bounding_box: BoundingBox,
@@ -94,6 +106,26 @@ pub struct CatalogVehicle {
     /// Additional properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
     pub properties: Option<vehicle::Properties>,
+
+    /// Trailer hitch attachment point
+    #[serde(
+        rename = "TrailerHitch",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer_hitch: Option<vehicle::TrailerHitch>,
+
+    /// Trailer coupler attachment point
+    #[serde(
+        rename = "TrailerCoupler",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub trailer_coupler: Option<vehicle::TrailerCoupler>,
+
+    /// Attached trailer (inline definition or reference)
+    #[serde(rename = "Trailer", default, skip_serializing_if = "Option::is_none")]
+    pub trailer: Option<vehicle::Trailer>,
 
     /// Parameter declarations for this catalog vehicle
     #[serde(
@@ -111,8 +143,20 @@ pub struct CatalogPerformance {
     pub max_speed: Double,
     #[serde(rename = "@maxAcceleration")]
     pub max_acceleration: Double,
+    #[serde(
+        rename = "@maxAccelerationRate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_acceleration_rate: Option<Double>,
     #[serde(rename = "@maxDeceleration")]
     pub max_deceleration: Double,
+    #[serde(
+        rename = "@maxDecelerationRate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_deceleration_rate: Option<Double>,
 }
 
 /// Axles with parameter support
@@ -126,6 +170,8 @@ pub struct CatalogAxles {
     pub front_axle: Option<CatalogFrontAxle>,
     #[serde(rename = "RearAxle")]
     pub rear_axle: CatalogRearAxle,
+    #[serde(rename = "AdditionalAxle", default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_axles: Vec<CatalogRearAxle>,
 }
 
 /// Front axle with parameter support
@@ -169,9 +215,17 @@ impl CatalogEntity for CatalogVehicle {
         let resolved_vehicle = vehicle::Vehicle {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
             vehicle_category: self.resolve_vehicle_category(&self.vehicle_category, &parameters)?,
-            role: None,
-            mass: None,
-            model3d: None,
+            role: self.role,
+            mass: self
+                .mass
+                .as_ref()
+                .map(|m| m.resolve(&parameters).map(crate::types::basic::Double::literal))
+                .transpose()?,
+            model3d: self
+                .model3d
+                .as_ref()
+                .map(|m| m.resolve(&parameters).map(Value::literal))
+                .transpose()?,
             parameter_declarations: None,
             bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
             performance: vehicle::Performance {
@@ -181,11 +235,21 @@ impl CatalogEntity for CatalogVehicle {
                 max_acceleration: crate::types::basic::Double::literal(
                     self.performance.max_acceleration.resolve(&parameters)?,
                 ),
-                max_acceleration_rate: None,
+                max_acceleration_rate: self
+                    .performance
+                    .max_acceleration_rate
+                    .as_ref()
+                    .map(|v| v.resolve(&parameters).map(crate::types::basic::Double::literal))
+                    .transpose()?,
                 max_deceleration: crate::types::basic::Double::literal(
                     self.performance.max_deceleration.resolve(&parameters)?,
                 ),
-                max_deceleration_rate: None,
+                max_deceleration_rate: self
+                    .performance
+                    .max_deceleration_rate
+                    .as_ref()
+                    .map(|v| v.resolve(&parameters).map(crate::types::basic::Double::literal))
+                    .transpose()?,
             },
             axles: crate::types::Axles {
                 front_axle: match self.axles.front_axle {
@@ -225,12 +289,35 @@ impl CatalogEntity for CatalogVehicle {
                         self.axles.rear_axle.position_z.resolve(&parameters)?,
                     ),
                 },
-                additional_axles: Vec::new(),
+                additional_axles: self
+                    .axles
+                    .additional_axles
+                    .iter()
+                    .map(|axle| -> Result<crate::types::Axle> {
+                        Ok(crate::types::Axle {
+                            max_steering: crate::types::basic::Double::literal(
+                                axle.max_steering.resolve(&parameters)?,
+                            ),
+                            wheel_diameter: crate::types::basic::Double::literal(
+                                axle.wheel_diameter.resolve(&parameters)?,
+                            ),
+                            track_width: crate::types::basic::Double::literal(
+                                axle.track_width.resolve(&parameters)?,
+                            ),
+                            position_x: crate::types::basic::Double::literal(
+                                axle.position_x.resolve(&parameters)?,
+                            ),
+                            position_z: crate::types::basic::Double::literal(
+                                axle.position_z.resolve(&parameters)?,
+                            ),
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?,
             },
             properties: self.properties,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
+            trailer_hitch: self.trailer_hitch,
+            trailer_coupler: self.trailer_coupler,
+            trailer: self.trailer,
         };
 
         Ok(resolved_vehicle)
@@ -442,6 +529,7 @@ impl CatalogEntity for CatalogPedestrian {
                 .as_ref()
                 .map(|r| self.resolve_role(r, &parameters))
                 .transpose()?,
+            model: None,
             model3d: self.model3d,
             bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
             properties: self.properties,
@@ -725,11 +813,16 @@ mod tests {
         let catalog_vehicle = CatalogVehicle {
             name: "SportsCar".to_string(),
             vehicle_category: Value::Literal("car".to_string()),
+            role: None,
+            mass: None,
+            model3d: None,
             bounding_box: BoundingBox::default(),
             performance: CatalogPerformance {
                 max_speed: Value::Literal(250.0),
                 max_acceleration: Value::Literal(15.0),
+                max_acceleration_rate: None,
                 max_deceleration: Value::Literal(12.0),
+                max_deceleration_rate: None,
             },
             axles: CatalogAxles {
                 front_axle: Some(CatalogFrontAxle {
@@ -746,8 +839,12 @@ mod tests {
                     position_x: Value::Literal(0.0),
                     position_z: Value::Literal(0.3),
                 },
+                additional_axles: vec![],
             },
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
+            trailer: None,
             parameter_declarations: None,
         };
 
@@ -759,11 +856,16 @@ mod tests {
         let catalog_vehicle = CatalogVehicle {
             name: "TestVehicle".to_string(),
             vehicle_category: Value::Literal("car".to_string()),
+            role: None,
+            mass: None,
+            model3d: None,
             bounding_box: BoundingBox::default(),
             performance: CatalogPerformance {
                 max_speed: Value::Parameter("MaxSpeedParam".to_string()),
                 max_acceleration: Value::Literal(10.0),
+                max_acceleration_rate: None,
                 max_deceleration: Value::Literal(8.0),
+                max_deceleration_rate: None,
             },
             axles: CatalogAxles {
                 front_axle: Some(CatalogFrontAxle {
@@ -780,8 +882,12 @@ mod tests {
                     position_x: Value::Literal(0.0),
                     position_z: Value::Literal(0.25),
                 },
+                additional_axles: vec![],
             },
             properties: None,
+            trailer_hitch: None,
+            trailer_coupler: None,
+            trailer: None,
             parameter_declarations: None,
         };
 
@@ -1251,5 +1357,78 @@ mod tests {
             vehicle.parameter_declarations.is_none(),
             "parameter_declarations should be None when element is absent"
         );
+    }
+
+    // ------------------------------------------------------------------
+    // XSD field additions: round-trip regression tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_catalog_vehicle_role_mass_model3d_and_trailer_round_trip() {
+        let xml = r#"<Vehicle name="TowCar" vehicleCategory="car" role="police" mass="1500.0" model3d="car.osgb">
+    <BoundingBox>
+        <Center x="0.0" y="0.0" z="0.75"/>
+        <Dimensions width="2.0" length="4.5" height="1.5"/>
+    </BoundingBox>
+    <Performance maxSpeed="50.0" maxAcceleration="10.0" maxDeceleration="8.0"/>
+    <Axles>
+        <RearAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="0.0" positionZ="0.3"/>
+    </Axles>
+    <TrailerHitch dx="1.0"/>
+    <TrailerCoupler dx="0.5"/>
+</Vehicle>"#;
+
+        let vehicle: CatalogVehicle = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(vehicle.role, Some(crate::types::enums::Role::Police));
+        assert_eq!(vehicle.mass.clone().unwrap().as_literal(), Some(&1500.0));
+        assert_eq!(
+            vehicle.model3d.clone().unwrap().as_literal(),
+            Some(&"car.osgb".to_string())
+        );
+        assert!(vehicle.trailer_hitch.is_some());
+        assert!(vehicle.trailer_coupler.is_some());
+
+        let serialized = quick_xml::se::to_string(&vehicle).unwrap();
+        let reparsed: CatalogVehicle = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(vehicle, reparsed);
+
+        let resolved = vehicle.into_scenario_entity(HashMap::new()).unwrap();
+        assert_eq!(resolved.role, Some(crate::types::enums::Role::Police));
+        assert_eq!(resolved.mass.unwrap().as_literal(), Some(&1500.0));
+        assert!(resolved.trailer_hitch.is_some());
+        assert!(resolved.trailer_coupler.is_some());
+    }
+
+    #[test]
+    fn test_catalog_performance_rate_fields_round_trip() {
+        let xml = r#"<Performance maxSpeed="50" maxAcceleration="5" maxAccelerationRate="2.5" maxDeceleration="6" maxDecelerationRate="3.5"/>"#;
+        let performance: CatalogPerformance = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            performance.max_acceleration_rate.clone().unwrap().as_literal(),
+            Some(&2.5)
+        );
+        assert_eq!(
+            performance.max_deceleration_rate.clone().unwrap().as_literal(),
+            Some(&3.5)
+        );
+
+        let serialized = quick_xml::se::to_string(&performance).unwrap();
+        let reparsed: CatalogPerformance = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(performance, reparsed);
+    }
+
+    #[test]
+    fn test_catalog_axles_additional_axle_round_trip() {
+        let xml = r#"<Axles>
+    <RearAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="0.0" positionZ="0.3"/>
+    <AdditionalAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="-3.0" positionZ="0.3"/>
+</Axles>"#;
+        let axles: CatalogAxles = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(axles.additional_axles.len(), 1);
+
+        let serialized = quick_xml::se::to_string(&axles).unwrap();
+        assert!(serialized.contains("<AdditionalAxle"), "serialized: {serialized}");
+        let reparsed: CatalogAxles = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(axles, reparsed);
     }
 }

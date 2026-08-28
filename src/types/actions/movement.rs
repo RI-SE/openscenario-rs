@@ -7,10 +7,13 @@
 //! - Spatial relationship actions (distance keeping, synchronization)
 //! - Trajectory following and path planning actions
 //!
-use crate::types::basic::{Boolean, Double, Int, OSString};
+use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations};
 use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
-use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode, SpeedTargetValueType};
+use crate::types::enums::{
+    CoordinateSystem, DynamicsDimension, DynamicsShape, FollowingMode, LateralDisplacement,
+    SpeedTargetValueType,
+};
 use crate::types::geometry::shapes::Shape;
 use crate::types::positions::Position;
 use crate::types::routing::{Route, RouteRef};
@@ -104,6 +107,8 @@ pub struct TransitionDynamics {
     pub dynamics_dimension: DynamicsDimension,
     #[serde(rename = "@dynamicsShape")]
     pub dynamics_shape: DynamicsShape,
+    #[serde(rename = "@followingMode", default, skip_serializing_if = "Option::is_none")]
+    pub following_mode: Option<FollowingMode>,
     #[serde(rename = "@value")]
     pub value: Double,
 }
@@ -147,6 +152,12 @@ pub struct Trajectory {
     pub name: OSString,
     #[serde(rename = "@closed")]
     pub closed: Boolean,
+    #[serde(
+        rename = "ParameterDeclarations",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_declarations: Option<ParameterDeclarations>,
     #[serde(rename = "Shape")]
     pub shape: Shape,
 }
@@ -419,6 +430,10 @@ pub struct LateralDistanceAction {
     pub freespace: Boolean,
     #[serde(rename = "@continuous")]
     pub continuous: Boolean,
+    #[serde(rename = "@displacement", default, skip_serializing_if = "Option::is_none")]
+    pub displacement: Option<LateralDisplacement>,
+    #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
+    pub coordinate_system: Option<CoordinateSystem>,
     #[serde(rename = "DynamicConstraints")]
     pub dynamic_constraints: Option<DynamicConstraints>,
 }
@@ -582,6 +597,7 @@ impl Default for TransitionDynamics {
         Self {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
+            following_mode: None,
             value: Double::literal(1.0),
         }
     }
@@ -620,6 +636,7 @@ impl Default for Trajectory {
         Self {
             name: OSString::literal("DefaultTrajectory".to_string()),
             closed: Boolean::literal(false),
+            parameter_declarations: None,
             shape: Shape::default(),
         }
     }
@@ -1100,6 +1117,8 @@ impl Default for LateralDistanceAction {
             distance: Some(Double::literal(2.0)),
             freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
+            displacement: None,
+            coordinate_system: None,
             dynamic_constraints: None,
         }
     }
@@ -1337,6 +1356,7 @@ mod tests {
             TransitionDynamics {
                 dynamics_dimension: DynamicsDimension::Time,
                 dynamics_shape: DynamicsShape::Linear,
+                following_mode: None,
                 value: Double::literal(2.0),
             },
             LaneChangeTarget::relative("TestEntity", 2),
@@ -1465,6 +1485,8 @@ mod tests {
             distance: Some(Double::literal(3.5)),
             freespace: Boolean::literal(true),
             continuous: Boolean::literal(false),
+            displacement: None,
+            coordinate_system: None,
             dynamic_constraints: Some(DynamicConstraints {
                 max_acceleration: Some(Double::literal(2.0)),
                 max_speed: Some(Double::literal(50.0)),
@@ -1749,6 +1771,73 @@ mod tests {
             initial_distance_offset: None,
         };
         assert!(invalid_multiple.validate().is_err());
+    }
+
+    // ------------------------------------------------------------------
+    // XSD field additions: round-trip regression tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_transition_dynamics_following_mode_round_trip() {
+        let xml = r#"<TransitionDynamics dynamicsDimension="time" dynamicsShape="linear" followingMode="position" value="2.0"/>"#;
+        let dynamics: TransitionDynamics = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(dynamics.following_mode, Some(FollowingMode::Position));
+
+        let serialized = quick_xml::se::to_string(&dynamics).unwrap();
+        assert!(serialized.contains(r#"followingMode="position""#), "serialized: {serialized}");
+        let deserialized: TransitionDynamics = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(dynamics, deserialized);
+    }
+
+    #[test]
+    fn test_trajectory_parameter_declarations_round_trip() {
+        let xml = r#"<Trajectory name="Traj1" closed="false">
+    <ParameterDeclarations>
+        <ParameterDeclaration name="speed" parameterType="double" value="10.0"/>
+    </ParameterDeclarations>
+    <Shape>
+        <Polyline>
+            <Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex>
+        </Polyline>
+    </Shape>
+</Trajectory>"#;
+        let trajectory: Trajectory = quick_xml::de::from_str(xml).unwrap();
+        let decls = trajectory
+            .parameter_declarations
+            .as_ref()
+            .expect("ParameterDeclarations must be present");
+        assert_eq!(decls.parameter_declarations.len(), 1);
+
+        let serialized = quick_xml::se::to_string(&trajectory).unwrap();
+        assert!(serialized.contains("<ParameterDeclarations>"), "serialized: {serialized}");
+        let reparsed: Trajectory = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(trajectory, reparsed);
+    }
+
+    #[test]
+    fn test_lateral_distance_action_displacement_and_coordinate_system_round_trip() {
+        let xml = r#"<LateralDistanceAction entityRef="Ego" continuous="false" freespace="true" distance="2.0" displacement="leftToReferencedEntity" coordinateSystem="road"/>"#;
+        let action: LateralDistanceAction = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            action.displacement,
+            Some(crate::types::enums::LateralDisplacement::LeftToReferencedEntity)
+        );
+        assert_eq!(
+            action.coordinate_system,
+            Some(crate::types::enums::CoordinateSystem::Road)
+        );
+
+        // Note: `dynamic_constraints` is not compared here — it lacks
+        // `skip_serializing_if` (a pre-existing gap unrelated to this XSD
+        // addition), so a `None` there does not round-trip byte-for-byte.
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        let reparsed: LateralDistanceAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action.displacement, reparsed.displacement);
+        assert_eq!(action.coordinate_system, reparsed.coordinate_system);
+        assert_eq!(action.entity_ref, reparsed.entity_ref);
+        assert_eq!(action.distance, reparsed.distance);
+        assert_eq!(action.freespace, reparsed.freespace);
+        assert_eq!(action.continuous, reparsed.continuous);
     }
 }
 

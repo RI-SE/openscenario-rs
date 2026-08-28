@@ -356,6 +356,7 @@ impl Waypoint {
                 h: Some(Double::literal(0.0)),
                 p: Some(Double::literal(0.0)),
                 r: Some(Double::literal(0.0)),
+                reference_context: None,
             }),
         });
 

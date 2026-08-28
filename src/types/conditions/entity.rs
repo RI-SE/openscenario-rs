@@ -121,6 +121,10 @@ pub struct TimeHeadwayCondition {
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
 
+    /// Whether to measure headway along route (deprecated)
+    #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
+    pub along_route: Option<Boolean>,
+
     /// Optional coordinate system for measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
     pub coordinate_system: Option<CoordinateSystem>,
@@ -151,6 +155,10 @@ pub struct TimeToCollisionCondition {
     /// Whether to measure in freespace or bounding box
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
+
+    /// Whether to measure along route (deprecated)
+    #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
+    pub along_route: Option<Boolean>,
 
     /// Optional coordinate system for measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
@@ -692,6 +700,7 @@ impl TimeHeadwayCondition {
             value: Double::literal(value),
             rule,
             freespace: Boolean::literal(freespace),
+            along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
             routing_algorithm: None,
@@ -741,6 +750,7 @@ impl TimeToCollisionCondition {
             value: Double::literal(value),
             rule,
             freespace: Boolean::literal(freespace),
+            along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
             routing_algorithm: None,
@@ -764,6 +774,7 @@ impl TimeToCollisionCondition {
             value: Double::literal(value),
             rule,
             freespace: Boolean::literal(freespace),
+            along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
             routing_algorithm: None,
@@ -881,6 +892,7 @@ impl Default for TimeHeadwayCondition {
             value: Double::literal(2.0),
             rule: Rule::LessThan,
             freespace: Boolean::literal(true),
+            along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
             routing_algorithm: None,
@@ -894,6 +906,7 @@ impl Default for TimeToCollisionCondition {
             value: Double::literal(5.0),
             rule: Rule::LessThan,
             freespace: Boolean::literal(true),
+            along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
             routing_algorithm: None,
@@ -1609,5 +1622,36 @@ mod tests {
         let end_of_road_deserialized: EndOfRoadCondition =
             serde_json::from_str(&end_of_road_serialized).unwrap();
         assert_eq!(end_of_road, end_of_road_deserialized);
+    }
+
+    // ------------------------------------------------------------------
+    // XSD field additions: round-trip regression tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_time_headway_condition_along_route_round_trip() {
+        let xml = r#"<TimeHeadwayCondition entityRef="Ego" value="1.5" freespace="true" rule="lessThan" alongRoute="true"/>"#;
+        let condition: TimeHeadwayCondition = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(condition.along_route.clone().unwrap().as_literal(), Some(&true));
+
+        let serialized = quick_xml::se::to_string(&condition).unwrap();
+        assert!(serialized.contains(r#"alongRoute="true""#), "serialized: {serialized}");
+        let deserialized: TimeHeadwayCondition = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(condition, deserialized);
+    }
+
+    #[test]
+    fn test_time_to_collision_condition_along_route_round_trip() {
+        let xml = r#"<TimeToCollisionCondition value="3.0" freespace="true" rule="lessThan" alongRoute="false">
+    <TimeToCollisionConditionTarget>
+        <EntityRef entityRef="Ego"/>
+    </TimeToCollisionConditionTarget>
+</TimeToCollisionCondition>"#;
+        let condition: TimeToCollisionCondition = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(condition.along_route.clone().unwrap().as_literal(), Some(&false));
+
+        let serialized = quick_xml::se::to_string(&condition).unwrap();
+        let deserialized: TimeToCollisionCondition = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(condition, deserialized);
     }
 }

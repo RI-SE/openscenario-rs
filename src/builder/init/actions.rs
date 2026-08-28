@@ -111,6 +111,7 @@ impl InitActionBuilder {
                             crate::types::actions::movement::TransitionDynamics {
                                 dynamics_dimension: crate::types::enums::DynamicsDimension::Time,
                                 dynamics_shape: crate::types::enums::DynamicsShape::Step,
+                                following_mode: None,
                                 value: crate::types::basic::Double::literal(1.0),
                             },
                         speed_action_target: crate::types::actions::movement::SpeedActionTarget {
@@ -137,6 +138,7 @@ impl InitActionBuilder {
                             crate::types::actions::movement::TransitionDynamics {
                                 dynamics_dimension: crate::types::enums::DynamicsDimension::Time,
                                 dynamics_shape: crate::types::enums::DynamicsShape::Step,
+                                following_mode: None,
                                 value: crate::types::basic::Double::literal(1.0),
                             },
                         speed_action_target: crate::types::actions::movement::SpeedActionTarget {

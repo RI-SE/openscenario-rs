@@ -125,9 +125,9 @@ pub struct CatalogWeather {
     #[serde(rename = "@temperature", default, skip_serializing_if = "Option::is_none")]
     pub temperature: Option<Double>,
 
-    /// Fractional cloud cover (optional)
+    /// Fractional cloud cover (optional) — XSD `@fractionalCloudCover` attribute
     #[serde(
-        rename = "FractionalCloudCover",
+        rename = "@fractionalCloudCover",
         default,
         skip_serializing_if = "Option::is_none"
     )]
@@ -148,6 +148,14 @@ pub struct CatalogWeather {
         skip_serializing_if = "Option::is_none"
     )]
     pub precipitation: Option<CatalogPrecipitation>,
+
+    /// Wind conditions
+    #[serde(rename = "Wind", default, skip_serializing_if = "Option::is_none")]
+    pub wind: Option<crate::types::environment::weather::Wind>,
+
+    /// Sky dome image reference
+    #[serde(rename = "DomeImage", default, skip_serializing_if = "Option::is_none")]
+    pub dome_image: Option<crate::types::environment::weather::DomeImage>,
 }
 
 /// Sun lighting configuration with parameterizable properties
@@ -406,8 +414,8 @@ impl CatalogEnvironment {
                         bounding_box: f.bounding_box.clone(),
                     }),
                     precipitation,
-                    wind: None,
-                    dome_image: None,
+                    wind: w.wind.clone(),
+                    dome_image: w.dome_image.clone(),
                 })
             })
             .transpose()?;
@@ -477,6 +485,8 @@ impl CatalogWeather {
                 intensity: Some(Value::Literal(0.0)),
                 precipitation_intensity: None,
             }),
+            wind: None,
+            dome_image: None,
         }
     }
 
@@ -503,6 +513,8 @@ impl CatalogWeather {
                 intensity: Some(Value::Literal(0.0)),
                 precipitation_intensity: None,
             }),
+            wind: None,
+            dome_image: None,
         }
     }
 
@@ -529,6 +541,8 @@ impl CatalogWeather {
                 intensity: Some(intensity),
                 precipitation_intensity: None,
             }),
+            wind: None,
+            dome_image: None,
         }
     }
 }
@@ -880,5 +894,35 @@ mod tests {
         assert!(environment.time_of_day.is_none());
         assert!(weather.cloud_state.is_none());
         assert!(weather.sun.is_none());
+    }
+
+    /// Regression: `fractionalCloudCover` is an XSD attribute on `Weather`
+    /// (:2564-2578), not a child element. Also verify `Wind`/`DomeImage`
+    /// round-trip through the catalog weather type.
+    #[test]
+    fn test_catalog_weather_fractional_cloud_cover_is_attribute() {
+        let xml = r#"<Weather fractionalCloudCover="threeOktas">
+    <Wind direction="1.0" speed="5.5"/>
+    <DomeImage azimuthOffset="0.2">
+        <DomeFile filepath="sky.hdr"/>
+    </DomeImage>
+</Weather>"#;
+        let weather: CatalogWeather = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            weather.fractional_cloud_cover,
+            Some(FractionalCloudCover::ThreeOktas)
+        );
+        assert!(weather.wind.is_some());
+        assert!(weather.dome_image.is_some());
+
+        let serialized = quick_xml::se::to_string(&weather).unwrap();
+        assert!(
+            serialized.contains(r#"fractionalCloudCover="threeOktas""#),
+            "serialized as attribute: {serialized}"
+        );
+        assert!(!serialized.contains("<FractionalCloudCover"), "serialized: {serialized}");
+
+        let reparsed: CatalogWeather = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(weather, reparsed);
     }
 }

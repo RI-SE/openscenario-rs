@@ -52,6 +52,7 @@ impl LaneChangeActionBuilder {
         self.dynamics = Some(TransitionDynamics {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
+            following_mode: None,
             value: Double::literal(duration),
         });
         self
@@ -88,6 +89,7 @@ impl ActionBuilder for LaneChangeActionBuilder {
             lane_change_action_dynamics: self.dynamics.unwrap_or_else(|| TransitionDynamics {
                 dynamics_dimension: DynamicsDimension::Time,
                 dynamics_shape: DynamicsShape::Linear,
+                following_mode: None,
                 value: Double::literal(2.0),
             }),
             lane_change_target: LaneChangeTarget {
@@ -179,6 +181,8 @@ impl ActionBuilder for LateralDistanceActionBuilder {
             distance: self.distance.map(Double::literal),
             freespace: Boolean::literal(self.freespace),
             continuous: Boolean::literal(self.continuous),
+            displacement: None,
+            coordinate_system: None,
             dynamic_constraints: self.dynamic_constraints,
         };
 

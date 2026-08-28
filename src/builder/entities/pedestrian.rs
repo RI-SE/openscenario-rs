@@ -167,6 +167,7 @@ impl<'parent> PedestrianBuilder<'parent> {
                 .mass
                 .unwrap_or_else(|| Double::literal(75.0)),
             role: self.pedestrian_data.role,
+            model: None,
             model3d: self.pedestrian_data.model3d,
             bounding_box: self.pedestrian_data.bounding_box.unwrap_or_default(),
             properties: self.pedestrian_data.properties,
@@ -312,6 +313,7 @@ impl DetachedPedestrianBuilder {
                 .mass
                 .unwrap_or_else(|| Double::literal(75.0)),
             role: self.pedestrian_data.role,
+            model: None,
             model3d: self.pedestrian_data.model3d,
             bounding_box: self.pedestrian_data.bounding_box.unwrap_or_default(),
             properties: self.pedestrian_data.properties,

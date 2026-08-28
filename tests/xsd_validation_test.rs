@@ -143,6 +143,7 @@ fn test_lane_change_action_serialization_fixes() {
         lane_change_action_dynamics: TransitionDynamics {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
+            following_mode: None,
             value: Double::literal(2.0),
         },
         lane_change_target: LaneChangeTarget::relative("Ego", -1),
@@ -159,6 +160,7 @@ fn test_lane_change_action_serialization_fixes() {
         lane_change_action_dynamics: TransitionDynamics {
             dynamics_dimension: DynamicsDimension::Time,
             dynamics_shape: DynamicsShape::Linear,
+            following_mode: None,
             value: Double::literal(2.0),
         },
         lane_change_target: LaneChangeTarget::relative("Ego", -1),

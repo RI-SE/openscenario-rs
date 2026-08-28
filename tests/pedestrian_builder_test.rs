@@ -145,6 +145,7 @@ mod pedestrian_builder_tests {
             pedestrian_category: PedestrianCategory::Pedestrian,
             mass: openscenario_rs::types::basic::Double::literal(75.0),
             role: Some(Role::Civil),
+            model: None,
             model3d: Some("./model.glb".to_string()),
             bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
             properties: None,

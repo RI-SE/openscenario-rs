@@ -76,6 +76,16 @@ pub struct Properties {
     pub properties: Vec<Property>,
     #[serde(rename = "File", default)]
     pub files: Vec<File>,
+    #[serde(rename = "CustomContent", default)]
+    pub custom_content: Vec<CustomContent>,
+}
+
+/// Arbitrary vendor-specific content — XSD `CustomContent` (`:1016`), `simpleContent`
+/// extending `xsd:string` with no attributes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct CustomContent {
+    #[serde(rename = "$text", default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
 }
 
 /// Property key-value pair
@@ -470,5 +480,27 @@ mod tests {
         let nested = trailer.trailer.expect("expected nested scenario object");
         assert_eq!(nested.get_name(), Some("Trailer1"));
         assert!(nested.vehicle.is_some());
+    }
+
+    #[test]
+    fn test_properties_custom_content_round_trip() {
+        let xml = r#"<Properties>
+    <Property name="test" value="1"/>
+    <CustomContent>some vendor content</CustomContent>
+</Properties>"#;
+        let properties: Properties = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(properties.custom_content.len(), 1);
+        assert_eq!(
+            properties.custom_content[0].content.as_deref(),
+            Some("some vendor content")
+        );
+
+        let serialized = quick_xml::se::to_string(&properties).unwrap();
+        assert!(
+            serialized.contains("<CustomContent>some vendor content</CustomContent>"),
+            "serialized: {serialized}"
+        );
+        let reparsed: Properties = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(properties, reparsed);
     }
 }
