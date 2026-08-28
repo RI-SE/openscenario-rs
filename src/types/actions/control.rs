@@ -167,8 +167,8 @@ pub struct OverrideClutchAction {
 /// Manual gear specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ManualGear {
-    #[serde(rename = "@gear")]
-    pub gear: Int,
+    #[serde(rename = "@number")]
+    pub number: Int,
 }
 
 /// Automatic gear specification
@@ -243,7 +243,7 @@ impl Default for ActivateControllerAction {
 impl Default for ManualGear {
     fn default() -> Self {
         Self {
-            gear: Int::literal(1),
+            number: Int::literal(1),
         }
     }
 }
@@ -320,9 +320,9 @@ impl ActivateControllerAction {
 
 impl ManualGear {
     /// Create manual gear for specific gear number
-    pub fn new(gear: i32) -> Self {
+    pub fn new(number: i32) -> Self {
         Self {
-            gear: Int::literal(gear),
+            number: Int::literal(number),
         }
     }
 
@@ -520,13 +520,13 @@ mod tests {
     #[test]
     fn test_manual_gear_creation() {
         let first_gear = ManualGear::first();
-        assert_eq!(first_gear.gear.as_literal().unwrap(), &1);
+        assert_eq!(first_gear.number.as_literal().unwrap(), &1);
 
         let neutral = ManualGear::neutral();
-        assert_eq!(neutral.gear.as_literal().unwrap(), &0);
+        assert_eq!(neutral.number.as_literal().unwrap(), &0);
 
         let reverse = ManualGear::reverse();
-        assert_eq!(reverse.gear.as_literal().unwrap(), &(-1));
+        assert_eq!(reverse.number.as_literal().unwrap(), &(-1));
     }
 
     #[test]
@@ -597,7 +597,7 @@ mod tests {
     fn test_gear_group_creation() {
         let manual_gear = Gear::manual(3);
         if let Gear::ManualGear(gear) = manual_gear {
-            assert_eq!(gear.gear.as_literal(), Some(&3));
+            assert_eq!(gear.number.as_literal(), Some(&3));
         } else {
             panic!("Expected ManualGear variant");
         }
@@ -614,21 +614,21 @@ mod tests {
     fn test_gear_group_convenience_methods() {
         let manual_first = Gear::manual_first();
         if let Gear::ManualGear(gear) = manual_first {
-            assert_eq!(gear.gear.as_literal(), Some(&1));
+            assert_eq!(gear.number.as_literal(), Some(&1));
         } else {
             panic!("Expected ManualGear variant");
         }
 
         let manual_neutral = Gear::manual_neutral();
         if let Gear::ManualGear(gear) = manual_neutral {
-            assert_eq!(gear.gear.as_literal(), Some(&0));
+            assert_eq!(gear.number.as_literal(), Some(&0));
         } else {
             panic!("Expected ManualGear variant");
         }
 
         let manual_reverse = Gear::manual_reverse();
         if let Gear::ManualGear(gear) = manual_reverse {
-            assert_eq!(gear.gear.as_literal(), Some(&(-1)));
+            assert_eq!(gear.number.as_literal(), Some(&(-1)));
         } else {
             panic!("Expected ManualGear variant");
         }

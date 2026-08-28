@@ -472,11 +472,13 @@ pub struct LongitudinalDistanceAction {
 /// Speed profile action for time-based speed control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedProfileAction {
-    #[serde(rename = "@entityRef")]
+    #[serde(rename = "@entityRef", default, skip_serializing_if = "Option::is_none")]
     pub entity_ref: Option<OSString>,
-    #[serde(rename = "DynamicConstraints")]
+    #[serde(rename = "@followingMode")]
+    pub following_mode: FollowingMode,
+    #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
-    #[serde(rename = "Entry", default)]
+    #[serde(rename = "SpeedProfileEntry", default)]
     pub entries: Vec<SpeedProfileEntry>,
 }
 
@@ -1132,6 +1134,7 @@ impl Default for SpeedProfileAction {
     fn default() -> Self {
         Self {
             entity_ref: None,
+            following_mode: FollowingMode::Follow,
             dynamic_constraints: None,
             entries: vec![SpeedProfileEntry::default()],
         }
@@ -1529,6 +1532,7 @@ mod tests {
 
         let action = SpeedProfileAction {
             entity_ref: Some(OSString::literal("RefEntity".to_string())),
+            following_mode: FollowingMode::Follow,
             dynamic_constraints: Some(DynamicConstraints {
                 max_acceleration: Some(Double::literal(1.5)),
                 max_speed: Some(Double::literal(30.0)),

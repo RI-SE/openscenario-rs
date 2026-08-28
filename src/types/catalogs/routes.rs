@@ -451,49 +451,21 @@ impl RouteParameterAssignment {
 
 /// Converts canonical `basic::ParameterDeclarations` into the
 /// `routing::ParameterDeclarations` used by the scenario `Route` type.
+///
+/// `routing::ValueConstraint`/`ValueConstraintGroup` are re-exports of the
+/// `basic` types, so constraint groups carry over unchanged.
 fn route_parameter_declarations(
     declarations: ParameterDeclarations,
 ) -> crate::error::Result<crate::types::routing::ParameterDeclarations> {
-    use crate::types::enums::Rule;
-
     let parameter_declarations = declarations
         .parameter_declarations
         .into_iter()
         .map(|decl| {
-            let parameter_type = decl.parameter_type;
-
-            let constraint_groups = decl
-                .constraint_groups
-                .into_iter()
-                .map(|group| crate::types::routing::ValueConstraintGroup {
-                    constraints: group
-                        .value_constraints
-                        .into_iter()
-                        .map(|constraint| crate::types::routing::ValueConstraint {
-                            rule: match constraint.rule {
-                                Rule::EqualTo => "equalTo",
-                                Rule::GreaterThan => "greaterThan",
-                                Rule::LessThan => "lessThan",
-                                Rule::GreaterOrEqual => "greaterOrEqual",
-                                Rule::LessOrEqual => "lessOrEqual",
-                                Rule::NotEqualTo => "notEqualTo",
-                            }
-                            .to_string(),
-                            value: constraint
-                                .value
-                                .as_literal()
-                                .cloned()
-                                .unwrap_or_else(|| constraint.value.to_string()),
-                        })
-                        .collect(),
-                })
-                .collect();
-
             Ok(crate::types::routing::ParameterDeclaration {
                 name: decl.name,
-                parameter_type,
+                parameter_type: decl.parameter_type,
                 value: decl.value,
-                constraint_groups,
+                constraint_groups: decl.constraint_groups,
             })
         })
         .collect::<crate::error::Result<Vec<_>>>()?;

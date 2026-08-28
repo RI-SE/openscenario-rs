@@ -101,7 +101,7 @@ pub struct PoissonDistribution {
 /// Histogram-based distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Histogram {
-    #[serde(rename = "HistogramBin")]
+    #[serde(rename = "Bin")]
     pub bins: Vec<HistogramBin>,
 }
 

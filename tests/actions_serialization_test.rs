@@ -327,25 +327,24 @@ fn test_parameter_action_system() {
 
 #[test]
 fn test_set_monitor_action() {
-    // Test SetMonitorAction with monitor name
+    // Test SetMonitorAction with monitorRef and value = true
     let monitor_action = SetMonitorAction {
-        enable: Boolean::literal(true),
-        monitor_name: Some(OSString::literal("testMonitor".to_string())),
+        monitor_ref: OSString::literal("testMonitor".to_string()),
+        value: Boolean::literal(true),
     };
 
     let serialized = serde_json::to_string(&monitor_action).unwrap();
     assert!(serialized.contains("testMonitor"));
     assert!(serialized.contains("true"));
 
-    // Test SetMonitorAction without monitor name
+    // Test SetMonitorAction with value = false
     let monitor_action = SetMonitorAction {
-        enable: Boolean::literal(false),
-        monitor_name: None,
+        monitor_ref: OSString::literal("otherMonitor".to_string()),
+        value: Boolean::literal(false),
     };
 
     let serialized = serde_json::to_string(&monitor_action).unwrap();
     assert!(serialized.contains("false"));
-    assert!(!serialized.contains("monitorName"));
 }
 
 #[test]

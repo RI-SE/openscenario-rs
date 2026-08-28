@@ -85,7 +85,7 @@ impl Default for CatalogController {
 #[derive(Default)]
 pub struct ControllerProperties {
     /// List of controller properties
-    #[serde(rename = "Property")]
+    #[serde(rename = "Property", default)]
     pub properties: Vec<ControllerProperty>,
 }
 

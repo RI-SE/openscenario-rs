@@ -50,7 +50,7 @@ pub struct Position {
     pub relative_lane_position: Option<RelativeLanePosition>,
     #[serde(rename = "TrajectoryPosition", skip_serializing_if = "Option::is_none")]
     pub trajectory_position: Option<TrajectoryPosition>,
-    #[serde(rename = "GeographicPosition", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "GeoPosition", skip_serializing_if = "Option::is_none")]
     pub geographic_position: Option<GeographicPosition>,
     #[serde(
         rename = "RelativeObjectPosition",

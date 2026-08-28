@@ -132,10 +132,10 @@ pub struct EnvironmentAction {
 // Monitor Action - Set monitor state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SetMonitorAction {
-    #[serde(rename = "@enable")]
-    pub enable: Boolean,
-    #[serde(rename = "@monitorName", skip_serializing_if = "Option::is_none")]
-    pub monitor_name: Option<OSString>,
+    #[serde(rename = "@monitorRef")]
+    pub monitor_ref: OSString,
+    #[serde(rename = "@value")]
+    pub value: Boolean,
 }
 
 // Variable Action System
@@ -303,8 +303,8 @@ impl Default for NamedAction {
 impl Default for SetMonitorAction {
     fn default() -> Self {
         SetMonitorAction {
-            enable: Boolean::literal(true),
-            monitor_name: None,
+            monitor_ref: OSString::literal("defaultMonitor".to_string()),
+            value: Boolean::literal(true),
         }
     }
 }
@@ -452,8 +452,23 @@ mod tests {
     #[test]
     fn test_set_monitor_action_default() {
         let sma = SetMonitorAction::default();
-        assert_eq!(sma.enable.as_literal().unwrap(), &true);
-        assert!(sma.monitor_name.is_none());
+        assert_eq!(sma.value.as_literal().unwrap(), &true);
+        assert_eq!(
+            sma.monitor_ref.as_literal().unwrap(),
+            &"defaultMonitor".to_string()
+        );
+    }
+
+    #[test]
+    fn test_set_monitor_action_roundtrip() {
+        // XSD: required @monitorRef (String) and @value (Boolean).
+        let xml = r#"<SetMonitorAction monitorRef="speedMonitor" value="true"/>"#;
+        let action: SetMonitorAction = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(
+            action.monitor_ref.as_literal().unwrap(),
+            &"speedMonitor".to_string()
+        );
+        assert_eq!(action.value.as_literal().unwrap(), &true);
     }
 
     #[test]

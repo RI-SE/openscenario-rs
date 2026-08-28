@@ -38,8 +38,12 @@ pub enum DistributionDefinition {
 }
 
 /// User-defined distribution for custom parameter distributions
+///
+/// XSD `UserDefinedDistribution` is a `simpleContent` extension of `xsd:string`
+/// with a required `@type` attribute — the text body is not a child element.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserDefinedDistribution {
+    #[serde(rename = "$text")]
     pub content: String,
     #[serde(rename = "@type")]
     pub distribution_type: String,

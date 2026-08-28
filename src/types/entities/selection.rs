@@ -90,10 +90,6 @@ pub struct ScenarioObjectTemplate {
 /// Reference to external object definitions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExternalObjectReference {
-    /// Path to the external object file
-    #[serde(rename = "@file")]
-    pub file: OSString,
-
     /// Name of the object within the external file
     #[serde(rename = "@name")]
     pub name: OSString,
@@ -103,7 +99,7 @@ pub struct ExternalObjectReference {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ByObjectType {
     /// Type of object to select
-    #[serde(rename = "@objectType")]
+    #[serde(rename = "@type")]
     pub object_type: ObjectType,
 }
 
@@ -111,8 +107,8 @@ pub struct ByObjectType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ByType {
     /// Type specification for selection
-    #[serde(rename = "@type")]
-    pub type_spec: OSString,
+    #[serde(rename = "@objectType")]
+    pub type_spec: ObjectType,
 }
 
 /// Selection by entity name pattern
@@ -193,7 +189,6 @@ impl Default for ScenarioObjectTemplate {
 impl Default for ExternalObjectReference {
     fn default() -> Self {
         Self {
-            file: OSString::literal("objects.xml".to_string()),
             name: OSString::literal("DefaultObject".to_string()),
         }
     }
@@ -210,7 +205,7 @@ impl Default for ByObjectType {
 impl Default for ByType {
     fn default() -> Self {
         Self {
-            type_spec: OSString::literal("vehicle".to_string()),
+            type_spec: ObjectType::Vehicle,
         }
     }
 }
@@ -357,7 +352,6 @@ impl ScenarioObjectTemplate {
     pub fn with_external_reference(
         name: impl Into<String>,
         object_type: ObjectType,
-        file: impl Into<String>,
         object_name: impl Into<String>,
     ) -> Self {
         Self {
@@ -365,7 +359,6 @@ impl ScenarioObjectTemplate {
             object_type,
             properties: None,
             external_object_reference: Some(ExternalObjectReference {
-                file: OSString::literal(file.into()),
                 name: OSString::literal(object_name.into()),
             }),
             object_controller: Vec::new(),
@@ -389,9 +382,8 @@ impl ScenarioObjectTemplate {
 
 impl ExternalObjectReference {
     /// Create a new external object reference
-    pub fn new(file: impl Into<String>, name: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            file: OSString::literal(file.into()),
             name: OSString::literal(name.into()),
         }
     }
@@ -421,10 +413,8 @@ impl ByObjectType {
 
 impl ByType {
     /// Create a new type selector
-    pub fn new(type_spec: impl Into<String>) -> Self {
-        Self {
-            type_spec: OSString::literal(type_spec.into()),
-        }
+    pub fn new(type_spec: ObjectType) -> Self {
+        Self { type_spec }
     }
 }
 
@@ -532,19 +522,16 @@ mod tests {
         let external_template = ScenarioObjectTemplate::with_external_reference(
             "ExternalVehicle",
             ObjectType::Vehicle,
-            "vehicles.xml",
             "SportsCar",
         );
         assert!(external_template.external_object_reference.is_some());
         let ext_ref = external_template.external_object_reference.unwrap();
-        assert_eq!(ext_ref.file.as_literal().unwrap(), "vehicles.xml");
         assert_eq!(ext_ref.name.as_literal().unwrap(), "SportsCar");
     }
 
     #[test]
     fn test_external_object_reference() {
-        let ext_ref = ExternalObjectReference::new("objects/vehicles.xml", "Sedan");
-        assert_eq!(ext_ref.file.as_literal().unwrap(), "objects/vehicles.xml");
+        let ext_ref = ExternalObjectReference::new("Sedan");
         assert_eq!(ext_ref.name.as_literal().unwrap(), "Sedan");
     }
 
@@ -562,11 +549,8 @@ mod tests {
 
     #[test]
     fn test_by_type() {
-        let type_selector = ByType::new("custom_vehicle_type");
-        assert_eq!(
-            type_selector.type_spec.as_literal().unwrap(),
-            "custom_vehicle_type"
-        );
+        let type_selector = ByType::new(ObjectType::Vehicle);
+        assert_eq!(type_selector.type_spec, ObjectType::Vehicle);
     }
 
     #[test]
@@ -586,7 +570,7 @@ mod tests {
         let selection = EntitySelection::by_object_type(ObjectType::Vehicle);
         let xml = quick_xml::se::to_string(&selection).unwrap();
         assert!(xml.contains("ByType"));
-        assert!(xml.contains("objectType=\"vehicle\""));
+        assert!(xml.contains("type=\"vehicle\""));
 
         let entities = SelectedEntities::from_names(vec!["Ego", "Target"]);
         let xml = quick_xml::se::to_string(&entities).unwrap();
@@ -599,5 +583,25 @@ mod tests {
         assert!(xml.contains("EntityDistributionEntry"));
         assert!(xml.contains("entityRef=\"Car1\""));
         assert!(xml.contains("weight=\"0.5\""));
+    }
+
+    #[test]
+    fn test_by_object_type_and_by_type_attribute_names() {
+        // XSD: ByObjectType has attribute `type`; ByType has attribute `objectType`.
+        let by_object_type: ByObjectType =
+            quick_xml::de::from_str(r#"<ByObjectType type="vehicle"/>"#).unwrap();
+        assert_eq!(by_object_type.object_type, ObjectType::Vehicle);
+
+        let by_type: ByType =
+            quick_xml::de::from_str(r#"<ByType objectType="pedestrian"/>"#).unwrap();
+        assert_eq!(by_type.type_spec, ObjectType::Pedestrian);
+    }
+
+    #[test]
+    fn test_external_object_reference_roundtrip() {
+        // XSD: ExternalObjectReference has exactly one attribute, `name`.
+        let ext_ref: ExternalObjectReference =
+            quick_xml::de::from_str(r#"<ExternalObjectReference name="Sedan"/>"#).unwrap();
+        assert_eq!(ext_ref.name.as_literal().unwrap(), "Sedan");
     }
 }

@@ -34,7 +34,7 @@ fn test_entity_selection_by_object_type() {
     // Test serialization
     let xml = quick_xml::se::to_string(&selection).unwrap();
     assert!(xml.contains("ByType"));
-    assert!(xml.contains("objectType=\"vehicle\""));
+    assert!(xml.contains("type=\"vehicle\""));
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn test_entity_selection_by_type_and_name() {
 fn test_entity_selection_xml_parsing() {
     let xml = r#"
     <EntitySelection>
-        <ByType objectType="vehicle"/>
+        <ByType type="vehicle"/>
     </EntitySelection>
     "#;
 
@@ -258,7 +258,6 @@ fn test_scenario_object_template_with_external_reference() {
     let template = ScenarioObjectTemplate::with_external_reference(
         "ExternalVehicle",
         ObjectType::Vehicle,
-        "vehicles.xml",
         "SportsCar",
     );
 
@@ -267,7 +266,6 @@ fn test_scenario_object_template_with_external_reference() {
     assert!(template.external_object_reference.is_some());
 
     let ext_ref = template.external_object_reference.unwrap();
-    assert_eq!(ext_ref.file.as_literal().unwrap(), "vehicles.xml");
     assert_eq!(ext_ref.name.as_literal().unwrap(), "SportsCar");
 }
 
@@ -315,24 +313,21 @@ fn test_scenario_object_template_xml_parsing() {
 
 #[test]
 fn test_external_object_reference() {
-    let ext_ref = ExternalObjectReference::new("objects/vehicles.xml", "Sedan");
-    assert_eq!(ext_ref.file.as_literal().unwrap(), "objects/vehicles.xml");
+    let ext_ref = ExternalObjectReference::new("Sedan");
     assert_eq!(ext_ref.name.as_literal().unwrap(), "Sedan");
 
     // Test default
     let default_ref = ExternalObjectReference::default();
-    assert_eq!(default_ref.file.as_literal().unwrap(), "objects.xml");
     assert_eq!(default_ref.name.as_literal().unwrap(), "DefaultObject");
 }
 
 #[test]
 fn test_external_object_reference_xml_parsing() {
     let xml = r#"
-    <ExternalObjectReference file="catalogs/vehicles.xml" name="SportsCar"/>
+    <ExternalObjectReference name="SportsCar"/>
     "#;
 
     let ext_ref: ExternalObjectReference = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(ext_ref.file.as_literal().unwrap(), "catalogs/vehicles.xml");
     assert_eq!(ext_ref.name.as_literal().unwrap(), "SportsCar");
 }
 
@@ -354,29 +349,28 @@ fn test_by_object_type() {
 
 #[test]
 fn test_by_object_type_xml_parsing() {
-    let xml = r#"<ByType objectType="pedestrian"/>"#;
+    // XSD: ByObjectType has attribute `type`.
+    let xml = r#"<ByObjectType type="pedestrian"/>"#;
     let selector: ByObjectType = quick_xml::de::from_str(xml).unwrap();
     assert_eq!(selector.object_type, ObjectType::Pedestrian);
 }
 
 #[test]
 fn test_by_type() {
-    let type_selector = ByType::new("custom_vehicle_type");
-    assert_eq!(
-        type_selector.type_spec.as_literal().unwrap(),
-        "custom_vehicle_type"
-    );
+    let type_selector = ByType::new(ObjectType::MiscellaneousObject);
+    assert_eq!(type_selector.type_spec, ObjectType::MiscellaneousObject);
 
     // Test default
     let default_selector = ByType::default();
-    assert_eq!(default_selector.type_spec.as_literal().unwrap(), "vehicle");
+    assert_eq!(default_selector.type_spec, ObjectType::Vehicle);
 }
 
 #[test]
 fn test_by_type_xml_parsing() {
-    let xml = r#"<ByType type="special_vehicle"/>"#;
+    // XSD: ByType has attribute `objectType`.
+    let xml = r#"<ByType objectType="pedestrian"/>"#;
     let selector: ByType = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(selector.type_spec.as_literal().unwrap(), "special_vehicle");
+    assert_eq!(selector.type_spec, ObjectType::Pedestrian);
 }
 
 #[test]

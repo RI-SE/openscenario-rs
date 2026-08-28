@@ -82,7 +82,7 @@ impl WorldPosition {
 /// are deprecated in favor of `latitudeDeg`/`longitudeDeg`/`altitude`; all are
 /// optional per the XSD (none use `use="required"`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "GeographicPosition")]
+#[serde(rename = "GeoPosition")]
 pub struct GeographicPosition {
     /// Latitude in degrees (deprecated — XSD attribute `latitude`)
     #[serde(rename = "@latitude", default, skip_serializing_if = "Option::is_none")]

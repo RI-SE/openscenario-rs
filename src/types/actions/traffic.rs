@@ -207,11 +207,10 @@ pub struct TrafficSignalGroupState {
 }
 
 /// Traffic stop action for traffic stop enable/disable
+///
+/// XSD `TrafficStopAction` is an empty complexType with no attributes or children.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TrafficStopAction {
-    #[serde(rename = "@enable")]
-    pub enable: Boolean,
-}
+pub struct TrafficStopAction {}
 
 
 /// Traffic definition for vehicle category and controller distribution
@@ -426,9 +425,7 @@ impl Default for TrafficSignalGroupState {
 
 impl Default for TrafficStopAction {
     fn default() -> Self {
-        Self {
-            enable: Boolean::literal(true),
-        }
+        Self {}
     }
 }
 
@@ -776,22 +773,6 @@ impl TrafficSignalControllerAction {
     }
 }
 
-impl TrafficStopAction {
-    /// Enable traffic stop
-    pub fn enable() -> Self {
-        Self {
-            enable: Boolean::literal(true),
-        }
-    }
-
-    /// Disable traffic stop
-    pub fn disable() -> Self {
-        Self {
-            enable: Boolean::literal(false),
-        }
-    }
-}
-
 impl TrafficDefinition {
     /// Create traffic definition with vehicle categories only
     pub fn with_vehicles(distribution: VehicleCategoryDistribution) -> Self {
@@ -1070,11 +1051,13 @@ mod tests {
 
     #[test]
     fn test_traffic_stop_action() {
-        let enable = TrafficStopAction::enable();
-        assert_eq!(enable.enable.as_literal(), Some(&true));
+        // XSD `TrafficStopAction` is an empty complexType.
+        let action = TrafficStopAction::default();
+        assert_eq!(action, TrafficStopAction {});
 
-        let disable = TrafficStopAction::disable();
-        assert_eq!(disable.enable.as_literal(), Some(&false));
+        let xml = quick_xml::se::to_string(&action).unwrap();
+        let parsed: TrafficStopAction = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(parsed, action);
     }
 
     #[test]
@@ -1164,7 +1147,7 @@ mod tests {
         assert_eq!(swarm.semi_minor_axis.as_literal(), Some(&50.0));
 
         let stop = TrafficStopAction::default();
-        assert_eq!(stop.enable.as_literal(), Some(&true));
+        assert_eq!(stop, TrafficStopAction {});
     }
 
     // TRAFFIC SIGNAL SYSTEM TESTS

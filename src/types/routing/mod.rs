@@ -12,6 +12,12 @@ use crate::types::enums::{ParameterType, RouteStrategy};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
+// `ValueConstraint`/`ValueConstraintGroup` are modeled once, correctly, in
+// `basic.rs` (with `@rule`/`@value` attributes and a `ValueConstraint`-renamed
+// `Vec`, matching XSD `:2442-2450`). Re-export them here rather than
+// duplicating a second, incorrect copy.
+pub use crate::types::basic::{ValueConstraint, ValueConstraintGroup};
+
 /// Simple catalog reference for routes
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "CatalogReference")]
@@ -39,7 +45,7 @@ pub use crate::types::catalogs::references::{ParameterAssignment, ParameterAssig
 #[serde(rename = "ParameterDeclarations")]
 pub struct ParameterDeclarations {
     /// List of parameter declarations
-    #[serde(rename = "ParameterDeclaration")]
+    #[serde(rename = "ParameterDeclaration", default)]
     pub parameter_declarations: Vec<ParameterDeclaration>,
 }
 
@@ -66,22 +72,6 @@ pub struct ParameterDeclaration {
         default
     )]
     pub constraint_groups: Vec<ValueConstraintGroup>,
-}
-
-/// Value constraint group (simplified)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ValueConstraintGroup {
-    /// List of constraints
-    pub constraints: Vec<ValueConstraint>,
-}
-
-/// Value constraint (simplified)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ValueConstraint {
-    /// Constraint rule
-    pub rule: String,
-    /// Constraint value
-    pub value: String,
 }
 
 /// Complete route definition with waypoints and metadata

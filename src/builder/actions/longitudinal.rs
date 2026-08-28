@@ -39,6 +39,7 @@ use crate::types::{
     },
     actions::wrappers::PrivateAction,
     basic::{Boolean, Double, OSString},
+    enums::FollowingMode,
 };
 
 /// Builder for longitudinal distance actions
@@ -146,6 +147,7 @@ impl ManeuverAction for LongitudinalDistanceActionBuilder {
 #[derive(Debug, Default)]
 pub struct SpeedProfileActionBuilder {
     entity_ref: Option<String>,
+    following_mode: Option<FollowingMode>,
     entries: Vec<SpeedProfileEntry>,
 }
 
@@ -158,6 +160,12 @@ impl SpeedProfileActionBuilder {
     /// Set target entity for this action
     pub fn for_entity(mut self, entity_ref: &str) -> Self {
         self.entity_ref = Some(entity_ref.to_string());
+        self
+    }
+
+    /// Set the required `followingMode` attribute
+    pub fn with_following_mode(mut self, following_mode: FollowingMode) -> Self {
+        self.following_mode = Some(following_mode);
         self
     }
 
@@ -185,6 +193,7 @@ impl ActionBuilder for SpeedProfileActionBuilder {
                 .entity_ref
                 .as_ref()
                 .map(|s| OSString::literal(s.clone())),
+            following_mode: self.following_mode.unwrap_or(FollowingMode::Follow),
             entries: self.entries,
             dynamic_constraints: None,
         };
