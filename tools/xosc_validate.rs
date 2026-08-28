@@ -4,10 +4,7 @@
 //! using libxml for comprehensive schema validation.
 
 use clap::{Parser, ValueEnum};
-use libxml::error::StructuredError;
-use libxml::parser::Parser as XmlParser;
-use libxml::schemas::{SchemaParserContext, SchemaValidationContext};
-use libxml::tree::Document;
+use openscenario_rs::validation::{ValidationError, XsdValidator};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -52,14 +49,6 @@ struct ValidationResult {
     errors: Vec<ValidationError>,
 }
 
-#[derive(Debug, Clone)]
-struct ValidationError {
-    line: Option<u32>,
-    column: Option<u32>,
-    message: String,
-    error_type: String,
-}
-
 #[derive(Debug)]
 enum ExitCode {
     Success = 0,
@@ -67,107 +56,6 @@ enum ExitCode {
     FileNotFound = 2,
     SchemaError = 3,
     InternalError = 99,
-}
-
-struct XsdValidator {
-    schema_validation_context: SchemaValidationContext,
-}
-
-impl XsdValidator {
-    fn new(xsd_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
-        if !xsd_path.exists() {
-            return Err(format!("Schema file not found: {}", xsd_path.display()).into());
-        }
-
-        let xsd_content = fs::read_to_string(xsd_path)
-            .map_err(|e| format!("Failed to read schema file: {}", e))?;
-
-        let mut schema_parser = SchemaParserContext::from_buffer(&xsd_content);
-
-        let schema_validation_context = SchemaValidationContext::from_parser(&mut schema_parser)
-            .map_err(|e| format!("Failed to create validation context: {:?}", e))?;
-
-        Ok(Self {
-            schema_validation_context,
-        })
-    }
-
-    fn validate_file(
-        &mut self,
-        xosc_path: &Path,
-    ) -> Result<ValidationResult, Box<dyn std::error::Error>> {
-        if !xosc_path.exists() {
-            return Ok(ValidationResult {
-                file_path: xosc_path.to_path_buf(),
-                is_valid: false,
-                errors: vec![ValidationError {
-                    line: None,
-                    column: None,
-                    message: "File not found".to_string(),
-                    error_type: "FileNotFound".to_string(),
-                }],
-            });
-        }
-
-        let xml_content = fs::read_to_string(xosc_path)
-            .map_err(|e| format!("Failed to read XOSC file: {}", e))?;
-
-        let parser = XmlParser::default();
-        let document = parser
-            .parse_string(&xml_content)
-            .map_err(|e| format!("Failed to parse XML: {}", e))?;
-
-        let validation_result = self.validate_document(&document, xosc_path);
-
-        Ok(validation_result)
-    }
-
-    fn validate_document(&mut self, document: &Document, file_path: &Path) -> ValidationResult {
-        match self.schema_validation_context.validate_document(document) {
-            Ok(_) => ValidationResult {
-                file_path: file_path.to_path_buf(),
-                is_valid: true,
-                errors: vec![],
-            },
-            Err(errors) => ValidationResult {
-                file_path: file_path.to_path_buf(),
-                is_valid: false,
-                errors: parse_libxml_errors(errors),
-            },
-        }
-    }
-}
-
-fn parse_libxml_errors(errors: Vec<StructuredError>) -> Vec<ValidationError> {
-    errors
-        .into_iter()
-        .map(|err| ValidationError {
-            line: err.line.map(|l| l as u32),
-            column: err.col.map(|c| c as u32),
-            message: err
-                .message
-                .as_ref()
-                .map(|s| s.trim().to_string())
-                .unwrap_or_else(|| "Unknown error".to_string()),
-            error_type: classify_error_type(
-                err.message.as_ref().unwrap_or(&"Unknown error".to_string()),
-            ),
-        })
-        .collect()
-}
-
-fn classify_error_type(message: &str) -> String {
-    if message.contains("not expected") || message.contains("not allowed") {
-        "ElementNotAllowed".to_string()
-    } else if message.contains("missing") || message.contains("required") {
-        "MissingRequired".to_string()
-    } else if message.contains("invalid value") || message.contains("not valid") {
-        "InvalidValue".to_string()
-    } else if message.contains("type") {
-        "TypeMismatch".to_string()
-    } else {
-        "ValidationError".to_string()
-    }
 }
 
 fn collect_files(
@@ -371,8 +259,8 @@ fn main() {
 }
 
 fn run_validation(args: Args) -> Result<bool, Box<dyn std::error::Error>> {
-    // Create validator
-    let mut validator = XsdValidator::new(&args.schema)?;
+    // Create validator once and reuse the parsed schema across every file.
+    let mut validator = XsdValidator::from_schema_file(&args.schema)?;
 
     // Collect files to validate
     let files = collect_files(&args.files, args.recursive)?;
@@ -384,8 +272,12 @@ fn run_validation(args: Args) -> Result<bool, Box<dyn std::error::Error>> {
     // Validate all files
     let mut results = Vec::new();
     for file in files {
-        let result = validator.validate_file(&file)?;
-        results.push(result);
+        let errors = validator.validate_file(&file)?;
+        results.push(ValidationResult {
+            file_path: file,
+            is_valid: errors.is_empty(),
+            errors,
+        });
     }
 
     // Format and print results

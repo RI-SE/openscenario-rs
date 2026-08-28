@@ -52,6 +52,9 @@ pub mod types;
 
 #[cfg(feature = "builder")]
 pub mod builder;
+
+#[cfg(feature = "validation")]
+pub mod validation;
 // Re-export core types for convenience
 pub use error::{Error, Result};
 pub use types::scenario::storyboard::{

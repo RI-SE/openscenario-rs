@@ -29,6 +29,7 @@ markup_fmt = "0.24"
 
 [features]
 builder = []
+validation = []
 
 
 [dev-dependencies]
@@ -39,6 +40,7 @@ tempfile = "3.0"
 [[bin]]
 name = "xosc-validate"
 path = "tools/xosc_validate.rs"
+required-features = ["validation"]
 
 [[bin]]
 name = "scenario_analyzer"
