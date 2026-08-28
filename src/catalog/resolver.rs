@@ -8,10 +8,10 @@
 
 use crate::catalog::parameters::ParameterSubstitutionEngine;
 use crate::error::{Error, Result};
-use crate::types::catalogs::controllers::{CatalogController, ControllerCatalog};
-use crate::types::catalogs::environments::{CatalogEnvironment, EnvironmentCatalog};
-use crate::types::catalogs::routes::{CatalogRoute, RouteCatalog};
-use crate::types::catalogs::trajectories::{CatalogTrajectory, TrajectoryCatalog};
+use crate::types::catalogs::controllers::CatalogController;
+use crate::types::catalogs::environments::CatalogEnvironment;
+use crate::types::catalogs::routes::CatalogRoute;
+use crate::types::catalogs::trajectories::CatalogTrajectory;
 use std::collections::{HashMap, HashSet};
 
 /// Represents a resolved catalog entity
@@ -41,14 +41,15 @@ pub trait CatalogResolvable<T> {
 
 /// Central catalog manager for all catalog types
 pub struct CatalogManager {
-    /// Controller catalogs indexed by catalog name
-    pub controller_catalogs: HashMap<String, ControllerCatalog>,
+    /// Controller catalogs indexed by catalog name, holding the `Controller`
+    /// entries found in that catalog's `Catalog` element
+    pub controller_catalogs: HashMap<String, Vec<CatalogController>>,
     /// Trajectory catalogs indexed by catalog name
-    pub trajectory_catalogs: HashMap<String, TrajectoryCatalog>,
+    pub trajectory_catalogs: HashMap<String, Vec<CatalogTrajectory>>,
     /// Route catalogs indexed by catalog name
-    pub route_catalogs: HashMap<String, RouteCatalog>,
+    pub route_catalogs: HashMap<String, Vec<CatalogRoute>>,
     /// Environment catalogs indexed by catalog name
-    pub environment_catalogs: HashMap<String, EnvironmentCatalog>,
+    pub environment_catalogs: HashMap<String, Vec<CatalogEnvironment>>,
     /// Parameter resolver for handling parameter substitution
     pub parameter_resolver: ParameterSubstitutionEngine,
 }
@@ -80,22 +81,22 @@ impl CatalogManager {
     }
 
     /// Add a controller catalog
-    pub fn add_controller_catalog(&mut self, name: String, catalog: ControllerCatalog) {
+    pub fn add_controller_catalog(&mut self, name: String, catalog: Vec<CatalogController>) {
         self.controller_catalogs.insert(name, catalog);
     }
 
     /// Add a trajectory catalog
-    pub fn add_trajectory_catalog(&mut self, name: String, catalog: TrajectoryCatalog) {
+    pub fn add_trajectory_catalog(&mut self, name: String, catalog: Vec<CatalogTrajectory>) {
         self.trajectory_catalogs.insert(name, catalog);
     }
 
     /// Add a route catalog
-    pub fn add_route_catalog(&mut self, name: String, catalog: RouteCatalog) {
+    pub fn add_route_catalog(&mut self, name: String, catalog: Vec<CatalogRoute>) {
         self.route_catalogs.insert(name, catalog);
     }
 
     /// Add an environment catalog
-    pub fn add_environment_catalog(&mut self, name: String, catalog: EnvironmentCatalog) {
+    pub fn add_environment_catalog(&mut self, name: String, catalog: Vec<CatalogEnvironment>) {
         self.environment_catalogs.insert(name, catalog);
     }
 
@@ -131,7 +132,7 @@ impl CatalogManager {
         params: &HashMap<String, String>,
     ) -> Result<ResolvedCatalog<CatalogController>> {
         if let Some(catalog) = self.controller_catalogs.get(catalog_name) {
-            for controller in &catalog.controllers {
+            for controller in catalog {
                 if controller.name == entry_name {
                     let resolved_controller =
                         if !params.is_empty() || !self.parameter_resolver.context().is_empty() {
@@ -151,8 +152,7 @@ impl CatalogManager {
                     ));
                 }
             }
-            let available: Vec<String> =
-                catalog.controllers.iter().map(|c| c.name.clone()).collect();
+            let available: Vec<String> = catalog.iter().map(|c| c.name.clone()).collect();
             return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
                 .with_context(&format!("Available controllers: {}", available.join(", "))));
         }
@@ -177,7 +177,7 @@ impl CatalogManager {
         params: &HashMap<String, String>,
     ) -> Result<ResolvedCatalog<CatalogTrajectory>> {
         if let Some(catalog) = self.trajectory_catalogs.get(catalog_name) {
-            for trajectory in &catalog.trajectories {
+            for trajectory in catalog {
                 if trajectory.name == entry_name {
                     return Ok(ResolvedCatalog::with_parameters(
                         trajectory.clone(),
@@ -187,11 +187,7 @@ impl CatalogManager {
                     ));
                 }
             }
-            let available: Vec<String> = catalog
-                .trajectories
-                .iter()
-                .map(|t| t.name.clone())
-                .collect();
+            let available: Vec<String> = catalog.iter().map(|t| t.name.clone()).collect();
             return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
                 .with_context(&format!("Available trajectories: {}", available.join(", "))));
         }
@@ -216,7 +212,7 @@ impl CatalogManager {
         params: &HashMap<String, String>,
     ) -> Result<ResolvedCatalog<CatalogRoute>> {
         if let Some(catalog) = self.route_catalogs.get(catalog_name) {
-            for route in &catalog.routes {
+            for route in catalog {
                 if route.name == entry_name {
                     return Ok(ResolvedCatalog::with_parameters(
                         route.clone(),
@@ -226,7 +222,7 @@ impl CatalogManager {
                     ));
                 }
             }
-            let available: Vec<String> = catalog.routes.iter().map(|r| r.name.clone()).collect();
+            let available: Vec<String> = catalog.iter().map(|r| r.name.clone()).collect();
             return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
                 .with_context(&format!("Available routes: {}", available.join(", "))));
         }
@@ -251,7 +247,7 @@ impl CatalogManager {
         params: &HashMap<String, String>,
     ) -> Result<ResolvedCatalog<CatalogEnvironment>> {
         if let Some(catalog) = self.environment_catalogs.get(catalog_name) {
-            for environment in &catalog.environments {
+            for environment in catalog {
                 if environment.name == entry_name {
                     return Ok(ResolvedCatalog::with_parameters(
                         environment.clone(),
@@ -261,11 +257,7 @@ impl CatalogManager {
                     ));
                 }
             }
-            let available: Vec<String> = catalog
-                .environments
-                .iter()
-                .map(|e| e.name.clone())
-                .collect();
+            let available: Vec<String> = catalog.iter().map(|e| e.name.clone()).collect();
             return Err(Error::catalog_entry_not_found(catalog_name, entry_name)
                 .with_context(&format!("Available environments: {}", available.join(", "))));
         }

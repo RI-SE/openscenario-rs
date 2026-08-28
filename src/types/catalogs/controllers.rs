@@ -3,40 +3,11 @@
 //! This module contains catalog-specific controller types that enable reuse of
 //! controller definitions across multiple scenarios with parameter substitution.
 
-use crate::types::basic::{Int, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{OSString, ParameterDeclarations, Value};
 use crate::types::controllers::Controller;
 use crate::types::entities::vehicle::{Properties, Property};
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
-
-/// Controller catalog containing reusable controller definitions
-///
-/// Represents a collection of controller definitions that can be referenced
-/// from scenarios, enabling modular controller design and reuse.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "ControllerCatalog")]
-pub struct ControllerCatalog {
-    /// Version information for catalog compatibility
-    #[serde(rename = "@revMajor")]
-    pub rev_major: Int,
-
-    #[serde(rename = "@revMinor")]
-    pub rev_minor: Int,
-
-    /// Collection of controller entries in this catalog
-    #[serde(rename = "Controller")]
-    pub controllers: Vec<CatalogController>,
-}
-
-impl Default for ControllerCatalog {
-    fn default() -> Self {
-        Self {
-            rev_major: Int::literal(1),
-            rev_minor: Int::literal(0),
-            controllers: Vec::new(),
-        }
-    }
-}
 
 /// Controller definition within a catalog
 ///
@@ -116,32 +87,6 @@ impl Default for ControllerProperty {
 }
 
 // Implementation methods for catalog controllers
-
-impl ControllerCatalog {
-    /// Creates a new controller catalog with version information
-    pub fn new(rev_major: i32, rev_minor: i32) -> Self {
-        Self {
-            rev_major: Value::Literal(rev_major),
-            rev_minor: Value::Literal(rev_minor),
-            controllers: Vec::new(),
-        }
-    }
-
-    /// Adds a controller to this catalog
-    pub fn add_controller(&mut self, controller: CatalogController) {
-        self.controllers.push(controller);
-    }
-
-    /// Finds a controller by name in this catalog
-    pub fn find_controller(&self, name: &str) -> Option<&CatalogController> {
-        self.controllers.iter().find(|c| c.name == name)
-    }
-
-    /// Gets all controller names in this catalog
-    pub fn controller_names(&self) -> Vec<&str> {
-        self.controllers.iter().map(|c| c.name.as_str()).collect()
-    }
-}
 
 impl CatalogController {
     /// Creates a new catalog controller with the specified name and type
@@ -268,15 +213,6 @@ mod tests {
     use crate::types::enums::ParameterType;
 
     #[test]
-    fn test_controller_catalog_creation() {
-        let catalog = ControllerCatalog::new(1, 2);
-
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
-        assert_eq!(catalog.rev_minor.as_literal().unwrap(), &2);
-        assert!(catalog.controllers.is_empty());
-    }
-
-    #[test]
     fn test_catalog_controller_creation() {
         let controller =
             CatalogController::new("TestController".to_string(), ControllerType::Movement);
@@ -285,27 +221,6 @@ mod tests {
         assert_eq!(controller.controller_type, Some(ControllerType::Movement));
         assert!(controller.parameter_declarations.is_none());
         assert!(controller.properties.is_none());
-    }
-
-    #[test]
-    fn test_controller_catalog_operations() {
-        let mut catalog = ControllerCatalog::new(1, 0);
-        let controller1 =
-            CatalogController::new("Controller1".to_string(), ControllerType::Movement);
-        let controller2 =
-            CatalogController::new("Controller2".to_string(), ControllerType::Lateral);
-
-        catalog.add_controller(controller1);
-        catalog.add_controller(controller2);
-
-        assert_eq!(catalog.controllers.len(), 2);
-        assert!(catalog.find_controller("Controller1").is_some());
-        assert!(catalog.find_controller("Controller2").is_some());
-        assert!(catalog.find_controller("NonExistent").is_none());
-
-        let names = catalog.controller_names();
-        assert!(names.contains(&"Controller1"));
-        assert!(names.contains(&"Controller2"));
     }
 
     #[test]
@@ -371,20 +286,6 @@ mod tests {
     }
 
     #[test]
-    fn test_controller_serialization() {
-        let catalog = ControllerCatalog::new(1, 0);
-
-        // Test XML serialization
-        let xml_result = quick_xml::se::to_string(&catalog);
-        assert!(xml_result.is_ok());
-
-        let xml = xml_result.unwrap();
-        assert!(xml.contains("ControllerCatalog"));
-        assert!(xml.contains("revMajor=\"1\""));
-        assert!(xml.contains("revMinor=\"0\""));
-    }
-
-    #[test]
     fn test_to_scenario_controller() {
         let mut properties = ControllerProperties::default();
         properties.add_property(
@@ -413,12 +314,10 @@ mod tests {
 
     #[test]
     fn test_defaults() {
-        let catalog = ControllerCatalog::default();
         let controller = CatalogController::default();
         let properties = ControllerProperties::default();
         let property = ControllerProperty::default();
 
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
         assert_eq!(controller.name, "DefaultCatalogController");
         assert!(properties.properties.is_empty());
         assert_eq!(property.name, "defaultProperty");

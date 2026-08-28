@@ -3,41 +3,12 @@
 //! This module contains catalog-specific environment types that enable reuse of
 //! environment configurations across multiple scenarios with parameter substitution.
 
-use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Boolean, Double, OSString, ParameterDeclarations, Value};
 use crate::types::environment::{
     Environment, Fog, Precipitation, RoadCondition, Sun, TimeOfDay, Weather,
 };
 use crate::types::enums::{CloudState, FractionalCloudCover, Wetness};
 use serde::{Deserialize, Serialize};
-
-/// Environment catalog containing reusable environment definitions
-///
-/// Represents a collection of environment configurations that can be referenced
-/// from scenarios, enabling modular environment design and weather/lighting reuse.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "EnvironmentCatalog")]
-pub struct EnvironmentCatalog {
-    /// Version information for catalog compatibility
-    #[serde(rename = "@revMajor")]
-    pub rev_major: Int,
-
-    #[serde(rename = "@revMinor")]
-    pub rev_minor: Int,
-
-    /// Collection of environment entries in this catalog
-    #[serde(rename = "Environment")]
-    pub environments: Vec<CatalogEnvironment>,
-}
-
-impl Default for EnvironmentCatalog {
-    fn default() -> Self {
-        Self {
-            rev_major: Value::Literal(1),
-            rev_minor: Value::Literal(0),
-            environments: Vec::new(),
-        }
-    }
-}
 
 /// Environment definition within a catalog
 ///
@@ -240,32 +211,6 @@ pub struct CatalogRoadCondition {
 }
 
 // Implementation methods for catalog environments
-
-impl EnvironmentCatalog {
-    /// Creates a new environment catalog with version information
-    pub fn new(rev_major: i32, rev_minor: i32) -> Self {
-        Self {
-            rev_major: Value::Literal(rev_major),
-            rev_minor: Value::Literal(rev_minor),
-            environments: Vec::new(),
-        }
-    }
-
-    /// Adds an environment to this catalog
-    pub fn add_environment(&mut self, environment: CatalogEnvironment) {
-        self.environments.push(environment);
-    }
-
-    /// Finds an environment by name in this catalog
-    pub fn find_environment(&self, name: &str) -> Option<&CatalogEnvironment> {
-        self.environments.iter().find(|e| e.name == name)
-    }
-
-    /// Gets all environment names in this catalog
-    pub fn environment_names(&self) -> Vec<&str> {
-        self.environments.iter().map(|e| e.name.as_str()).collect()
-    }
-}
 
 impl CatalogEnvironment {
     /// Creates a new catalog environment with the specified name
@@ -551,40 +496,12 @@ mod tests {
     use crate::types::enums::ParameterType;
 
     #[test]
-    fn test_environment_catalog_creation() {
-        let catalog = EnvironmentCatalog::new(1, 2);
-
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
-        assert_eq!(catalog.rev_minor.as_literal().unwrap(), &2);
-        assert!(catalog.environments.is_empty());
-    }
-
-    #[test]
     fn test_catalog_environment_creation() {
         let environment = CatalogEnvironment::new("TestEnvironment".to_string());
 
         assert_eq!(environment.name, "TestEnvironment");
         assert!(environment.parameter_declarations.is_none());
         assert!(environment.time_of_day.is_none());
-    }
-
-    #[test]
-    fn test_environment_catalog_operations() {
-        let mut catalog = EnvironmentCatalog::new(1, 0);
-        let env1 = CatalogEnvironment::new("SunnyDay".to_string());
-        let env2 = CatalogEnvironment::new("RainyNight".to_string());
-
-        catalog.add_environment(env1);
-        catalog.add_environment(env2);
-
-        assert_eq!(catalog.environments.len(), 2);
-        assert!(catalog.find_environment("SunnyDay").is_some());
-        assert!(catalog.find_environment("RainyNight").is_some());
-        assert!(catalog.find_environment("NonExistent").is_none());
-
-        let names = catalog.environment_names();
-        assert!(names.contains(&"SunnyDay"));
-        assert!(names.contains(&"RainyNight"));
     }
 
     #[test]
@@ -695,20 +612,6 @@ mod tests {
     }
 
     #[test]
-    fn test_environment_serialization() {
-        let catalog = EnvironmentCatalog::new(1, 0);
-
-        // Test XML serialization
-        let xml_result = quick_xml::se::to_string(&catalog);
-        assert!(xml_result.is_ok());
-
-        let xml = xml_result.unwrap();
-        assert!(xml.contains("EnvironmentCatalog"));
-        assert!(xml.contains("revMajor=\"1\""));
-        assert!(xml.contains("revMinor=\"0\""));
-    }
-
-    #[test]
     fn test_resolve_environment() {
         let mut catalog_env = CatalogEnvironment::new("TestEnvironment".to_string());
 
@@ -791,11 +694,9 @@ mod tests {
 
     #[test]
     fn test_defaults() {
-        let catalog = EnvironmentCatalog::default();
         let environment = CatalogEnvironment::new("DefaultCatalogEnvironment".to_string());
         let weather = CatalogWeather::default();
 
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
         assert_eq!(environment.name, "DefaultCatalogEnvironment");
         assert!(environment.time_of_day.is_none());
         assert!(weather.cloud_state.is_none());

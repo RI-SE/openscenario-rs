@@ -3,39 +3,10 @@
 //! This module contains catalog-specific route types that enable reuse of
 //! route definitions across multiple scenarios with parameter substitution.
 
-use crate::types::basic::{Boolean, Int, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
 use crate::types::enums::RouteStrategy;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
-
-/// Route catalog containing reusable route definitions
-///
-/// Represents a collection of route definitions that can be referenced
-/// from scenarios, enabling modular route design and path reuse.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "RouteCatalog")]
-pub struct RouteCatalog {
-    /// Version information for catalog compatibility
-    #[serde(rename = "@revMajor")]
-    pub rev_major: Int,
-
-    #[serde(rename = "@revMinor")]
-    pub rev_minor: Int,
-
-    /// Collection of route entries in this catalog
-    #[serde(rename = "Route")]
-    pub routes: Vec<CatalogRoute>,
-}
-
-impl Default for RouteCatalog {
-    fn default() -> Self {
-        Self {
-            rev_major: Value::Literal(1),
-            rev_minor: Value::Literal(0),
-            routes: Vec::new(),
-        }
-    }
-}
 
 /// Route definition within a catalog
 ///
@@ -143,32 +114,6 @@ pub struct RouteParameterAssignment {
 }
 
 // Implementation methods for catalog routes
-
-impl RouteCatalog {
-    /// Creates a new route catalog with version information
-    pub fn new(rev_major: i32, rev_minor: i32) -> Self {
-        Self {
-            rev_major: Value::Literal(rev_major),
-            rev_minor: Value::Literal(rev_minor),
-            routes: Vec::new(),
-        }
-    }
-
-    /// Adds a route to this catalog
-    pub fn add_route(&mut self, route: CatalogRoute) {
-        self.routes.push(route);
-    }
-
-    /// Finds a route by name in this catalog
-    pub fn find_route(&self, name: &str) -> Option<&CatalogRoute> {
-        self.routes.iter().find(|r| r.name == name)
-    }
-
-    /// Gets all route names in this catalog
-    pub fn route_names(&self) -> Vec<&str> {
-        self.routes.iter().map(|r| r.name.as_str()).collect()
-    }
-}
 
 impl CatalogRoute {
     /// Creates a new catalog route with the specified name
@@ -367,15 +312,6 @@ mod tests {
     use crate::types::enums::ParameterType;
 
     #[test]
-    fn test_route_catalog_creation() {
-        let catalog = RouteCatalog::new(1, 2);
-
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
-        assert_eq!(catalog.rev_minor.as_literal().unwrap(), &2);
-        assert!(catalog.routes.is_empty());
-    }
-
-    #[test]
     fn test_catalog_route_creation() {
         let route = CatalogRoute::new("TestRoute".to_string());
 
@@ -383,25 +319,6 @@ mod tests {
         assert_eq!(route.closed.as_literal().unwrap(), &false);
         assert!(route.parameter_declarations.is_none());
         assert!(route.waypoints.is_empty());
-    }
-
-    #[test]
-    fn test_route_catalog_operations() {
-        let mut catalog = RouteCatalog::new(1, 0);
-        let route1 = CatalogRoute::new("Route1".to_string());
-        let route2 = CatalogRoute::new("Route2".to_string());
-
-        catalog.add_route(route1);
-        catalog.add_route(route2);
-
-        assert_eq!(catalog.routes.len(), 2);
-        assert!(catalog.find_route("Route1").is_some());
-        assert!(catalog.find_route("Route2").is_some());
-        assert!(catalog.find_route("NonExistent").is_none());
-
-        let names = catalog.route_names();
-        assert!(names.contains(&"Route1"));
-        assert!(names.contains(&"Route2"));
     }
 
     #[test]
@@ -495,20 +412,6 @@ mod tests {
     }
 
     #[test]
-    fn test_route_serialization() {
-        let catalog = RouteCatalog::new(1, 0);
-
-        // Test XML serialization
-        let xml_result = quick_xml::se::to_string(&catalog);
-        assert!(xml_result.is_ok());
-
-        let xml = xml_result.unwrap();
-        assert!(xml.contains("RouteCatalog"));
-        assert!(xml.contains("revMajor=\"1\""));
-        assert!(xml.contains("revMinor=\"0\""));
-    }
-
-    #[test]
     fn test_catalog_route_into_scenario_entity() {
         use crate::types::catalogs::entities::CatalogEntity;
 
@@ -537,11 +440,9 @@ mod tests {
 
     #[test]
     fn test_defaults() {
-        let catalog = RouteCatalog::default();
         let route = CatalogRoute::default();
         let waypoint = RouteWaypoint::default();
 
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
         assert_eq!(route.name, "DefaultCatalogRoute");
         assert_eq!(waypoint.route_strategy, RouteStrategy::Fastest);
     }

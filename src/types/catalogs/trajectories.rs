@@ -7,35 +7,6 @@ use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations,
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-/// Trajectory catalog containing reusable trajectory definitions
-///
-/// Represents a collection of trajectory definitions that can be referenced
-/// from scenarios, enabling modular trajectory design and path reuse.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "TrajectoryCatalog")]
-pub struct TrajectoryCatalog {
-    /// Version information for catalog compatibility
-    #[serde(rename = "@revMajor")]
-    pub rev_major: Int,
-
-    #[serde(rename = "@revMinor")]
-    pub rev_minor: Int,
-
-    /// Collection of trajectory entries in this catalog
-    #[serde(rename = "Trajectory")]
-    pub trajectories: Vec<CatalogTrajectory>,
-}
-
-impl Default for TrajectoryCatalog {
-    fn default() -> Self {
-        Self {
-            rev_major: Int::literal(1),
-            rev_minor: Int::literal(0),
-            trajectories: Vec::new(),
-        }
-    }
-}
-
 /// Trajectory definition within a catalog
 ///
 /// Extends the base Trajectory type with catalog-specific functionality
@@ -225,32 +196,6 @@ pub struct NurbsKnot {
 }
 
 // Implementation methods for catalog trajectories
-
-impl TrajectoryCatalog {
-    /// Creates a new trajectory catalog with version information
-    pub fn new(rev_major: i32, rev_minor: i32) -> Self {
-        Self {
-            rev_major: Value::Literal(rev_major),
-            rev_minor: Value::Literal(rev_minor),
-            trajectories: Vec::new(),
-        }
-    }
-
-    /// Adds a trajectory to this catalog
-    pub fn add_trajectory(&mut self, trajectory: CatalogTrajectory) {
-        self.trajectories.push(trajectory);
-    }
-
-    /// Finds a trajectory by name in this catalog
-    pub fn find_trajectory(&self, name: &str) -> Option<&CatalogTrajectory> {
-        self.trajectories.iter().find(|t| t.name == name)
-    }
-
-    /// Gets all trajectory names in this catalog
-    pub fn trajectory_names(&self) -> Vec<&str> {
-        self.trajectories.iter().map(|t| t.name.as_str()).collect()
-    }
-}
 
 impl CatalogTrajectory {
     /// Creates a new catalog trajectory with the specified name
@@ -586,15 +531,6 @@ mod tests {
     }
 
     #[test]
-    fn test_trajectory_catalog_creation() {
-        let catalog = TrajectoryCatalog::new(1, 2);
-
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
-        assert_eq!(catalog.rev_minor.as_literal().unwrap(), &2);
-        assert!(catalog.trajectories.is_empty());
-    }
-
-    #[test]
     fn test_catalog_trajectory_creation() {
         let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
             vertices: Vec::new(),
@@ -604,35 +540,6 @@ mod tests {
         assert_eq!(trajectory.name, "TestTrajectory");
         assert_eq!(trajectory.closed.as_literal(), Some(&false));
         assert!(trajectory.parameter_declarations.is_none());
-    }
-
-    #[test]
-    fn test_trajectory_catalog_operations() {
-        let mut catalog = TrajectoryCatalog::new(1, 0);
-
-        let shape1 = CatalogTrajectoryShape::Polyline(CatalogPolyline {
-            vertices: Vec::new(),
-        });
-        let trajectory1 = CatalogTrajectory::new("Trajectory1".to_string(), shape1);
-
-        let shape2 = CatalogTrajectoryShape::Clothoid(CatalogClothoid::new(
-            Value::Literal(0.1),
-            Value::Literal(0.01),
-            Value::Literal(100.0),
-        ));
-        let trajectory2 = CatalogTrajectory::new("Trajectory2".to_string(), shape2);
-
-        catalog.add_trajectory(trajectory1);
-        catalog.add_trajectory(trajectory2);
-
-        assert_eq!(catalog.trajectories.len(), 2);
-        assert!(catalog.find_trajectory("Trajectory1").is_some());
-        assert!(catalog.find_trajectory("Trajectory2").is_some());
-        assert!(catalog.find_trajectory("NonExistent").is_none());
-
-        let names = catalog.trajectory_names();
-        assert!(names.contains(&"Trajectory1"));
-        assert!(names.contains(&"Trajectory2"));
     }
 
     #[test]
@@ -736,20 +643,6 @@ mod tests {
     }
 
     #[test]
-    fn test_trajectory_serialization() {
-        let catalog = TrajectoryCatalog::new(1, 0);
-
-        // Test XML serialization
-        let xml_result = quick_xml::se::to_string(&catalog);
-        assert!(xml_result.is_ok());
-
-        let xml = xml_result.unwrap();
-        assert!(xml.contains("TrajectoryCatalog"));
-        assert!(xml.contains("revMajor=\"1\""));
-        assert!(xml.contains("revMinor=\"0\""));
-    }
-
-    #[test]
     fn test_resolve_trajectory_polyline() {
         let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
             vertices: vec![
@@ -831,7 +724,6 @@ mod tests {
 
     #[test]
     fn test_defaults() {
-        let catalog = TrajectoryCatalog::default();
         let trajectory = CatalogTrajectory::default();
         let polyline = CatalogPolyline {
             vertices: Vec::new(),
@@ -843,7 +735,6 @@ mod tests {
         );
         let nurbs = CatalogNurbs::new(Value::Literal(2));
 
-        assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
         assert_eq!(trajectory.name, "DefaultCatalogTrajectory");
         assert!(polyline.vertices.is_empty());
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);

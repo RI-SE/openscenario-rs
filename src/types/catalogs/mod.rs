@@ -17,12 +17,6 @@ pub mod routes;
 pub mod trajectories;
 
 // Re-export catalog types with explicit imports to avoid ambiguity
-// Main catalog containers
-pub use controllers::ControllerCatalog;
-pub use environments::EnvironmentCatalog;
-pub use routes::RouteCatalog;
-pub use trajectories::TrajectoryCatalog;
-
 // Catalog entity types (from entities module - these are the primary definitions)
 pub use entities::{
     CatalogAxles, CatalogEntity, CatalogFrontAxle, CatalogManeuver, CatalogMiscObject,

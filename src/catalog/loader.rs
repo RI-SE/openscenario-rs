@@ -181,164 +181,168 @@ impl CatalogLoader {
         }
     }
 
-    /// Load a specific controller catalog from a file
+    /// Load the controller entries from a specific catalog file
+    ///
+    /// A catalog file is an `OpenSCENARIO` document whose body is a
+    /// `Catalog` element (see `CatalogFile`/`CatalogContent`); this parses
+    /// that structure and returns whatever `Controller` entries it holds
+    /// (empty if the file is a catalog of some other kind).
     pub fn load_controller_catalog<P: AsRef<Path>>(
         &self,
         file_path: P,
-    ) -> Result<crate::types::catalogs::controllers::ControllerCatalog> {
-        let path = file_path.as_ref();
-        if !path.exists() {
-            return Err(Error::file_not_found(&path.to_string_lossy()));
-        }
-
-        let xml_content = fs::read_to_string(path)
-            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
-
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
+    ) -> Result<Vec<CatalogController>> {
+        let catalog = self.load_and_parse_catalog_file(file_path)?;
+        Ok(catalog.catalog.controllers)
     }
 
-    /// Load a specific trajectory catalog from a file
+    /// Load the trajectory entries from a specific catalog file
     pub fn load_trajectory_catalog<P: AsRef<Path>>(
         &self,
         file_path: P,
-    ) -> Result<crate::types::catalogs::trajectories::TrajectoryCatalog> {
-        let path = file_path.as_ref();
-        if !path.exists() {
-            return Err(Error::file_not_found(&path.to_string_lossy()));
-        }
-
-        let xml_content = fs::read_to_string(path)
-            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
-
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
+    ) -> Result<Vec<crate::types::catalogs::trajectories::CatalogTrajectory>> {
+        let catalog = self.load_and_parse_catalog_file(file_path)?;
+        Ok(catalog.catalog.trajectories)
     }
 
-    /// Load a specific route catalog from a file
+    /// Load the route entries from a specific catalog file
     pub fn load_route_catalog<P: AsRef<Path>>(
         &self,
         file_path: P,
-    ) -> Result<crate::types::catalogs::routes::RouteCatalog> {
-        let path = file_path.as_ref();
-        if !path.exists() {
-            return Err(Error::file_not_found(&path.to_string_lossy()));
-        }
-
-        let xml_content = fs::read_to_string(path)
-            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
-
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
+    ) -> Result<Vec<crate::types::catalogs::routes::CatalogRoute>> {
+        let catalog = self.load_and_parse_catalog_file(file_path)?;
+        Ok(catalog.catalog.routes)
     }
 
-    /// Load a specific environment catalog from a file
+    /// Load the environment entries from a specific catalog file
     pub fn load_environment_catalog<P: AsRef<Path>>(
         &self,
         file_path: P,
-    ) -> Result<crate::types::catalogs::environments::EnvironmentCatalog> {
-        let path = file_path.as_ref();
-        if !path.exists() {
-            return Err(Error::file_not_found(&path.to_string_lossy()));
-        }
-
-        let xml_content = fs::read_to_string(path)
-            .map_err(|e| Error::file_read_error(&path.to_string_lossy(), &e.to_string()))?;
-
-        quick_xml::de::from_str(&xml_content)
-            .map_err(|e| Error::parse_error(&path.to_string_lossy(), &e.to_string()))
+    ) -> Result<Vec<crate::types::catalogs::environments::CatalogEnvironment>> {
+        let catalog = self.load_and_parse_catalog_file(file_path)?;
+        Ok(catalog.catalog.environments)
     }
 
     /// Load all controller catalogs from a directory and return them as a hashmap
+    ///
+    /// A catalog directory legitimately mixes catalog kinds (e.g. a vehicle
+    /// catalog alongside a controller catalog), so a file that parses fine
+    /// but has no `Controller` entries is skipped rather than treated as an
+    /// error. A genuine parse failure (malformed XML, not a valid catalog
+    /// file at all) is propagated instead of silently discarded.
     pub fn load_controller_catalogs_from_directory(
         &self,
         directory: &Directory,
-    ) -> Result<
-        std::collections::HashMap<String, crate::types::catalogs::controllers::ControllerCatalog>,
-    > {
+    ) -> Result<std::collections::HashMap<String, Vec<CatalogController>>> {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            if let Ok(catalog) = self.load_controller_catalog(&file_path) {
-                let catalog_name = file_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                catalogs.insert(catalog_name, catalog);
+            let controllers = self.load_controller_catalog(&file_path)?;
+            if controllers.is_empty() {
+                continue;
             }
+            let catalog_name = file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            catalogs.insert(catalog_name, controllers);
         }
 
         Ok(catalogs)
     }
 
     /// Load all trajectory catalogs from a directory and return them as a hashmap
+    ///
+    /// See `load_controller_catalogs_from_directory` for the error-handling
+    /// rationale: files with no `Trajectory` entries are skipped, real parse
+    /// errors propagate.
     pub fn load_trajectory_catalogs_from_directory(
         &self,
         directory: &Directory,
     ) -> Result<
-        std::collections::HashMap<String, crate::types::catalogs::trajectories::TrajectoryCatalog>,
+        std::collections::HashMap<
+            String,
+            Vec<crate::types::catalogs::trajectories::CatalogTrajectory>,
+        >,
     > {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            if let Ok(catalog) = self.load_trajectory_catalog(&file_path) {
-                let catalog_name = file_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                catalogs.insert(catalog_name, catalog);
+            let trajectories = self.load_trajectory_catalog(&file_path)?;
+            if trajectories.is_empty() {
+                continue;
             }
+            let catalog_name = file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            catalogs.insert(catalog_name, trajectories);
         }
 
         Ok(catalogs)
     }
 
     /// Load all route catalogs from a directory and return them as a hashmap
+    ///
+    /// See `load_controller_catalogs_from_directory` for the error-handling
+    /// rationale: files with no `Route` entries are skipped, real parse
+    /// errors propagate.
     pub fn load_route_catalogs_from_directory(
         &self,
         directory: &Directory,
-    ) -> Result<std::collections::HashMap<String, crate::types::catalogs::routes::RouteCatalog>>
-    {
+    ) -> Result<
+        std::collections::HashMap<String, Vec<crate::types::catalogs::routes::CatalogRoute>>,
+    > {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            if let Ok(catalog) = self.load_route_catalog(&file_path) {
-                let catalog_name = file_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                catalogs.insert(catalog_name, catalog);
+            let routes = self.load_route_catalog(&file_path)?;
+            if routes.is_empty() {
+                continue;
             }
+            let catalog_name = file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            catalogs.insert(catalog_name, routes);
         }
 
         Ok(catalogs)
     }
 
     /// Load all environment catalogs from a directory and return them as a hashmap
+    ///
+    /// See `load_controller_catalogs_from_directory` for the error-handling
+    /// rationale: files with no `Environment` entries are skipped, real
+    /// parse errors propagate.
     pub fn load_environment_catalogs_from_directory(
         &self,
         directory: &Directory,
     ) -> Result<
-        std::collections::HashMap<String, crate::types::catalogs::environments::EnvironmentCatalog>,
+        std::collections::HashMap<
+            String,
+            Vec<crate::types::catalogs::environments::CatalogEnvironment>,
+        >,
     > {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 
         for file_path in catalog_files {
-            if let Ok(catalog) = self.load_environment_catalog(&file_path) {
-                let catalog_name = file_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                catalogs.insert(catalog_name, catalog);
+            let environments = self.load_environment_catalog(&file_path)?;
+            if environments.is_empty() {
+                continue;
             }
+            let catalog_name = file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            catalogs.insert(catalog_name, environments);
         }
 
         Ok(catalogs)
@@ -447,5 +451,214 @@ mod tests {
         assert_eq!(catalog.catalog_name().as_literal().unwrap(), "TestCatalog");
         assert_eq!(catalog.file_header.author.as_literal().unwrap(), "Test");
         assert_eq!(catalog.catalog.entity_count(), 0);
+    }
+
+    /// A real controller catalog file is an `OpenSCENARIO` document with a
+    /// `FileHeader` and a `Catalog name="..."` body holding `Controller`
+    /// entries (XSD `:849-861`, `:1532-1537`) — not a standalone
+    /// `<ControllerCatalog>` root, which does not exist in the schema.
+    #[test]
+    fn test_load_controller_catalog() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("controllers.xosc");
+        let xml = r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="Controller catalog" revMajor="1" revMinor="3"/>
+    <Catalog name="ControllerCatalog">
+        <Controller name="AdaptiveCruiseController" controllerType="movement"/>
+    </Catalog>
+</OpenSCENARIO>"#;
+        fs::write(&file_path, xml).unwrap();
+
+        let loader = CatalogLoader::new();
+        let controllers = loader.load_controller_catalog(&file_path)?;
+
+        assert_eq!(controllers.len(), 1);
+        assert_eq!(controllers[0].name, "AdaptiveCruiseController");
+
+        Ok(())
+    }
+
+    /// A real trajectory catalog file's `Trajectory` entries carry a
+    /// `Shape` (XSD `:2364` area references the schema-defined `Trajectory`
+    /// complex type used inside a `Catalog`), not a bespoke
+    /// `<TrajectoryCatalog>` root.
+    #[test]
+    fn test_load_trajectory_catalog() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("trajectories.xosc");
+        let xml = r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="Trajectory catalog" revMajor="1" revMinor="3"/>
+    <Catalog name="TrajectoryCatalog">
+        <Trajectory name="StraightPath" closed="false">
+            <Shape>
+                <Polyline>
+                    <Vertex>
+                        <Position><WorldPosition x="0" y="0" z="0"/></Position>
+                    </Vertex>
+                    <Vertex>
+                        <Position><WorldPosition x="10" y="0" z="0"/></Position>
+                    </Vertex>
+                </Polyline>
+            </Shape>
+        </Trajectory>
+    </Catalog>
+</OpenSCENARIO>"#;
+        fs::write(&file_path, xml).unwrap();
+
+        let loader = CatalogLoader::new();
+        let trajectories = loader.load_trajectory_catalog(&file_path)?;
+
+        assert_eq!(trajectories.len(), 1);
+        assert_eq!(trajectories[0].name, "StraightPath");
+
+        Ok(())
+    }
+
+    /// A real route catalog file's `Route` entries carry `Waypoint`
+    /// children directly under `Catalog`, not a bespoke `<RouteCatalog>`
+    /// root (XSD `:1963` `RouteCatalogLocation` is an unrelated location
+    /// type).
+    #[test]
+    fn test_load_route_catalog() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("routes.xosc");
+        let xml = r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="Route catalog" revMajor="1" revMinor="3"/>
+    <Catalog name="RouteCatalog">
+        <Route name="MainRoute" closed="false">
+            <Waypoint routeStrategy="shortest">
+                <Position><WorldPosition x="0" y="0" z="0"/></Position>
+            </Waypoint>
+            <Waypoint routeStrategy="shortest">
+                <Position><WorldPosition x="100" y="0" z="0"/></Position>
+            </Waypoint>
+        </Route>
+    </Catalog>
+</OpenSCENARIO>"#;
+        fs::write(&file_path, xml).unwrap();
+
+        let loader = CatalogLoader::new();
+        let routes = loader.load_route_catalog(&file_path)?;
+
+        assert_eq!(routes.len(), 1);
+        assert_eq!(routes[0].name, "MainRoute");
+        assert_eq!(routes[0].waypoints.len(), 2);
+
+        Ok(())
+    }
+
+    /// A real environment catalog file's `Environment` entries hold
+    /// `Weather`/`TimeOfDay`/`RoadCondition` directly under `Catalog`, not a
+    /// bespoke `<EnvironmentCatalog>` root (XSD `:1201`
+    /// `EnvironmentCatalogLocation` is an unrelated location type).
+    #[test]
+    fn test_load_environment_catalog() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("environments.xosc");
+        let xml = r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="Environment catalog" revMajor="1" revMinor="3"/>
+    <Catalog name="EnvironmentCatalog">
+        <Environment name="Sunny">
+            <Weather fractionalCloudCover="zeroOktas">
+                <Sun azimuth="0" elevation="1.571" illuminance="100000"/>
+            </Weather>
+        </Environment>
+    </Catalog>
+</OpenSCENARIO>"#;
+        fs::write(&file_path, xml).unwrap();
+
+        let loader = CatalogLoader::new();
+        let environments = loader.load_environment_catalog(&file_path)?;
+
+        assert_eq!(environments.len(), 1);
+        assert_eq!(environments[0].name, "Sunny");
+
+        Ok(())
+    }
+
+    /// Directory-level loaders skip files that legitimately parse as some
+    /// other catalog kind (no entries of the requested kind) but still
+    /// return the ones that do match.
+    #[test]
+    fn test_load_controller_catalogs_from_directory_skips_other_catalog_kinds() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+
+        fs::write(
+            dir_path.join("controllers.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="ControllerCatalog">
+        <Controller name="Ctrl1"/>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        // A route catalog living in the same directory - has zero Controller
+        // entries and must be skipped, not treated as an error.
+        fs::write(
+            dir_path.join("routes.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="RouteCatalog">
+        <Route name="R1" closed="false">
+            <Waypoint routeStrategy="shortest">
+                <Position><WorldPosition x="0" y="0" z="0"/></Position>
+            </Waypoint>
+        </Route>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let catalogs = loader.load_controller_catalogs_from_directory(&directory)?;
+
+        assert_eq!(catalogs.len(), 1);
+        assert_eq!(catalogs["controllers"].len(), 1);
+        assert_eq!(catalogs["controllers"][0].name, "Ctrl1");
+
+        Ok(())
+    }
+
+    /// A genuinely malformed `.xosc` file must fail loudly rather than be
+    /// swallowed as "no matching entries".
+    #[test]
+    fn test_load_controller_catalogs_from_directory_propagates_parse_errors() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+
+        fs::write(dir_path.join("broken.xosc"), "<not valid xml").unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+
+        assert!(loader
+            .load_controller_catalogs_from_directory(&directory)
+            .is_err());
+    }
+
+    /// Regression: catalog files used to be modeled as a standalone
+    /// `<ControllerCatalog revMajor=".." revMinor="..">` root element. No
+    /// such complexType exists in the schema (only the unrelated
+    /// `ControllerCatalogLocation`, XSD `:985`) — a real catalog file is
+    /// always an `OpenSCENARIO` document with a `Catalog` body. Confirm the
+    /// old invented shape is rejected rather than silently accepted.
+    #[test]
+    fn test_old_invented_root_shape_does_not_parse_as_catalog_file() {
+        let old_shape_xml = r#"<ControllerCatalog revMajor="1" revMinor="0">
+    <Controller name="Ctrl1"/>
+</ControllerCatalog>"#;
+
+        let loader = CatalogLoader::new();
+        assert!(loader.parse_catalog_from_string(old_shape_xml).is_err());
     }
 }
