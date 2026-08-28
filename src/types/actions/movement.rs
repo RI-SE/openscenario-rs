@@ -559,18 +559,78 @@ pub enum FinalSpeedChoice {
     RelativeSpeedToMaster(RelativeSpeedToMaster),
 }
 
+/// Steady state defined by a target distance.
+///
+/// XSD `TargetDistanceSteadyState` (:2142-2144): required `@distance`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TargetDistanceSteadyState {
+    #[serde(rename = "@distance")]
+    pub distance: Double,
+}
+
+/// Steady state defined by a target time.
+///
+/// XSD `TargetTimeSteadyState` (:2145-2147): required `@time`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TargetTimeSteadyState {
+    #[serde(rename = "@time")]
+    pub time: Double,
+}
+
 /// Absolute speed specification
+///
+/// XSD `AbsoluteSpeed` (:672-677): required `@value` plus the optional
+/// `SteadyState` group (:2075-2080), a choice of `TargetDistanceSteadyState`
+/// | `TargetTimeSteadyState`, modeled here as parallel optional siblings.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsoluteSpeed {
     #[serde(rename = "@value")]
     pub value: Double,
+
+    /// SteadyState choice branch: target distance
+    #[serde(
+        rename = "TargetDistanceSteadyState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub target_distance_steady_state: Option<TargetDistanceSteadyState>,
+
+    /// SteadyState choice branch: target time
+    #[serde(
+        rename = "TargetTimeSteadyState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub target_time_steady_state: Option<TargetTimeSteadyState>,
 }
 
 /// Relative speed to master specification
+///
+/// XSD `RelativeSpeedToMaster` (:1889-1895): required `@speedTargetValueType`
+/// and `@value`, plus the optional `SteadyState` group.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeSpeedToMaster {
+    #[serde(rename = "@speedTargetValueType")]
+    pub speed_target_value_type: SpeedTargetValueType,
+
     #[serde(rename = "@value")]
     pub value: Double,
+
+    /// SteadyState choice branch: target distance
+    #[serde(
+        rename = "TargetDistanceSteadyState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub target_distance_steady_state: Option<TargetDistanceSteadyState>,
+
+    /// SteadyState choice branch: target time
+    #[serde(
+        rename = "TargetTimeSteadyState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub target_time_steady_state: Option<TargetTimeSteadyState>,
 }
 
 /// Acquire position action for moving to a specific position
@@ -1154,6 +1214,8 @@ impl Default for AbsoluteSpeed {
     fn default() -> Self {
         Self {
             value: Double::literal(10.0),
+            target_distance_steady_state: None,
+            target_time_steady_state: None,
         }
     }
 }
@@ -1161,7 +1223,10 @@ impl Default for AbsoluteSpeed {
 impl Default for RelativeSpeedToMaster {
     fn default() -> Self {
         Self {
+            speed_target_value_type: SpeedTargetValueType::Delta,
             value: Double::literal(0.0),
+            target_distance_steady_state: None,
+            target_time_steady_state: None,
         }
     }
 }
@@ -1548,6 +1613,8 @@ mod tests {
             final_speed: Some(FinalSpeed {
                 speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
                     value: Double::literal(15.0),
+                    target_distance_steady_state: None,
+                    target_time_steady_state: None,
                 }),
             }),
             target_tolerance_master: Some(Double::literal(1.0)),
@@ -1629,6 +1696,8 @@ mod tests {
         let abs_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
                 value: Double::literal(25.0),
+                target_distance_steady_state: None,
+                target_time_steady_state: None,
             }),
         };
 
@@ -1639,7 +1708,10 @@ mod tests {
         // Test relative speed to master
         let rel_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
+                speed_target_value_type: SpeedTargetValueType::Delta,
                 value: Double::literal(-5.0),
+                target_distance_steady_state: None,
+                target_time_steady_state: None,
             }),
         };
 

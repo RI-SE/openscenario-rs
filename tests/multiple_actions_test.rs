@@ -12,10 +12,14 @@ fn test_event_multiple_actions_struct() {
         priority: Priority::Override,
         actions: vec![
             StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: Value::literal("Action1".to_string()),
                 private_action: Some(StoryPrivateAction::default()),
             },
             StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: Value::literal("Action2".to_string()),
                 private_action: Some(StoryPrivateAction::default()),
             },
@@ -85,10 +89,14 @@ fn test_event_serialization_with_multiple_actions() {
         priority: Priority::Parallel,
         actions: vec![
             StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: Value::literal("FirstAction".to_string()),
                 private_action: None,
             },
             StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: Value::literal("SecondAction".to_string()),
                 private_action: None,
             },

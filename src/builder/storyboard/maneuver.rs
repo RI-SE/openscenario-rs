@@ -177,6 +177,7 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
                     },
                 };
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
@@ -190,6 +191,7 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
             }
             crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -223,6 +225,8 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -309,6 +313,7 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
                     },
                 };
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
@@ -322,6 +327,7 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
             }
             crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -354,6 +360,8 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
                 })
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -564,6 +572,7 @@ impl DetachedSpeedActionBuilder {
                     },
                 };
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
@@ -597,6 +606,8 @@ impl DetachedSpeedActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -629,6 +640,7 @@ impl DetachedSpeedActionBuilder {
                     },
                 };
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
@@ -662,6 +674,8 @@ impl DetachedSpeedActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -694,6 +708,7 @@ impl DetachedSpeedActionBuilder {
                     },
                 };
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: Some(init_long_action),
                     lateral_action: None,
                     visibility_action: None,
@@ -727,6 +742,8 @@ impl DetachedSpeedActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("SpeedAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -778,6 +795,7 @@ impl DetachedTeleportActionBuilder {
         let story_private_action = match private_action {
             crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -814,6 +832,8 @@ impl DetachedTeleportActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -831,6 +851,7 @@ impl DetachedTeleportActionBuilder {
         let story_private_action = match private_action {
             crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -867,6 +888,8 @@ impl DetachedTeleportActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -884,6 +907,7 @@ impl DetachedTeleportActionBuilder {
         let story_private_action = match private_action {
             crate::types::actions::wrappers::PrivateAction::TeleportAction(teleport_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -920,6 +944,8 @@ impl DetachedTeleportActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("TeleportAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1029,6 +1055,7 @@ impl DetachedFollowTrajectoryActionBuilder {
         let story_private_action = match private_action {
             crate::types::actions::wrappers::PrivateAction::RoutingAction(routing_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -1067,6 +1094,8 @@ impl DetachedFollowTrajectoryActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1084,6 +1113,7 @@ impl DetachedFollowTrajectoryActionBuilder {
         let story_private_action = match private_action {
             crate::types::actions::wrappers::PrivateAction::RoutingAction(routing_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -1122,6 +1152,8 @@ impl DetachedFollowTrajectoryActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1139,6 +1171,7 @@ impl DetachedFollowTrajectoryActionBuilder {
         let story_private_action = match private_action {
             crate::types::actions::wrappers::PrivateAction::RoutingAction(routing_action) => {
                 StoryPrivateAction {
+                    activate_controller_action: None,
                     longitudinal_action: None,
                     lateral_action: None,
                     visibility_action: None,
@@ -1177,6 +1210,8 @@ impl DetachedFollowTrajectoryActionBuilder {
                     .ok()
             }),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1238,6 +1273,8 @@ impl DetachedLongitudinalDistanceActionBuilder {
             priority: Priority::Override,
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("LongitudinalDistanceAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1293,6 +1330,8 @@ impl DetachedSpeedProfileActionBuilder {
             priority: Priority::Override,
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("SpeedProfileAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1354,6 +1393,8 @@ impl DetachedAssignRouteActionBuilder {
             priority: Priority::Override,
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("AssignRouteAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1419,6 +1460,8 @@ impl DetachedSynchronizeActionBuilder {
             priority: Priority::Override,
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("SynchronizeAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1484,6 +1527,8 @@ impl DetachedVisibilityActionBuilder {
             priority: Priority::Override,
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
+                global_action: None,
+                user_defined_action: None,
                 name: OSString::literal("VisibilityAction".to_string()),
                 private_action: Some(story_private_action),
             }],
@@ -1534,6 +1579,7 @@ fn convert_private_action_to_story(
                 },
             };
             StoryPrivateAction {
+                activate_controller_action: None,
                 longitudinal_action: Some(init_long_action),
                 lateral_action: None,
                 visibility_action: None,
@@ -1546,6 +1592,7 @@ fn convert_private_action_to_story(
             }
         }
         PrivateAction::LateralAction(lat_action) => StoryPrivateAction {
+            activate_controller_action: None,
             longitudinal_action: None,
             lateral_action: Some(lat_action),
             visibility_action: None,
@@ -1557,6 +1604,7 @@ fn convert_private_action_to_story(
             trailer_action: None,
         },
         PrivateAction::VisibilityAction(vis_action) => StoryPrivateAction {
+            activate_controller_action: None,
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: Some(vis_action),
@@ -1568,6 +1616,7 @@ fn convert_private_action_to_story(
             trailer_action: None,
         },
         PrivateAction::SynchronizeAction(sync_action) => StoryPrivateAction {
+            activate_controller_action: None,
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
@@ -1579,6 +1628,7 @@ fn convert_private_action_to_story(
             trailer_action: None,
         },
         PrivateAction::TeleportAction(teleport_action) => StoryPrivateAction {
+            activate_controller_action: None,
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
@@ -1590,6 +1640,7 @@ fn convert_private_action_to_story(
             trailer_action: None,
         },
         PrivateAction::RoutingAction(routing_action) => StoryPrivateAction {
+            activate_controller_action: None,
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
@@ -1601,6 +1652,7 @@ fn convert_private_action_to_story(
             trailer_action: None,
         },
         _ => StoryPrivateAction {
+            activate_controller_action: None,
             longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,

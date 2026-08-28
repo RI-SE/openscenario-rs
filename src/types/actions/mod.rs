@@ -40,6 +40,8 @@ pub use movement::{
     SpeedAction,
     SpeedProfileAction,
     SynchronizeAction,
+    TargetDistanceSteadyState,
+    TargetTimeSteadyState,
     TeleportAction,
     Trajectory,
     TrajectoryFollowingMode,

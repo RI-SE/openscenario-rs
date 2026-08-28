@@ -954,8 +954,11 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         maximum_execution_count: Some(Value::literal(1)),
         priority: Priority::Override,
         actions: vec![StoryAction {
+            global_action: None,
+            user_defined_action: None,
             name: Value::literal("SpeedAction1".to_string()),
             private_action: Some(StoryPrivateAction {
+                activate_controller_action: None,
                 longitudinal_action: Some(LongitudinalAction {
                     speed_action: Some(speed_action),
                     longitudinal_distance_action: None,

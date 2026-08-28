@@ -18,29 +18,52 @@ use super::triggers::Trigger;
 use crate::types::basic::ParameterDeclarations;
 
 /// Story-level Action wrapper with name attribute and action content
+///
+/// XSD `Action` (:705-712): required `@name` plus a choice of `GlobalAction`
+/// | `UserDefinedAction` | `PrivateAction`, modeled as parallel optional
+/// siblings (see module note on `wrappers::NamedAction`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StoryAction {
     /// Name of the action
     #[serde(rename = "@name")]
     pub name: OSString,
 
+    /// Global action affecting the whole scenario
+    #[serde(
+        rename = "GlobalAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub global_action: Option<StoryGlobalAction>,
+
+    /// User-defined (custom command) action
+    #[serde(
+        rename = "UserDefinedAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub user_defined_action: Option<crate::types::actions::wrappers::UserDefinedAction>,
+
     /// Private action for individual entities
-    #[serde(rename = "PrivateAction", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "PrivateAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub private_action: Option<StoryPrivateAction>,
-    // Other action types can be added later as optional fields
 }
 
-/// Types of actions available at the story level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub enum StoryActionType {
-    /// Private action for individual entities
-    PrivateAction(StoryPrivateAction),
-    // Global action affecting the entire scenario (future)
-    // GlobalAction(StoryGlobalAction),
-
-    // User-defined action (future)
-    // UserDefinedAction(UserDefinedAction),
+/// Element wrapper hosting the `GlobalAction` choice.
+///
+/// XSD `GlobalAction` (:1282-1293) is a choice, already modeled as
+/// `wrappers::GlobalAction`. As a named child element the choice has to sit
+/// behind a wrapper struct, the same shape `RoutePosition.RouteRefElement`
+/// uses.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename = "GlobalAction")]
+pub struct StoryGlobalAction {
+    #[serde(flatten)]
+    pub action: crate::types::actions::wrappers::GlobalAction,
 }
 
 /// Private action at story level (reuses init-level structure)
@@ -54,6 +77,12 @@ pub struct StoryPrivateAction {
     pub visibility_action: Option<crate::types::actions::VisibilityAction>,
     #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none")]
     pub synchronize_action: Option<crate::types::actions::SynchronizeAction>,
+    /// Deprecated in XSD `PrivateAction` (:1777-1791) but widely emitted
+    #[serde(
+        rename = "ActivateControllerAction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub activate_controller_action: Option<crate::types::actions::ActivateControllerAction>,
     #[serde(rename = "ControllerAction", skip_serializing_if = "Option::is_none")]
     pub controller_action: Option<crate::types::actions::ControllerAction>,
     #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
@@ -232,14 +261,10 @@ impl Default for StoryAction {
     fn default() -> Self {
         Self {
             name: OSString::literal("DefaultAction".to_string()),
+            global_action: None,
+            user_defined_action: None,
             private_action: Some(StoryPrivateAction::default()),
         }
-    }
-}
-
-impl Default for StoryActionType {
-    fn default() -> Self {
-        Self::PrivateAction(StoryPrivateAction::default())
     }
 }
 
@@ -250,6 +275,7 @@ impl Default for StoryPrivateAction {
             lateral_action: None,
             visibility_action: None,
             synchronize_action: None,
+            activate_controller_action: None,
             controller_action: None,
             teleport_action: None,
             routing_action: None,
