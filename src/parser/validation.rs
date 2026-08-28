@@ -880,6 +880,7 @@ mod tests {
                 entity_catalog_reference: None,
                 object_controller: Default::default(),
             }],
+            entity_selections: Vec::new(),
         };
 
         let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
@@ -961,6 +962,7 @@ mod tests {
                 entity_catalog_reference: None,
                 object_controller: Default::default(),
             }],
+            entity_selections: Vec::new(),
         };
 
         let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
@@ -1064,6 +1066,7 @@ mod tests {
                     object_controller: Default::default(),
                 },
             ],
+            entity_selections: Vec::new(),
         };
 
         let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
@@ -1165,6 +1168,7 @@ mod tests {
 
         let entities = crate::types::entities::Entities {
             scenario_objects: vec![scenario_object],
+            entity_selections: Vec::new(),
         };
 
         let mut scenario = crate::types::scenario::storyboard::test_scenario_document();

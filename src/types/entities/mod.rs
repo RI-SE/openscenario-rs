@@ -102,11 +102,23 @@ pub struct ScenarioObject {
 }
 
 /// Container for all entities in the scenario
+///
+/// XSD `Entities` (`:1122-1127`): sequence of `ScenarioObject`
+/// (`minOccurs="0" maxOccurs="unbounded"`) followed by `EntitySelection`
+/// (`minOccurs="0" maxOccurs="unbounded"`).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Entities {
     /// List of scenario objects
     #[serde(rename = "ScenarioObject", default)]
     pub scenario_objects: Vec<ScenarioObject>,
+
+    /// List of entity selections
+    #[serde(
+        rename = "EntitySelection",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub entity_selections: Vec<EntitySelection>,
 }
 
 impl ScenarioObject {

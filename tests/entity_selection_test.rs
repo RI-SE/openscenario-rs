@@ -2,7 +2,7 @@
 //!
 //! Tests all 8 critical entity selection types:
 //! - EntitySelection
-//! - SelectedEntities  
+//! - SelectedEntities
 //! - EntityDistribution
 //! - EntityDistributionEntry
 //! - ScenarioObjectTemplate
@@ -14,38 +14,56 @@ use openscenario_rs::types::{
     basic::{Double, OSString},
     entities::{
         ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntitySelection,
-        ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities,
+        ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities, Vehicle,
     },
     enums::ObjectType,
 };
 
 #[test]
-fn test_entity_selection_by_object_type() {
-    let selection = EntitySelection::by_object_type(ObjectType::Vehicle);
+fn test_entity_selection_creation() {
+    let mut members = SelectedEntities::new();
+    members.add_entity("Ego");
+    let selection = EntitySelection::new("Selection1", members);
 
-    assert!(selection.by_type.is_some());
-    assert_eq!(
-        selection.by_type.as_ref().unwrap().object_type,
-        ObjectType::Vehicle
-    );
+    assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
+    assert_eq!(selection.members.entity_refs.len(), 1);
 
     // Test serialization
     let xml = quick_xml::se::to_string(&selection).unwrap();
-    assert!(xml.contains("ByType"));
-    assert!(xml.contains("type=\"vehicle\""));
+    assert!(xml.contains("Members"));
+    assert!(xml.contains("name=\"Selection1\""));
 }
 
 #[test]
-fn test_entity_selection_xml_parsing() {
+fn test_entity_selection_xml_parsing_entity_refs() {
     let xml = r#"
-    <EntitySelection>
-        <ByType type="vehicle"/>
+    <EntitySelection name="Selection1">
+        <Members>
+            <EntityRef entityRef="Ego"/>
+        </Members>
     </EntitySelection>
     "#;
 
     let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
-    assert!(selection.by_type.is_some());
-    assert_eq!(selection.by_type.unwrap().object_type, ObjectType::Vehicle);
+    assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
+    assert_eq!(selection.members.entity_refs.len(), 1);
+    assert!(selection.members.by_type.is_empty());
+}
+
+#[test]
+fn test_entity_selection_xml_parsing_by_type() {
+    let xml = r#"
+    <EntitySelection name="Selection2">
+        <Members>
+            <ByType objectType="vehicle"/>
+        </Members>
+    </EntitySelection>
+    "#;
+
+    let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
+    assert!(selection.members.entity_refs.is_empty());
+    assert_eq!(selection.members.by_type.len(), 1);
+    assert_eq!(selection.members.by_type[0].type_spec, ObjectType::Vehicle);
 }
 
 #[test]
@@ -99,14 +117,17 @@ fn test_selected_entities_xml_parsing() {
 #[test]
 fn test_entity_distribution_creation() {
     let mut distribution = EntityDistribution::new();
-    distribution.add_entry("Car1", 0.6);
-    distribution.add_entry("Car2", 0.4);
+    distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.6);
+    distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.4);
 
     assert_eq!(distribution.entries.len(), 2);
     assert_eq!(distribution.total_weight(), 1.0);
 
     // Test uniform distribution
-    let uniform_dist = EntityDistribution::uniform(vec!["A", "B", "C", "D"]);
+    let templates: Vec<ScenarioObjectTemplate> = (0..4)
+        .map(|_| ScenarioObjectTemplate::new_vehicle(Vehicle::default()))
+        .collect();
+    let uniform_dist = EntityDistribution::uniform(templates);
     assert_eq!(uniform_dist.entries.len(), 4);
     assert!((uniform_dist.total_weight() - 1.0).abs() < f64::EPSILON);
 
@@ -118,13 +139,16 @@ fn test_entity_distribution_creation() {
 
 #[test]
 fn test_entity_distribution_xml_serialization() {
-    let distribution = EntityDistribution::uniform(vec!["Car1", "Car2"]);
+    let templates = vec![
+        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+    ];
+    let distribution = EntityDistribution::uniform(templates);
     let xml = quick_xml::se::to_string(&distribution).unwrap();
 
     assert!(xml.contains("EntityDistributionEntry"));
     assert!(xml.contains("ScenarioObjectTemplate"));
-    assert!(xml.contains("name=\"Car1\""));
-    assert!(xml.contains("name=\"Car2\""));
+    assert!(xml.contains("Vehicle"));
     assert!(xml.contains("weight=\"0.5\""));
 }
 
@@ -133,10 +157,14 @@ fn test_entity_distribution_xml_parsing() {
     let xml = r#"
     <EntityDistribution>
         <EntityDistributionEntry weight="0.6">
-            <ScenarioObjectTemplate name="Car1" objectType="vehicle"/>
+            <ScenarioObjectTemplate>
+                <CatalogReference catalogName="VehicleCatalog" entryName="Car1"/>
+            </ScenarioObjectTemplate>
         </EntityDistributionEntry>
         <EntityDistributionEntry weight="0.4">
-            <ScenarioObjectTemplate name="Car2" objectType="vehicle"/>
+            <ScenarioObjectTemplate>
+                <CatalogReference catalogName="VehicleCatalog" entryName="Car2"/>
+            </ScenarioObjectTemplate>
         </EntityDistributionEntry>
     </EntityDistribution>
     "#;
@@ -145,58 +173,47 @@ fn test_entity_distribution_xml_parsing() {
     assert_eq!(distribution.entries.len(), 2);
     assert_eq!(distribution.total_weight(), 1.0);
 
-    let car1_entry = distribution
+    let weight_06 = distribution
         .entries
         .iter()
-        .find(|e| e.scenario_object_template.name.as_literal().map(|s| s.as_str()) == Some("Car1"))
+        .find(|e| e.weight.as_literal() == Some(&0.6))
         .unwrap();
-    assert_eq!(car1_entry.weight.as_literal().unwrap(), &0.6);
+    assert!(weight_06.scenario_object_template.entity_catalog_reference.is_some());
 
-    let car2_entry = distribution
+    let weight_04 = distribution
         .entries
         .iter()
-        .find(|e| e.scenario_object_template.name.as_literal().map(|s| s.as_str()) == Some("Car2"))
+        .find(|e| e.weight.as_literal() == Some(&0.4))
         .unwrap();
-    assert_eq!(car2_entry.weight.as_literal().unwrap(), &0.4);
+    assert!(weight_04.scenario_object_template.entity_catalog_reference.is_some());
 }
 
 #[test]
 fn test_entity_distribution_entry() {
-    let template = ScenarioObjectTemplate::new("TestEntity", ObjectType::Vehicle);
+    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
     let entry = EntityDistributionEntry::new(template, 0.75);
-    assert_eq!(
-        entry.scenario_object_template.name.as_literal().unwrap(),
-        "TestEntity"
-    );
+    assert!(entry.scenario_object_template.vehicle.is_some());
     assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
 
     // Test default
     let default_entry = EntityDistributionEntry::default();
-    assert_eq!(
-        default_entry.scenario_object_template.name.as_literal().unwrap(),
-        "DefaultTemplate"
-    );
+    assert!(default_entry.scenario_object_template.vehicle.is_some());
     assert_eq!(default_entry.weight.as_literal().unwrap(), &1.0);
 }
 
 #[test]
 fn test_scenario_object_template_basic() {
-    let template = ScenarioObjectTemplate::new("VehicleTemplate", ObjectType::Vehicle);
-    assert_eq!(template.name.as_literal().unwrap(), "VehicleTemplate");
-    assert_eq!(template.object_type, ObjectType::Vehicle);
+    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    assert!(template.vehicle.is_some());
+    assert!(template.pedestrian.is_none());
     assert!(template.external_object_reference.is_none());
 }
 
 #[test]
 fn test_scenario_object_template_with_external_reference() {
-    let template = ScenarioObjectTemplate::with_external_reference(
-        "ExternalVehicle",
-        ObjectType::Vehicle,
-        "SportsCar",
-    );
+    let template = ScenarioObjectTemplate::with_external_reference("SportsCar");
 
-    assert_eq!(template.name.as_literal().unwrap(), "ExternalVehicle");
-    assert_eq!(template.object_type, ObjectType::Vehicle);
+    assert!(template.vehicle.is_none());
     assert!(template.external_object_reference.is_some());
 
     let ext_ref = template.external_object_reference.unwrap();
@@ -205,20 +222,21 @@ fn test_scenario_object_template_with_external_reference() {
 
 #[test]
 fn test_scenario_object_template_xml_serialization() {
-    let template = ScenarioObjectTemplate::new("TestTemplate", ObjectType::Pedestrian);
+    use openscenario_rs::types::entities::Pedestrian;
+
+    let template =
+        ScenarioObjectTemplate::new_pedestrian(Pedestrian::new_pedestrian("Walker1".to_string()));
 
     let xml = quick_xml::se::to_string(&template).unwrap();
-    assert!(xml.contains("name=\"TestTemplate\""));
-    assert!(xml.contains("objectType=\"pedestrian\""));
+    assert!(xml.contains("Pedestrian"));
 }
 
 #[test]
 fn test_scenario_object_template_xml_parsing() {
-    let xml = r#"<ScenarioObjectTemplate name="VehicleTemplate" objectType="vehicle"/>"#;
+    let xml = r#"<ScenarioObjectTemplate><CatalogReference catalogName="VehicleCatalog" entryName="VehicleTemplate"/></ScenarioObjectTemplate>"#;
 
     let template: ScenarioObjectTemplate = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(template.name.as_literal().unwrap(), "VehicleTemplate");
-    assert_eq!(template.object_type, ObjectType::Vehicle);
+    assert!(template.entity_catalog_reference.is_some());
 }
 
 #[test]
@@ -286,42 +304,54 @@ fn test_by_type_xml_parsing() {
 #[test]
 fn test_complex_entity_selection_scenario() {
     // Test a complex scenario with multiple selection types
-    let vehicle_selection = EntitySelection::by_object_type(ObjectType::Vehicle);
+    let mut members = SelectedEntities::new();
+    members.add_by_type(ObjectType::Vehicle);
+    let vehicle_selection = EntitySelection::new("VehicleSelection", members);
 
     let selected_vehicles = SelectedEntities::from_names(vec!["Car1", "Car2", "Truck1"]);
     let selected_pedestrians = SelectedEntities::from_names(vec!["Walker1", "Walker2"]);
 
     let mut vehicle_distribution = EntityDistribution::new();
-    vehicle_distribution.add_entry("Car1", 0.5);
-    vehicle_distribution.add_entry("Car2", 0.3);
-    vehicle_distribution.add_entry("Truck1", 0.2);
+    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.5);
+    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.3);
+    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.2);
 
-    let vehicle_template = ScenarioObjectTemplate::new("VehicleTemplate", ObjectType::Vehicle);
+    let vehicle_template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
 
     // Verify all components work together
-    assert!(vehicle_selection.by_type.is_some());
+    assert_eq!(vehicle_selection.members.by_type.len(), 1);
     assert_eq!(selected_vehicles.count(), 3);
     assert_eq!(selected_pedestrians.count(), 2);
     assert_eq!(vehicle_distribution.entries.len(), 3);
     assert_eq!(vehicle_distribution.total_weight(), 1.0);
-    assert_eq!(vehicle_template.name.as_literal().unwrap(), "VehicleTemplate");
+    assert!(vehicle_template.vehicle.is_some());
 }
 
 #[test]
 fn test_parameter_support_in_entity_selection() {
-    // Test distribution with parameter weights and name
+    // Test distribution with parameter weight and a parameterized external reference name
     let entry = EntityDistributionEntry {
         weight: Double::parameter("VehicleWeight".to_string()),
         scenario_object_template: ScenarioObjectTemplate {
-            name: OSString::parameter("VehicleName".to_string()),
-            object_type: ObjectType::Vehicle,
-            external_object_reference: None,
+            vehicle: None,
+            pedestrian: None,
+            misc_object: None,
+            external_object_reference: Some(ExternalObjectReference {
+                name: OSString::parameter("VehicleName".to_string()),
+            }),
+            entity_catalog_reference: None,
             object_controller: Vec::new(),
         },
     };
 
     assert_eq!(
-        entry.scenario_object_template.name.as_parameter().unwrap(),
+        entry
+            .scenario_object_template
+            .external_object_reference
+            .unwrap()
+            .name
+            .as_parameter()
+            .unwrap(),
         "VehicleName"
     );
     assert_eq!(entry.weight.as_parameter().unwrap(), "VehicleWeight");
@@ -346,7 +376,9 @@ fn test_all_defaults() {
 #[test]
 fn test_serialization_roundtrip() {
     // Test that all types can be serialized and deserialized
-    let original_selection = EntitySelection::by_object_type(ObjectType::Vehicle);
+    let mut members = SelectedEntities::new();
+    members.add_by_type(ObjectType::Vehicle);
+    let original_selection = EntitySelection::new("Selection1", members);
     let xml = quick_xml::se::to_string(&original_selection).unwrap();
     let parsed_selection: EntitySelection = quick_xml::de::from_str(&xml).unwrap();
     assert_eq!(original_selection, parsed_selection);
@@ -356,7 +388,11 @@ fn test_serialization_roundtrip() {
     let parsed_entities: SelectedEntities = quick_xml::de::from_str(&xml).unwrap();
     assert_eq!(original_entities, parsed_entities);
 
-    let original_distribution = EntityDistribution::uniform(vec!["X", "Y"]);
+    let templates = vec![
+        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+    ];
+    let original_distribution = EntityDistribution::uniform(templates);
     let xml = quick_xml::se::to_string(&original_distribution).unwrap();
     let parsed_distribution: EntityDistribution = quick_xml::de::from_str(&xml).unwrap();
     assert_eq!(original_distribution, parsed_distribution);

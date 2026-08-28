@@ -1759,12 +1759,11 @@ mod tests {
     // traffic actions that reference it.
 
     fn sample_entity_distribution() -> EntityDistribution {
-        use crate::types::entities::ScenarioObjectTemplate;
-        use crate::types::enums::ObjectType;
+        use crate::types::entities::{ScenarioObjectTemplate, Vehicle};
 
         EntityDistribution {
             entries: vec![crate::types::entities::EntityDistributionEntry::new(
-                ScenarioObjectTemplate::new("Vehicle1", ObjectType::Vehicle),
+                ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
                 1.0,
             )],
         }

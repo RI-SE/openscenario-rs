@@ -12,24 +12,39 @@
 
 use crate::types::basic::{Double, OSString};
 use crate::types::controllers::ObjectController;
+use crate::types::entities::{MiscObject, Pedestrian, ScenarioEntityReference, Vehicle};
 use crate::types::enums::ObjectType;
 use crate::types::scenario::triggers::EntityRef;
 use serde::{Deserialize, Serialize};
 
 /// Main entity selection framework with selection criteria
+///
+/// XSD `EntitySelection` (`:1180-1185`): required attribute `@name` (String);
+/// sequence of a required `Members` element of type `SelectedEntities`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntitySelection {
-    /// Selection by object type
-    #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
-    pub by_type: Option<ByObjectType>,
+    /// Name of the entity selection (used for references)
+    #[serde(rename = "@name")]
+    pub name: OSString,
+
+    /// Members of the selection
+    #[serde(rename = "Members")]
+    pub members: SelectedEntities,
 }
 
 /// Container for selected entities with entity references
+///
+/// XSD `SelectedEntities` (`:2013-2018`): a choice, each branch
+/// `maxOccurs="unbounded"`, of `EntityRef` or `ByType`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SelectedEntities {
     /// List of entity references
-    #[serde(rename = "EntityRef")]
+    #[serde(rename = "EntityRef", default, skip_serializing_if = "Vec::is_empty")]
     pub entity_refs: Vec<EntityRef>,
+
+    /// List of type-based selections
+    #[serde(rename = "ByType", default, skip_serializing_if = "Vec::is_empty")]
+    pub by_type: Vec<ByType>,
 }
 
 /// Entity distribution system for probabilistic entity spawning
@@ -57,22 +72,42 @@ pub struct EntityDistributionEntry {
 }
 
 /// Template system for scenario object creation
+///
+/// XSD `ScenarioObjectTemplate` (`:2007-2012`): no attributes; sequence of
+/// the `EntityObject` group (`:1168-1176`, a choice of `CatalogReference` |
+/// `Vehicle` | `Pedestrian` | `MiscObject` | `ExternalObjectReference`)
+/// followed by an optional/repeated `ObjectController`. Mirrors the
+/// `EntityObject` group modeling used by `ScenarioObject`
+/// (`src/types/entities/mod.rs`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScenarioObjectTemplate {
-    /// Name of the template
-    #[serde(rename = "@name")]
-    pub name: OSString,
+    /// Vehicle entity (optional)
+    #[serde(rename = "Vehicle", skip_serializing_if = "Option::is_none")]
+    pub vehicle: Option<Vehicle>,
 
-    /// Object type for the template
-    #[serde(rename = "@objectType")]
-    pub object_type: ObjectType,
+    /// Pedestrian entity (optional)
+    #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
+    pub pedestrian: Option<Pedestrian>,
+
+    /// Miscellaneous object entity (optional)
+    #[serde(
+        rename = "MiscObject",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub misc_object: Option<MiscObject>,
 
     /// External object reference (optional)
     #[serde(
         rename = "ExternalObjectReference",
+        default,
         skip_serializing_if = "Option::is_none"
     )]
     pub external_object_reference: Option<ExternalObjectReference>,
+
+    /// Entity catalog reference (vehicle or pedestrian, optional)
+    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
+    pub entity_catalog_reference: Option<ScenarioEntityReference>,
 
     /// Object controller configuration (optional, may occur multiple times)
     #[serde(
@@ -111,7 +146,8 @@ pub struct ByType {
 impl Default for EntitySelection {
     fn default() -> Self {
         Self {
-            by_type: Some(ByObjectType::default()),
+            name: OSString::literal("DefaultSelection".to_string()),
+            members: SelectedEntities::default(),
         }
     }
 }
@@ -120,6 +156,7 @@ impl Default for SelectedEntities {
     fn default() -> Self {
         Self {
             entity_refs: vec![EntityRef::default()],
+            by_type: Vec::new(),
         }
     }
 }
@@ -144,9 +181,11 @@ impl Default for EntityDistributionEntry {
 impl Default for ScenarioObjectTemplate {
     fn default() -> Self {
         Self {
-            name: OSString::literal("DefaultTemplate".to_string()),
-            object_type: ObjectType::Vehicle,
+            vehicle: Some(Vehicle::default()),
+            pedestrian: None,
+            misc_object: None,
             external_object_reference: None,
+            entity_catalog_reference: None,
             object_controller: Vec::new(),
         }
     }
@@ -178,10 +217,11 @@ impl Default for ByType {
 
 // Implementation methods
 impl EntitySelection {
-    /// Create a new entity selection by object type
-    pub fn by_object_type(object_type: ObjectType) -> Self {
+    /// Create a new named entity selection
+    pub fn new(name: impl Into<String>, members: SelectedEntities) -> Self {
         Self {
-            by_type: Some(ByObjectType { object_type }),
+            name: OSString::literal(name.into()),
+            members,
         }
     }
 }
@@ -191,6 +231,7 @@ impl SelectedEntities {
     pub fn new() -> Self {
         Self {
             entity_refs: Vec::new(),
+            by_type: Vec::new(),
         }
     }
 
@@ -201,12 +242,18 @@ impl SelectedEntities {
                 .into_iter()
                 .map(|name| EntityRef::new(name.into()))
                 .collect(),
+            by_type: Vec::new(),
         }
     }
 
     /// Add an entity reference
     pub fn add_entity(&mut self, entity_name: impl Into<String>) {
         self.entity_refs.push(EntityRef::new(entity_name.into()));
+    }
+
+    /// Add a type-based selection
+    pub fn add_by_type(&mut self, object_type: ObjectType) {
+        self.by_type.push(ByType::new(object_type));
     }
 
     /// Get the number of selected entities
@@ -223,26 +270,18 @@ impl EntityDistribution {
         }
     }
 
-    /// Add a distribution entry from a template name and object type
-    pub fn add_entry(&mut self, template_name: impl Into<String>, weight: f64) {
-        self.entries.push(EntityDistributionEntry {
-            weight: Double::literal(weight),
-            scenario_object_template: ScenarioObjectTemplate::new(
-                template_name,
-                ObjectType::Vehicle,
-            ),
-        });
+    /// Add a distribution entry from a scenario object template and weight
+    pub fn add_entry(&mut self, scenario_object_template: ScenarioObjectTemplate, weight: f64) {
+        self.entries
+            .push(EntityDistributionEntry::new(scenario_object_template, weight));
     }
 
-    /// Create a uniform distribution from template names
-    pub fn uniform(template_names: Vec<impl Into<String>>) -> Self {
-        let weight = 1.0 / template_names.len() as f64;
-        let entries = template_names
+    /// Create a uniform distribution from scenario object templates
+    pub fn uniform(templates: Vec<ScenarioObjectTemplate>) -> Self {
+        let weight = 1.0 / templates.len() as f64;
+        let entries = templates
             .into_iter()
-            .map(|name| EntityDistributionEntry {
-                weight: Double::literal(weight),
-                scenario_object_template: ScenarioObjectTemplate::new(name, ObjectType::Vehicle),
-            })
+            .map(|template| EntityDistributionEntry::new(template, weight))
             .collect();
 
         Self { entries }
@@ -268,28 +307,52 @@ impl EntityDistributionEntry {
 }
 
 impl ScenarioObjectTemplate {
-    /// Create a new scenario object template
-    pub fn new(name: impl Into<String>, object_type: ObjectType) -> Self {
+    /// Create a new scenario object template wrapping a vehicle
+    pub fn new_vehicle(vehicle: Vehicle) -> Self {
         Self {
-            name: OSString::literal(name.into()),
-            object_type,
+            vehicle: Some(vehicle),
+            pedestrian: None,
+            misc_object: None,
             external_object_reference: None,
+            entity_catalog_reference: None,
             object_controller: Vec::new(),
         }
     }
 
-    /// Create a template with external object reference
-    pub fn with_external_reference(
-        name: impl Into<String>,
-        object_type: ObjectType,
-        object_name: impl Into<String>,
-    ) -> Self {
+    /// Create a new scenario object template wrapping a pedestrian
+    pub fn new_pedestrian(pedestrian: Pedestrian) -> Self {
         Self {
-            name: OSString::literal(name.into()),
-            object_type,
+            vehicle: None,
+            pedestrian: Some(pedestrian),
+            misc_object: None,
+            external_object_reference: None,
+            entity_catalog_reference: None,
+            object_controller: Vec::new(),
+        }
+    }
+
+    /// Create a new scenario object template wrapping a miscellaneous object
+    pub fn new_misc_object(misc_object: MiscObject) -> Self {
+        Self {
+            vehicle: None,
+            pedestrian: None,
+            misc_object: Some(misc_object),
+            external_object_reference: None,
+            entity_catalog_reference: None,
+            object_controller: Vec::new(),
+        }
+    }
+
+    /// Create a template referencing an external object definition
+    pub fn with_external_reference(object_name: impl Into<String>) -> Self {
+        Self {
+            vehicle: None,
+            pedestrian: None,
+            misc_object: None,
             external_object_reference: Some(ExternalObjectReference {
                 name: OSString::literal(object_name.into()),
             }),
+            entity_catalog_reference: None,
             object_controller: Vec::new(),
         }
     }
@@ -340,10 +403,11 @@ mod tests {
 
     #[test]
     fn test_entity_selection_creation() {
-        // Test by object type
-        let selection = EntitySelection::by_object_type(ObjectType::Vehicle);
-        assert!(selection.by_type.is_some());
-        assert_eq!(selection.by_type.unwrap().object_type, ObjectType::Vehicle);
+        let mut members = SelectedEntities::new();
+        members.add_entity("Ego");
+        let selection = EntitySelection::new("Selection1", members);
+        assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
+        assert_eq!(selection.members.entity_refs.len(), 1);
     }
 
     #[test]
@@ -357,44 +421,46 @@ mod tests {
 
         let entities_from_names = SelectedEntities::from_names(vec!["Car1", "Car2", "Car3"]);
         assert_eq!(entities_from_names.count(), 3);
+
+        entities.add_by_type(ObjectType::Pedestrian);
+        assert_eq!(entities.by_type.len(), 1);
     }
 
     #[test]
     fn test_entity_distribution() {
         let mut distribution = EntityDistribution::new();
-        distribution.add_entry("Car1", 0.6);
-        distribution.add_entry("Car2", 0.4);
+        distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.6);
+        distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.4);
 
         assert_eq!(distribution.entries.len(), 2);
         assert_eq!(distribution.total_weight(), 1.0);
 
-        let uniform_dist = EntityDistribution::uniform(vec!["A", "B", "C", "D"]);
+        let templates = vec![
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ];
+        let uniform_dist = EntityDistribution::uniform(templates);
         assert_eq!(uniform_dist.entries.len(), 4);
         assert!((uniform_dist.total_weight() - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_entity_distribution_entry() {
-        let template = ScenarioObjectTemplate::new("TestEntity", ObjectType::Vehicle);
+        let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
         let entry = EntityDistributionEntry::new(template, 0.75);
-        assert_eq!(
-            entry.scenario_object_template.name.as_literal().unwrap(),
-            "TestEntity"
-        );
+        assert!(entry.scenario_object_template.vehicle.is_some());
         assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
     }
 
     #[test]
     fn test_scenario_object_template() {
-        let template = ScenarioObjectTemplate::new("VehicleTemplate", ObjectType::Vehicle);
-        assert_eq!(template.name.as_literal().unwrap(), "VehicleTemplate");
-        assert_eq!(template.object_type, ObjectType::Vehicle);
+        let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+        assert!(template.vehicle.is_some());
+        assert!(template.pedestrian.is_none());
 
-        let external_template = ScenarioObjectTemplate::with_external_reference(
-            "ExternalVehicle",
-            ObjectType::Vehicle,
-            "SportsCar",
-        );
+        let external_template = ScenarioObjectTemplate::with_external_reference("SportsCar");
         assert!(external_template.external_object_reference.is_some());
         let ext_ref = external_template.external_object_reference.unwrap();
         assert_eq!(ext_ref.name.as_literal().unwrap(), "SportsCar");
@@ -426,10 +492,12 @@ mod tests {
 
     #[test]
     fn test_serialization() {
-        let selection = EntitySelection::by_object_type(ObjectType::Vehicle);
+        let mut members = SelectedEntities::new();
+        members.add_entity("Ego");
+        let selection = EntitySelection::new("Selection1", members);
         let xml = quick_xml::se::to_string(&selection).unwrap();
-        assert!(xml.contains("ByType"));
-        assert!(xml.contains("type=\"vehicle\""));
+        assert!(xml.contains("Members"));
+        assert!(xml.contains("name=\"Selection1\""));
 
         let entities = SelectedEntities::from_names(vec!["Ego", "Target"]);
         let xml = quick_xml::se::to_string(&entities).unwrap();
@@ -437,12 +505,89 @@ mod tests {
         assert!(xml.contains("entityRef=\"Ego\""));
         assert!(xml.contains("entityRef=\"Target\""));
 
-        let distribution = EntityDistribution::uniform(vec!["Car1", "Car2"]);
+        let templates = vec![
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ];
+        let distribution = EntityDistribution::uniform(templates);
         let xml = quick_xml::se::to_string(&distribution).unwrap();
         assert!(xml.contains("EntityDistributionEntry"));
         assert!(xml.contains("ScenarioObjectTemplate"));
-        assert!(xml.contains("name=\"Car1\""));
         assert!(xml.contains("weight=\"0.5\""));
+    }
+
+    #[test]
+    fn test_entity_selection_roundtrip_entity_refs() {
+        // TASK: EntitySelection with @name and Members containing two EntityRef.
+        let xml = r#"<EntitySelection name="Selection1"><Members><EntityRef entityRef="Ego"/><EntityRef entityRef="Target1"/></Members></EntitySelection>"#;
+        let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
+        assert_eq!(selection.members.entity_refs.len(), 2);
+        assert!(selection.members.by_type.is_empty());
+
+        let serialized = quick_xml::se::to_string(&selection).unwrap();
+        let roundtripped: EntitySelection = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(roundtripped, selection);
+    }
+
+    #[test]
+    fn test_entity_selection_roundtrip_by_type() {
+        // TASK: EntitySelection with Members containing a ByType branch.
+        let xml = r#"<EntitySelection name="Selection2"><Members><ByType objectType="vehicle"/></Members></EntitySelection>"#;
+        let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
+        assert!(selection.members.entity_refs.is_empty());
+        assert_eq!(selection.members.by_type.len(), 1);
+        assert_eq!(selection.members.by_type[0].type_spec, ObjectType::Vehicle);
+
+        let serialized = quick_xml::se::to_string(&selection).unwrap();
+        let roundtripped: EntitySelection = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(roundtripped, selection);
+    }
+
+    #[test]
+    fn test_scenario_object_template_catalog_reference_roundtrip() {
+        use crate::types::catalogs::references::CatalogReference;
+        use crate::types::catalogs::entities::CatalogVehicle;
+
+        let catalog_ref: CatalogReference<CatalogVehicle> =
+            CatalogReference::new("VehicleCatalog".to_string(), "Sedan".to_string());
+        let template = ScenarioObjectTemplate {
+            vehicle: None,
+            pedestrian: None,
+            misc_object: None,
+            external_object_reference: None,
+            entity_catalog_reference: Some(ScenarioEntityReference::Vehicle(catalog_ref)),
+            object_controller: Vec::new(),
+        };
+
+        let xml = quick_xml::se::to_string(&template).unwrap();
+        assert!(xml.contains("CatalogReference"));
+
+        let roundtripped: ScenarioObjectTemplate = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(roundtripped, template);
+    }
+
+    #[test]
+    fn test_scenario_object_template_vehicle_with_controller_roundtrip() {
+        use crate::types::controllers::Controller;
+        use crate::types::enums::ControllerType;
+
+        let mut template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+        template
+            .object_controller
+            .push(ObjectController::with_controller(Controller::new(
+                "InlineController".to_string(),
+                ControllerType::Movement,
+            )));
+
+        let xml = quick_xml::se::to_string(&template).unwrap();
+        assert!(xml.contains("Vehicle"));
+        assert!(xml.contains("ObjectController"));
+
+        let roundtripped: ScenarioObjectTemplate = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(roundtripped.vehicle.is_some(), true);
+        assert_eq!(roundtripped.object_controller.len(), 1);
+        assert_eq!(roundtripped, template);
     }
 
     #[test]

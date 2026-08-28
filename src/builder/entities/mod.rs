@@ -31,6 +31,7 @@ impl EntityCollection {
     pub fn into_entities(self) -> Entities {
         Entities {
             scenario_objects: self.objects,
+            entity_selections: Vec::new(),
         }
     }
 
