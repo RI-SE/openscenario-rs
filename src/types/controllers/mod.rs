@@ -3,7 +3,7 @@
 //! This module provides comprehensive controller functionality for entity behavior management,
 //! including controller definitions, activation actions, and parameter management.
 
-use crate::types::basic::{Boolean, Directory, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Directory, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::distributions::ParameterValueDistribution;
 use crate::types::entities::vehicle::{File, Properties, Property};
@@ -182,36 +182,6 @@ impl Default for ActivateControllerAction {
     fn default() -> Self {
         Self {
             controller_ref: Value::Literal("DefaultController".to_string()),
-        }
-    }
-}
-
-/// Action to override controller parameter values.
-///
-/// This action modifies controller behavior by overriding specific parameter values
-/// and can activate or deactivate the override.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct OverrideControllerValueAction {
-    /// Reference to the controller to override
-    #[serde(rename = "@controllerRef")]
-    pub controller_ref: OSString,
-
-    /// Parameter assignments for the override
-    #[serde(rename = "ParameterAssignments")]
-    pub parameter_assignments: ParameterAssignments,
-
-    /// Whether the override is active
-    #[serde(rename = "@active")]
-    pub active: Boolean,
-}
-
-impl Default for OverrideControllerValueAction {
-    fn default() -> Self {
-        Self {
-            controller_ref: Value::Literal("DefaultController".to_string()),
-            parameter_assignments: ParameterAssignments::default(),
-            active: Value::Literal(true),
         }
     }
 }
@@ -412,21 +382,6 @@ impl ActivateControllerAction {
     }
 }
 
-impl OverrideControllerValueAction {
-    /// Creates an action to override controller values.
-    pub fn new(
-        controller_ref: String,
-        parameter_assignments: ParameterAssignments,
-        active: bool,
-    ) -> Self {
-        Self {
-            controller_ref: Value::Literal(controller_ref),
-            parameter_assignments,
-            active: Value::Literal(active),
-        }
-    }
-}
-
 impl ControllerAssignment {
     /// Creates a controller assignment.
     pub fn new(controller_ref: String, target_entity: String) -> Self {
@@ -467,19 +422,6 @@ mod tests {
             action.controller_ref.as_literal().unwrap(),
             "MainController"
         );
-    }
-
-    #[test]
-    fn test_override_controller_action() {
-        let assignments = ParameterAssignments::default();
-        let action =
-            OverrideControllerValueAction::new("TestController".to_string(), assignments, true);
-
-        assert_eq!(
-            action.controller_ref.as_literal().unwrap(),
-            "TestController"
-        );
-        assert_eq!(action.active.as_literal().unwrap(), &true);
     }
 
     #[test]
@@ -537,7 +479,6 @@ mod tests {
         let object_controller = ObjectController::default();
         let properties = ControllerProperties::default();
         let activate_action = ActivateControllerAction::default();
-        let override_action = OverrideControllerValueAction::default();
         let assignment = ControllerAssignment::default();
 
         // All defaults should be valid
@@ -545,7 +486,6 @@ mod tests {
         assert!(object_controller.catalog_reference.is_none());
         assert!(properties.properties.is_empty());
         assert!(activate_action.controller_ref.as_literal().is_some());
-        assert!(override_action.active.as_literal().is_some());
         assert!(assignment.target_entity.as_literal().is_some());
     }
 

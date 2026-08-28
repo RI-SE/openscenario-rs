@@ -21,7 +21,6 @@ pub use movement::{
     AssignRouteAction,
     DynamicConstraints,
     FinalSpeed,
-    FollowRouteAction,
     FollowTrajectoryAction,
     LaneChangeAction,
     LaneChangeTarget,

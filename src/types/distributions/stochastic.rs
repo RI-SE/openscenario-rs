@@ -23,8 +23,6 @@ pub struct StochasticDistribution {
     pub distribution_type: StochasticDistributionType,
     #[serde(rename = "@parameterName")]
     pub parameter_name: OSString,
-    #[serde(rename = "@randomSeed", skip_serializing_if = "Option::is_none")]
-    pub random_seed: Option<OSString>,
 }
 
 /// Types of stochastic distributions

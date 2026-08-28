@@ -72,10 +72,6 @@ pub struct CatalogEnvironment {
         skip_serializing_if = "Option::is_none"
     )]
     pub road_condition: Option<CatalogRoadCondition>,
-
-    /// Optional road network reference
-    #[serde(rename = "RoadNetwork", skip_serializing_if = "Option::is_none")]
-    pub road_network: Option<RoadNetworkReference>,
 }
 
 /// Time of day configuration with parameterizable properties
@@ -243,35 +239,6 @@ pub struct CatalogRoadCondition {
     pub properties: Option<crate::types::entities::vehicle::Properties>,
 }
 
-/// Reference to a road network file
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "RoadNetwork")]
-pub struct RoadNetworkReference {
-    /// Path to the road network file (OpenDRIVE format)
-    #[serde(rename = "@logicFile")]
-    pub logic_file: OSString,
-
-    /// Optional path to visual geometry file
-    #[serde(rename = "@sceneGraphFile", skip_serializing_if = "Option::is_none")]
-    pub scene_graph_file: Option<OSString>,
-
-    /// Traffic signals reference (optional)
-    #[serde(rename = "TrafficSignals", skip_serializing_if = "Option::is_none")]
-    pub traffic_signals: Option<TrafficSignalsReference>,
-}
-
-/// Reference to traffic signals configuration
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "TrafficSignals")]
-pub struct TrafficSignalsReference {
-    /// Traffic signal controller configuration file
-    #[serde(
-        rename = "@trafficSignalControllerFile",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub controller_file: Option<OSString>,
-}
-
 // Implementation methods for catalog environments
 
 impl EnvironmentCatalog {
@@ -309,7 +276,6 @@ impl CatalogEnvironment {
             time_of_day: None,
             weather: None,
             road_condition: None,
-            road_network: None,
         }
     }
 
@@ -321,7 +287,6 @@ impl CatalogEnvironment {
             time_of_day: None,
             weather: None,
             road_condition: None,
-            road_network: None,
         }
     }
 
@@ -340,16 +305,8 @@ impl CatalogEnvironment {
         self.road_condition = Some(road_condition);
     }
 
-    /// Sets the road network reference for this environment
-    pub fn set_road_network(&mut self, road_network: RoadNetworkReference) {
-        self.road_network = Some(road_network);
-    }
-
     /// Converts this catalog environment to a scenario environment, resolving
     /// every parameterizable value against `parameters`.
-    ///
-    /// The catalog-only `<RoadNetwork>` reference has no counterpart on the
-    /// scenario `Environment` type and is therefore not carried over.
     pub fn resolve_environment(
         &self,
         parameters: &std::collections::HashMap<String, String>,
@@ -547,33 +504,6 @@ impl CatalogWeather {
     }
 }
 
-impl RoadNetworkReference {
-    /// Creates a road network reference with the specified logic file
-    pub fn new(logic_file: OSString) -> Self {
-        Self {
-            logic_file,
-            scene_graph_file: None,
-            traffic_signals: None,
-        }
-    }
-
-    /// Creates a road network reference with visual geometry
-    pub fn with_scene_graph(logic_file: OSString, scene_graph_file: OSString) -> Self {
-        Self {
-            logic_file,
-            scene_graph_file: Some(scene_graph_file),
-            traffic_signals: None,
-        }
-    }
-
-    /// Sets traffic signals configuration
-    pub fn set_traffic_signals(&mut self, controller_file: OSString) {
-        self.traffic_signals = Some(TrafficSignalsReference {
-            controller_file: Some(controller_file),
-        });
-    }
-}
-
 /// Catalog entity integration so `CatalogEnvironment` can be used as the entry type
 /// in `CatalogContent` and behind a `CatalogReference`.
 impl crate::types::catalogs::entities::CatalogEntity for CatalogEnvironment {
@@ -716,30 +646,6 @@ mod tests {
 
         assert_eq!(tod2.date_time.as_literal().unwrap(), "2021-06-21T06:00:00");
         assert_eq!(tod2.animation.as_literal().unwrap(), &true);
-    }
-
-    #[test]
-    fn test_road_network_reference() {
-        let mut road_net = RoadNetworkReference::new(Value::Literal("road.xodr".to_string()));
-        road_net.set_traffic_signals(Value::Literal("signals.xml".to_string()));
-
-        assert_eq!(road_net.logic_file.as_literal().unwrap(), "road.xodr");
-        assert!(road_net.traffic_signals.is_some());
-
-        let with_graphics = RoadNetworkReference::with_scene_graph(
-            Value::Literal("road.xodr".to_string()),
-            Value::Literal("road.osgb".to_string()),
-        );
-
-        assert_eq!(
-            with_graphics
-                .scene_graph_file
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            "road.osgb"
-        );
     }
 
     #[test]

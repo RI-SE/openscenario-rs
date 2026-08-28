@@ -10,9 +10,9 @@ use openscenario_rs::types::actions::control::{
     BrakeInput, Gear, OverrideBrakeAction, OverrideGearAction, OverrideParkingBrakeAction,
 };
 use openscenario_rs::types::actions::movement::{
-    AssignRouteAction, FinalSpeed, FinalSpeedChoice, FollowRouteAction, LaneChangeTarget,
-    LaneChangeTargetChoice, LaneOffsetTarget, LaneOffsetTargetChoice, LateralAction,
-    LateralActionChoice, LongitudinalAction, LongitudinalActionChoice,
+    AssignRouteAction, FinalSpeed, FinalSpeedChoice, LaneChangeTarget, LaneChangeTargetChoice,
+    LaneOffsetTarget, LaneOffsetTargetChoice, LateralAction, LateralActionChoice,
+    LongitudinalAction, LongitudinalActionChoice,
 };
 use openscenario_rs::types::actions::traffic::{TrafficSignalAction, TrafficSignalActionChoice};
 use openscenario_rs::types::actions::wrappers::{
@@ -31,7 +31,7 @@ fn ser<T: serde::Serialize>(root: &str, v: &T) -> String {
     quick_xml::se::to_string_with_root(root, v).expect("serialize failed")
 }
 
-// ─── movement.rs: AssignRouteAction / FollowRouteAction (RouteRef) ───────────
+// ─── movement.rs: AssignRouteAction (RouteRef) ────────────────────────────
 // XSD:786-791 AssignRouteAction := choice(Route | CatalogReference)
 
 #[test]
@@ -47,21 +47,6 @@ fn assign_route_action_catalog_reference_round_trip() {
     }
     let out = ser("AssignRouteAction", &action);
     assert!(out.contains("CatalogReference"), "got: {out}");
-}
-
-#[test]
-fn follow_route_action_catalog_reference_round_trip() {
-    // NOTE: `FollowRouteAction` has no counterpart in OpenSCENARIO 1.3 (RoutingAction
-    // at XSD:1981-1988 offers AssignRouteAction / FollowTrajectoryAction /
-    // AcquirePositionAction / RandomRouteAction only). The type is exercised here
-    // only to pin its current wire format.
-    let xml = r#"<FollowRouteAction><CatalogReference catalogName="Routes" entryName="R2"/></FollowRouteAction>"#;
-    let action: FollowRouteAction = de(xml);
-    match &action.route_ref {
-        RouteRef::Catalog(c) => assert_eq!(c.entry_name.to_string(), "R2"),
-        other => panic!("expected RouteRef::Catalog, got {other:?}"),
-    }
-    assert!(ser("FollowRouteAction", &action).contains("CatalogReference"));
 }
 
 // ─── movement.rs: LaneChangeTarget ──────────────────────────────────────────

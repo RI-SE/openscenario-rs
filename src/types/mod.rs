@@ -91,7 +91,7 @@ pub use distributions::{
 // Re-export controller types
 pub use controllers::{
     ActivateControllerAction, Controller, ControllerAssignment, ControllerDistribution,
-    ControllerProperties, ObjectController, OverrideControllerValueAction,
+    ControllerProperties, ObjectController,
 };
 
 // Re-export catalog location types

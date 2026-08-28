@@ -219,8 +219,6 @@ pub struct DistributionRange {
 pub struct ValueSetDistribution {
     #[serde(rename = "ParameterValueSet")]
     pub parameter_value_sets: Vec<ParameterValueSet>,
-    #[serde(rename = "@assignmentAuthor", skip_serializing_if = "Option::is_none")]
-    pub assignment_author: Option<String>,
 }
 
 /// Set of parameter assignments
@@ -433,7 +431,6 @@ impl Default for ValueSetDistribution {
     fn default() -> Self {
         Self {
             parameter_value_sets: vec![ParameterValueSet::default()],
-            assignment_author: None,
         }
     }
 }

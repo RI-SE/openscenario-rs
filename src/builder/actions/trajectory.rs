@@ -318,7 +318,6 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
         Ok(PrivateAction::RoutingAction(RoutingAction {
             assign_route_action: None,
             follow_trajectory_action: Some(follow_trajectory_action),
-            follow_route_action: None,
         }))
     }
 

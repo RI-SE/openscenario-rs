@@ -15,9 +15,8 @@ pub use axles::{Axle, Axles};
 pub use misc_object::MiscObject;
 pub use pedestrian::Pedestrian;
 pub use selection::{
-    ByName, ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntitySelection,
-    ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities, TemplateProperties,
-    TemplateProperty,
+    ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntitySelection,
+    ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities,
 };
 pub use vehicle::{Properties, Trailer, Vehicle};
 

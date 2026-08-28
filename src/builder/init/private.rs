@@ -3,9 +3,8 @@
 use super::actions::InitActionBuilder;
 use crate::builder::actions::ActionBuilder as ActionBuilderTrait;
 use crate::builder::actions::{
-    AssignRouteActionBuilder, FollowRouteActionBuilder, FollowTrajectoryActionBuilder,
-    LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder, SynchronizeActionBuilder,
-    VisibilityActionBuilder,
+    AssignRouteActionBuilder, FollowTrajectoryActionBuilder, LongitudinalDistanceActionBuilder,
+    SpeedProfileActionBuilder, SynchronizeActionBuilder, VisibilityActionBuilder,
 };
 use crate::builder::BuilderResult;
 use crate::types::{
@@ -19,7 +18,7 @@ use crate::types::{
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
     positions::Position,
-    routing::{Route, RouteRef},
+    routing::Route,
     scenario::init::{EnvironmentAction, GlobalAction, LongitudinalAction, Private, PrivateAction},
 };
 
@@ -127,17 +126,6 @@ impl PrivateActionBuilder {
     ) -> Self {
         let builder_action = AssignRouteActionBuilder::new()
             .with_catalog_route(catalog_name, entry_name)
-            .build_action()
-            .unwrap();
-
-        self.actions.push(builder_action);
-        self
-    }
-
-    /// Add follow route action (convenience)
-    pub fn add_follow_route_action(mut self, route_ref: RouteRef) -> Self {
-        let builder_action = FollowRouteActionBuilder::new()
-            .with_route_ref(route_ref)
             .build_action()
             .unwrap();
 

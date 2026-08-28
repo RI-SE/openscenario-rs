@@ -357,25 +357,11 @@ fn test_set_monitor_action() {
 
 #[test]
 fn test_random_route_action() {
-    // Test RandomRouteAction with all fields
-    let random_route = RandomRouteAction {
-        number_of_routes: Some(UnsignedInt::literal(5)),
-        random_seed: Some(UnsignedInt::literal(12345)),
-    };
+    // XSD `RandomRouteAction` (:1813-1814) is an empty complexType.
+    let random_route = RandomRouteAction::default();
 
     let serialized = serde_json::to_string(&random_route).unwrap();
-    assert!(serialized.contains("5"));
-    assert!(serialized.contains("12345"));
-
-    // Test RandomRouteAction with no fields
-    let random_route = RandomRouteAction {
-        number_of_routes: None,
-        random_seed: None,
-    };
-
-    let serialized = serde_json::to_string(&random_route).unwrap();
-    assert!(!serialized.contains("numberOfRoutes"));
-    assert!(!serialized.contains("randomSeed"));
+    assert_eq!(serialized, "{}");
 }
 
 #[test]

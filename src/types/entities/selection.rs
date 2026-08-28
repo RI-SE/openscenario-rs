@@ -22,10 +22,6 @@ pub struct EntitySelection {
     /// Selection by object type
     #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<ByObjectType>,
-
-    /// Selection by entity name pattern
-    #[serde(rename = "ByName", skip_serializing_if = "Option::is_none")]
-    pub by_name: Option<ByName>,
 }
 
 /// Container for selected entities with entity references
@@ -67,10 +63,6 @@ pub struct ScenarioObjectTemplate {
     #[serde(rename = "@objectType")]
     pub object_type: ObjectType,
 
-    /// Template properties (optional)
-    #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
-    pub properties: Option<TemplateProperties>,
-
     /// External object reference (optional)
     #[serde(
         rename = "ExternalObjectReference",
@@ -111,40 +103,11 @@ pub struct ByType {
     pub type_spec: ObjectType,
 }
 
-/// Selection by entity name pattern
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ByName {
-    /// Name pattern for entity selection
-    #[serde(rename = "@name")]
-    pub name: OSString,
-}
-
-/// Template properties for scenario object templates
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-pub struct TemplateProperties {
-    /// Custom properties as key-value pairs
-    #[serde(rename = "Property", default)]
-    pub properties: Vec<TemplateProperty>,
-}
-
-/// Individual template property
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TemplateProperty {
-    /// Property name
-    #[serde(rename = "@name")]
-    pub name: OSString,
-
-    /// Property value
-    #[serde(rename = "@value")]
-    pub value: OSString,
-}
-
 // Default implementations
 impl Default for EntitySelection {
     fn default() -> Self {
         Self {
             by_type: Some(ByObjectType::default()),
-            by_name: None,
         }
     }
 }
@@ -179,7 +142,6 @@ impl Default for ScenarioObjectTemplate {
         Self {
             name: OSString::literal("DefaultTemplate".to_string()),
             object_type: ObjectType::Vehicle,
-            properties: None,
             external_object_reference: None,
             object_controller: Vec::new(),
         }
@@ -210,50 +172,12 @@ impl Default for ByType {
     }
 }
 
-impl Default for ByName {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("*".to_string()),
-        }
-    }
-}
-
-impl Default for TemplateProperty {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("property".to_string()),
-            value: OSString::literal("value".to_string()),
-        }
-    }
-}
-
 // Implementation methods
 impl EntitySelection {
     /// Create a new entity selection by object type
     pub fn by_object_type(object_type: ObjectType) -> Self {
         Self {
             by_type: Some(ByObjectType { object_type }),
-            by_name: None,
-        }
-    }
-
-    /// Create a new entity selection by name pattern
-    pub fn by_name(name: impl Into<String>) -> Self {
-        Self {
-            by_type: None,
-            by_name: Some(ByName {
-                name: OSString::literal(name.into()),
-            }),
-        }
-    }
-
-    /// Create a new entity selection with both type and name criteria
-    pub fn by_type_and_name(object_type: ObjectType, name: impl Into<String>) -> Self {
-        Self {
-            by_type: Some(ByObjectType { object_type }),
-            by_name: Some(ByName {
-                name: OSString::literal(name.into()),
-            }),
         }
     }
 }
@@ -342,7 +266,6 @@ impl ScenarioObjectTemplate {
         Self {
             name: OSString::literal(name.into()),
             object_type,
-            properties: None,
             external_object_reference: None,
             object_controller: Vec::new(),
         }
@@ -357,25 +280,10 @@ impl ScenarioObjectTemplate {
         Self {
             name: OSString::literal(name.into()),
             object_type,
-            properties: None,
             external_object_reference: Some(ExternalObjectReference {
                 name: OSString::literal(object_name.into()),
             }),
             object_controller: Vec::new(),
-        }
-    }
-
-    /// Add a property to the template
-    pub fn add_property(&mut self, name: impl Into<String>, value: impl Into<String>) {
-        if self.properties.is_none() {
-            self.properties = Some(TemplateProperties::default());
-        }
-
-        if let Some(ref mut props) = self.properties {
-            props.properties.push(TemplateProperty {
-                name: OSString::literal(name.into()),
-                value: OSString::literal(value.into()),
-            });
         }
     }
 }
@@ -418,25 +326,6 @@ impl ByType {
     }
 }
 
-impl ByName {
-    /// Create a new name selector
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: OSString::literal(name.into()),
-        }
-    }
-
-    /// Create a wildcard selector (matches all)
-    pub fn wildcard() -> Self {
-        Self::new("*")
-    }
-
-    /// Create a prefix selector
-    pub fn prefix(prefix: impl Into<String>) -> Self {
-        Self::new(format!("{}*", prefix.into()))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -448,29 +337,6 @@ mod tests {
         let selection = EntitySelection::by_object_type(ObjectType::Vehicle);
         assert!(selection.by_type.is_some());
         assert_eq!(selection.by_type.unwrap().object_type, ObjectType::Vehicle);
-        assert!(selection.by_name.is_none());
-
-        // Test by name
-        let selection = EntitySelection::by_name("Ego*");
-        assert!(selection.by_type.is_none());
-        assert!(selection.by_name.is_some());
-        assert_eq!(
-            selection.by_name.unwrap().name.as_literal().unwrap(),
-            "Ego*"
-        );
-
-        // Test by type and name
-        let selection = EntitySelection::by_type_and_name(ObjectType::Pedestrian, "Walker*");
-        assert!(selection.by_type.is_some());
-        assert!(selection.by_name.is_some());
-        assert_eq!(
-            selection.by_type.unwrap().object_type,
-            ObjectType::Pedestrian
-        );
-        assert_eq!(
-            selection.by_name.unwrap().name.as_literal().unwrap(),
-            "Walker*"
-        );
     }
 
     #[test]
@@ -509,15 +375,9 @@ mod tests {
 
     #[test]
     fn test_scenario_object_template() {
-        let mut template = ScenarioObjectTemplate::new("VehicleTemplate", ObjectType::Vehicle);
+        let template = ScenarioObjectTemplate::new("VehicleTemplate", ObjectType::Vehicle);
         assert_eq!(template.name.as_literal().unwrap(), "VehicleTemplate");
         assert_eq!(template.object_type, ObjectType::Vehicle);
-        assert!(template.properties.is_none());
-
-        template.add_property("color", "red");
-        template.add_property("mass", "1500");
-        assert!(template.properties.is_some());
-        assert_eq!(template.properties.as_ref().unwrap().properties.len(), 2);
 
         let external_template = ScenarioObjectTemplate::with_external_reference(
             "ExternalVehicle",
@@ -551,18 +411,6 @@ mod tests {
     fn test_by_type() {
         let type_selector = ByType::new(ObjectType::Vehicle);
         assert_eq!(type_selector.type_spec, ObjectType::Vehicle);
-    }
-
-    #[test]
-    fn test_by_name() {
-        let wildcard_selector = ByName::wildcard();
-        assert_eq!(wildcard_selector.name.as_literal().unwrap(), "*");
-
-        let prefix_selector = ByName::prefix("Ego");
-        assert_eq!(prefix_selector.name.as_literal().unwrap(), "Ego*");
-
-        let exact_selector = ByName::new("SpecificEntity");
-        assert_eq!(exact_selector.name.as_literal().unwrap(), "SpecificEntity");
     }
 
     #[test]

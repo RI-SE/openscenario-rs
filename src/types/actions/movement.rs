@@ -271,16 +271,11 @@ pub struct AssignRouteAction {
     pub route: RouteRef,
 }
 
-/// Follow route action with route reference support
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
-pub struct FollowRouteAction {
-    /// Route reference (direct or catalog-based)
-    #[serde(flatten)]
-    pub route_ref: RouteRef,
-}
-
 /// Routing action container for trajectory and route-based movement
+///
+/// XSD `RoutingAction` (:1981-1988) is a choice of `AssignRouteAction` |
+/// `FollowTrajectoryAction` | `AcquirePositionAction` | `RandomRouteAction`.
+/// `AcquirePositionAction`/`RandomRouteAction` are not yet wired in here.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct RoutingAction {
@@ -294,10 +289,6 @@ pub struct RoutingAction {
         skip_serializing_if = "Option::is_none"
     )]
     pub follow_trajectory_action: Option<FollowTrajectoryAction>,
-
-    /// Follow route action
-    #[serde(rename = "FollowRouteAction", skip_serializing_if = "Option::is_none")]
-    pub follow_route_action: Option<FollowRouteAction>,
 }
 
 
@@ -782,22 +773,6 @@ impl FollowTrajectoryAction {
     }
 }
 
-impl FollowRouteAction {
-    /// Create a follow route action with direct route
-    pub fn with_route(route: Route) -> Self {
-        Self {
-            route_ref: RouteRef::direct(route),
-        }
-    }
-
-    /// Create a follow route action from catalog name and entry name
-    pub fn from_catalog(catalog_name: impl Into<String>, entry_name: impl Into<String>) -> Self {
-        Self {
-            route_ref: RouteRef::catalog(catalog_name, entry_name),
-        }
-    }
-}
-
 impl AssignRouteAction {
     /// Create a new assign route action with direct route
     pub fn new(route: RouteRef) -> Self {
@@ -825,7 +800,6 @@ impl RoutingAction {
         Self {
             assign_route_action: Some(action),
             follow_trajectory_action: None,
-            follow_route_action: None,
         }
     }
     /// Create a routing action with trajectory following
@@ -833,16 +807,6 @@ impl RoutingAction {
         Self {
             assign_route_action: None,
             follow_trajectory_action: Some(action),
-            follow_route_action: None,
-        }
-    }
-
-    /// Create a routing action with route following
-    pub fn with_route(action: FollowRouteAction) -> Self {
-        Self {
-            assign_route_action: None,
-            follow_trajectory_action: None,
-            follow_route_action: Some(action),
         }
     }
 
@@ -857,11 +821,6 @@ impl RoutingAction {
             entry_name,
             following_mode,
         ))
-    }
-
-    /// Create a routing action with route from catalog
-    pub fn with_route_from_catalog(catalog_name: String, entry_name: String) -> Self {
-        Self::with_route(FollowRouteAction::from_catalog(catalog_name, entry_name))
     }
 }
 

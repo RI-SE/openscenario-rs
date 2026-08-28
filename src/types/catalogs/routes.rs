@@ -3,8 +3,8 @@
 //! This module contains catalog-specific route types that enable reuse of
 //! route definitions across multiple scenarios with parameter substitution.
 
-use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
-use crate::types::enums::{RouteStrategy, RoutingAlgorithm};
+use crate::types::basic::{Boolean, Int, OSString, ParameterDeclarations, Value};
+use crate::types::enums::RouteStrategy;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -86,25 +86,9 @@ pub struct RouteWaypoint {
     #[serde(rename = "Position")]
     pub position: Position,
 
-    /// Routing strategy to reach this waypoint
-    #[serde(rename = "@routeStrategy", skip_serializing_if = "Option::is_none")]
-    pub route_strategy: Option<RouteStrategy>,
-
-    /// Routing algorithm to use
-    #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
-    pub routing_algorithm: Option<RoutingAlgorithm>,
-
-    /// Time constraint for reaching this waypoint
-    #[serde(rename = "@time", skip_serializing_if = "Option::is_none")]
-    pub time: Option<Double>,
-
-    /// Speed constraint at this waypoint
-    #[serde(rename = "@speed", skip_serializing_if = "Option::is_none")]
-    pub speed: Option<Double>,
-
-    /// Lane constraints at this waypoint
-    #[serde(rename = "LaneConstraints", skip_serializing_if = "Option::is_none")]
-    pub lane_constraints: Option<LaneConstraints>,
+    /// Routing strategy to reach this waypoint (required per XSD)
+    #[serde(rename = "@routeStrategy")]
+    pub route_strategy: RouteStrategy,
 }
 
 impl Default for RouteWaypoint {
@@ -130,75 +114,9 @@ impl Default for RouteWaypoint {
                 geographic_position: None,
                 relative_object_position: None,
             },
-            route_strategy: None,
-            routing_algorithm: None,
-            time: None,
-            speed: None,
-            lane_constraints: None,
+            route_strategy: RouteStrategy::Fastest,
         }
     }
-}
-
-/// Lane constraints for route waypoints
-///
-/// Specifies which lanes are allowed or preferred at a waypoint,
-/// with optional parameterization.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "LaneConstraints")]
-#[derive(Default)]
-pub struct LaneConstraints {
-    /// Preferred lane ID (can be parameterized)
-    #[serde(rename = "@preferredLane", skip_serializing_if = "Option::is_none")]
-    pub preferred_lane: Option<Int>,
-
-    /// Allowed lane IDs
-    #[serde(rename = "AllowedLane", skip_serializing_if = "Vec::is_empty", default)]
-    pub allowed_lanes: Vec<AllowedLane>,
-
-    /// Forbidden lane IDs
-    #[serde(
-        rename = "ForbiddenLane",
-        skip_serializing_if = "Vec::is_empty",
-        default
-    )]
-    pub forbidden_lanes: Vec<ForbiddenLane>,
-}
-
-
-/// Allowed lane specification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "AllowedLane")]
-pub struct AllowedLane {
-    /// Lane ID that is allowed (can be parameterized)
-    #[serde(rename = "@laneId")]
-    pub lane_id: Int,
-}
-
-/// Forbidden lane specification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "ForbiddenLane")]
-pub struct ForbiddenLane {
-    /// Lane ID that is forbidden (can be parameterized)
-    #[serde(rename = "@laneId")]
-    pub lane_id: Int,
-}
-
-/// Route reference for use in scenarios
-///
-/// References a route from a catalog with optional parameter overrides.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "RouteRef")]
-pub struct RouteRef {
-    /// Name of the route in the catalog
-    #[serde(rename = "@route")]
-    pub route: OSString,
-
-    /// Optional parameter assignments
-    #[serde(
-        rename = "ParameterAssignments",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_assignments: Option<RouteParameterAssignments>,
 }
 
 /// Parameter assignments for route references
@@ -287,15 +205,11 @@ impl CatalogRoute {
         self.waypoints.push(waypoint);
     }
 
-    /// Adds a simple waypoint with just a position
-    pub fn add_position_waypoint(&mut self, position: Position) {
+    /// Adds a simple waypoint with a position and routing strategy
+    pub fn add_position_waypoint(&mut self, position: Position, route_strategy: RouteStrategy) {
         self.waypoints.push(RouteWaypoint {
             position,
-            route_strategy: None,
-            routing_algorithm: None,
-            time: None,
-            speed: None,
-            lane_constraints: None,
+            route_strategy,
         });
     }
 
@@ -306,15 +220,11 @@ impl CatalogRoute {
 }
 
 impl RouteWaypoint {
-    /// Creates a new waypoint with the specified position
-    pub fn new(position: Position) -> Self {
+    /// Creates a new waypoint with the specified position and routing strategy
+    pub fn new(position: Position, route_strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy: None,
-            routing_algorithm: None,
-            time: None,
-            speed: None,
-            lane_constraints: None,
+            route_strategy,
         }
     }
 
@@ -322,93 +232,7 @@ impl RouteWaypoint {
     pub fn with_strategy(position: Position, strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy: Some(strategy),
-            routing_algorithm: None,
-            time: None,
-            speed: None,
-            lane_constraints: None,
-        }
-    }
-
-    /// Creates a waypoint with timing constraint
-    pub fn with_time(position: Position, time: Double) -> Self {
-        Self {
-            position,
-            route_strategy: None,
-            routing_algorithm: None,
-            time: Some(time),
-            speed: None,
-            lane_constraints: None,
-        }
-    }
-
-    /// Creates a waypoint with speed constraint
-    pub fn with_speed(position: Position, speed: Double) -> Self {
-        Self {
-            position,
-            route_strategy: None,
-            routing_algorithm: None,
-            time: None,
-            speed: Some(speed),
-            lane_constraints: None,
-        }
-    }
-
-    /// Sets lane constraints for this waypoint
-    pub fn set_lane_constraints(&mut self, constraints: LaneConstraints) {
-        self.lane_constraints = Some(constraints);
-    }
-}
-
-impl LaneConstraints {
-    /// Creates lane constraints with a preferred lane
-    pub fn with_preferred_lane(lane_id: Int) -> Self {
-        Self {
-            preferred_lane: Some(lane_id),
-            allowed_lanes: Vec::new(),
-            forbidden_lanes: Vec::new(),
-        }
-    }
-
-    /// Adds an allowed lane
-    pub fn add_allowed_lane(&mut self, lane_id: Int) {
-        self.allowed_lanes.push(AllowedLane { lane_id });
-    }
-
-    /// Adds a forbidden lane
-    pub fn add_forbidden_lane(&mut self, lane_id: Int) {
-        self.forbidden_lanes.push(ForbiddenLane { lane_id });
-    }
-}
-
-impl AllowedLane {
-    /// Creates an allowed lane specification
-    pub fn new(lane_id: Int) -> Self {
-        Self { lane_id }
-    }
-}
-
-impl ForbiddenLane {
-    /// Creates a forbidden lane specification
-    pub fn new(lane_id: Int) -> Self {
-        Self { lane_id }
-    }
-}
-
-impl RouteRef {
-    /// Creates a new route reference
-    pub fn new(route: OSString) -> Self {
-        Self {
-            route,
-            parameter_assignments: None,
-        }
-    }
-
-    /// Creates a route reference with parameter assignments
-    pub fn with_parameters(route: OSString, assignments: RouteParameterAssignments) -> Self {
-        Self {
-            route,
-            parameter_assignments: Some(assignments),
+            route_strategy: strategy,
         }
     }
 }
@@ -484,26 +308,14 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
         self,
         parameters: std::collections::HashMap<String, String>,
     ) -> crate::error::Result<Self::ResolvedType> {
-        // The scenario `Waypoint` type has no `routingAlgorithm`, `time`,
-        // `speed` or `LaneConstraints`; those catalog-only extensions are not
-        // carried over.
         let waypoints = self
             .waypoints
             .into_iter()
-            .map(|w| {
-                let route_strategy = w.route_strategy.ok_or_else(|| {
-                    crate::error::Error::validation_error(
-                        "Waypoint",
-                        "routeStrategy is required by the XSD but missing on a catalog waypoint",
-                    )
-                })?;
-
-                Ok(crate::types::routing::Waypoint {
-                    position: w.position,
-                    route_strategy,
-                })
+            .map(|w| crate::types::routing::Waypoint {
+                position: w.position,
+                route_strategy: w.route_strategy,
             })
-            .collect::<crate::error::Result<Vec<_>>>()?;
+            .collect::<Vec<_>>();
 
         Ok(crate::types::routing::Route {
             name: OSString::literal(crate::types::catalogs::entities::resolve_parameter(
@@ -598,62 +410,25 @@ mod tests {
         let pos1 = Position::default();
         let pos2 = Position::default();
 
-        route.add_position_waypoint(pos1);
+        route.add_position_waypoint(pos1, RouteStrategy::Shortest);
 
         let waypoint2 = RouteWaypoint::with_strategy(pos2, RouteStrategy::Fastest);
         route.add_waypoint(waypoint2);
 
         assert_eq!(route.waypoint_count(), 2);
-        assert!(route.waypoints[0].route_strategy.is_none());
-        assert_eq!(
-            route.waypoints[1].route_strategy,
-            Some(RouteStrategy::Fastest)
-        );
+        assert_eq!(route.waypoints[0].route_strategy, RouteStrategy::Shortest);
+        assert_eq!(route.waypoints[1].route_strategy, RouteStrategy::Fastest);
     }
 
     #[test]
     fn test_waypoint_creation() {
         let pos = Position::default();
 
-        let waypoint1 = RouteWaypoint::new(pos.clone());
-        let waypoint2 = RouteWaypoint::with_strategy(pos.clone(), RouteStrategy::Shortest);
-        let waypoint3 = RouteWaypoint::with_time(pos.clone(), Value::Literal(30.0));
-        let waypoint4 = RouteWaypoint::with_speed(pos, Value::Parameter("maxSpeed".to_string()));
+        let waypoint1 = RouteWaypoint::new(pos.clone(), RouteStrategy::Fastest);
+        let waypoint2 = RouteWaypoint::with_strategy(pos, RouteStrategy::Shortest);
 
-        assert!(waypoint1.route_strategy.is_none());
-        assert_eq!(waypoint2.route_strategy, Some(RouteStrategy::Shortest));
-        assert_eq!(
-            waypoint3.time.as_ref().unwrap().as_literal().unwrap(),
-            &30.0
-        );
-        assert!(matches!(
-            waypoint4.speed.as_ref().unwrap(),
-            Value::Parameter(_)
-        ));
-    }
-
-    #[test]
-    fn test_lane_constraints() {
-        let mut constraints = LaneConstraints::with_preferred_lane(Value::Literal(2));
-        constraints.add_allowed_lane(Value::Literal(1));
-        constraints.add_allowed_lane(Value::Parameter("laneId".to_string()));
-        constraints.add_forbidden_lane(Value::Literal(0));
-
-        assert_eq!(
-            constraints
-                .preferred_lane
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &2
-        );
-        assert_eq!(constraints.allowed_lanes.len(), 2);
-        assert_eq!(constraints.forbidden_lanes.len(), 1);
-        assert!(matches!(
-            constraints.allowed_lanes[1].lane_id,
-            Value::Parameter(_)
-        ));
+        assert_eq!(waypoint1.route_strategy, RouteStrategy::Fastest);
+        assert_eq!(waypoint2.route_strategy, RouteStrategy::Shortest);
     }
 
     #[test]
@@ -687,32 +462,6 @@ mod tests {
         let route = CatalogRoute::with_closed("ClosedRoute".to_string(), true);
 
         assert_eq!(route.closed.as_literal().unwrap(), &true);
-    }
-
-    #[test]
-    fn test_route_ref() {
-        let mut assignments = RouteParameterAssignments {
-            assignments: Vec::new(),
-        };
-        assignments.add_assignment(
-            Value::Literal("speed".to_string()),
-            Value::Literal("60.0".to_string()),
-        );
-
-        let route_ref =
-            RouteRef::with_parameters(Value::Literal("MyRoute".to_string()), assignments);
-
-        assert_eq!(route_ref.route.as_literal().unwrap(), "MyRoute");
-        assert!(route_ref.parameter_assignments.is_some());
-        assert_eq!(
-            route_ref
-                .parameter_assignments
-                .as_ref()
-                .unwrap()
-                .assignments
-                .len(),
-            1
-        );
     }
 
     #[test]
@@ -785,30 +534,14 @@ mod tests {
         assert_eq!(resolved.waypoints[1].route_strategy, RouteStrategy::Fastest);
     }
 
-    /// `routeStrategy` is required by the XSD on the scenario `Waypoint`, so a
-    /// catalog waypoint without one cannot be resolved.
-    #[test]
-    fn test_catalog_route_into_scenario_entity_requires_route_strategy() {
-        use crate::types::catalogs::entities::CatalogEntity;
-
-        let mut route = CatalogRoute::new("Incomplete".to_string());
-        route.add_position_waypoint(Position::default());
-
-        assert!(route
-            .into_scenario_entity(std::collections::HashMap::new())
-            .is_err());
-    }
-
     #[test]
     fn test_defaults() {
         let catalog = RouteCatalog::default();
         let route = CatalogRoute::default();
         let waypoint = RouteWaypoint::default();
-        let constraints = LaneConstraints::default();
 
         assert_eq!(catalog.rev_major.as_literal().unwrap(), &1);
         assert_eq!(route.name, "DefaultCatalogRoute");
-        assert!(waypoint.route_strategy.is_none());
-        assert!(constraints.preferred_lane.is_none());
+        assert_eq!(waypoint.route_strategy, RouteStrategy::Fastest);
     }
 }

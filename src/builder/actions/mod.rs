@@ -61,7 +61,7 @@ pub use global::{EntityActionBuilder, EnvironmentActionBuilder, VariableActionBu
 pub use lateral::{LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder};
 pub use longitudinal::{LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder};
 pub use movement::{SpeedActionBuilder, TeleportActionBuilder};
-pub use routing::{AssignRouteActionBuilder, FollowRouteActionBuilder};
+pub use routing::AssignRouteActionBuilder;
 pub use synchronize::SynchronizeActionBuilder;
 pub use trajectory::{
     FollowTrajectoryActionBuilder, PolylineBuilder, TrajectoryBuilder, VertexBuilder,

@@ -3,7 +3,7 @@
 //! This module contains the main wrapper types that organize individual actions
 //! according to the OpenSCENARIO specification hierarchy.
 
-use crate::types::basic::{Boolean, Double, OSString, UnsignedInt};
+use crate::types::basic::{Boolean, Double, OSString};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -271,15 +271,9 @@ pub struct NamedAction {
     pub action: Action,
 }
 
-// Additional action types for completeness
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
-pub struct RandomRouteAction {
-    #[serde(rename = "@numberOfRoutes", skip_serializing_if = "Option::is_none")]
-    pub number_of_routes: Option<UnsignedInt>,
-    #[serde(rename = "@randomSeed", skip_serializing_if = "Option::is_none")]
-    pub random_seed: Option<UnsignedInt>,
-}
+// XSD `RandomRouteAction` (:1813-1814) is an empty complexType.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct RandomRouteAction {}
 
 // Default implementations
 impl Default for Action {
@@ -508,10 +502,8 @@ mod tests {
     }
 
     #[test]
-    fn test_random_route_action_default_has_no_options() {
-        let rra = RandomRouteAction::default();
-        assert!(rra.number_of_routes.is_none());
-        assert!(rra.random_seed.is_none());
+    fn test_random_route_action_default() {
+        let _rra = RandomRouteAction::default();
     }
 }
 
