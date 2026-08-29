@@ -1,45 +1,33 @@
-# OpenSCENARIO-rs User Guide
+# User guide
 
-This comprehensive guide covers all aspects of using the OpenSCENARIO-rs library, from basic file parsing to advanced catalog management and scenario construction.
+`openscenario-rs` reads, writes and constructs [OpenSCENARIO](https://www.asam.net/standards/detail/openscenario/)
+files. This guide walks through the library from installation to catalog resolution. It
+assumes familiarity with the standard itself and describes only what the crate actually does.
 
-## Table of Contents
-
-1. [Installation](#installation)
-2. [Basic Concepts](#basic-concepts)
-3. [File Parsing](#file-parsing)
-4. [Type System](#type-system)
-5. [Parameter Resolution](#parameter-resolution)
-6. [Catalog Management](#catalog-management)
-7. [Scenario Construction](#scenario-construction)
-8. [Validation](#validation)
-9. [XSD Compliance](#xsd-compliance)
-10. [Error Handling](#error-handling)
-11. [Performance Considerations](#performance-considerations)
+For exhaustive signatures see the [API reference](api_reference.md); for the schema mapping,
+the [type system guide](type_system_guide.md).
 
 ## Installation
 
-Add OpenSCENARIO-rs to your `Cargo.toml`:
-
 ```toml
 [dependencies]
-openscenario-rs = "0.1.0"
-
-# Optional features
-[dependencies.openscenario-rs]
-version = "0.1.0"
-features = ["builder", "validation"]
+openscenario-rs = "0.3.2"
 ```
 
-### Available Features
+Neither optional feature is on by default:
 
-- **`builder`** - Enables programmatic scenario construction
-- **`validation`** - Adds comprehensive validation capabilities
+```toml
+openscenario-rs = { version = "0.3.2", features = ["builder", "validation"] }
+```
 
-## Basic Concepts
+`builder` enables programmatic construction; `validation` enables XSD schema validation and
+the `xosc-validate` binary. The crate requires Rust **1.90** or later.
 
-### OpenSCENARIO Document Types
+## Three kinds of document
 
-OpenSCENARIO-rs supports all three types of OpenSCENARIO documents:
+The `.xosc` extension covers three different document shapes, and the crate models all of them
+with the same `OpenScenario` root type. Every field but the header is optional, and which
+fields are populated is what distinguishes one shape from another:
 
 ```rust
 use openscenario_rs::{parse_file, OpenScenarioDocumentType};
@@ -48,842 +36,340 @@ let document = parse_file("scenario.xosc")?;
 
 match document.document_type() {
     OpenScenarioDocumentType::Scenario => {
-        // Main scenario with entities, storyboard, etc.
-        println!("Scenario file with {} entities", 
-                 document.entities.as_ref().map_or(0, |e| e.scenario_objects.len()));
-    }
-    OpenScenarioDocumentType::Catalog => {
-        // Catalog containing reusable elements
-        println!("Catalog file");
+        // entities and a storyboard are both present
+        if let Some(entities) = &document.entities {
+            println!("{} entities", entities.scenario_objects.len());
+        }
     }
     OpenScenarioDocumentType::ParameterVariation => {
-        // Parameter variation for batch simulation
-        println!("Parameter variation file");
+        println!("parameter variation file");
+    }
+    OpenScenarioDocumentType::Catalog => {
+        println!("catalog file");
     }
     OpenScenarioDocumentType::Unknown => {
-        println!("Unknown document type");
+        println!("none of the above");
     }
 }
 ```
 
-### The Value<T> System
+The predicates `is_scenario()`, `is_parameter_variation()` and `is_catalog()` are available
+where a single check reads better than a match.
 
-OpenSCENARIO-rs uses a `Value<T>` wrapper system to support parameterization:
-
-```rust
-use openscenario_rs::types::{Double, OSString};
-
-// Value<f64> that can be a literal or parameter reference
-let speed: Double = Double::literal(30.0);
-let speed_param: Double = Double::parameter("${Speed}");
-
-// Access literal values
-if let Some(literal_speed) = speed.as_literal() {
-    println!("Speed: {} m/s", literal_speed);
-}
-
-// Check if it's a parameter reference
-if speed_param.is_parameter() {
-    println!("Speed is parameterized");
-}
-```
-
-## File Parsing
-
-### Basic File Parsing
+## Parsing and serializing
 
 ```rust
-use openscenario_rs::{parse_file, parse_str, Result};
+use openscenario_rs::{parse_file, parse_str, serialize_str};
 
-// Parse from file
-fn parse_scenario_file() -> Result<()> {
-    let scenario = parse_file("examples/highway_scenario.xosc")?;
-    
-    // Access file header
-    println!("Author: {}", scenario.file_header.author.as_literal().unwrap());
-    println!("Date: {}", scenario.file_header.date.as_literal().unwrap());
-    println!("Description: {}", scenario.file_header.description.as_literal().unwrap());
-    
-    Ok(())
-}
+let from_disk = parse_file("scenario.xosc")?;
+let from_memory = parse_str(xml)?;
 
-// Parse from string
-fn parse_scenario_string() -> Result<()> {
-    let xml_content = std::fs::read_to_string("scenario.xosc")?;
-    let scenario = parse_str(&xml_content)?;
-    
-    // Process scenario...
-    
-    Ok(())
-}
+let xml = serialize_str(&from_disk)?;
 ```
 
-### Catalog File Parsing
+The file-oriented forms in `parser::xml` add `serialize_to_file`, and catalog documents have
+their own set: `parse_catalog_file`, `parse_catalog_str`, `serialize_catalog_to_string`,
+`serialize_catalog_to_file`.
+
+Serialization prepends the XML declaration and pretty-prints the output, so a document written
+back to disk is readable rather than one long line.
+
+### Validated parsing
+
+Each parse function has a `_validated` sibling that runs a structural pre-check first:
 
 ```rust
-use openscenario_rs::{parse_catalog_file, parse_catalog_str};
+use openscenario_rs::parser::xml::parse_from_file_validated;
 
-// Parse catalog file
-let catalog = parse_catalog_file("catalogs/vehicles.xosc")?;
-
-// Access catalog entries
-for vehicle in &catalog.catalog.vehicles {
-    println!("Vehicle: {}", vehicle.name.as_literal().unwrap());
-}
-
-// Parse catalog from string
-let catalog_xml = std::fs::read_to_string("catalog.xosc")?;
-let catalog = parse_catalog_str(&catalog_xml)?;
+let document = parse_from_file_validated("scenario.xosc")?;
 ```
 
-## Type System
+Be clear on what this buys you. The pre-check confirms the input is non-empty, begins with
+`<?xml` or `<`, and contains the substring `OpenSCENARIO`. It turns a confusing serde error
+into a clear one when someone hands you a JSON file. It is **not** schema validation, and a
+file containing only `<OpenSCENARIO/>` passes it. For real conformance checking see
+[validation_guide.md](validation_guide.md).
 
-### Core Data Flow
+## Reading a scenario
 
-```mermaid
-graph TD
-    A[XML Input] --> B[quick-xml Parser]
-    B --> C[Serde Deserializer]
-    C --> D[Value&lt;T&gt; Wrappers]
-    D --> E[OpenSCENARIO Types]
-    
-    subgraph "Type Categories"
-        F[Basic Types<br/>Double, OSString, etc.]
-        G[Scenario Types<br/>OpenScenario, Storyboard]
-        H[Entity Types<br/>Vehicle, Pedestrian]
-        I[Action Types<br/>LongitudinalAction, etc.]
-        J[Condition Types<br/>SpeedCondition, etc.]
-    end
-    
-    E --> F
-    E --> G
-    E --> H
-    E --> I
-    E --> J
-    
-    K[Parameter Context] --> D
-    L[Catalog Resolution] --> E
-```
-
-### Working with Entities
+Entities are `ScenarioObject`s, and the entity kind is a flat set of `Option` fields rather
+than an enum:
 
 ```rust
-use openscenario_rs::types::{Vehicle, Pedestrian, ScenarioObject};
+if let Some(entities) = &document.entities {
+    for object in &entities.scenario_objects {
+        let name = object.name.as_literal().map_or("<parameterized>", |v| v);
 
-// Access scenario entities
-if let Some(entities) = &scenario.entities {
-    for scenario_object in &entities.scenario_objects {
-        println!("Entity: {}", scenario_object.name.as_literal().unwrap());
-        
-        // Check entity type
-        if let Some(entity_object) = &scenario_object.entity_object {
-            match entity_object {
-                EntityObject::Vehicle(vehicle) => {
-                    println!("  Vehicle mass: {:?}", 
-                             vehicle.properties.as_ref()
-                                   .and_then(|p| p.mass.as_ref())
-                                   .and_then(|m| m.as_literal()));
-                }
-                EntityObject::Pedestrian(pedestrian) => {
-                    println!("  Pedestrian model: {}", 
-                             pedestrian.model.as_literal().unwrap());
-                }
-                EntityObject::MiscObject(misc) => {
-                    println!("  Misc object category: {:?}", misc.category);
-                }
-            }
-        }
-        
-        // Check for catalog reference
-        if let Some(catalog_ref) = &scenario_object.catalog_reference {
-            println!("  References catalog: {}", 
-                     catalog_ref.entry_name.as_literal().unwrap());
+        if let Some(vehicle) = &object.vehicle {
+            println!("{name}: vehicle, category {:?}", vehicle.vehicle_category);
+        } else if let Some(pedestrian) = &object.pedestrian {
+            println!("{name}: pedestrian, mass {}", pedestrian.mass);
+        } else if let Some(catalog_ref) = &object.entity_catalog_reference {
+            println!("{name}: from catalog");
         }
     }
 }
 ```
 
-### Working with Actions
+Two details catch people out. `ScenarioObject::name` is an `OSString`, not an
+`Option<OSString>` – the schema requires it. And the catalog reference field is named
+`entity_catalog_reference`, not `catalog_reference`.
+
+## Values, parameters and expressions
+
+Nearly every attribute in OpenSCENARIO may hold a literal, a `${parameter}` reference, or a
+`${expression}`. The crate models this once, in `Value<T>`, rather than per attribute:
 
 ```rust
-use openscenario_rs::types::actions::*;
-
-// Access storyboard actions
-if let Some(storyboard) = &scenario.storyboard {
-    for story in &storyboard.story {
-        for act in &story.acts {
-            for maneuver_group in &act.maneuver_groups {
-                for maneuver in &maneuver_group.maneuvers {
-                    for event in &maneuver.events {
-                        for action in &event.action {
-                            match action {
-                                Action::Private(private_action) => {
-                                    match &private_action.action_type {
-                                        PrivateActionType::LongitudinalAction(long_action) => {
-                                            println!("Longitudinal action");
-                                        }
-                                        PrivateActionType::LateralAction(lat_action) => {
-                                            println!("Lateral action");
-                                        }
-                                        // ... other action types
-                                        _ => {}
-                                    }
-                                }
-                                Action::UserDefined(user_action) => {
-                                    println!("User-defined action");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+pub enum Value<T> { Literal(T), Parameter(String), Expression(String) }
 ```
 
-### Working with Conditions
+You will meet it through its aliases: `OSString`, `Double`, `Int`, `UnsignedInt`,
+`UnsignedShort`, `Boolean` and `DateTime`. Construction takes an owned value, and a parameter
+name is given **bare**, without the `${…}` braces:
 
 ```rust
-use openscenario_rs::types::conditions::*;
+use openscenario_rs::types::basic::Double;
 
-// Access trigger conditions
-if let Some(storyboard) = &scenario.storyboard {
-    for story in &storyboard.story {
-        for act in &story.acts {
-            for start_trigger in &act.start_trigger {
-                for condition_group in &start_trigger.condition_groups {
-                    for condition in &condition_group.conditions {
-                        match &condition.condition_type {
-                            ConditionType::ByEntity(entity_condition) => {
-                                match &entity_condition.condition {
-                                    EntityCondition::Distance(dist_condition) => {
-                                        println!("Distance condition");
-                                    }
-                                    EntityCondition::Speed(speed_condition) => {
-                                        println!("Speed condition");
-                                    }
-                                    // ... other entity conditions
-                                    _ => {}
-                                }
-                            }
-                            ConditionType::ByValue(value_condition) => {
-                                match &value_condition.condition {
-                                    ValueCondition::SimulationTime(time_condition) => {
-                                        println!("Simulation time condition");
-                                    }
-                                    // ... other value conditions
-                                    _ => {}
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+let literal = Double::literal(25.0);
+let parameter = Double::parameter("vehicle_speed".to_string());
+let expression = Double::expression("vehicle_speed + 10".to_string());
 ```
 
-## Parameter Resolution
-
-### Understanding Parameters
-
-OpenSCENARIO supports parameter references using `${parameter_name}` syntax:
+Inspection is by three accessors, each returning `None` for the other two variants. There is
+no `is_parameter()` predicate:
 
 ```rust
-use openscenario_rs::types::{ParameterContext, Resolve};
+if let Some(speed) = literal.as_literal() { /* &f64 */ }
+if let Some(name) = parameter.as_parameter() { /* &str */ }
+if let Some(expr) = expression.as_expression() { /* &str */ }
+```
+
+### Resolution
+
+Resolution takes a plain `HashMap<String, String>`:
+
+```rust
 use std::collections::HashMap;
 
-// Create parameter context
-let mut parameters = HashMap::new();
-parameters.insert("Speed".to_string(), "30.0".to_string());
-parameters.insert("Lane".to_string(), "1".to_string());
-parameters.insert("VehicleModel".to_string(), "sedan".to_string());
+let mut params = HashMap::new();
+params.insert("vehicle_speed".to_string(), "30.0".to_string());
 
-let param_context = ParameterContext::new()
-    .with_parameter("Speed".to_string(), "30.0".to_string())
-    .with_parameter("Lane".to_string(), "1".to_string());
-
-// Resolve parameter references
-let speed_param = Double::parameter("${Speed}");
-let resolved_speed: f64 = speed_param.resolve(&param_context)?;
-println!("Resolved speed: {}", resolved_speed); // 30.0
+let speed: f64 = parameter.resolve(&params)?;
 ```
 
-### Extracting Scenario Parameters
+A parameter absent from the map, or a substituted value that does not parse into `T`, produces
+`Error::ParameterError`. The parameters declared by a document itself are extracted with:
 
 ```rust
 use openscenario_rs::catalog::extract_scenario_parameters;
 
-// Extract parameters from scenario
-let scenario_params = extract_scenario_parameters(&scenario.parameter_declarations);
-
-// Combine with additional parameters
-let mut all_params = scenario_params;
-all_params.insert("ExternalParam".to_string(), "value".to_string());
+let params = extract_scenario_parameters(&document.parameter_declarations);
 ```
 
-### Expression Evaluation
+Arithmetic expressions are evaluated separately:
 
 ```rust
-use openscenario_rs::expression::evaluate_expression;
+use openscenario_rs::evaluate_expression;
 
-let parameters = std::collections::HashMap::from([
-    ("Speed".to_string(), "30.0".to_string()),
-    ("Offset".to_string(), "5.0".to_string()),
-]);
-
-// Evaluate mathematical expressions
-let result = evaluate_expression("${Speed + Offset * 2}", &parameters)?;
-println!("Result: {}", result); // "40.0"
-
-// Supported operations: +, -, *, /, (), sqrt, sin, cos, etc.
-let complex_expr = "sqrt(${Speed} * ${Speed} + ${Offset} * ${Offset})";
-let result = evaluate_expression(complex_expr, &parameters)?;
+let result: f64 = evaluate_expression("vehicle_speed * 2 + 5", &params)?;
 ```
 
-## Catalog Management
+`examples/expression_demo.rs` runs through all three value kinds.
 
-### Catalog System Architecture
-
-```mermaid
-graph TD
-    A[Scenario File] --> B[CatalogLocations]
-    B --> C[CatalogManager]
-    C --> D[CatalogLoader]
-    C --> E[CatalogResolver]
-    C --> F[ParameterEngine]
-    
-    D --> G[Vehicle Catalogs]
-    D --> H[Pedestrian Catalogs]
-    D --> I[Controller Catalogs]
-    D --> J[Environment Catalogs]
-    
-    K[Catalog References] --> E
-    E --> L[Resolved Entities]
-    
-    F --> M[Parameter Substitution]
-    M --> L
-    
-    subgraph "Catalog Types"
-        G --> N[VehicleCatalog.xosc]
-        H --> O[PedestrianCatalog.xosc]
-        I --> P[ControllerCatalog.xosc]
-        J --> Q[EnvironmentCatalog.xosc]
-    end
+```bash
+cargo run --example expression_demo
 ```
 
-### Setting Up Catalog Management
+## Catalogs
+
+Catalogs hold reusable vehicles, pedestrians, controllers, trajectories, routes and
+environments, referenced from a scenario by catalog name and entry name. `CatalogManager`
+loads and resolves them.
 
 ```rust
-use openscenario_rs::catalog::{CatalogManager, extract_scenario_parameters};
+use openscenario_rs::CatalogManager;
 
-// Create catalog manager
-let mut catalog_manager = CatalogManager::new();
+let mut manager = CatalogManager::with_base_path("./scenarios");
 
-// Extract parameters from scenario
-let scenario_params = extract_scenario_parameters(&scenario.parameter_declarations);
-catalog_manager.set_global_parameters(scenario_params)?;
+// Parameters declared by the scenario are needed to resolve parameterized catalog names
+manager.set_global_parameters(params)?;
 
-// Load catalogs from scenario locations
-if let Some(catalog_locations) = &scenario.catalog_locations {
-    catalog_manager.discover_and_load_catalogs(catalog_locations)?;
+if let Some(locations) = &document.catalog_locations {
+    manager.discover_and_load_catalogs(locations)?;
 }
 ```
 
-### Resolving Vehicle References
+Resolving a reference needs both the reference and the catalog location it should be looked up
+in:
 
 ```rust
-use openscenario_rs::types::catalogs::references::VehicleCatalogReference;
+let resolved = manager.resolve_vehicle_reference(&reference, &vehicle_location)?;
 
-// Find vehicle catalog references in scenario
-for scenario_object in &scenario.entities.unwrap().scenario_objects {
-    if let Some(catalog_ref) = &scenario_object.catalog_reference {
-        // This is a generic catalog reference - need to determine type
-        println!("Found catalog reference: {}", 
-                 catalog_ref.entry_name.as_literal().unwrap());
-    }
-    
-    // Or check for specific vehicle references in entity properties
-    if let Some(entity_object) = &scenario_object.entity_object {
-        match entity_object {
-            EntityObject::Vehicle(vehicle) => {
-                // Vehicle loaded directly (not from catalog)
-                println!("Direct vehicle: {}", vehicle.name.as_literal().unwrap());
-            }
-            _ => {}
-        }
-    }
-}
-
-// Resolve specific vehicle catalog reference
-let vehicle_ref = VehicleCatalogReference {
-    catalog_name: OSString::literal("VehicleCatalog".to_string()),
-    entry_name: OSString::literal("sedan_vehicle".to_string()),
-    parameter_assignments: None,
-};
-
-if let Some(vehicle_location) = &scenario.catalog_locations.unwrap().vehicle_catalog {
-    let resolved_vehicle = catalog_manager
-        .resolve_vehicle_reference(&vehicle_ref, vehicle_location)?;
-    
-    println!("Resolved vehicle: {:?}", resolved_vehicle.entity.name);
-    println!("From catalog file: {}", resolved_vehicle.source_file);
-}
+let vehicle = &resolved.entity;
+println!("resolved from {}", resolved.metadata.catalog_path);
 ```
 
-### Working with Catalog Parameters
+`ResolvedCatalog<T>` carries the entity alongside `ResolutionMetadata`, which records the
+catalog file it came from, the entry name and every parameter substituted during resolution.
+The path is `metadata.catalog_path`, not a field on the resolved value itself.
+
+`resolve_controller_reference` and `resolve_pedestrian_reference` follow the same shape.
+Circular references are detected during resolution rather than being followed until the stack
+runs out.
+
+### Building a reference
+
+`CatalogReference<T>` carries a private type marker, so it cannot be built from a struct
+literal outside its module. Use the constructor:
 
 ```rust
-use openscenario_rs::types::basic::ParameterAssignment;
+use openscenario_rs::types::catalogs::references::CatalogReference;
 
-// Create vehicle reference with parameters
-let vehicle_ref = VehicleCatalogReference {
-    catalog_name: OSString::literal("VehicleCatalog".to_string()),
-    entry_name: OSString::literal("parametric_vehicle".to_string()),
-    parameter_assignments: Some(vec![
-        ParameterAssignment {
-            parameter_ref: OSString::literal("Mass".to_string()),
-            value: OSString::literal("1500.0".to_string()),
-        },
-        ParameterAssignment {
-            parameter_ref: OSString::literal("Color".to_string()),
-            value: OSString::literal("red".to_string()),
-        },
-    ]),
-};
+let reference = CatalogReference::new("VehicleCatalog".to_string(), "car_white".to_string());
+```
 
-// Resolve with parameters
-let resolved = catalog_manager
-    .resolve_vehicle_reference(&vehicle_ref, vehicle_location)?;
+`ParameterAssignment` and `ParameterAssignments`, which carry the values a reference passes
+into a parameterized catalog entry, live in `types::catalogs::references` alongside it.
 
-// Check resolved parameters
-for (param, value) in &resolved.resolved_parameters {
-    println!("Parameter {}: {}", param, value);
+### Catalog files
+
+A catalog file is a full OpenSCENARIO document whose root carries a `Catalog` element, and the
+crate parses it as such:
+
+```rust
+use openscenario_rs::parse_catalog_file;
+
+let catalog = parse_catalog_file("catalogs/vehicles.xosc")?;
+
+println!("{}: {} entries", catalog.catalog_name(), catalog.entity_count());
+for name in catalog.entity_names() {
+    println!("  {name}");
 }
 ```
 
-### Creating Custom Catalogs
+`CatalogFile` also offers `vehicles()`, `controllers()`, `pedestrians()` and the corresponding
+`find_*` lookups.
+
+## Constructing scenarios
+
+With the `builder` feature:
 
 ```rust
-use openscenario_rs::types::catalogs::files::{CatalogFile, Catalog};
-use openscenario_rs::types::entities::Vehicle;
+use openscenario_rs::types::catalogs::locations::CatalogLocations;
+use openscenario_rs::types::road::RoadNetwork;
+use openscenario_rs::ScenarioBuilder;
 
-// Create a vehicle catalog programmatically
-let vehicle = Vehicle::new("sports_car")
-    .with_mass(1200.0)
-    .with_performance(250.0, 12.0, 10.0); // max_speed, max_accel, max_decel
-
-let catalog = Catalog {
-    name: OSString::literal("CustomVehicles".to_string()),
-    vehicles: vec![vehicle],
-    pedestrians: vec![],
-    misc_objects: vec![],
-    controllers: vec![],
-    environments: vec![],
-    maneuvers: vec![],
-    trajectories: vec![],
-    routes: vec![],
-};
-
-let catalog_file = CatalogFile {
-    file_header: FileHeader::new("Custom Catalog", "1.0"),
-    catalog,
-};
-
-// Serialize catalog to XML
-let xml = openscenario_rs::serialize_catalog_to_string(&catalog_file)?;
-std::fs::write("custom_vehicles.xosc", xml)?;
+let scenario = ScenarioBuilder::new()
+    .with_header("Basic Highway Scenario", "Builder Demo")
+    .with_catalog_locations(CatalogLocations::default())
+    .with_road_network(RoadNetwork::default())
+    .with_entities()
+    .with_storyboard(|sb| sb)
+    .build()?;
 ```
 
-## Scenario Construction
-
-### Using the Builder Pattern
-
-```rust
-use openscenario_rs::builder::ScenarioBuilder;
-use openscenario_rs::types::enums::{VehicleCategory, PedestrianCategory};
-
-#[cfg(feature = "builder")]
-fn build_scenario() -> Result<OpenScenario> {
-    let scenario = ScenarioBuilder::new()
-        .with_author("Scenario Generator")
-        .with_description("Automatically generated scenario")
-        .with_date("2024-01-15")
-        
-        // Add ego vehicle
-        .add_vehicle("ego_vehicle")
-            .with_category(VehicleCategory::Car)
-            .with_model("sedan")
-            .with_mass(1500.0)
-            .with_max_speed(60.0)
-            .with_max_acceleration(8.0)
-            .with_max_deceleration(10.0)
-        
-        // Add pedestrian
-        .add_pedestrian("pedestrian_1")
-            .with_category(PedestrianCategory::Pedestrian)
-            .with_model("adult_male")
-            .with_mass(75.0)
-        
-        // Add initial actions
-        .add_init_action()
-            .for_entity("ego_vehicle")
-            .teleport_to_world_position(100.0, 200.0, 0.0, 0.0, 0.0, 1.57)
-        
-        .add_init_action()
-            .for_entity("pedestrian_1")
-            .teleport_to_world_position(150.0, 205.0, 0.0, 0.0, 0.0, 0.0)
-        
-        // Add story with maneuvers
-        .add_story("main_story")
-            .add_act("setup_act")
-                .add_maneuver_group("ego_maneuvers")
-                    .actors(vec!["ego_vehicle"])
-                    .add_maneuver("speed_up")
-                        .add_event("accelerate_event")
-                            .add_longitudinal_action()
-                                .speed_action(30.0, TransitionDynamics::linear(2.0))
-                            .add_start_trigger()
-                                .simulation_time_condition(1.0)
-        
-        .build()?;
-    
-    Ok(scenario)
-}
-```
-
-### Manual Construction
-
-```rust
-use openscenario_rs::types::*;
-use openscenario_rs::types::scenario::*;
-
-fn create_scenario_manually() -> Result<OpenScenario> {
-    // Create file header
-    let file_header = FileHeader {
-        author: OSString::literal("Manual Builder".to_string()),
-        date: OSString::literal("2024-01-15".to_string()),
-        description: OSString::literal("Manually constructed scenario".to_string()),
-        rev_major: UnsignedShort::literal(1),
-        rev_minor: UnsignedShort::literal(0),
-    };
-    
-    // Create vehicle
-    let vehicle = Vehicle {
-        name: OSString::literal("ego_vehicle".to_string()),
-        vehicle_category: VehicleCategory::Car,
-        properties: Some(VehicleProperties {
-            mass: Some(Double::literal(1500.0)),
-            // ... other properties
-        }),
-        // ... other vehicle fields
-    };
-    
-    // Create scenario object
-    let scenario_object = ScenarioObject {
-        name: OSString::literal("ego_vehicle".to_string()),
-        entity_object: Some(EntityObject::Vehicle(vehicle)),
-        catalog_reference: None,
-    };
-    
-    // Create entities
-    let entities = Entities {
-        scenario_objects: vec![scenario_object],
-        entity_selections: vec![],
-    };
-    
-    // Create init actions
-    let teleport_action = TeleportAction {
-        position: Position::WorldPosition(WorldPosition {
-            x: Double::literal(100.0),
-            y: Double::literal(200.0),
-            z: Double::literal(0.0),
-            h: Double::literal(0.0),
-            p: Double::literal(0.0),
-            r: Double::literal(0.0),
-        }),
-    };
-    
-    let private_action = PrivateAction {
-        entity_ref: OSString::literal("ego_vehicle".to_string()),
-        action_type: PrivateActionType::TeleportAction(teleport_action),
-    };
-    
-    let init_actions = Init {
-        actions: vec![Action::Private(private_action)],
-    };
-    
-    // Create storyboard
-    let storyboard = Storyboard {
-        init: init_actions,
-        story: vec![], // Add stories as needed
-        stop_trigger: vec![], // Add stop triggers as needed
-    };
-    
-    // Create final scenario
-    let scenario = OpenScenario {
-        file_header,
-        parameter_declarations: None,
-        catalog_locations: None,
-        road_network: None,
-        entities: Some(entities),
-        storyboard: Some(storyboard),
-    };
-    
-    Ok(scenario)
-}
-```
+The builder uses a typestate so that a document missing its header or entities does not
+compile. `CatalogLocations`, `RoadNetwork` and the storyboard are required too, but by the
+schema rather than the type system, so `build()` rejects them at runtime. The empty forms
+above are what a scenario with no catalogs and no road file should pass. The
+[builder guide](builder_guide.md) covers entities, init actions, storyboards and the detached
+style.
 
 ## Validation
 
-### Built-in Validation
+Four layers exist and they answer different questions. Briefly:
+
+- the **structural pre-check** described above rejects obvious non-documents;
+- **XSD schema validation** (`validation` feature) is the one that answers whether a file
+  conforms to OpenSCENARIO 1.3;
+- **semantic validation** checks cross-references and constraints in a parsed document;
+- **per-type `validate()`** checks a single value or choice group.
+
+The schema validator in brief:
 
 ```rust
-use openscenario_rs::types::{Validate, ValidationContext};
+use openscenario_rs::validation::XsdValidator;
 
-// Create validation context
-let mut validation_context = ValidationContext::new()
-    .with_strict_mode(); // Enable strict validation
+let mut validator = XsdValidator::from_schema_file("Schema/OpenSCENARIO.xsd")?;
+let errors = validator.validate_file("scenario.xosc")?;
 
-// Add entities to validation context
-for entity in &scenario.entities.unwrap().scenario_objects {
-    validation_context.add_entity(
-        entity.name.as_literal().unwrap().clone(),
-        EntityRef {
-            name: entity.name.as_literal().unwrap().clone(),
-            object_type: ObjectType::Vehicle, // or appropriate type
-        }
-    );
+if errors.is_empty() {
+    println!("valid");
 }
-
-// Validate scenario
-scenario.validate(&validation_context)?;
 ```
 
-### Custom Validation Rules
+An empty vector means valid; `Err` is reserved for input that is not well-formed XML at all.
+The full treatment is in [validation_guide.md](validation_guide.md).
+
+From the command line:
+
+```bash
+cargo run --bin xosc-validate --features validation -- scenario.xosc
+```
+
+## Error handling
+
+Everything fallible returns `openscenario_rs::Result<T>`, aliasing a single `Error` enum. The
+variants carry structured context rather than a formatted string, so a caller can react to the
+specific failure:
 
 ```rust
-use openscenario_rs::types::{Validate, ValidationContext, Result};
+use openscenario_rs::Error;
 
-// Implement custom validation for your types
-impl Validate for CustomScenarioType {
-    fn validate(&self, ctx: &ValidationContext) -> Result<()> {
-        // Check entity references exist
-        if let Some(entity_name) = self.entity_ref.as_literal() {
-            if !ctx.entities.contains_key(entity_name) {
-                return Err(Error::validation_error(
-                    "entity_ref",
-                    &format!("Entity '{}' not found", entity_name)
-                ));
-            }
-        }
-        
-        // Check value constraints
-        if let Some(speed) = self.target_speed.as_literal() {
-            if *speed < 0.0 {
-                return Err(Error::validation_error(
-                    "target_speed",
-                    "Speed cannot be negative"
-                ));
-            }
-        }
-        
-        Ok(())
+match parse_file("scenario.xosc") {
+    Ok(document) => { /* ... */ }
+    Err(Error::FileNotFound { path }) => eprintln!("no such file: {path}"),
+    Err(Error::ParameterNotFound { param, available }) => {
+        eprintln!("unknown parameter {param}; known: {available:?}");
     }
+    Err(Error::XmlParseError(e)) => eprintln!("malformed XML: {e}"),
+    Err(e) => eprintln!("{e}"),
 }
 ```
 
-### Schema Validation
+`Error::EntityNotFound` and `Error::ParameterNotFound` both carry the available names, which
+is usually what you want to print. See the [API reference](api_reference.md) for the full list
+of variants and their constructor helpers.
 
-```rust
-use openscenario_rs::parser::validation::validate_against_schema;
+## Command-line tools
 
-// Validate XML against OpenSCENARIO XSD schema
-let xml_content = std::fs::read_to_string("scenario.xosc")?;
-validate_against_schema(&xml_content, "Schema/OpenSCENARIO.xsd")?;
-
-// Then parse if validation succeeds
-let scenario = parse_str(&xml_content)?;
+```bash
+cargo run --bin scenario_analyzer -- scenario.xosc
+cargo run --bin xosc-validate --features validation -- scenario.xosc
 ```
 
-## XSD Compliance
+`xosc-validate` takes `--schema`, `--format human|json|junit`, `--recursive` and `--quiet`, and
+exits non-zero on failure so it can be gated in CI without parsing its output.
 
-OpenSCENARIO-rs achieves 95%+ XSD validation compliance with the official OpenSCENARIO schema. The library generates XML that strictly adheres to the XSD specification.
+## Examples
 
-### Key Features
+The `examples/` directory holds runnable programs for each area of the crate:
 
-- **Proper Attribute Handling**: Optional attributes are omitted when `None` instead of serialized as empty strings
-- **Choice Group Compliance**: XSD choice groups serialize with correct wrapper elements
-- **Schema Validation**: Built-in validation against OpenSCENARIO XSD standards
-- **Backward Compatibility**: Existing XOSC files continue to parse correctly
+| Example | Shows |
+|---|---|
+| `parse` | A general-purpose parse-and-inspect tool |
+| `expression_demo` | Literals, parameters and expressions |
+| `routing_demo` | Routes, waypoints and trajectories |
+| `spatial_conditions_demo`, `simple_spatial_demo` | Spatial conditions |
+| `motion_conditions_demo`, `byvalue_conditions_demo` | Condition families |
+| `vehicle_components_demo`, `vehicle_axles_demo`, `bounding_box_demo` | Vehicle structure |
+| `action_wrappers_demo` | The action wrapper hierarchy |
+| `cut_in_scenario_demo`, `alks_scenario_4_1_1_comprehensive` | Complete worked scenarios, built programmatically |
 
-### XSD-Compliant Serialization
-
-```rust
-use openscenario_rs::types::actions::movement::LaneChangeAction;
-
-// Create action with optional offset
-let action = LaneChangeAction {
-    target_lane_offset: None, // Will be omitted in XML
-    // ... other fields
-};
-
-// Serialize to XSD-compliant XML
-let xml = quick_xml::se::to_string(&action)?;
-// Output: <LaneChangeAction>...</LaneChangeAction>
-// Note: No targetLaneOffset="" attribute present
-
-// With value
-let action_with_offset = LaneChangeAction {
-    target_lane_offset: Some(Double::literal(0.5)),
-    // ... other fields  
-};
-
-let xml = quick_xml::se::to_string(&action_with_offset)?;
-// Output: <LaneChangeAction targetLaneOffset="0.5">...</LaneChangeAction>
+```bash
+cargo run --example expression_demo
+cargo run --example cut_in_scenario_demo --features builder
 ```
 
-### Handling Empty Attributes
+One caveat: `basic_parsing` reads a hardcoded path that is not in the repository and panics.
 
-The library gracefully handles empty attributes during deserialization:
+## Known limitations
 
-```rust
-// This XML with empty attribute...
-let xml = r#"<LaneChangeAction targetLaneOffset="">...</LaneChangeAction>"#;
+The crate targets OpenSCENARIO 1.3 as defined by the bundled `Schema/OpenSCENARIO.xsd`.
 
-// ...deserializes correctly with None value
-let action: LaneChangeAction = quick_xml::de::from_str(xml)?;
-assert!(action.target_lane_offset.is_none());
-```
-
-### XSD Validation Tools
-
-For strict XSD validation during development:
-
-```rust
-use openscenario_rs::examples::test_lane_change_serialization;
-
-// Use the provided examples to validate serialization
-test_lane_change_serialization(); // Validates XSD compliance
-```
-
-See [`docs/xsd_validation_fixes.md`](xsd_validation_fixes.md) for detailed implementation patterns and troubleshooting.
-
-## Error Handling
-
-### Error Types
-
-```rust
-use openscenario_rs::{Error, Result};
-
-fn handle_parsing_errors() -> Result<()> {
-    match parse_file("scenario.xosc") {
-        Ok(scenario) => {
-            println!("Parsed successfully");
-            Ok(())
-        }
-        Err(Error::XmlParseError(e)) => {
-            eprintln!("XML parsing failed: {}", e);
-            Err(Error::XmlParseError(e))
-        }
-        Err(Error::IoError(e)) => {
-            eprintln!("File I/O error: {}", e);
-            Err(Error::IoError(e))
-        }
-        Err(Error::ValidationError { field, message }) => {
-            eprintln!("Validation error in field '{}': {}", field, message);
-            Err(Error::validation_error(&field, &message))
-        }
-        Err(Error::ParameterError { param, value }) => {
-            eprintln!("Parameter '{}' error: {}", param, value);
-            Err(Error::parameter_error(&param, &value))
-        }
-        Err(Error::EntityNotFound { entity }) => {
-            eprintln!("Entity not found: {}", entity);
-            Err(Error::EntityNotFound { entity })
-        }
-        Err(Error::CatalogNotFound { catalog, entry }) => {
-            eprintln!("Catalog entry '{}' not found in catalog '{}'", entry, catalog);
-            Err(Error::CatalogNotFound { catalog, entry })
-        }
-        Err(Error::CatalogError(msg)) => {
-            eprintln!("Catalog error: {}", msg);
-            Err(Error::CatalogError(msg))
-        }
-    }
-}
-```
-
-### Error Context
-
-```rust
-// Add context to errors
-let result = parse_file("scenario.xosc")
-    .map_err(|e| e.with_context("Failed to parse main scenario file"));
-
-// Create custom errors with context
-let error = Error::validation_error("speed", "Invalid speed value")
-    .with_context("While validating longitudinal action");
-```
-
-## Performance Considerations
-
-### Memory Usage
-
-The parser uses zero-copy deserialization for efficient memory usage.
-
-### Caching Catalogs
-
-```rust
-// Cache catalog resolutions for repeated use
-let mut catalog_manager = CatalogManager::new();
-
-// Load catalogs once
-catalog_manager.discover_and_load_catalogs(catalog_locations)?;
-
-// Reuse for multiple scenarios
-for scenario_file in scenario_files {
-    let scenario = parse_file(&scenario_file)?;
-    // Catalog resolution uses cached catalogs
-    let resolved = resolve_scenario_catalogs(&scenario, &mut catalog_manager)?;
-}
-```
-
-### Lazy Evaluation
-
-```rust
-// Parameters and catalogs are resolved on demand
-let scenario = parse_file("scenario.xosc")?; // Fast - no catalog resolution yet
-
-// Catalog resolution happens when needed
-let resolved_vehicle = catalog_manager
-    .resolve_vehicle_reference(&vehicle_ref, &vehicle_location)?; // Slower
-```
-
-### Zero-Copy Operations
-
-```rust
-// When possible, the library uses references to avoid copying
-let entity_name = entity.name.as_literal().unwrap(); // &String, not String
-let speed_value = speed.as_literal().unwrap(); // &f64, not f64
-
-// Clone only when necessary
-let owned_name = entity.name.as_literal().unwrap().clone(); // String
-```
-
-## Best Practices
-
-1. **Use High-Level APIs**: Start with `parse_file()` and `CatalogManager`
-2. **Handle Errors Properly**: Always check `Result` return values
-3. **Cache Catalogs**: Reuse `CatalogManager` instances for multiple scenarios
-4. **Validate Early**: Use validation APIs to catch errors early
-5. **Parameter Management**: Extract and manage parameters systematically
-6. **Type Safety**: Leverage the `Value<T>` system for parameter support
-
-## Next Steps
-
-- See [API Reference](api_reference.md) for detailed API documentation
-- Check [Examples](../examples/) for real-world usage patterns
-- Read [Development Guide](development_guide.md) for contributing guidelines
+One conformance gap is open and worth knowing about before you hit it: every enumeration in
+the schema is a union that also admits a parameter, so `vehicleCategory="${cat}"` is valid
+across 75 attributes. A bare Rust enum cannot represent that, and the crate currently rejects
+such files. The full conformance ledger, including which parts of the schema the test corpus
+never exercises, is in [xsd_gaps.md](xsd_gaps.md).

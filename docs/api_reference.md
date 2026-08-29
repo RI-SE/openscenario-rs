@@ -1,904 +1,266 @@
-# OpenSCENARIO-rs API Reference
+# API reference
 
-This document provides comprehensive API documentation for the OpenSCENARIO-rs library, covering all modules, types, and functions.
+A reference to the public surface of `openscenario-rs` 0.3.2. Every signature here is taken
+from the source; where a name is ambiguous or collides with another, that is flagged rather
+than glossed over.
 
-## Table of Contents
+For narrative introductions see the [user guide](user_guide.md) and
+[builder guide](builder_guide.md). For how the types map to the schema, see the
+[type system guide](type_system_guide.md).
 
-1. [Core API](#core-api)
-2. [Parser Module](#parser-module)
-3. [Type System](#type-system)
-4. [Catalog System](#catalog-system)
-5. [Expression System](#expression-system)
-6. [Builder API](#builder-api)
-7. [Error Types](#error-types)
-8. [Utility Functions](#utility-functions)
+## Crate metadata
 
-## Core API
+| | |
+|---|---|
+| Version | 0.3.2 |
+| Edition | 2021 |
+| MSRV | **1.90** |
+| License | GPL-3.0-only |
+| Target standard | OpenSCENARIO 1.3 |
 
-### High-Level Functions
+## Features
 
-The library provides convenient high-level functions for common operations:
+Neither feature is enabled by default.
 
-```rust
-pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario>
-pub fn parse_str(xml: &str) -> Result<OpenScenario>
-pub fn parse_catalog_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile>
-pub fn parse_catalog_str(xml: &str) -> Result<CatalogFile>
-pub fn serialize_str(scenario: &OpenScenario) -> Result<String>
+| Feature | Enables |
+|---|---|
+| `builder` | `openscenario_rs::builder`, the `ScenarioBuilder` re-export, and the `pedestrian_builder_demo` example |
+| `validation` | `openscenario_rs::validation` (`XsdValidator`) and the `xosc-validate` binary |
+
+```toml
+[dependencies]
+openscenario-rs = { version = "0.3.2", features = ["builder", "validation"] }
 ```
 
-#### parse_file()
+## Top-level functions
 
-Parse an OpenSCENARIO file from the filesystem.
-
-**Parameters:**
-- `path: P` - File path (anything implementing `AsRef<Path>`)
-
-**Returns:**
-- `Result<OpenScenario>` - Parsed scenario or error
-
-**Example:**
-```rust
-use openscenario_rs::parse_file;
-
-let scenario = parse_file("scenario.xosc")?;
-println!("Author: {}", scenario.file_header.author.as_literal().unwrap());
-```
-
-#### parse_str()
-
-Parse an OpenSCENARIO document from a string.
-
-**Parameters:**
-- `xml: &str` - XML content as string
-
-**Returns:**
-- `Result<OpenScenario>` - Parsed scenario or error
-
-**Example:**
-```rust
-let xml = std::fs::read_to_string("scenario.xosc")?;
-let scenario = parse_str(&xml)?;
-```
-
-### Document Types
+The crate root offers five convenience functions wrapping `parser::xml`:
 
 ```rust
-#[derive(Debug, Clone, PartialEq)]
-pub enum OpenScenarioDocumentType {
-    Scenario,
-    Catalog,
-    ParameterVariation,
-    Unknown,
-}
+pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
+pub fn parse_str(xml: &str) -> Result<OpenScenario>;
+pub fn parse_catalog_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile>;
+pub fn parse_catalog_str(xml: &str) -> Result<CatalogFile>;
+pub fn serialize_str(scenario: &OpenScenario) -> Result<String>;
 ```
 
-Check document type with:
-```rust
-match scenario.document_type() {
-    OpenScenarioDocumentType::Scenario => { /* main scenario */ }
-    OpenScenarioDocumentType::Catalog => { /* catalog file */ }
-    // ... other types
-}
-```
+## Root re-exports
 
-## Parser Module
-
-### XML Parsing (`parser::xml`)
-
-Core XML parsing functionality with serde integration.
+There is no `prelude` module; the crate root re-exports the following directly.
 
 ```rust
-pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario>
-pub fn parse_from_str(xml: &str) -> Result<OpenScenario>
-pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String>
-pub fn serialize_to_file<P: AsRef<Path>>(scenario: &OpenScenario, path: P) -> Result<()>
+pub use error::{Error, Result};
+pub use types::scenario::storyboard::{
+    FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition,
+};
+pub use parser::xml::{
+    parse_catalog_from_file, parse_catalog_from_str, parse_from_file, parse_from_str,
+    serialize_catalog_to_file, serialize_catalog_to_string, serialize_to_file,
+    serialize_to_string,
+};
+pub use parser::choice_groups::{
+    parse_choice_group, ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup,
+};
+pub use expression::evaluate_expression;
+pub use catalog::{
+    CatalogLoader, CatalogManager, CatalogResolver, ParameterSubstitutionEngine, ResolvedCatalog,
+};
+
+#[cfg(feature = "builder")]
+pub use builder::ScenarioBuilder;
 ```
 
-### Validation (`parser::validation`)
+## Modules
 
-Schema validation against OpenSCENARIO XSD.
+| Module | Gate | Contents |
+|---|---|---|
+| `types` | none | The OpenSCENARIO 1.3 type model |
+| `parser` | none | XML deserialization, serialization, semantic validation, choice-group helpers |
+| `catalog` | none | Catalog loading, resolution and parameter substitution |
+| `expression` | none | `${…}` tokenizing, parsing and evaluation |
+| `error` | none | `Error` and `Result` |
+| `builder` | `builder` | Typestate scenario construction |
+| `validation` | `validation` | libxml-backed XSD schema validation |
+
+## The document root
+
+`OpenScenario` (`src/types/scenario/storyboard.rs:16`) models all three document shapes the
+standard defines, so every field but the header is optional:
 
 ```rust
-pub fn validate_against_schema(xml: &str, schema_path: &str) -> Result<()>
-pub fn validate_scenario(scenario: &OpenScenario) -> Result<ValidationReport>
-```
-
-## Type System
-
-### Core Architecture
-
-```mermaid
-graph TD
-    A[Value&lt;T&gt; System] --> B[Basic Types]
-    A --> C[Complex Types]
-    
-    B --> D[Double = Value&lt;f64&gt;]
-    B --> E[OSString = Value&lt;String&gt;]
-    B --> F[UnsignedInt = Value&lt;u32&gt;]
-    B --> G[Boolean = Value&lt;bool&gt;]
-    
-    C --> H[Scenario Types]
-    C --> I[Entity Types]
-    C --> J[Action Types]
-    C --> K[Condition Types]
-    
-    H --> L[OpenScenario]
-    H --> M[Storyboard]
-    H --> N[FileHeader]
-    
-    I --> O[Vehicle]
-    I --> P[Pedestrian]
-    I --> Q[MiscObject]
-    
-    J --> R[LongitudinalAction]
-    J --> S[LateralAction]
-    J --> T[VisibilityAction]
-    
-    K --> U[SpeedCondition]
-    K --> V[DistanceCondition]
-    K --> W[TimeOfDayCondition]
-```
-
-### Value<T> System
-
-The core parameterization system supporting literal values and parameter references.
-
-#### Value<T> Types
-
-```rust
-pub type Double = Value<f64>;
-pub type OSString = Value<String>;
-pub type UnsignedInt = Value<u32>;
-pub type UnsignedShort = Value<u16>;
-pub type Int = Value<i32>;
-pub type Boolean = Value<bool>;
-```
-
-#### Value<T> Methods
-
-```rust
-impl<T> Value<T> {
-    pub fn literal(value: T) -> Self
-    pub fn parameter(param_ref: String) -> Self
-    pub fn as_literal(&self) -> Option<&T>
-    pub fn is_literal(&self) -> bool
-    pub fn is_parameter(&self) -> bool
-    pub fn parameter_name(&self) -> Option<&str>
-}
-```
-
-**Example:**
-```rust
-use openscenario_rs::types::{Double, OSString};
-
-// Create literal values
-let speed = Double::literal(30.0);
-let name = OSString::literal("ego_vehicle".to_string());
-
-// Create parameter references
-let param_speed = Double::parameter("${TargetSpeed}".to_string());
-let param_name = OSString::parameter("${VehicleName}".to_string());
-
-// Access values
-if let Some(speed_val) = speed.as_literal() {
-    println!("Speed: {} m/s", speed_val);
-}
-
-if param_speed.is_parameter() {
-    println!("Speed is parameterized: {}", param_speed.parameter_name().unwrap());
-}
-```
-
-### Scenario Types
-
-#### OpenScenario
-
-The root document type containing all scenario elements.
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OpenScenario {
     pub file_header: FileHeader,
     pub parameter_declarations: Option<ParameterDeclarations>,
+    pub variable_declarations: Option<VariableDeclarations>,
+    pub monitor_declarations: Option<MonitorDeclarations>,
     pub catalog_locations: Option<CatalogLocations>,
     pub road_network: Option<RoadNetwork>,
     pub entities: Option<Entities>,
     pub storyboard: Option<Storyboard>,
+    pub parameter_value_distribution: Option<ParameterValueDistribution>,
+    pub catalog: Option<CatalogDefinition>,
 }
+```
 
+Which shape a given document is, is determined by inspection rather than by a tag:
+
+```rust
 impl OpenScenario {
-    pub fn document_type(&self) -> OpenScenarioDocumentType
-    pub fn validate(&self, ctx: &ValidationContext) -> Result<()>
+    pub fn document_type(&self) -> OpenScenarioDocumentType;
+    pub fn is_scenario(&self) -> bool;
+    pub fn is_parameter_variation(&self) -> bool;
+    pub fn is_catalog(&self) -> bool;
+}
+
+pub enum OpenScenarioDocumentType {
+    Scenario,
+    ParameterVariation,
+    Catalog,
+    Unknown,
 }
 ```
 
-#### FileHeader
+A document counts as `Scenario` when it carries both entities and a storyboard; failing that,
+`ParameterVariation` if it carries a parameter value distribution, then `Catalog`, then
+`Unknown`.
 
-Metadata about the OpenSCENARIO file.
+## Parser
+
+### `parser::xml`
 
 ```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FileHeader {
-    pub author: OSString,
-    pub date: OSString,
-    pub description: OSString,
-    pub rev_major: UnsignedShort,
-    pub rev_minor: UnsignedShort,
-}
+pub fn parse_from_str(xml: &str) -> Result<OpenScenario>;
+pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
+pub fn parse_from_str_validated(xml: &str) -> Result<OpenScenario>;
+pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
+pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String>;
+pub fn serialize_to_file<P: AsRef<Path>>(scenario: &OpenScenario, path: P) -> Result<()>;
+pub fn validate_xml_structure(xml: &str) -> Result<()>;
 
-impl FileHeader {
-    pub fn new(author: &str, description: &str) -> Self
-    pub fn with_date(mut self, date: &str) -> Self
-    pub fn with_revision(mut self, major: u16, minor: u16) -> Self
-}
+pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile>;
+pub fn parse_catalog_from_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile>;
+pub fn parse_catalog_from_str_validated(xml: &str) -> Result<CatalogFile>;
+pub fn parse_catalog_from_file_validated<P: AsRef<Path>>(path: P) -> Result<CatalogFile>;
+pub fn serialize_catalog_to_string(catalog: &CatalogFile) -> Result<String>;
+pub fn serialize_catalog_to_file<P: AsRef<Path>>(catalog: &CatalogFile, path: P) -> Result<()>;
+pub fn validate_catalog_xml_structure(xml: &str) -> Result<()>;
 ```
 
-### Entity Types
+Parsing is `quick_xml::de::from_str`. Serialization prepends the XML declaration, runs
+`quick_xml::se::to_string`, and pretty-prints the result through `markup_fmt`. The parse and
+serialize functions are `#[must_use]`.
 
-#### Vehicle
+The `_validated` variants run `validate_xml_structure` first. That check confirms the input is
+non-empty, starts with `<?xml` or `<`, and contains the substring `OpenSCENARIO` – it is
+**not** schema validation. For that, see `validation::XsdValidator` below.
 
-Represents a vehicle entity in the scenario.
+### `parser::validation`
 
 ```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Vehicle {
-    pub name: OSString,
-    pub vehicle_category: VehicleCategory,
-    pub properties: Option<VehicleProperties>,
-    pub bounding_box: Option<BoundingBox>,
-    pub performance: Option<Performance>,
-    pub axles: Option<Axles>,
+pub struct ScenarioValidator;
+impl ScenarioValidator {
+    pub fn new() -> Self;
+    pub fn with_config(config: ValidationConfig) -> Self;
+    pub fn validate_scenario(&mut self, scenario: &OpenScenario) -> ValidationResult;
 }
 
-impl Vehicle {
-    pub fn new(name: &str) -> Self
-    pub fn with_category(mut self, category: VehicleCategory) -> Self
-    pub fn with_mass(mut self, mass: f64) -> Self
-    pub fn with_performance(mut self, max_speed: f64, max_accel: f64, max_decel: f64) -> Self
+pub struct ValidationConfig {
+    pub strict_mode: bool,
+    pub validate_references: bool,
+    pub validate_constraints: bool,
+    pub validate_semantics: bool,
+    pub max_errors: usize,
+    pub use_cache: bool,
+}
+
+pub struct ValidationResult {
+    pub errors: Vec<ValidationError>,
+    pub warnings: Vec<ValidationWarning>,
+    pub metrics: ValidationMetrics,
+}
+impl ValidationResult {
+    pub fn is_valid(&self) -> bool;      // no errors
+    pub fn is_clean(&self) -> bool;      // no errors and no warnings
+    pub fn total_issues(&self) -> usize;
+    pub fn summary(&self) -> String;
 }
 ```
 
-#### VehicleProperties
+Findings are categorized by `ValidationErrorCategory` (`MissingRequired`, `InvalidReference`,
+`ConstraintViolation`, `SemanticError`, `TypeMismatch`, `ParameterError`) and
+`ValidationWarningCategory` (`Deprecated`, `Suspicious`, `Performance`, `BestPractice`).
 
-Physical properties of a vehicle.
+### `parser::choice_groups`
 
 ```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VehicleProperties {
-    pub mass: Option<Double>,
-    pub model_3d: Option<OSString>,
-    pub model_type: Option<OSString>,
-}
+pub trait XsdChoiceGroup { /* ... */ }
+pub struct ChoiceGroupParser;
+pub struct ChoiceGroupRegistry;
+pub fn parse_choice_group(/* ... */);
 ```
 
-#### Pedestrian
+Infrastructure for XSD choice groups, re-exported at the crate root. The module documents
+itself as a simplified implementation sufficient for current needs.
 
-Represents a pedestrian entity in the scenario.
+## Schema validation (feature `validation`)
 
 ```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Pedestrian {
-    pub name: OSString,
-    pub pedestrian_category: PedestrianCategory,
-    pub model: OSString,
-    pub mass: Double,
-    pub bounding_box: Option<BoundingBox>,
-    pub properties: Option<PedestrianProperties>,
+pub struct XsdValidator;
+impl XsdValidator {
+    pub fn from_schema_file<P: AsRef<Path>>(xsd_path: P) -> Result<Self>;
+    pub fn from_schema_str(xsd_content: &str) -> Result<Self>;
+    pub fn validate_str(&mut self, xml: &str) -> Result<Vec<ValidationError>>;
+    pub fn validate_file<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<ValidationError>>;
+    pub fn validate_document(&mut self, document: &libxml::tree::Document) -> Vec<ValidationError>;
 }
 
-impl Pedestrian {
-    pub fn new(name: &str, model: &str) -> Self
-    pub fn with_category(mut self, category: PedestrianCategory) -> Self
-    pub fn with_mass(mut self, mass: f64) -> Self
+pub struct ValidationError {
+    pub line: Option<u32>,
+    pub column: Option<u32>,
+    pub message: String,
+    pub error_type: String,
 }
+
+pub fn convert_errors(errors: Vec<StructuredError>) -> Vec<ValidationError>;
+pub fn classify_error_type(message: &str) -> String;
 ```
 
-### Action Types
+An empty `Vec` means the document is valid. `Err` is returned only when the input is not
+well-formed XML – that is, when the schema cannot be applied at all. The schema is parsed once
+at construction and reused, so a validator should be built once and looped over.
 
-#### Action
+`classify_error_type` returns one of `ElementNotAllowed`, `MissingRequired`, `InvalidValue`,
+`TypeMismatch` or `ValidationError`.
 
-Root action type with all possible action variants.
+See the [validation guide](validation_guide.md) for how this relates to the other layers.
+
+## Types
+
+### `Value<T>` and its aliases
 
 ```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Action {
-    Private(PrivateAction),
-    UserDefined(UserDefinedAction),
+pub enum Value<T> { Literal(T), Parameter(String), Expression(String) }
+
+impl<T: Clone> Value<T> {
+    pub fn literal(value: T) -> Self;
+    pub fn parameter(name: String) -> Self;     // bare name, no ${}
+    pub fn expression(expr: String) -> Self;
+}
+
+impl<T> Value<T> where T: FromStr + Clone {
+    pub fn resolve(&self, params: &HashMap<String, String>) -> Result<T>;
+    pub fn as_literal(&self) -> Option<&T>;
+    pub fn as_parameter(&self) -> Option<&str>;
+    pub fn as_expression(&self) -> Option<&str>;
 }
 ```
 
-#### PrivateAction
+Aliases: `OSString`, `Double`, `Int`, `UnsignedInt`, `UnsignedShort`, `Boolean`, `DateTime`.
 
-Actions that target specific entities.
+Free functions in `types::basic`: `parse_parameter_reference`, `is_expression`,
+`is_valid_parameter_name`.
 
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PrivateAction {
-    pub entity_ref: OSString,
-    pub action_type: PrivateActionType,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum PrivateActionType {
-    LongitudinalAction(LongitudinalAction),
-    LateralAction(LateralAction),
-    VisibilityAction(VisibilityAction),
-    SynchronizeAction(SynchronizeAction),
-    ActivateControllerAction(ActivateControllerAction),
-    ControllerAction(ControllerAction),
-    TeleportAction(TeleportAction),
-    RoutingAction(RoutingAction),
-    AppearanceAction(AppearanceAction),
-}
-```
-
-#### LongitudinalAction
-
-Actions affecting longitudinal motion.
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum LongitudinalAction {
-    SpeedAction(SpeedAction),
-    LongitudinalDistanceAction(LongitudinalDistanceAction),
-    SpeedProfileAction(SpeedProfileAction),
-}
-```
-
-#### SpeedAction
-
-Action to change entity speed.
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SpeedAction {
-    pub speed_action_dynamics: TransitionDynamics,
-    pub speed_target: SpeedTarget,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum SpeedTarget {
-    RelativeTargetSpeed(RelativeTargetSpeed),
-    AbsoluteTargetSpeed(AbsoluteTargetSpeed),
-}
-```
-
-### Condition Types
-
-#### Condition
-
-Root condition type for triggers.
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Condition {
-    pub name: OSString,
-    pub delay: Option<Double>,
-    pub condition_edge: ConditionEdge,
-    pub condition_type: ConditionType,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ConditionType {
-    ByEntity(ByEntityCondition),
-    ByValue(ByValueCondition),
-}
-```
-
-#### SpeedCondition
-
-Condition based on entity speed.
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SpeedCondition {
-    pub value: Double,
-    pub rule: Rule,
-    pub direction: Option<DirectionalDimension>,
-}
-
-impl SpeedCondition {
-    pub fn new(value: f64, rule: Rule) -> Self
-    pub fn greater_than(value: f64) -> Self
-    pub fn less_than(value: f64) -> Self
-    pub fn equal_to(value: f64) -> Self
-}
-```
-
-## Catalog System
-
-### CatalogManager
-
-Main interface for catalog operations.
-
-```rust
-pub struct CatalogManager {
-    // Internal fields
-}
-
-impl CatalogManager {
-    pub fn new() -> Self
-    pub fn with_base_path<P: AsRef<Path>>(base_path: P) -> Self
-    
-    pub fn discover_and_load_catalogs(&mut self, locations: &CatalogLocations) -> Result<()>
-    
-    pub fn resolve_vehicle_reference(
-        &mut self,
-        reference: &VehicleCatalogReference,
-        location: &VehicleCatalogLocation,
-    ) -> Result<ResolvedCatalog<Vehicle>>
-    
-    pub fn resolve_controller_reference(
-        &mut self,
-        reference: &ControllerCatalogReference,
-        location: &ControllerCatalogLocation,
-    ) -> Result<ResolvedCatalog<Controller>>
-    
-    pub fn resolve_pedestrian_reference(
-        &mut self,
-        reference: &PedestrianCatalogReference,
-        location: &PedestrianCatalogLocation,
-    ) -> Result<ResolvedCatalog<Pedestrian>>
-    
-    pub fn set_global_parameters(&mut self, parameters: HashMap<String, String>) -> Result<()>
-    pub fn parameter_engine(&mut self) -> &mut ParameterSubstitutionEngine
-}
-```
-
-### CatalogLocations
-
-Specifies where to find catalog files.
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CatalogLocations {
-    pub vehicle_catalog: Option<VehicleCatalogLocation>,
-    pub controller_catalog: Option<ControllerCatalogLocation>,
-    pub pedestrian_catalog: Option<PedestrianCatalogLocation>,
-    pub misc_object_catalog: Option<MiscObjectCatalogLocation>,
-    pub environment_catalog: Option<EnvironmentCatalogLocation>,
-    pub maneuver_catalog: Option<ManeuverCatalogLocation>,
-    pub trajectory_catalog: Option<TrajectoryCatalogLocation>,
-    pub route_catalog: Option<RouteCatalogLocation>,
-}
-```
-
-### ResolvedCatalog<T>
-
-Result of catalog reference resolution.
-
-```rust
-#[derive(Debug, Clone)]
-pub struct ResolvedCatalog<T> {
-    pub entity: T,
-    pub source_file: String,
-    pub entry_name: String,
-    pub resolved_parameters: HashMap<String, String>,
-}
-
-impl<T> ResolvedCatalog<T> {
-    pub fn with_parameters(
-        entity: T,
-        source_file: String,
-        entry_name: String,
-        parameters: HashMap<String, String>,
-    ) -> Self
-}
-```
-
-## Expression System
-
-### Expression Evaluation
-
-```rust
-pub fn evaluate_expression(
-    expression: &str,
-    parameters: &HashMap<String, String>,
-) -> Result<String>
-```
-
-#### Supported Operations
-
-- **Arithmetic**: `+`, `-`, `*`, `/`
-- **Parentheses**: `(`, `)`
-- **Mathematical functions**: `sqrt`, `sin`, `cos`, `tan`, `abs`, `floor`, `ceil`
-- **Constants**: `pi`, `e`
-- **Comparisons**: `>`, `<`, `>=`, `<=`, `==`, `!=`
-- **Logical**: `&&`, `||`, `!`
-
-#### Examples
-
-```rust
-use openscenario_rs::expression::evaluate_expression;
-use std::collections::HashMap;
-
-let params = HashMap::from([
-    ("Speed".to_string(), "30.0".to_string()),
-    ("Time".to_string(), "5.0".to_string()),
-]);
-
-// Basic arithmetic
-let result = evaluate_expression("${Speed} * ${Time}", &params)?;
-assert_eq!(result, "150.0");
-
-// Mathematical functions
-let result = evaluate_expression("sqrt(${Speed} * ${Speed} + 100)", &params)?;
-
-// Complex expressions
-let result = evaluate_expression("sin(${Speed} * pi / 180) * 100", &params)?;
-```
-
-## Builder API
-
-*Note: Available only with the `builder` feature enabled.*
-
-### Implementation Status
-
-**Current Status**: 99% functional implementation with 87% compilation success
-- ✅ **Complete Feature Set**: All 6 development sprints implemented
-- ✅ **Major Compilation Issues Resolved**: 30+ errors → 4 remaining lifetime issues
-- 🔄 **Final Phase**: Resolving fluent API method chaining lifetime variance
-
-### ScenarioBuilder
-
-Type-safe fluent API for programmatic scenario construction with state transitions.
-
-```rust
-#[cfg(feature = "builder")]
-pub struct ScenarioBuilder<State = Empty> {
-    // Internal state with type-level state tracking
-}
-
-// State Types
-pub struct Empty;
-pub struct HasHeader;
-pub struct HasEntities;
-
-impl ScenarioBuilder<Empty> {
-    pub fn new() -> ScenarioBuilder<Empty>
-    pub fn with_header(self, name: &str, author: &str) -> ScenarioBuilder<HasHeader>
-}
-
-impl ScenarioBuilder<HasHeader> {
-    // Parameters
-    pub fn add_parameter(self, name: &str, param_type: ParameterType, value: &str) -> Self
-    pub fn add_parameter_with_constraints(self, name: &str, param_type: ParameterType, value: &str) -> ParameterBuilder<Self>
-    
-    // Catalog locations  
-    pub fn with_catalog_locations(self) -> CatalogLocationsBuilder<Self>
-    
-    // Road network
-    pub fn with_road_file(self, path: &str) -> Self
-    
-    // Entities
-    pub fn with_entities(self) -> ScenarioBuilder<HasEntities>
-}
-
-impl ScenarioBuilder<HasEntities> {
-    // Entity builders
-    pub fn add_vehicle(self, name: &str) -> VehicleBuilder<Self>
-    pub fn add_catalog_vehicle(self, name: &str) -> CatalogVehicleBuilder<Self>
-    pub fn add_pedestrian(self, name: &str) -> PedestrianBuilder<Self>
-    
-    // Storyboard
-    pub fn with_storyboard(self) -> StoryboardBuilder<Self>
-    
-    // Build final scenario
-    pub fn build(self) -> Result<OpenScenario, BuilderError>
-}
-```
-
-### Entity Builders
-
-#### VehicleBuilder
-
-```rust
-pub struct VehicleBuilder<P> {
-    parent: P,
-    vehicle_data: VehicleData,
-}
-
-impl<P> VehicleBuilder<P> {
-    pub fn car(self) -> Self                    // Preset: passenger car
-    pub fn truck(self) -> Self                  // Preset: truck
-    pub fn with_dimensions(self, length: f64, width: f64, height: f64) -> Self
-    pub fn with_mass(self, mass: f64) -> Self
-    pub fn with_performance(self, max_speed: f64, max_accel: f64, max_decel: f64) -> Self
-    pub fn finish(self) -> P                    // Return to parent builder
-}
-```
-
-#### CatalogVehicleBuilder
-
-```rust
-pub struct CatalogVehicleBuilder<P> {
-    parent: P,
-    catalog_ref: CatalogReferenceData,
-}
-
-impl<P> CatalogVehicleBuilder<P> {
-    pub fn from_catalog(self, catalog_name: &str) -> Self
-    pub fn entry_name(self, entry: &str) -> Self
-    pub fn parameter_assignments(self) -> ParameterAssignmentBuilder<Self>
-    pub fn finish(self) -> P
-}
-```
-
-### Action Builders
-
-#### SpeedActionBuilder
-
-```rust
-pub struct SpeedActionBuilder<P> {
-    parent: P,
-    action_data: SpeedActionData,
-}
-
-impl<P> SpeedActionBuilder<P> {
-    pub fn named(self, name: &str) -> Self
-    pub fn to_speed(self, speed: f64) -> Self              // Absolute target speed
-    pub fn to_speed_parameter(self, param: &str) -> Self   // Parameter reference
-    pub fn change_by(self, delta: f64) -> Self             // Relative speed change
-    pub fn with_dynamics(self) -> DynamicsBuilder<Self>    // Transition dynamics
-    pub fn triggered_by(self) -> TriggerBuilder<Self>      // Trigger conditions
-    pub fn finish(self) -> Result<P, BuilderError>
-}
-```
-
-#### TeleportActionBuilder  
-
-```rust
-pub struct TeleportActionBuilder<P> {
-    parent: P,
-    position_data: Option<PositionData>,
-}
-
-impl<P> TeleportActionBuilder<P> {
-    pub fn named(self, name: &str) -> Self
-    pub fn to(self) -> PositionBuilder<Self>              // Position target
-    pub fn triggered_by(self) -> TriggerBuilder<Self>     // Trigger conditions  
-    pub fn finish(self) -> Result<P, BuilderError>
-}
-```
-
-### Position Builders
-
-#### PositionBuilder
-
-```rust
-pub trait PositionBuilder<P> {
-    fn world_position(self, x: f64, y: f64, z: f64) -> P
-    fn lane_position(self, road_id: &str, lane_id: &str, s: f64) -> P
-    fn relative_world_position(self, entity: &str, dx: f64, dy: f64, dz: f64) -> P
-    fn relative_lane_position(self, entity: &str, ds: f64, dt: f64) -> P
-}
-```
-
-### Condition Builders
-
-#### TriggerBuilder
-
-```rust
-pub struct TriggerBuilder<P> {
-    parent: P,
-    conditions: Vec<ConditionGroup>,
-}
-
-impl<P> TriggerBuilder<P> {
-    pub fn time_condition(self, time: f64) -> Self
-    pub fn speed_condition(self, entity: &str, speed: f64) -> Self
-    pub fn distance_condition(self, entity: &str) -> DistanceConditionBuilder<Self>
-    
-    pub fn add_condition_group(self) -> ConditionGroupBuilder<Self>
-    pub fn finish(self) -> P
-}
-```
-
-#### DistanceConditionBuilder
-
-```rust
-pub struct DistanceConditionBuilder<P> {
-    parent: P,
-    entity: String,
-    target: Option<PositionOrEntity>,
-    rule: Option<Rule>,
-}
-
-impl<P> DistanceConditionBuilder<P> {
-    pub fn to_entity(self, entity: &str) -> Self
-    pub fn to_position(self, position: Position) -> Self
-    pub fn closer_than(self, distance: f64) -> Self
-    pub fn farther_than(self, distance: f64) -> Self
-    pub fn finish(self) -> P
-}
-```
-
-### Storyboard Builders
-
-⚠️ **Note**: Current implementation has 4 lifetime variance issues in method chaining
-
-#### StoryboardBuilder
-
-```rust
-pub struct StoryboardBuilder<P> {
-    parent: P,
-    stories: Vec<Story>,
-}
-
-impl<P> StoryboardBuilder<P> {
-    pub fn add_story(self, name: &str) -> StoryBuilder<Self>
-    pub fn finish(self) -> P
-}
-```
-
-#### StoryBuilder (⚠️ Lifetime issues)
-
-```rust
-pub struct StoryBuilder<'parent, P> {
-    parent: &'parent mut StoryboardBuilder<P>,
-    story_data: StoryData,
-}
-
-impl<'parent, P> StoryBuilder<'parent, P> {
-    // ⚠️ These methods have lifetime variance issues:
-    pub fn add_act(&mut self, name: &str) -> ActBuilder<'_, Self>
-    pub fn finish(self) -> &'parent mut StoryboardBuilder<P>
-}
-```
-
-**Current Workaround**:
-```rust
-// Instead of fluent chaining, use explicit variables:
-let mut story_builder = storyboard.add_story("main");
-let mut act_builder = story_builder.add_act("phase1");
-let maneuver_builder = act_builder.add_maneuver("action", "ego");
-let completed = maneuver_builder.finish().finish().finish();
-```
-
-### Error Handling
-
-#### BuilderError
-
-```rust
-#[derive(Error, Debug)]
-pub enum BuilderError {
-    #[error("Missing required field: {field}")]
-    MissingField { field: String, suggestion: Option<String> },
-    
-    #[error("Validation error: {message}")]  
-    ValidationError { message: String, suggestion: Option<String> },
-    
-    #[error("Type mismatch: expected {expected}, found {found}")]
-    TypeMismatch { expected: String, found: String },
-    
-    #[error("Entity not found: {entity}")]
-    EntityNotFound { entity: String },
-    
-    #[error("Parameter error: {param} = {value}")]
-    ParameterError { param: String, value: String },
-}
-```
-
-### Example Usage
-
-#### Basic Scenario
-
-```rust
-#[cfg(feature = "builder")]
-use openscenario_rs::builder::ScenarioBuilder;
-use openscenario_rs::types::enums::ParameterType;
-
-let scenario = ScenarioBuilder::new()
-    .with_header("Highway Test", "Test Author") 
-    .add_parameter("target_speed", ParameterType::Double, "30.0")
-    .with_entities()
-        .add_vehicle("ego")
-            .car()
-            .with_dimensions(4.5, 1.8, 1.4)
-            .finish()
-        .add_vehicle("target")
-            .car()
-            .finish()
-    .with_storyboard()
-        .add_story("main_story")
-            // Note: Use workaround for method chaining due to lifetime issues
-            // .add_act("acceleration") // <-- Currently has lifetime variance error
-        .finish()
-    .build()?;
-```
-
-#### With Catalog Integration
-
-```rust
-let scenario = ScenarioBuilder::new()
-    .with_header("Catalog Demo", "Developer")
-    .with_catalog_locations()
-        .vehicle_catalog("./catalogs/VehicleCatalog.xosc")
-        .finish()
-    .with_entities()
-        .add_catalog_vehicle("ego")
-            .from_catalog("VehicleCatalog")
-            .entry_name("BMW_X5")
-            .parameter_assignments()
-                .assign("color", "blue")
-                .finish()
-            .finish()
-    .build()?;
-```
-
-### Compilation Status
-
-```bash
-# Check current builder compilation status
-cargo check --features builder
-
-# Current: 4 lifetime variance errors in storyboard method chaining
-# Status: 87% resolution rate (30+ errors → 4 remaining)
-# Functionality: 99% feature-complete implementation
-```
-
-## Error Types
-
-### Error Enum
-
-```rust
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("XML parsing error: {0}")]
-    XmlParseError(#[from] quick_xml::DeError),
-    
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
-    
-    #[error("Validation error in field '{field}': {message}")]
-    ValidationError { field: String, message: String },
-    
-    #[error("Parameter error for '{param}': {value}")]
-    ParameterError { param: String, value: String },
-    
-    #[error("Entity not found: {entity}")]
-    EntityNotFound { entity: String },
-    
-    #[error("Catalog entry not found: {entry} in catalog {catalog}")]
-    CatalogNotFound { catalog: String, entry: String },
-    
-    #[error("Catalog error: {0}")]
-    CatalogError(String),
-}
-```
-
-### Error Creation
-
-```rust
-impl Error {
-    pub fn with_context(self, context: &str) -> Self
-    pub fn parsing_error(msg: &str, line: usize, col: usize) -> Self
-    pub fn parameter_error(param: &str, value: &str) -> Self
-    pub fn validation_error(field: &str, message: &str) -> Self
-    pub fn catalog_error(message: &str) -> Self
-}
-```
-
-### Result Type
-
-```rust
-pub type Result<T> = std::result::Result<T, Error>;
-```
-
-## Utility Functions
-
-### Parameter Management
-
-```rust
-pub fn extract_scenario_parameters(
-    parameter_declarations: &Option<ParameterDeclarations>,
-) -> HashMap<String, String>
-```
-
-Extract parameters from scenario parameter declarations.
-
-### Validation Traits
+### Cross-cutting traits
 
 ```rust
 pub trait Validate {
@@ -908,15 +270,16 @@ pub trait Validate {
 pub trait Resolve<T> {
     fn resolve(&self, ctx: &ParameterContext) -> Result<T>;
 }
-```
 
-### Context Types
-
-```rust
 pub struct ValidationContext {
     pub entities: HashMap<String, EntityRef>,
     pub catalogs: HashMap<String, CatalogRef>,
     pub strict_mode: bool,
+}
+impl ValidationContext {
+    pub fn new() -> Self;
+    pub fn with_strict_mode(self) -> Self;                             // chainable
+    pub fn add_entity(&mut self, name: String, entity_ref: EntityRef); // not chainable
 }
 
 pub struct ParameterContext {
@@ -925,35 +288,266 @@ pub struct ParameterContext {
 }
 ```
 
-## Feature Flags
+`Value<T>` carries blanket impls of both traits.
 
-The library supports optional features that can be enabled in your `Cargo.toml`:
+### Enumerations
 
-```toml
-[dependencies.openscenario-rs]
-version = "0.1.0"
-features = ["builder", "validation"]
+All 37 XSD enumeration simple types have a same-named Rust enum in `types::enums`, each
+variant renamed to its schema value. Those re-exported at `types::` include `AngleType`,
+`AutomaticGearType`, `ColorType`, `ConditionEdge`, `ControllerType`, `DirectionalDimension`,
+`DynamicsDimension`, `DynamicsShape`, `FractionalCloudCover`, `LightMode`,
+`MiscObjectCategory`, `ObjectType`, `ParameterType`, `PedestrianCategory`,
+`PedestrianGestureType`, `PedestrianMotionType`, `PrecipitationType`, `Priority`, `Role`,
+`RouteStrategy`, `RoutingAlgorithm`, `Rule`, `TriggeringEntitiesRule`, `VehicleCategory`,
+`VehicleComponentType`, `VehicleLightType` and `Wetness`. The remainder are reachable at
+`types::enums::`.
+
+### Entities
+
+```rust
+pub struct ScenarioObject {
+    pub name: OSString,                                            // required, not Option
+    pub vehicle: Option<Vehicle>,
+    pub pedestrian: Option<Pedestrian>,
+    pub misc_object: Option<MiscObject>,
+    pub external_object_reference: Option<ExternalObjectReference>,
+    pub entity_catalog_reference: Option<ScenarioEntityReference>,
+    pub object_controller: Vec<ObjectController>,                  // may repeat
+}
 ```
 
-### Available Features
+The entity variants are flat `Option` fields; there is no `EntityObject` enum. The catalog
+reference field is named `entity_catalog_reference`, not `catalog_reference`.
 
-- **`builder`** - Enables the fluent builder API for programmatic scenario construction
-- **`validation`** - Adds comprehensive validation capabilities beyond basic parsing
+### Conditions by value
 
-## Thread Safety
+`ByValueCondition` (`src/types/conditions/value.rs:98`) holds **eight** branches as parallel
+`Option` fields. The field names are the snake-case condition names in full, each carrying the
+`_condition` suffix:
 
-All types in the library are `Send` and `Sync` where appropriate. The `CatalogManager` is designed for single-threaded use but catalog resolution results can be safely shared between threads.
+| Field | Element |
+|---|---|
+| `parameter_condition` | `ParameterCondition` |
+| `variable_condition` | `VariableCondition` |
+| `time_of_day_condition` | `TimeOfDayCondition` |
+| `simulation_time_condition` | `SimulationTimeCondition` |
+| `storyboard_element_state_condition` | `StoryboardElementStateCondition` |
+| `user_defined_value_condition` | `UserDefinedValueCondition` |
+| `traffic_signal_condition` | `TrafficSignalCondition` |
+| `traffic_signal_controller_condition` | `TrafficSignalControllerCondition` |
 
-## Memory Management
+`Rule` takes `EqualTo`, `GreaterThan`, `LessThan`, `GreaterOrEqual`, `LessOrEqual` and
+`NotEqualTo`, serializing as `equalTo`, `greaterThan` and so on.
 
-The library is designed for efficient memory usage:
+## Catalogs
 
-- **Zero-copy parsing** where possible
-- **Lazy evaluation** of catalog resolution
-- **Value<T> optimization** to minimize allocations
+```rust
+pub struct CatalogManager;
+impl CatalogManager {
+    pub fn new() -> Self;
+    pub fn with_base_path<P: AsRef<Path>>(base_path: P) -> Self;
+    pub fn load_catalog<T: CatalogLocation>(&mut self, location: &T) -> Result<T::CatalogType>;
+    pub fn resolve_vehicle_reference(
+        &mut self,
+        reference: &VehicleCatalogReference,
+        location: &VehicleCatalogLocation,
+    ) -> Result<ResolvedCatalog<Vehicle>>;
+    pub fn resolve_controller_reference(/* ... */) -> Result<ResolvedCatalog<Controller>>;
+    pub fn resolve_pedestrian_reference(/* ... */) -> Result<ResolvedCatalog<Pedestrian>>;
+    pub fn discover_and_load_catalogs(&mut self, locations: &CatalogLocations) -> Result<()>;
+    pub fn parameter_engine(&mut self) -> &mut ParameterSubstitutionEngine;
+    pub fn set_global_parameters(&mut self, parameters: HashMap<String, String>) -> Result<()>;
+}
 
-## Compatibility
+pub struct ResolvedCatalog<T> {
+    pub entity: T,
+    pub metadata: ResolutionMetadata,
+}
 
-- **Rust**: 1.70.0 or later
-- **OpenSCENARIO**: 1.3 specification (1.4 support planned)
-- **XML**: Standards-compliant XML 1.0 with namespace support
+pub struct ResolutionMetadata {
+    pub catalog_path: String,
+    pub entity_name: String,
+    pub parameter_substitutions: HashMap<String, String>,
+}
+```
+
+Free functions in `catalog`: `extract_scenario_parameters(&Option<ParameterDeclarations>) ->
+HashMap<String, String>` and `resolve_catalog_reference_simple`.
+
+`CatalogResolver` tracks a resolution stack to detect circular dependencies.
+`ParameterSubstitutionEngine` handles substitution into catalog entities.
+
+> **Name collision.** Two different types are called `CatalogManager`. The one re-exported at
+> the crate root is `catalog::CatalogManager`, documented above. A second, unrelated
+> `CatalogManager` in `catalog::resolver` holds per-kind catalog maps and is not re-exported.
+> `openscenario_rs::CatalogManager` always means the first.
+
+### Catalog references
+
+`CatalogReference<T>` (`src/types/catalogs/references.rs`) carries a private `PhantomData`
+field, so it cannot be built from a struct literal outside its module. Use the constructors:
+
+```rust
+impl<T: CatalogEntity> CatalogReference<T> {
+    pub fn new(catalog_name: String, entry_name: String) -> Self;
+    pub fn with_parameters(/* ... */) -> Self;
+    pub fn get_catalog_name(&self, params: &HashMap<String, String>) -> Result<String>;
+    pub fn get_entry_name(&self, params: &HashMap<String, String>) -> Result<String>;
+}
+```
+
+`ParameterAssignment` and `ParameterAssignments` live in `types::catalogs::references`, not in
+`types::basic`.
+
+## Expressions
+
+```rust
+pub fn evaluate_expression<T>(expr: &str, params: &HashMap<String, String>) -> Result<T>;
+```
+
+The module also exposes `ExpressionParser::{new, parse}` and
+`ExpressionEvaluator::{new, evaluate}` for working with the parsed `Expr` tree directly.
+
+## Errors
+
+```rust
+pub type Result<T> = std::result::Result<T, Error>;
+```
+
+`Error` is a single `thiserror` enum with 26 variants:
+
+| Group | Variants |
+|---|---|
+| XML and IO | `XmlParseError`, `XmlSerializeError`, `IoError`, `FileNotFound`, `DirectoryNotFound`, `FileReadError`, `FileWriteError` |
+| Lookup | `EntityNotFound`, `CatalogEntryNotFound`, `CatalogNotFound`, `ParameterNotFound` |
+| Validation | `ValidationError`, `MissingRequiredField`, `InvalidValue`, `OutOfRange`, `TypeMismatch`, `ConstraintViolation` |
+| Structure | `InvalidXmlStructure`, `MalformedXml`, `ChoiceGroupError`, `InconsistentState` |
+| Parameters and expressions | `ParameterError`, `CircularDependency`, `ParseError`, `ExpressionError` |
+| Catalog | `CatalogError` |
+
+Constructor helpers exist for most: `Error::file_not_found`, `entity_not_found`,
+`catalog_not_found`, `validation_error`, `missing_field`, `invalid_value`, `out_of_range`,
+`type_mismatch`, `parameter_error`, `parameter_not_found`, `invalid_xml`, `malformed_xml`,
+`parsing_error`, `circular_dependency`, `parse_error`, `expression_error`,
+`constraint_violation`, `catalog_error`, `choice_group_error`.
+
+`Error::with_context(self, &str) -> Self` prefixes the message of a subset of variants. It is
+a silent no-op on the rest, so do not rely on it to attach context universally.
+
+> **Name collision.** Three distinct things are called `ValidationError`:
+> `Error::ValidationError` (a variant of the enum above),
+> `parser::validation::ValidationError` (a semantic-validation finding), and
+> `validation::ValidationError` (a libxml schema diagnostic). Alias on import when more than
+> one is in scope.
+
+## Builder (feature `builder`)
+
+Entry point and typestate transitions:
+
+```rust
+pub struct ScenarioBuilder<S>;
+pub struct Empty; pub struct HasHeader; pub struct HasEntities; pub struct Complete;
+
+impl ScenarioBuilder<Empty> {
+    pub fn new() -> Self;
+    pub fn with_header(self, description: &str, author: &str) -> ScenarioBuilder<HasHeader>;
+}
+
+impl ScenarioBuilder<HasHeader> {
+    pub fn with_parameters(self, params: ParameterDeclarations) -> Self;
+    pub fn add_parameter(self, name: &str, param_type: ParameterType, value: &str) -> Self;
+    pub fn with_catalog_locations(self, locations: CatalogLocations) -> Self;
+    pub fn with_road_network(self, network: RoadNetwork) -> Self;
+    pub fn with_road_file(self, file_path: &str) -> Self;
+    pub fn with_entities(self) -> ScenarioBuilder<HasEntities>;
+}
+
+impl ScenarioBuilder<HasEntities> {
+    pub fn add_vehicle<F>(self, name: &str, config: F) -> Self;      // closure, not a builder
+    pub fn add_vehicle_mut(&mut self, name: &str) -> VehicleBuilder<'_>;
+    pub fn add_catalog_vehicle(/* ... */) -> CatalogVehicleBuilder<'_>;
+    pub fn add_pedestrian<F>(self, name: &str, config: F) -> Self;
+    pub fn add_catalog_pedestrian(/* ... */) -> CatalogPedestrianBuilder<'_>;
+    pub fn with_storyboard<F>(self, config: F) -> ScenarioBuilder<Complete>;
+    pub fn with_storyboard_mut(self) -> StoryboardBuilder;
+    pub fn create_storyboard(self) -> StoryboardBuilder;
+    pub fn build(self) -> BuilderResult<OpenScenario>;
+}
+
+impl ScenarioBuilder<Complete> {
+    pub fn build(self) -> BuilderResult<OpenScenario>;
+}
+```
+
+Note that `add_vehicle` and `add_pedestrian` take a configuring closure and return `Self`; the
+builder-returning forms are the `_mut` variants. `with_storyboard` likewise takes a closure and
+advances the state to `Complete`.
+
+`build()` enforces the five elements the XSD requires of a scenario document and returns
+`BuilderError::MissingField` for any that is absent: `file_header`, `entities`,
+`catalog_locations`, `road_network` and `storyboard`. The first two are already guaranteed by
+the typestate; the other three are runtime checks. `CatalogLocations::default()` and
+`RoadNetwork::default()` are the correct values when a scenario references no catalogs and
+names no road file: the elements are required even though all their children are optional.
+
+### Errors
+
+```rust
+pub enum BuilderError {
+    ValidationError { message: String, suggestion: String },
+    MissingField { field: String, suggestion: String },
+    InvalidEntityRef { entity: String, available: Vec<String> },
+    ConstraintViolation { constraint: String, details: String },
+    OpenScenarioError(#[from] crate::error::Error),
+}
+pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
+```
+
+### Re-exports at `builder::`
+
+Actions: `ActivateControllerActionBuilder`, `EntityActionBuilder`, `EnvironmentActionBuilder`,
+`FollowTrajectoryActionBuilder`, `LaneChangeActionBuilder`, `LaneOffsetActionBuilder`,
+`LateralDistanceActionBuilder`, `PolylineBuilder`, `SpeedActionBuilder`,
+`TeleportActionBuilder`, `TrajectoryBuilder`, `VariableActionBuilder`, `VertexBuilder`.
+
+Catalog: `CatalogEntityBuilder`, `CatalogLocationsBuilder`,
+`PedestrianCatalogReferenceBuilder`, `VehicleCatalogReferenceBuilder`.
+
+Conditions: `AccelerationConditionBuilder`, `CollisionConditionBuilder`,
+`ParameterConditionBuilder`, `ReachPositionConditionBuilder`,
+`RelativeDistanceConditionBuilder`, `SpeedConditionBuilder`, `TimeConditionBuilder`,
+`TraveledDistanceConditionBuilder`, `TriggerBuilder`, `ValueSpeedConditionBuilder`,
+`VariableConditionBuilder`.
+
+Entities: `DetachedVehicleBuilder`, `VehicleBuilder`.
+
+Init: `GlobalActionBuilder`, `InitActionBuilder`, `PrivateActionBuilder`.
+
+Parameters: `ParameterContext`, `ParameterDeclarationsBuilder`, `ParameterizedValueBuilder`.
+
+Storyboard: `ActBuilder`, `DetachedActBuilder`, `DetachedFollowTrajectoryActionBuilder`,
+`DetachedManeuverBuilder`, `DetachedSpeedActionBuilder`, `DetachedStoryBuilder`,
+`ManeuverBuilder`, `StoryBuilder`, `StoryboardBuilder`.
+
+Templates: `BasicScenarioTemplate`, `ScenarioTemplate`.
+
+Validation: `BuilderValidatable`, `BuilderValidationContext`, `ValidationContextBuilder`.
+
+> `PedestrianBuilder`, `CatalogVehicleBuilder`, `CatalogPedestrianBuilder` and
+> `DetachedPedestrianBuilder` exist but are **not** re-exported at `builder::`. Import them
+> from `openscenario_rs::builder::entities`.
+
+> **Name collision.** `builder::parameters::ParameterContext` is a different type from
+> `types::ParameterContext`. The builder one has a private field and no `scope`.
+
+## Binaries
+
+| Binary | Required features | Purpose |
+|---|---|---|
+| `xosc-validate` | `validation` | Validate `.xosc` files against the XSD |
+| `scenario_analyzer` | none | Inspect and report on a scenario file |
+
+```bash
+cargo run --bin xosc-validate --features validation -- scenario.xosc
+cargo run --bin scenario_analyzer -- scenario.xosc
+```

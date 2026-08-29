@@ -1,177 +1,52 @@
-# OpenSCENARIO-rs Documentation
+# Documentation
 
-Welcome to the comprehensive documentation for OpenSCENARIO-rs, a type-safe, high-performance Rust library for parsing, validating, and manipulating OpenSCENARIO files.
+`openscenario-rs` parses, validates, constructs and serializes
+[OpenSCENARIO](https://www.asam.net/standards/detail/openscenario/) files. It targets
+**OpenSCENARIO 1.3** as defined by the bundled `Schema/OpenSCENARIO.xsd`, and the Rust type
+model follows that schema rather than approximating it: fields the schema marks optional are
+`Option<T>`, no default is invented beyond what the schema defines, and a type with no
+counterpart in the XSD does not belong in the crate.
 
-## 📚 Documentation Overview
+## The documents
 
-This documentation provides complete coverage of the library's capabilities, from basic usage to advanced extension development.
+| Document | Covers |
+|---|---|
+| [User guide](user_guide.md) | Installation, parsing, values and parameters, catalogs, error handling |
+| [API reference](api_reference.md) | The public surface: signatures, modules, features, errors |
+| [Builder guide](builder_guide.md) | Programmatic construction behind the `builder` feature |
+| [Type system guide](type_system_guide.md) | `Value<T>`, serde conventions, choice groups, adding a type |
+| [Validation guide](validation_guide.md) | The four validation layers and which one answers which question |
+| [XSD gaps](xsd_gaps.md) | The conformance ledger: what the corpus proves, what remains open |
+| [Development guide](development_guide.md) | Contributor patterns and troubleshooting |
 
-### 🚀 Getting Started
+Also in the repository: [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the workflow and
+conventions, [`CHANGELOG.md`](../CHANGELOG.md) for what changed between releases, and
+[`examples/`](../examples/) for runnable programs covering each area of the crate.
 
-- **[User Guide](user_guide.md)** - Complete tutorial from installation to advanced usage
-- **[API Reference](api_reference.md)** - Comprehensive API documentation with examples
-- **[Examples](../examples/)** - Real-world code examples and demos
+## Where to start
 
-### 🏗️ Core Architecture
+**Reading and writing scenario files.** Start with the [user guide](user_guide.md), then keep
+the [API reference](api_reference.md) open. The `basic_parsing` and `parse` examples are the
+shortest path to working code.
 
-- **[Type System Guide](type_system_guide.md)** - Understanding the Value<T> system and schema mapping
-- **[Validation Guide](validation_guide.md)** - Error handling and validation system
-- **[Performance Guide](performance_guide.md)** - Optimization strategies and best practices
+**Constructing scenarios in Rust.** Read the [builder guide](builder_guide.md) and run
+`builder_basic_demo`, then `builder_comprehensive_demo` when the detached style becomes
+relevant.
 
-### 🔧 Advanced Topics
+**Contributing types or fixing conformance.** Read the
+[type system guide](type_system_guide.md) for the conventions, then
+[xsd_gaps.md](xsd_gaps.md) for the audit methods and the gates a change has to pass.
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) has the commands.
 
-- **[Extension Guide](extension_guide.md)** - Creating custom types, actions, and integrations
-- **[Development Guide](development_guide.md)** - Contributing patterns and architectural insights
-- **[XSD Validation Fixes](xsd_validation_fixes.md)** - Resolving XSD compliance issues and implementation patterns
+## One caveat worth reading first
 
-## 🎯 Quick Navigation
+The test corpus exercises **156 of the schema's 294 element declarations**, or about 53%. A
+green round-trip run therefore means the crate is stable over what the corpus contains, not
+that it is lossless over the standard. The distinction matters, and
+[xsd_gaps.md](xsd_gaps.md) explains why: serde ignores unknown XML by default, so a field the
+Rust types do not model is dropped identically on every pass and the comparison still succeeds.
+The corpus reported a perfect score for a long time while silently discarding route positions,
+vehicle light states and global actions.
 
-### For New Users
-1. Start with the **[User Guide](user_guide.md)** for installation and basic concepts
-2. Browse **[Examples](../examples/)** for practical usage patterns
-3. Reference **[API Documentation](api_reference.md)** for specific functions
-
-### For Library Developers
-1. Read **[Type System Guide](type_system_guide.md)** to understand the architecture
-2. Study **[Development Guide](development_guide.md)** for coding patterns
-3. Follow **[Extension Guide](extension_guide.md)** for creating custom functionality
-
-### For Performance-Critical Applications
-1. Review **[Performance Guide](performance_guide.md)** for optimization strategies
-2. Implement monitoring using patterns from the performance guide
-3. Use **[Validation Guide](validation_guide.md)** for efficient error handling
-
-## 📖 Documentation Structure
-
-```
-docs/
-├── README.md                 # This overview (you are here)
-├── user_guide.md            # Complete usage tutorial
-├── api_reference.md         # Detailed API documentation
-├── type_system_guide.md     # Type system and schema mapping
-├── validation_guide.md      # Validation and error handling
-├── extension_guide.md       # Customization and extensions
-├── performance_guide.md     # Performance optimization
-├── development_guide.md     # Development patterns and troubleshooting
-└── xsd_validation_fixes.md  # XSD compliance fixes and patterns
-```
-
-## 🔍 Key Features Covered
-
-### Core Functionality
-- **Complete OpenSCENARIO Support** - All 418+ types from the specification
-- **Type-Safe Parsing** - Rust's type system prevents runtime errors
-- **Parameter Resolution** - Full `${parameter}` reference support
-- **Catalog Management** - Automatic loading and resolution
-- **XML Round-Trip** - Perfect serialization/deserialization
-
-### Advanced Capabilities
-- **Custom Extensions** - Add domain-specific types and validation
-- **Performance Optimization** - Zero-copy parsing for efficiency
-- **Validation System** - Comprehensive error checking and reporting
-- **Integration APIs** - Connect with simulation engines and pipelines
-
-## 📋 Common Use Cases
-
-| Use Case | Primary Docs | Key Features |
-|----------|-------------|--------------|
-| **Parse scenario files** | [User Guide](user_guide.md) | Basic parsing, entity access |
-| **Validate scenarios** | [Validation Guide](validation_guide.md) | Built-in validation, custom rules |
-| **Build scenarios programmatically** | [API Reference](api_reference.md) | Builder patterns, fluent APIs |
-| **Handle catalogs** | [User Guide](user_guide.md) | Catalog resolution, caching |
-| **Optimize performance** | [Performance Guide](performance_guide.md) | Memory management, efficient parsing |
-| **Add custom functionality** | [Extension Guide](extension_guide.md) | Custom types, actions, validators |
-| **Integrate with systems** | [Extension Guide](extension_guide.md) | Simulation bridges, data pipelines |
-| **Fix XSD validation issues** | [XSD Validation Fixes](xsd_validation_fixes.md) | Serialization patterns, compliance fixes |
-
-## 🎲 Example Code Index
-
-### Basic Usage Examples
-```rust
-// Parse a scenario file
-use openscenario_rs::parse_file;
-let scenario = parse_file("scenario.xosc")?;
-
-// Access entities
-if let Some(entities) = &scenario.entities {
-    for entity in &entities.scenario_objects {
-        println!("Entity: {}", entity.name.as_ref().unwrap().as_literal().unwrap());
-    }
-}
-```
-
-### Advanced Usage Examples
-```rust
-// Custom validation
-use openscenario_rs::types::{Validate, ValidationContext};
-impl Validate for MyCustomType {
-    fn validate(&self, ctx: &ValidationContext) -> Result<()> {
-        // Custom validation logic
-        Ok(())
-    }
-}
-```
-
-## 🔗 Cross-References
-
-### Related Documentation
-- **OpenSCENARIO Specification** - Official ASAM standard documentation
-- **Rust serde Documentation** - Serialization framework used internally
-- **quick-xml Documentation** - XML parsing library
-
-### External Resources
-- **[OpenSCENARIO Official Site](https://www.asam.net/standards/detail/openscenario/)** - Specification and resources
-- **[Rust Book](https://doc.rust-lang.org/book/)** - Learning Rust programming
-- **[Cargo Guide](https://doc.rust-lang.org/cargo/)** - Rust package management
-
-## 🚦 Getting Help
-
-### Documentation Issues
-- Missing information? Check the [API Reference](api_reference.md)
-- Need examples? Browse the [examples directory](../examples/)
-- Performance concerns? See the [Performance Guide](performance_guide.md)
-
-### Code Issues
-- Compilation errors? Check the [Development Guide](development_guide.md)
-- Type system confusion? Read the [Type System Guide](type_system_guide.md)
-- Validation problems? Study the [Validation Guide](validation_guide.md)
-
-### Community Support
-- **GitHub Issues** - Bug reports and feature requests
-- **GitHub Discussions** - Questions and community help
-- **Documentation PRs** - Improvements and corrections welcome
-
-## 📝 Contributing to Documentation
-
-We welcome documentation improvements! Here's how to contribute:
-
-1. **Identify gaps** - What's missing or unclear?
-2. **Propose changes** - Open an issue or discussion
-3. **Submit improvements** - Create a pull request
-4. **Review process** - Community review and feedback
-
-### Documentation Standards
-- **Clear examples** - Every concept should have code examples
-- **Complete coverage** - All public APIs should be documented
-- **Practical focus** - Emphasize real-world usage patterns
-- **Consistent style** - Follow established formatting and tone
-
-## 🎯 Next Steps
-
-Choose your path based on your goals:
-
-**🚀 Get Started Quickly**
-→ [User Guide](user_guide.md) → [Examples](../examples/) → [API Reference](api_reference.md)
-
-**🔧 Understand the Architecture**
-→ [Type System Guide](type_system_guide.md) → [Development Guide](development_guide.md) → [Extension Guide](extension_guide.md)
-
-**⚡ Optimize Performance**
-→ [Performance Guide](performance_guide.md) → [Validation Guide](validation_guide.md) → Advanced examples
-
-**🎨 Build Extensions**
-→ [Extension Guide](extension_guide.md) → [Type System Guide](type_system_guide.md) → Custom development
-
----
-
-*This documentation is maintained alongside the OpenSCENARIO-rs library. For the latest updates, visit the [GitHub repository](https://github.com/ashfaqfarooqui/openscenario-rs).*
+Known gaps are tracked in one place, [xsd_gaps.md](xsd_gaps.md), rather than being scattered
+through the guides.

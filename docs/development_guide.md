@@ -45,7 +45,9 @@ assert_eq!(action.velocity.as_ref().unwrap().as_literal(), Some(&10.0));
 - `Double` = `Value<f64>`
 - `OSString` = `Value<String>` 
 - `UnsignedInt` = `Value<u32>`
-- `PositiveDouble` = `Value<f64>` (with validation)
+- `UnsignedShort` = `Value<u16>`
+- `Boolean` = `Value<bool>`
+- `DateTime` = `Value<chrono::DateTime<Utc>>`
 
 ## XML Serialization Patterns
 
@@ -140,7 +142,9 @@ fn test_xml_round_trip() {
 
 ### XSD Compliance Patterns
 
-OpenSCENARIO-rs achieves 95%+ XSD validation compliance. Follow these patterns for maintaining compliance:
+The current conformance state, including what the test corpus does and does not prove, is
+recorded in [xsd_gaps.md](xsd_gaps.md) rather than summarized as a percentage here. Follow
+these patterns when adding or correcting types:
 
 #### Optional Attribute Pattern
 
@@ -207,9 +211,13 @@ When modifying serialization behavior, always verify against the official schema
 
 **XSD Validation Testing**:
 ```bash
-# Use examples to validate XSD compliance
-cargo run --example test_lane_change_serialization
+# Validate a file against the bundled schema
+cargo run --bin xosc-validate --features validation -- tests/data/alks_scenario.xosc
 ```
+
+For a change's effect on the whole corpus, run the three gates in the sibling `../test`
+harness (`report`, `lossy`, `validate`) – see [xsd_gaps.md](xsd_gaps.md) for what each one
+catches and [CONTRIBUTING.md](../CONTRIBUTING.md) for the commands.
 
 **Common XSD Issues**:
 - Empty attributes (`targetLaneOffset=""`) instead of omission
@@ -247,48 +255,19 @@ When uncertain about type usage patterns:
 
 ## Recent Fixes Applied
 
-### XSD Validation Compliance (Latest - Resolved)
+This section previously held a hand-maintained changelog, which drifted. Release history,
+including the breaking changes from the schema-conformance passes, is now in
+[CHANGELOG.md](../CHANGELOG.md).
 
-**Problem**: XSD validation failures due to improper XML serialization patterns.
+Two patterns from those fixes are worth keeping in mind, because both classes of bug recur:
 
-**Root Cause**: 
-- `LaneChangeAction` serialized empty `targetLaneOffset=""` instead of omitting attribute
-- `EntityCondition` enum didn't match XSD choice group structure requirements
-- Various attribute vs element serialization inconsistencies
-
-**Solution**: Implemented comprehensive XSD compliance patterns:
-
-**Files Modified**:
-- `src/types/actions/movement.rs` - Added `skip_serializing_if` to `targetLaneOffset`
-- `src/types/conditions/entity.rs` - Custom `Serialize` for choice groups
-- `tests/xsd_validation_test.rs` - Comprehensive XSD compliance tests
-- `examples/test_lane_change_serialization.rs` - Validation example
-- `docs/xsd_validation_fixes.md` - Complete implementation guide
-
-**Key Patterns**:
-- Use `skip_serializing_if = "Option::is_none"` for all optional XML attributes
-- Implement custom `Serialize` for XSD choice groups using `SerializeMap`
-- Use custom deserializers for graceful empty string handling
-- Always use `@` prefix for XML attributes in serde annotations
-
-### TrafficSwarmAction XML Serialization (Resolved)
-
-**Problem**: `test_xml_round_trip_traffic_swarm` failing due to empty attribute serialization.
-
-**Root Cause**: Optional `Value<T>` fields serialized as empty attributes, failing deserialization.
-
-**Solution**: Added `skip_serializing_if = "Option::is_none"` to optional fields in `TrafficSwarmAction`.
-
-**Files Modified**:
-- `src/types/actions/traffic.rs` - Main fix + test updates
-- `src/types/actions/control.rs` - Value<T> comparison fixes
-- `src/types/actions/movement.rs` - Raw value assignment fixes
-- `src/types/road.rs` - OSString comparison fixes
-- `src/types/positions/road.rs` - Multiple Value<T> fixes
-- `tests/position_types_test.rs` - Float literal and type fixes
-- `tests/openscenario_integration_test.rs` & `tests/scenario_parsing_integration_test.rs` - Minor fixes
-
-**Key Pattern**: Always use `skip_serializing_if = "Option::is_none"` for optional `Value<T>` fields to prevent empty attribute serialization issues.
+- **Optional attributes must carry `skip_serializing_if = "Option::is_none"`.** Without it an
+  absent `Option<Value<T>>` serializes as an empty attribute (`targetLaneOffset=""`), which is
+  schema-invalid and fails to deserialize. `LaneChangeAction` and `TrafficSwarmAction` both hit
+  this.
+- **XSD choice groups sometimes need a hand-written `Serialize`.** The derive emits a wrapper
+  element the schema does not define; `EntityCondition`
+  (`src/types/conditions/entity.rs:368`) serializes through `SerializeMap` instead.
 
 ## Contributing Guidelines
 

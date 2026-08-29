@@ -29,14 +29,20 @@ remaining gaps against the XSD are tracked in [docs/xsd_gaps.md](docs/xsd_gaps.m
 
 ## Status
 
-Core parsing and serialization is functional. Actions and conditions have broad but not complete coverage — see the implementation table in [docs/user_guide.md](docs/user_guide.md) for details.
+Core parsing and serialization is functional. The type model has been audited element by
+element against the schema over four conformance passes; what the test corpus proves, what it
+does not, and the one gap that remains open are recorded in
+[docs/xsd_gaps.md](docs/xsd_gaps.md). Recent changes, including breaking ones, are in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Quick Start
 
 ```toml
 [dependencies]
-openscenario-rs = "0.3.0"
+openscenario-rs = "0.3.2"
 ```
+
+Requires Rust 1.90 or later. Neither optional feature is enabled by default.
 
 ### Parsing
 
@@ -69,16 +75,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```bash
 cargo run --bin scenario_analyzer -- scenario.xosc
-cargo run --bin xosc-validate -- scenario.xosc
+cargo run --bin xosc-validate --features validation -- scenario.xosc
 ```
+
+`xosc-validate` requires the `validation` feature and exits non-zero on failure, so it can be
+gated in CI without parsing its output.
 
 ## Modules
 
-- `types/` — OpenSCENARIO data types
-- `parser/` — XML parsing and serialization
-- `catalog/` — catalog loading and reference resolution
-- `expression/` — expression evaluation
-- `builder/` — programmatic scenario construction (feature-gated)
+- `types/`: OpenSCENARIO data types
+- `parser/`: XML parsing, serialization, and semantic validation
+- `catalog/`: catalog loading and reference resolution
+- `expression/`: expression evaluation
+- `builder/`: programmatic scenario construction (feature `builder`)
+- `validation/`: XSD schema validation (feature `validation`)
 
 ## Testing
 
@@ -89,14 +99,19 @@ cargo test --features builder
 
 ## Documentation
 
-- [User Guide](docs/user_guide.md)
-- [Builder Guide](docs/builder_guide.md)
-- [API Reference](docs/api_reference.md)
-- [Design](docs/design.md)
+Start at the [documentation index](docs/README.md).
+
+- [User Guide](docs/user_guide.md): parsing, values and parameters, catalogs
+- [API Reference](docs/api_reference.md): the public surface
+- [Builder Guide](docs/builder_guide.md): programmatic construction
+- [Type System Guide](docs/type_system_guide.md): how the types map to the XSD
+- [Validation Guide](docs/validation_guide.md): the four validation layers
+- [XSD Gaps](docs/xsd_gaps.md): the conformance ledger
 
 ## Contributing
 
-Check existing patterns before adding new types. Add tests. Verify XML round-trip behavior.
+See [CONTRIBUTING.md](CONTRIBUTING.md). In brief: follow the existing schema-mapping
+conventions, add a round-trip test, and keep the conformance gates green.
 
 ## License & Attribution
 

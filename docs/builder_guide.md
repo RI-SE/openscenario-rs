@@ -1,917 +1,313 @@
-# OpenSCENARIO-rs Builder System Guide
+# Builder guide
 
-The OpenSCENARIO-rs builder system provides a type-safe, fluent API for programmatically constructing OpenSCENARIO documents. This guide covers all aspects of using the builder system effectively.
-
-## Current Status
-
-⚠️ **Implementation Status**: The builder system is 99% functional with comprehensive features implemented across 6 development sprints. Currently resolving final 4 lifetime variance errors in fluent API method chaining.
-
-**Latest Updates**:
-- ✅ Complete builder API with entities, actions, conditions, storyboard
-- ✅ Parameter system with constraint validation
-- ✅ Catalog integration with reference resolution
-- ✅ 87% of compilation errors resolved (30+ → 4 remaining)
-- 🔄 Fixing final lifetime variance issues in storyboard builders
-
-## Table of Contents
-
-1. [Quick Start](#quick-start)
-2. [Current Implementation](#current-implementation)
-3. [Core Concepts](#core-concepts)
-4. [Type States](#type-states)
-5. [Entity Builders](#entity-builders)
-6. [Action Builders](#action-builders)
-7. [Condition Builders](#condition-builders)
-8. [Storyboard Construction](#storyboard-construction)
-9. [Parameter Support](#parameter-support)
-10. [Catalog Integration](#catalog-integration)
-11. [Error Handling](#error-handling)
-12. [Known Issues](#known-issues)
-13. [Best Practices](#best-practices)
-14. [Examples](#examples)
-
-## Quick Start
-
-Enable the builder feature in your `Cargo.toml`:
+The builder API constructs OpenSCENARIO documents programmatically, behind the `builder`
+cargo feature. It exists because assembling an `OpenScenario` by hand means populating a deep
+tree of nested `Option` fields in the right order, which is tedious and easy to get subtly
+wrong.
 
 ```toml
 [dependencies]
-openscenario-rs = { version = "0.1", features = ["builder"] }
+openscenario-rs = { version = "0.3.2", features = ["builder"] }
 ```
 
-Create a simple scenario:
+Signatures in this guide are taken from `src/builder/`; the runnable examples referenced
+throughout are in `examples/`.
+
+## Quick start
 
 ```rust
-use openscenario_rs::builder::ScenarioBuilder;
-use openscenario_rs::types::enums::ParameterType;
+use openscenario_rs::types::catalogs::locations::CatalogLocations;
+use openscenario_rs::types::road::RoadNetwork;
+use openscenario_rs::ScenarioBuilder;
 
 let scenario = ScenarioBuilder::new()
-    .with_header("My First Scenario", "Your Name")
+    .with_header("Basic Highway Scenario", "Builder Demo")
+    .with_catalog_locations(CatalogLocations::default())
+    .with_road_network(RoadNetwork::default())
     .with_entities()
-        .add_vehicle("ego")
-            .car()
-            .finish()
+    .with_storyboard(|sb| sb)
+    .build()?;
+
+let xml = openscenario_rs::serialize_to_string(&scenario)?;
+```
+
+Four things are required of a scenario document and `build()` rejects a chain missing any of
+them: the header, `CatalogLocations`, `RoadNetwork`, and the storyboard. The last three are
+runtime errors rather than compile errors – see [Required elements](#required-elements).
+
+## Typestate
+
+`ScenarioBuilder<S>` carries a phantom state parameter, and the methods available depend on
+it. The point is that a document missing its header or its entities is not representable – the
+transition methods are the only way forward, so an incomplete scenario fails to compile rather
+than failing at runtime.
+
+```
+Empty ──with_header──▶ HasHeader ──with_entities──▶ HasEntities ──with_storyboard──▶ Complete
+```
+
+`build()` is exposed on both `HasEntities` and `Complete`, but the two implementations are
+identical and both enforce the same requirements.
+
+### Required elements
+
+The XSD group `ScenarioDefinition` (`Schema/OpenSCENARIO.xsd:1989`) declares four elements
+without `minOccurs="0"`, so a scenario document must carry all four. `build()` returns
+`BuilderError::MissingField` for each one it does not find:
+
+| Element | Set it with | Enforced by |
+|---|---|---|
+| `FileHeader` | `.with_header(description, author)` | the typestate |
+| `Entities` | `.with_entities()` | the typestate |
+| `CatalogLocations` | `.with_catalog_locations(...)` | `build()`, at runtime |
+| `RoadNetwork` | `.with_road_file(path)` or `.with_road_network(...)` | `build()`, at runtime |
+| `Storyboard` | `.with_storyboard(...)` | `build()`, at runtime |
+
+A scenario that references no catalogs and names no road file still has to emit both elements,
+because every *child* of each is optional but the elements themselves are not. Pass
+`CatalogLocations::default()` and `RoadNetwork::default()` for that case: they serialize as
+empty elements, which is schema-valid and states nothing.
+
+Omitting either used to produce schema-invalid XML with no error at all, which is what
+motivated the check.
+
+| State | Available methods |
+|---|---|
+| `Empty` | `new`, `with_header` |
+| `HasHeader` | `with_parameters`, `add_parameter`, `with_catalog_locations`, `with_road_network`, `with_road_file`, `with_entities` |
+| `HasEntities` | `add_vehicle`, `add_vehicle_mut`, `add_catalog_vehicle`, `add_pedestrian`, `add_catalog_pedestrian`, `with_storyboard`, `with_storyboard_mut`, `create_storyboard`, `build` |
+| `Complete` | `build` |
+
+Note the argument order on `with_header`: **description first, then author.**
+
+```rust
+pub fn with_header(self, description: &str, author: &str) -> ScenarioBuilder<HasHeader>;
+```
+
+## Header, parameters and road network
+
+```rust
+use openscenario_rs::types::enums::ParameterType;
+use openscenario_rs::ScenarioBuilder;
+
+let builder = ScenarioBuilder::new()
+    .with_header("Highway Overtaking", "openscenario-rs")
+    .add_parameter("initial_speed", ParameterType::Double, "25.0")
+    .add_parameter("target_speed", ParameterType::Double, "35.0")
+    .with_road_file("highway.xodr")
+    .with_entities();
+```
+
+`add_parameter` appends a single declaration; `with_parameters` replaces the whole
+`ParameterDeclarations` block. `with_road_file` is shorthand for the common case of a road
+network that is one OpenDRIVE file; `with_road_network` takes a full `RoadNetwork`.
+
+## Two builder styles
+
+The crate offers an attached and a detached style, and knowing which one you are in explains
+most of the API's shape.
+
+**Attached builders** borrow their parent and hand it back. `add_vehicle` takes a configuring
+closure and returns the scenario builder, so the chain never breaks:
+
+```rust
+let builder = builder.add_vehicle("ego", |v| v.car().with_dimensions(4.5, 1.8, 1.4));
+```
+
+`add_vehicle_mut` is the same thing without the closure, for when the configuration is long
+enough that a closure reads badly. It returns a `VehicleBuilder<'_>` borrowing the scenario
+builder, and `finish()` returns the borrow:
+
+```rust
+let mut builder = builder;
+builder.add_vehicle_mut("ego").car().with_performance(200.0, 10.0, 10.0).finish();
+```
+
+**Detached builders** own nothing and produce a value. They are the answer when a component is
+built once and reused, or built somewhere the parent is not in scope:
+
+```rust
+use openscenario_rs::builder::DetachedVehicleBuilder;
+
+let ego = DetachedVehicleBuilder::new("ego").car().build();      // -> ScenarioObject
+```
+
+Detached entity builders end in `build()`; detached storyboard builders end in `attach_to`
+or `attach_to_detached`, which is how a maneuver assembled in isolation is folded back into an
+act. `examples/builder_comprehensive_demo.rs` works through a full scenario in this style.
+
+## Entities
+
+`VehicleBuilder` and `DetachedVehicleBuilder` share a method set:
+
+| Method | Effect |
+|---|---|
+| `car()` | Passenger-car category, with default dimensions and performance |
+| `truck()` | Truck category, likewise |
+| `with_dimensions(length, width, height)` | Bounding box |
+| `with_performance(max_speed, max_acceleration, max_deceleration)` | Performance block |
+| `finish()` / `build()` | Return to the parent, or produce a `ScenarioObject` |
+
+`VehicleBuilder::detached(self)` converts an attached builder into a detached one.
+
+Pedestrians take a parallel set – `pedestrian()`, `wheelchair()`, `animal()`, plus
+`with_mass`, `with_dimensions`, `with_role` and `with_model3d`. Note that `with_mass` exists
+on the pedestrian builders only; vehicles have no such method.
+
+```rust
+use openscenario_rs::builder::entities::DetachedPedestrianBuilder;
+
+let walker = DetachedPedestrianBuilder::new("pedestrian_1")
+    .pedestrian()
+    .with_mass(80.0)
+    .with_dimensions(0.5, 0.6, 1.8);
+```
+
+> `PedestrianBuilder`, `DetachedPedestrianBuilder`, `CatalogVehicleBuilder` and
+> `CatalogPedestrianBuilder` are **not** re-exported at `openscenario_rs::builder`. Import
+> them from `openscenario_rs::builder::entities`. Vehicle builders are re-exported at both
+> paths.
+
+## Init actions
+
+The `Init` block sets the world's starting state, and `InitActionBuilder`
+(`src/builder/init/`) covers it. The shortcuts handle the common cases directly:
+
+```rust
+use openscenario_rs::builder::InitActionBuilder;
+
+let init = InitActionBuilder::new()
+    .add_global_environment_action()
+    .add_speed_action("ego", 27.8)
+    .add_teleport_action("ego", position)
     .build()?;
 ```
 
-## Current Implementation
+For anything beyond those, `create_private_action(entity_ref)` opens a `PrivateActionBuilder`
+scoped to one entity, and `create_global_action()` opens a `GlobalActionBuilder`. Both return
+to the parent through `finish()`.
 
-The builder system has been developed through 6 comprehensive sprints:
-
-### ✅ Sprint 0: Foundation
-- Error handling system with structured error types
-- Basic ScenarioBuilder with type-safe state transitions
-- Core validation framework
-
-### ✅ Sprint 1: Entity System  
-- VehicleBuilder with car/truck presets
-- Parameter support for configurable entities
-- Catalog vehicle references
-
-### ✅ Sprint 2: Action System
-- SpeedActionBuilder for longitudinal control
-- TeleportActionBuilder with position integration
-- Action wrapper types
-
-### ✅ Sprint 3: Storyboard System
-- Story/Act/Maneuver hierarchical builders
-- Action integration with proper nesting
-- Event sequencing
-
-### ✅ Sprint 4: Conditions & Triggers
-- TimeCondition, SpeedCondition, DistanceCondition
-- Complex trigger logic with AND/OR combinations
-- Edge and delay handling
-
-### ✅ Sprint 5: Advanced Features
-- Full catalog integration with parameter resolution
-- Comprehensive parameter system with constraints
-- Validation framework integration
-
-### ✅ Sprint 6: Documentation & Polish
-- Complete API documentation
-- Working examples and demos
-- Test automation scripts
-
-### 🔄 Current: Final Compilation Fixes
-- **87% complete**: 30+ errors → 4 remaining
-- **4 lifetime variance errors** in storyboard method chaining
-- All other categories resolved: trait imports, type mismatches, API compatibility
-
-## Core Concepts
-
-### Type-Safe Construction
-
-The builder system uses Rust's type system to enforce correct construction order:
-
-- **Compile-time validation**: Invalid operations are caught at compile time
-- **State transitions**: Each step unlocks new methods while preventing invalid ones
-- **Zero-cost abstractions**: No runtime overhead for type safety
-
-### Fluent API
-
-The builder provides a natural, readable syntax:
+`PrivateActionBuilder` covers teleport, speed, longitudinal distance, speed profile, route
+assignment (inline via `add_assign_route_action` and by catalog via
+`add_assign_route_catalog`), synchronization, and visibility. Visibility has both the general
+form and two shortcuts:
 
 ```rust
-ScenarioBuilder::new()
-    .with_header("Highway Test", "Author")
-    .add_parameter("speed", ParameterType::Double, "25.0")
-    .with_entities()
-        .add_vehicle("ego")
-            .car()
-            .with_dimensions(4.5, 1.8, 1.4)
-            .finish()
-    .with_storyboard()
-        .add_story("main")
-            .add_act("acceleration")
-                .add_maneuver("speed_up", "ego")
-                    .add_speed_action()
-                        .to_speed(30.0)
-                        .finish()?
-                    .finish()
-                .finish()
-            .finish()
-        .finish()
-    .build()?
-```
-
-## Type States
-
-The builder progresses through several type states that enforce correct construction order:
-
-### State Diagram
-
-```
-Empty → HasHeader → HasEntities → Complete
-  ↓         ↓            ↓           ↓
- new()  add_param()  add_vehicle()  build()
-       with_catalog() add_pedestrian()
-       with_road()   with_storyboard()
-```
-
-### State Descriptions
-
-- **Empty**: Initial state, must call `with_header()` first
-- **HasHeader**: Can add parameters, catalogs, road networks
-- **HasEntities**: Can add entities and build storyboard
-- **Complete**: Ready to build final OpenSCENARIO document
-
-## Entity Builders
-
-### Vehicle Builder
-
-Create vehicles with different configurations:
-
-```rust
-// Basic car
-.add_vehicle("ego")
-    .car()
+let init = InitActionBuilder::new()
+    .create_private_action("ego")
+    .add_speed_action(27.8)
+    .make_visible()
     .finish()
-
-// Custom truck
-.add_vehicle("truck1")
-    .truck()
-    .with_dimensions(8.0, 2.5, 3.0)
-    .finish()
-
-// Car with custom properties
-.add_vehicle("sports_car")
-    .car()
-    .with_dimensions(4.2, 1.9, 1.3)
-    .finish()
+    .build()?;
 ```
 
-### Catalog Vehicle Builder
+`add_action(PrivateActionWrapper)` is the escape hatch for an action the builder does not wrap.
 
-Reference vehicles from catalogs:
+Three constructors cover the standard openings: `InitActionBuilder::with_default_environment`,
+`::for_single_vehicle(entity_ref)` and `::for_multiple_vehicles(&[&str])`.
+
+## Storyboard
+
+`with_storyboard` takes a closure and advances the state to `Complete`. Where the storyboard is
+complex enough that a single closure becomes unwieldy, `StoryboardBuilder::new` takes the
+scenario builder directly and the detached style takes over:
 
 ```rust
-.add_catalog_vehicle("ego")
-    .from_catalog("VehicleCatalog")
-    .entry_name("PassengerCar")
-    .finish()
+use openscenario_rs::builder::StoryboardBuilder;
+
+let mut storyboard = StoryboardBuilder::new(scenario_builder);
+let mut story = storyboard.add_story_simple("highway_overtaking");
+
+let mut act = story.create_act("initial_acceleration");
+let mut maneuver = act.create_maneuver("ego_accelerate", "ego");
+
+let speed_action = maneuver
+    .create_speed_action()
+    .named("initial_acceleration")
+    .to_speed(25.0)
+    .with_trigger(trigger);
+
+speed_action.attach_to_detached(&mut maneuver)?;
+maneuver.attach_to_detached(&mut act);
+act.attach_to(&mut story);
 ```
 
-### Pedestrian Builder
+The nesting reads bottom-up: an action attaches to a maneuver, a maneuver to an act, an act to
+a story. `StoryboardBuilder` also offers stop-trigger shortcuts – `stop_after_time(f64)`,
+`stop_when_entity_reaches`, `stop_on_condition` and the general `with_stop_trigger`.
 
-Add pedestrian entities:
+## Conditions and triggers
+
+`TriggerBuilder` assembles condition groups, and each condition family has its own builder:
+`SpeedConditionBuilder`, `AccelerationConditionBuilder`, `TimeConditionBuilder`,
+`TraveledDistanceConditionBuilder`, `ReachPositionConditionBuilder`,
+`RelativeDistanceConditionBuilder`, `CollisionConditionBuilder`, `ParameterConditionBuilder`,
+`VariableConditionBuilder` and `ValueSpeedConditionBuilder`. All are re-exported at
+`openscenario_rs::builder`.
+
+## Validation during construction
+
+`src/builder/validation.rs` checks a scenario before it becomes a document:
 
 ```rust
-.add_pedestrian("pedestrian1")
-    .with_mass(75.0)
-    .finish()
+use openscenario_rs::builder::ValidationContextBuilder;
+
+let ctx = ValidationContextBuilder::new()
+    .with_standard_rules()
+    .with_entity("ego", "vehicle")
+    .with_parameter("initial_speed", "25.0")
+    .build();
+
+ctx.validate_scenario(&scenario)?;
 ```
 
-## Action Builders
+`with_standard_rules` installs `EntityReferenceValidationRule`,
+`ParameterReferenceValidationRule`, `CatalogReferenceValidationRule` and
+`StoryboardStructureValidationRule`. Custom rules implement `BuilderValidationRule` and go in
+through `with_rule`. Details are in the [validation guide](validation_guide.md).
 
-### Speed Actions
-
-Control vehicle speed:
-
-```rust
-.add_speed_action()
-    .named("accelerate")
-    .to_speed(30.0)  // Absolute speed
-    .finish()?
-
-.add_speed_action()
-    .named("slow_down")
-    .change_by(-5.0)  // Relative speed change
-    .finish()?
-```
-
-### Teleport Actions
-
-Instantly move entities:
+## Errors
 
 ```rust
-.add_teleport_action()
-    .named("lane_change")
-    .to()
-        .world_position(100.0, -3.5, 0.0)
-    .finish()?
-
-.add_teleport_action()
-    .named("highway_entry")
-    .to()
-        .lane_position("highway", "1", 50.0)
-    .finish()?
-```
-
-### Lane Change Actions
-
-Perform lane changes:
-
-```rust
-.add_lane_change_action()
-    .named("overtake")
-    .target_lane_offset(-1)  // Move to left lane
-    .dynamics()
-        .max_lateral_acc(2.0)
-        .finish()
-    .finish()?
-```
-
-## Condition Builders
-
-### Time Conditions
-
-Trigger events based on simulation time:
-
-```rust
-.triggered_by()
-    .time_condition(5.0)  // After 5 seconds
-    .finish()
-```
-
-### Speed Conditions
-
-Trigger based on entity speed:
-
-```rust
-.triggered_by()
-    .speed_condition("ego", 25.0)  // When ego exceeds 25 m/s
-    .finish()
-```
-
-### Distance Conditions
-
-Trigger based on distance to positions:
-
-```rust
-.triggered_by()
-    .distance_condition("ego")
-        .to_position(world_position(100.0, 0.0, 0.0))
-        .closer_than(10.0)
-    .finish()
-```
-
-### Complex Triggers
-
-Combine multiple conditions:
-
-```rust
-.triggered_by()
-    .add_condition_group()
-        .time_condition()
-            .at_time(3.0)
-            .finish()?
-        .speed_condition()
-            .for_entity("ego")
-            .speed_above(20.0)
-            .finish()?
-        .finish_group()
-    .build()?
-```
-
-## Storyboard Construction
-
-### Stories, Acts, and Maneuvers
-
-Build complex scenario behavior:
-
-```rust
-.with_storyboard()
-    .add_story("highway_scenario")
-        .add_act("initial_phase")
-            .add_maneuver("ego_acceleration", "ego")
-                .add_speed_action()
-                    .to_speed(25.0)
-                    .triggered_by()
-                        .time_condition(1.0)
-                        .finish()
-                    .finish()?
-                .finish()
-            .finish()
-        
-        .add_act("overtaking_phase")
-            .add_maneuver("ego_overtake", "ego")
-                .add_lane_change_action()
-                    .target_lane_offset(-1)
-                    .triggered_by()
-                        .speed_condition("target", 20.0)
-                        .finish()
-                    .finish()?
-                .finish()
-            .finish()
-        .finish()
-    .finish()
-```
-
-### Event Sequencing
-
-Control when events occur:
-
-```rust
-.add_maneuver("complex_behavior", "ego")
-    // First action: accelerate after 2 seconds
-    .add_speed_action()
-        .named("initial_acceleration")
-        .to_speed(30.0)
-        .triggered_by()
-            .time_condition(2.0)
-            .finish()
-        .finish()?
-    
-    // Second action: lane change when close to target
-    .add_lane_change_action()
-        .named("overtake_maneuver")
-        .target_lane_offset(-1)
-        .triggered_by()
-            .distance_condition("ego")
-                .to_entity("target")
-                .closer_than(20.0)
-            .finish()
-        .finish()?
-    .finish()
-```
-
-## Parameter Support
-
-### Adding Parameters
-
-Make scenarios configurable:
-
-```rust
-.with_header("Configurable Scenario", "Author")
-.add_parameter("initial_speed", ParameterType::Double, "25.0")
-.add_parameter("target_lane", ParameterType::String, "1")
-.add_parameter("weather_condition", ParameterType::String, "sunny")
-```
-
-### Using Parameters
-
-Reference parameters in values:
-
-```rust
-.add_speed_action()
-    .to_speed_parameter("initial_speed")  // Use ${initial_speed}
-    .finish()?
-```
-
-### Parameter Validation
-
-Validate parameter constraints:
-
-```rust
-.add_parameter_with_constraints("speed", ParameterType::Double, "25.0")
-    .range(0.0, 50.0)
-    .finish()
-```
-
-## Catalog Integration
-
-### Catalog Locations
-
-Specify where to find catalogs:
-
-```rust
-.with_catalog_locations()
-    .vehicle_catalog("./catalogs/VehicleCatalog.xosc")
-    .pedestrian_catalog("./catalogs/PedestrianCatalog.xosc")
-    .finish()
-```
-
-### Using Catalog Entities
-
-Reference entities from catalogs:
-
-```rust
-.add_catalog_vehicle("ego")
-    .from_catalog("VehicleCatalog")
-    .entry_name("BMW_X5")
-    .parameter_assignments()
-        .assign("color", "blue")
-        .assign("license_plate", "ABC-123")
-        .finish()
-    .finish()
-```
-
-## Error Handling
-
-### Builder Errors
-
-The builder system provides detailed error messages:
-
-```rust
-use openscenario_rs::builder::error::BuilderError;
-
-match scenario_result {
-    Ok(scenario) => println!("Scenario built successfully"),
-    Err(BuilderError::MissingField { field, suggestion }) => {
-        println!("Missing {}: {}", field, suggestion);
-    }
-    Err(BuilderError::ValidationError { message, suggestion }) => {
-        println!("Validation failed: {} ({})", message, suggestion);
-    }
-    Err(BuilderError::TypeMismatch { expected, found }) => {
-        println!("Type error: expected {}, found {}", expected, found);
-    }
-    Err(e) => println!("Other error: {}", e),
+pub enum BuilderError {
+    ValidationError { message: String, suggestion: String },
+    MissingField { field: String, suggestion: String },
+    InvalidEntityRef { entity: String, available: Vec<String> },
+    ConstraintViolation { constraint: String, details: String },
+    OpenScenarioError(#[from] crate::error::Error),
 }
+pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 ```
 
-### Validation
+`InvalidEntityRef` carries the available entity names, and the two `suggestion` fields carry
+a remedy where the builder can name one – worth surfacing rather than printing the message
+alone.
 
-The builder includes comprehensive validation:
+## Templates
 
-```rust
-let builder = ScenarioBuilder::new()
-    .with_header("Test", "Author")
-    .with_entities();
-
-// Validate current state
-builder.validate()?;
-
-// Continue building...
-let scenario = builder.build()?;
-```
-
-### Error Categories
-
-1. **Compilation Errors**: Type safety enforced at compile time
-2. **Runtime Validation**: Logical consistency checks during build
-3. **Parameter Errors**: Invalid parameter references or constraints
-4. **Catalog Errors**: Missing catalog entries or files
-
-## Known Issues
-
-### Lifetime Variance in Storyboard Builders
-
-**Status**: 4 remaining compilation errors in fluent API method chaining
-
-**Affected Files**:
-- `src/builder/storyboard/story.rs` (lines 81, 131)
-- `src/builder/storyboard/maneuver.rs` (lines 34, 39)
-
-**Error Pattern**:
-```rust
-error: lifetime may not live long enough
-method was supposed to return data with lifetime `'parent` but it is returning data with lifetime `'1`
-```
-
-**Workaround**: Use explicit lifetime annotations or alternative API patterns until resolved.
-
-**Example Affected Code**:
-```rust
-// Currently problematic - lifetime variance issue
-.add_story("main")
-    .add_act("phase1")  // <-- Lifetime error here
-        .add_maneuver("action", "ego")
-            .finish()
-        .finish()
-    .finish()
-```
-
-**Alternative Pattern** (works around issue):
-```rust
-// Use separate builder variables to avoid chaining
-let story_builder = scenario.add_story("main");
-let act_builder = story_builder.add_act("phase1");
-let maneuver_builder = act_builder.add_maneuver("action", "ego");
-let completed_story = maneuver_builder.finish().finish().finish();
-```
-
-### Compilation Status
-
-Run `cargo check --features builder` to see current compilation status:
-- ✅ **Resolved**: Trait imports, type mismatches, struct fields, API compatibility
-- 🔄 **In Progress**: 4 lifetime variance errors in method chaining
-- ℹ️ **Warnings**: 54 unused import warnings (non-blocking)
-
-## Best Practices
-
-### 1. Use Type States Effectively
-
-Let the type system guide you:
-
-```rust
-// Good: Type system prevents invalid operations
-let builder = ScenarioBuilder::new();
-// builder.add_vehicle("ego");  // Compile error - no header yet
-
-let builder = builder.with_header("Test", "Author");
-// builder.build();  // Compile error - no entities yet
-
-let builder = builder.with_entities();
-// Now can add vehicles and build
-```
-
-### 2. Handle Errors Appropriately
-
-Use `?` operator for clean error propagation:
-
-```rust
-fn build_scenario() -> Result<OpenScenario, BuilderError> {
-    let scenario = ScenarioBuilder::new()
-        .with_header("Test", "Author")
-        .with_entities()
-            .add_vehicle("ego")
-                .car()
-                .finish()
-        .with_storyboard()
-            .add_story("main")
-                .add_act("test")
-                    .add_maneuver("action", "ego")
-                        .add_speed_action()
-                            .to_speed(30.0)
-                            .finish()?  // Propagate action builder errors
-                        .finish()
-                    .finish()
-                .finish()
-            .finish()
-        .build()?;  // Propagate scenario builder errors
-    
-    Ok(scenario)
-}
-```
-
-### 3. Use Meaningful Names
-
-Choose descriptive names for entities and events:
-
-```rust
-.add_vehicle("ego_vehicle")  // Not just "ego"
-.add_vehicle("target_vehicle")
-.add_vehicle("oncoming_truck")
-
-.add_speed_action()
-    .named("highway_acceleration")  // Descriptive event names
-    .to_speed(30.0)
-    .finish()?
-```
-
-### 4. Structure Complex Scenarios
-
-Break complex scenarios into logical phases:
-
-```rust
-.with_storyboard()
-    .add_story("highway_overtaking_scenario")
-        .add_act("setup_phase")
-            // Initial positioning and speeds
-            .finish()
-        
-        .add_act("approach_phase")
-            // Approach target vehicle
-            .finish()
-        
-        .add_act("overtaking_phase")
-            // Execute overtaking maneuver
-            .finish()
-        
-        .add_act("completion_phase")
-            // Return to original lane
-            .finish()
-        .finish()
-```
-
-### 5. Use Parameters for Reusability
-
-Make scenarios configurable:
-
-```rust
-.add_parameter("ego_initial_speed", ParameterType::Double, "25.0")
-.add_parameter("target_speed", ParameterType::Double, "20.0")
-.add_parameter("overtaking_speed", ParameterType::Double, "35.0")
-.add_parameter("safety_distance", ParameterType::Double, "10.0")
-```
+`BasicScenarioTemplate` and `ScenarioTemplate` (`src/builder/templates/`) wrap a preconfigured
+opening for scenarios that differ only in their details.
 
 ## Examples
 
-### Complete Highway Scenario
+| Example | Shows |
+|---|---|
+| `builder_basic_demo` | The minimum: header, required elements, entities, build, serialize |
+| `builder_comprehensive_demo` | Detached builders across multiple acts and maneuvers |
+| `builder_performance_demo` | Building at volume |
+| `pedestrian_builder_demo` | Pedestrian entities |
+| `cut_in_scenario_demo` | A cut-in scenario, detached style |
+| `alks_scenario_4_1_1_comprehensive` | ALKS Scenario 4.1.1 "Free Driving", end to end |
 
-```rust
-use openscenario_rs::{ScenarioBuilder, types::enums::ParameterType};
-
-fn highway_overtaking_scenario() -> Result<OpenScenario, BuilderError> {
-    ScenarioBuilder::new()
-        .with_header("Highway Overtaking Scenario", "OpenSCENARIO-rs")
-        
-        // Parameters for configurability
-        .add_parameter("ego_speed", ParameterType::Double, "25.0")
-        .add_parameter("target_speed", ParameterType::Double, "20.0")
-        .add_parameter("overtake_speed", ParameterType::Double, "35.0")
-        
-        // Road network
-        .with_road_file("highway_3_lanes.xodr")
-        
-        // Entities
-        .with_entities()
-            .add_vehicle("ego")
-                .car()
-                .with_dimensions(4.5, 1.8, 1.4)
-                .finish()
-            
-            .add_vehicle("target")
-                .car()
-                .finish()
-            
-            .add_vehicle("oncoming")
-                .truck()
-                .finish()
-        
-        // Scenario behavior
-        .with_storyboard()
-            .add_story("overtaking_story")
-                .add_act("initial_driving")
-                    .add_maneuver("ego_cruise", "ego")
-                        .add_speed_action()
-                            .named("initial_cruise")
-                            .to_speed_parameter("ego_speed")
-                            .triggered_by()
-                                .time_condition(1.0)
-                                .finish()
-                            .finish()?
-                        .finish()
-                    
-                    .add_maneuver("target_cruise", "target")
-                        .add_speed_action()
-                            .named("target_cruise")
-                            .to_speed_parameter("target_speed")
-                            .triggered_by()
-                                .time_condition(0.5)
-                                .finish()
-                            .finish()?
-                        .finish()
-                    .finish()
-                
-                .add_act("overtaking")
-                    .add_maneuver("ego_overtake", "ego")
-                        .add_speed_action()
-                            .named("accelerate_for_overtake")
-                            .to_speed_parameter("overtake_speed")
-                            .triggered_by()
-                                .distance_condition("ego")
-                                    .to_entity("target")
-                                    .closer_than(30.0)
-                                .finish()
-                            .finish()?
-                        
-                        .add_lane_change_action()
-                            .named("move_to_left_lane")
-                            .target_lane_offset(-1)
-                            .triggered_by()
-                                .speed_condition("ego", 30.0)
-                                .finish()
-                            .finish()?
-                        
-                        .add_lane_change_action()
-                            .named("return_to_right_lane")
-                            .target_lane_offset(1)
-                            .triggered_by()
-                                .distance_condition("ego")
-                                    .to_entity("target")
-                                    .farther_than(50.0)
-                                .finish()
-                            .finish()?
-                        .finish()
-                    .finish()
-                .finish()
-            .finish()
-        .build()
-}
+```bash
+cargo run --example builder_basic_demo --features builder
+cargo run --example builder_comprehensive_demo --features builder
 ```
 
-### Urban Intersection Scenario
+## Choosing a style
 
-```rust
-fn urban_intersection_scenario() -> Result<OpenScenario, BuilderError> {
-    ScenarioBuilder::new()
-        .with_header("Urban Intersection Scenario", "Traffic Engineer")
-        
-        .add_parameter("approach_speed", ParameterType::Double, "15.0")
-        .add_parameter("stop_distance", ParameterType::Double, "5.0")
-        
-        .with_road_file("urban_intersection.xodr")
-        
-        .with_entities()
-            .add_vehicle("ego")
-                .car()
-                .finish()
-            
-            .add_pedestrian("pedestrian1")
-                .with_mass(75.0)
-                .finish()
-            
-            .add_vehicle("cross_traffic")
-                .car()
-                .finish()
-        
-        .with_storyboard()
-            .add_story("intersection_approach")
-                .add_act("approach_phase")
-                    .add_maneuver("ego_approach", "ego")
-                        .add_speed_action()
-                            .named("approach_intersection")
-                            .to_speed_parameter("approach_speed")
-                            .triggered_by()
-                                .time_condition(0.5)
-                                .finish()
-                            .finish()?
-                        
-                        .add_speed_action()
-                            .named("stop_for_pedestrian")
-                            .to_speed(0.0)
-                            .triggered_by()
-                                .distance_condition("ego")
-                                    .to_entity("pedestrian1")
-                                    .closer_than_parameter("stop_distance")
-                                .finish()
-                            .finish()?
-                        .finish()
-                    .finish()
-                
-                .add_act("crossing_phase")
-                    .add_maneuver("pedestrian_cross", "pedestrian1")
-                        .add_teleport_action()
-                            .named("cross_street")
-                            .to()
-                                .world_position(50.0, 10.0, 0.0)
-                            .triggered_by()
-                                .speed_condition("ego", 0.1)  // When ego stops
-                                .finish()
-                            .finish()?
-                        .finish()
-                    
-                    .add_maneuver("ego_proceed", "ego")
-                        .add_speed_action()
-                            .named("proceed_through_intersection")
-                            .to_speed_parameter("approach_speed")
-                            .triggered_by()
-                                .distance_condition("pedestrian1")
-                                    .to_position(world_position(50.0, 10.0, 0.0))
-                                    .closer_than(2.0)  // When pedestrian reaches other side
-                                .finish()
-                            .finish()?
-                        .finish()
-                    .finish()
-                .finish()
-            .finish()
-        .build()
-}
-```
-
-## Advanced Features
-
-### Custom Validation
-
-Implement custom validation logic:
-
-```rust
-impl ScenarioBuilder<HasEntities> {
-    fn validate_entity_count(&self) -> Result<(), BuilderError> {
-        if let Some(entities) = &self.data.entities {
-            if entities.scenario_objects.is_empty() {
-                return Err(BuilderError::validation_error(
-                    "At least one entity is required"
-                ));
-            }
-        }
-        Ok(())
-    }
-}
-```
-
-### Performance Optimization
-
-For large scenarios, consider:
-
-```rust
-// Pre-allocate collections
-let mut builder = ScenarioBuilder::new()
-    .with_header("Large Scenario", "Author")
-    .with_entities();
-
-// Add many entities efficiently
-for i in 0..100 {
-    builder = builder
-        .add_vehicle(&format!("vehicle_{}", i))
-            .car()
-            .finish();
-}
-
-let scenario = builder.build()?;
-```
-
-### Integration with External Tools
-
-Export scenarios for external validation:
-
-```rust
-let scenario = build_my_scenario()?;
-
-// Serialize to XML
-let xml = openscenario_rs::serialize_to_string(&scenario)?;
-
-// Save to file
-std::fs::write("scenario.xosc", xml)?;
-
-// Validate with external tool
-std::process::Command::new("openscenario-validator")
-    .arg("scenario.xosc")
-    .status()?;
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Compilation Errors**: Usually indicate incorrect state transitions
-   ```rust
-   // Error: Cannot add vehicle before header
-   ScenarioBuilder::new().add_vehicle("ego");  // ❌
-   
-   // Correct: Set header first
-   ScenarioBuilder::new()
-       .with_header("Test", "Author")
-       .with_entities()
-       .add_vehicle("ego");  // ✅
-   ```
-
-2. **Runtime Errors**: Check for missing required fields
-   ```rust
-   // Error: Missing speed value
-   .add_speed_action()
-       .finish()?;  // ❌ No speed set
-   
-   // Correct: Set speed value
-   .add_speed_action()
-       .to_speed(30.0)
-       .finish()?;  // ✅
-   ```
-
-3. **Validation Errors**: Ensure logical consistency
-   ```rust
-   // Error: Invalid entity reference
-   .add_maneuver("test", "nonexistent_entity");  // ❌
-   
-   // Correct: Use existing entity
-   .add_maneuver("test", "ego");  // ✅
-   ```
-
-### Debug Tips
-
-1. **Enable Debug Logging**:
-   ```rust
-   env_logger::init();
-   log::debug!("Building scenario...");
-   ```
-
-2. **Validate Incrementally**:
-   ```rust
-   let builder = ScenarioBuilder::new()
-       .with_header("Test", "Author");
-   builder.validate()?;  // Check each step
-   
-   let builder = builder.with_entities();
-   builder.validate()?;
-   ```
-
-3. **Use Type Annotations**:
-   ```rust
-   let builder: ScenarioBuilder<HasHeader> = ScenarioBuilder::new()
-       .with_header("Test", "Author");
-   ```
-
-This guide provides comprehensive coverage of the OpenSCENARIO-rs builder system. For more examples and advanced usage patterns, see the `examples/` directory in the repository.
+Reach for the attached style by default: it is shorter, the borrow checker keeps the
+composition honest, and the chain reads in document order. Switch to detached builders when a
+component is reused across scenarios, when it is assembled in a function that does not hold the
+parent, or when a storyboard has enough nesting that closures stop being readable. The two mix
+freely within one scenario.

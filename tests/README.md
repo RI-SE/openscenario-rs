@@ -1,85 +1,96 @@
-# Integration Tests for OpenSCENARIO-rs
+# Integration tests
 
-This directory contains comprehensive integration tests for the OpenSCENARIO-rs library, focusing on real-world scenario parsing and validation.
+42 integration test files covering parsing, serialization, schema conformance and the builder
+API. Unit tests live inline in `src/` alongside the code they exercise; this directory holds
+the tests that go through the public API.
 
-## Test Files
-
-### `integration_tests.rs`
-Main integration test file containing:
-
-#### Basic Parsing Tests
-- `can_parse_simple_scenario_from_string()` - Tests basic XML parsing functionality
-- `can_access_file_header()` - Validates file header parsing and access
-- `can_access_entities()` - Tests entity parsing and retrieval
-- `can_serialize_and_deserialize_scenario()` - Validates round-trip serialization
-- `handles_malformed_xml()` - Error handling for invalid XML
-- `handles_missing_required_fields()` - Validation of required field enforcement
-
-#### Cut-in Scenario Tests (`cut_in_scenario_tests` module)
-Comprehensive tests specifically for the `cut_in_101_exam.xosc` scenario file:
-
-- **`can_parse_cut_in_101_exam_scenario()`** - Validates parsing of the complex cut-in scenario with proper file header information
-- **`can_access_cut_in_entities()`** - Tests entity extraction and validation for all three vehicles (Ego, A1, A2)
-- **`can_access_cut_in_storyboard()`** - Validates storyboard structure parsing
-- **`can_validate_cut_in_story_structure()`** - Tests story and act structure validation
-- **`can_roundtrip_cut_in_scenario()`** - Tests serialization and deserialization fidelity
-- **`validates_scenario_file_exists()`** - Basic file structure and content validation
-
-## Test Data
-
-### `cut_in_101_exam.xosc`
-A complex OpenSCENARIO file located at `tests/data/cut_in_101_exam.xosc` containing:
-
-- **Entities**: 3 vehicles (Ego, A1, A2) with detailed specifications
-- **File Header**: Metadata including author, date, and version information
-- **Storyboard**: Complex story structure with initialization and maneuvers
-- **Trajectory Data**: Detailed vehicle trajectories with precise timing
-- **Environment Settings**: Weather, lighting, and road conditions
-
-### Key Scenario Properties
-- **Author**: OnSite_TOPS
-- **Description**: scenario_highD
-- **Vehicles**: All vehicles use "Default_car" configuration with identical physical properties
-- **Story**: Named "Cutin" with three acts (Act_Ego, Act_A1, Act_A2)
-- **Environment**: Default environment with clear weather and standard road conditions
-
-## MVP Considerations
-
-The current tests are designed to work with the MVP (Minimum Viable Product) implementation of OpenSCENARIO-rs. Some tests include graceful handling of parsing failures that may occur due to incomplete feature implementation.
-
-Key MVP limitations addressed in tests:
-- Simplified vehicle type definitions (no performance or axles fields yet)
-- Basic story structure (detailed story elements may not be fully implemented)
-- Graceful error handling for incomplete parsing capabilities
-
-## Running Tests
+## Running
 
 ```bash
-# Run all integration tests
-cargo test --test integration_tests
-
-# Run only cut-in scenario tests
-cargo test --test integration_tests cut_in
-
-# Run with verbose output
-cargo test --test integration_tests -- --nocapture
+cargo test                                    # everything not feature-gated
+cargo test --features builder,validation      # everything
+cargo test --test xsd_validation_test         # one file
+cargo test roundtrip                          # by name
 ```
 
-## Test Philosophy
+## Layout
 
-These integration tests follow a pragmatic approach:
+Tests are grouped by the area of the crate they exercise. Put a new test next to its
+neighbors rather than in a new file.
 
-1. **Real-world validation**: Tests use actual OpenSCENARIO files rather than synthetic examples
-2. **Progressive enhancement**: Tests are designed to pass with current MVP implementation while being ready for future enhancements
-3. **Graceful degradation**: Complex parsing features that aren't implemented yet are handled with appropriate fallbacks
-4. **Comprehensive coverage**: Tests cover file structure, entity parsing, serialization, and error handling
+**Round-trip and serialization**
 
-## Future Enhancements
+| File | Covers |
+|---|---|
+| `choice_flatten_roundtrip_test.rs` | A round trip for **every** `#[serde(flatten)]` choice site, asserting the emitted tag is the XSD element name. A new flattened choice belongs here. |
+| `actions_serialization_test.rs` | Action serialization across the action tree |
+| `entity_conditions_serde_test.rs` | Entity condition serde, the largest file by test count |
+| `multiple_actions_test.rs` | Documents carrying several actions |
 
-As the library evolves, these tests will be enhanced to cover:
-- Detailed trajectory validation
-- Performance characteristics parsing
-- Complex story element validation
-- Advanced environment settings
-- Catalog reference resolution
-- Parameter substitution
+**Schema conformance**
+
+| File | Covers |
+|---|---|
+| `xsd_validation_test.rs` | Choice-group `validate()` and `get_action_type()` across the type tree |
+| `xsd_choice_groups_test.rs` | Choice-group structure against the schema |
+| `xsd_pedestrian_compliance_test.rs` | Pedestrian conformance |
+| `init_action_choices_test.rs` | All seven `GlobalAction` and ten `PrivateAction` branches |
+
+**Parsing**
+
+`comprehensive_parsing_test.rs`, `openscenario_integration_test.rs`,
+`scenario_parsing_integration_test.rs`, `sparse_scenario_test.rs`,
+`steady_state_and_story_action_test.rs`.
+
+**Entities and catalogs**
+
+`entity_selection_test.rs`, `enhanced_vehicle_components_test.rs`,
+`vehicle_components_test.rs`, `vehicle_axles_test.rs`, `catalog_system_test.rs`,
+`catalog_builders_test.rs`, `initialization_system_test.rs`.
+
+**Conditions**
+
+`entity_conditions_test.rs`, `entity_conditions_integration_test.rs`,
+`spatial_conditions_test.rs`, `motion_conditions_test.rs`, `safety_conditions_test.rs`,
+`value_conditions_test.rs`, `condition_builders_test.rs`, `temporal_coordinate_test.rs`.
+
+**Positions and geometry**
+
+`position_types_test.rs`, `advanced_positions_test.rs`, `position_builders_test.rs`,
+`spatial_operations_test.rs`.
+
+**Distributions**
+
+`deterministic_distributions_test.rs`.
+
+**Builders** (require `--features builder`)
+
+`scenario_builder_test.rs`, `complete_scenario_builder_test.rs`, `detached_builders_test.rs`,
+`action_builders_test.rs`, `vehicle_builders_test.rs`, `pedestrian_builder_test.rs`,
+`parameter_builders_test.rs`.
+
+## Fixtures
+
+`tests/data/` holds six scenario files. `NOTICE` in that directory records their provenance
+and licensing.
+
+| File | Purpose |
+|---|---|
+| `simple_scenario.xosc` | A minimal well-formed scenario |
+| `minimal_sparse.xosc` | A scenario with most optional content absent |
+| `alks_scenario.xosc` | An ALKS scenario from openMSL, MPL 2.0 |
+| `cut_in_101_exam.xosc` | A large realistic scenario, 126 KB |
+| `expressions_scenario.xosc` | Parameter references and expressions |
+| `multiple_actions_scenario.xosc` | Several actions in one storyboard |
+
+## What these tests do not cover
+
+The fixtures here are a handful of files, and they are not the conformance check. The corpus
+that exercises the schema more broadly lives in the sibling `../test` harness and covers about
+53% of the schema's element declarations even so.
+
+Be careful how you read a green round-trip test. serde ignores unknown XML by default, so a
+field the Rust types do not model is dropped identically on every pass and the comparison
+still succeeds – a passing round trip means *stable*, not *lossless*. See
+[docs/xsd_gaps.md](../docs/xsd_gaps.md) for what the gates actually prove and
+[CONTRIBUTING.md](../CONTRIBUTING.md) for how to run them.
