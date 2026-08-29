@@ -454,6 +454,7 @@ impl ScenarioBuilder<Empty> {
 }
 
 impl ScenarioBuilder<HasHeader> {
+    pub fn with_revision(self, major: u16, minor: u16) -> Self;   // defaults to 1.3
     pub fn with_parameters(self, params: ParameterDeclarations) -> Self;
     pub fn add_parameter(self, name: &str, param_type: ParameterType, value: &str) -> Self;
     pub fn with_catalog_locations(self, locations: CatalogLocations) -> Self;

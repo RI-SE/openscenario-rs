@@ -69,6 +69,40 @@ mod catalog_builder_tests {
     }
 
     #[test]
+    fn all_eight_catalog_location_kinds_can_be_set() {
+        let locations = CatalogLocationsBuilder::new()
+            .with_vehicle_catalog("./catalogs/vehicles")
+            .with_pedestrian_catalog("./catalogs/pedestrians")
+            .with_controller_catalog("./catalogs/controllers")
+            .with_misc_object_catalog("./catalogs/misc")
+            .with_environment_catalog("./catalogs/environments")
+            .with_maneuver_catalog("./catalogs/maneuvers")
+            .with_trajectory_catalog("./catalogs/trajectories")
+            .with_route_catalog("./catalogs/routes")
+            .build();
+
+        assert!(locations.vehicle_catalog.is_some());
+        assert!(locations.pedestrian_catalog.is_some());
+        assert!(locations.controller_catalog.is_some());
+        assert!(locations.misc_object_catalog.is_some());
+        assert!(locations.environment_catalog.is_some());
+        assert!(locations.maneuver_catalog.is_some());
+        assert!(locations.trajectory_catalog.is_some());
+        assert!(locations.route_catalog.is_some());
+
+        assert_eq!(
+            locations
+                .route_catalog
+                .unwrap()
+                .directory
+                .path
+                .as_literal()
+                .unwrap(),
+            "./catalogs/routes"
+        );
+    }
+
+    #[test]
     fn test_scenario_builder_with_catalog_locations() {
         let locations = CatalogLocationsBuilder::new()
             .with_vehicle_catalog("./catalogs/vehicles")

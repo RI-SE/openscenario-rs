@@ -120,8 +120,9 @@ impl ScenarioBuilder<Empty> {
     /// Set file header information and transition to HasHeader state
     ///
     /// The file header contains essential metadata about the scenario including
-    /// description, author, and creation timestamp. This method automatically
-    /// sets the OpenSCENARIO version to 1.0 and uses the current timestamp.
+    /// description, author, and creation timestamp. The revision defaults to **1.3**, the
+    /// version of the standard this crate targets and validates against; override it with
+    /// [`ScenarioBuilder::with_revision`] when writing for an older consumer.
     ///
     /// # Arguments
     ///
@@ -147,7 +148,7 @@ impl ScenarioBuilder<Empty> {
 
         self.data.file_header = Some(FileHeader {
             rev_major: UnsignedShort::literal(1),
-            rev_minor: UnsignedShort::literal(0),
+            rev_minor: UnsignedShort::literal(3),
             date: OSString::literal(now),
             description: OSString::literal(description.to_string()),
             author: OSString::literal(author.to_string()),
@@ -164,6 +165,30 @@ impl ScenarioBuilder<Empty> {
 
 // Implementation for HasHeader state
 impl ScenarioBuilder<HasHeader> {
+    /// Override the OpenSCENARIO revision recorded in the file header
+    ///
+    /// [`ScenarioBuilder::with_header`] defaults to 1.3, which is what this crate targets.
+    /// Set it lower only when the consumer requires an earlier revision; note that the
+    /// document is still built from the 1.3 type model, so declaring an older revision does
+    /// not restrict what the builder emits.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use openscenario_rs::ScenarioBuilder;
+    ///
+    /// let builder = ScenarioBuilder::new()
+    ///     .with_header("Legacy consumer", "Author")
+    ///     .with_revision(1, 0);
+    /// ```
+    pub fn with_revision(mut self, major: u16, minor: u16) -> Self {
+        if let Some(header) = &mut self.data.file_header {
+            header.rev_major = UnsignedShort::literal(major);
+            header.rev_minor = UnsignedShort::literal(minor);
+        }
+        self
+    }
+
     /// Add parameter declarations to the scenario
     ///
     /// Parameters allow scenarios to be configurable and reusable. This method
@@ -486,6 +511,30 @@ mod tests {
         assert!(scenario.storyboard.is_some());
         assert!(scenario.catalog_locations.is_some());
         assert!(scenario.road_network.is_some());
+    }
+
+    /// The header defaults to the revision this crate targets, not to 1.0.
+    #[test]
+    fn header_defaults_to_revision_1_3() {
+        let scenario = minimal_builder().build().unwrap();
+
+        assert_eq!(scenario.file_header.rev_major.as_literal().unwrap(), &1);
+        assert_eq!(scenario.file_header.rev_minor.as_literal().unwrap(), &3);
+    }
+
+    #[test]
+    fn with_revision_overrides_the_default() {
+        let scenario = ScenarioBuilder::new()
+            .with_header("Legacy consumer", "Test Author")
+            .with_revision(1, 0)
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities()
+            .with_storyboard(|storyboard| storyboard)
+            .build()
+            .unwrap();
+
+        assert_eq!(scenario.file_header.rev_minor.as_literal().unwrap(), &0);
     }
 
     /// Regression: omitting either element used to serialize to schema-invalid XML silently.

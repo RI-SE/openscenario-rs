@@ -84,6 +84,19 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **The builder's file header no longer claims OpenSCENARIO 1.0.** `with_header()` hard-coded
+  `revMajor`/`revMinor` to 1/0 while the crate targets, validates against, and models 1.3, so
+  every document it produced understated its own revision. The default is now 1.3, and
+  `ScenarioBuilder::with_revision(major, minor)` overrides it for consumers that need an
+  earlier one.
+- **`CatalogLocationsBuilder` covers all eight catalog kinds.** It previously offered vehicle,
+  pedestrian and controller only; misc-object, environment, maneuver, trajectory and route
+  locations could not be set through the builder at all, though `CatalogLocations` has always
+  carried the fields.
+- **`examples/basic_parsing.rs` runs.** It read a hard-coded path that is not in the repository
+  and panicked, with an `.expect()` message naming a different file than the one it opened. A
+  new `tests/examples_smoke_test.rs` now executes every example and fails if any exits
+  non-zero, plus a cheap guard asserting no example is missing from that list.
 - **The builder no longer emits scenario documents missing required elements.**
   `ScenarioBuilder::build()` produced an `OpenScenario` with `CatalogLocations` and
   `RoadNetwork` absent whenever the caller had not set them, which is schema-invalid: the XSD

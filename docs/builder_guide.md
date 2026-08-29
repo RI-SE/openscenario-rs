@@ -74,7 +74,7 @@ motivated the check.
 | State | Available methods |
 |---|---|
 | `Empty` | `new`, `with_header` |
-| `HasHeader` | `with_parameters`, `add_parameter`, `with_catalog_locations`, `with_road_network`, `with_road_file`, `with_entities` |
+| `HasHeader` | `with_revision`, `with_parameters`, `add_parameter`, `with_catalog_locations`, `with_road_network`, `with_road_file`, `with_entities` |
 | `HasEntities` | `add_vehicle`, `add_vehicle_mut`, `add_catalog_vehicle`, `add_pedestrian`, `add_catalog_pedestrian`, `with_storyboard`, `with_storyboard_mut`, `create_storyboard`, `build` |
 | `Complete` | `build` |
 
@@ -101,6 +101,41 @@ let builder = ScenarioBuilder::new()
 `add_parameter` appends a single declaration; `with_parameters` replaces the whole
 `ParameterDeclarations` block. `with_road_file` is shorthand for the common case of a road
 network that is one OpenDRIVE file; `with_road_network` takes a full `RoadNetwork`.
+
+The file header records revision **1.3**, the version this crate targets and validates
+against. Override it only for a consumer that needs an earlier one:
+
+```rust
+let builder = ScenarioBuilder::new()
+    .with_header("Legacy consumer", "Author")
+    .with_revision(1, 0);
+```
+
+Note that the document is still built from the 1.3 type model, so declaring an older revision
+does not restrict what the builder emits.
+
+## Catalog locations
+
+`CatalogLocationsBuilder` covers all eight kinds the schema defines, each taking a directory
+path:
+
+```rust
+use openscenario_rs::builder::CatalogLocationsBuilder;
+
+let locations = CatalogLocationsBuilder::new()
+    .with_vehicle_catalog("./catalogs/vehicles")
+    .with_pedestrian_catalog("./catalogs/pedestrians")
+    .with_controller_catalog("./catalogs/controllers")
+    .with_misc_object_catalog("./catalogs/misc")
+    .with_environment_catalog("./catalogs/environments")
+    .with_maneuver_catalog("./catalogs/maneuvers")
+    .with_trajectory_catalog("./catalogs/trajectories")
+    .with_route_catalog("./catalogs/routes")
+    .build();
+```
+
+Every kind is optional, so a builder with nothing set produces an empty `CatalogLocations`,
+which is the right value for a scenario that references no catalogs.
 
 ## Two builder styles
 

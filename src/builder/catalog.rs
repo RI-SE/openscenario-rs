@@ -9,8 +9,9 @@ use crate::types::{
     basic::{Directory, OSString},
     catalogs::{
         locations::{
-            CatalogLocations, ControllerCatalogLocation, PedestrianCatalogLocation,
-            VehicleCatalogLocation,
+            CatalogLocations, ControllerCatalogLocation, EnvironmentCatalogLocation,
+            ManeuverCatalogLocation, MiscObjectCatalogLocation, PedestrianCatalogLocation,
+            RouteCatalogLocation, TrajectoryCatalogLocation, VehicleCatalogLocation,
         },
         references::{
             ControllerCatalogReference, PedestrianCatalogReference, VehicleCatalogReference,
@@ -27,6 +28,11 @@ pub struct CatalogLocationsBuilder {
     vehicle_catalog: Option<VehicleCatalogLocation>,
     pedestrian_catalog: Option<PedestrianCatalogLocation>,
     controller_catalog: Option<ControllerCatalogLocation>,
+    misc_object_catalog: Option<MiscObjectCatalogLocation>,
+    environment_catalog: Option<EnvironmentCatalogLocation>,
+    maneuver_catalog: Option<ManeuverCatalogLocation>,
+    trajectory_catalog: Option<TrajectoryCatalogLocation>,
+    route_catalog: Option<RouteCatalogLocation>,
 }
 
 impl CatalogLocationsBuilder {
@@ -65,17 +71,71 @@ impl CatalogLocationsBuilder {
         self
     }
 
+    /// Set miscellaneous object catalog location
+    pub fn with_misc_object_catalog(mut self, directory_path: &str) -> Self {
+        self.misc_object_catalog = Some(MiscObjectCatalogLocation {
+            directory: Directory {
+                path: OSString::literal(directory_path.to_string()),
+            },
+        });
+        self
+    }
+
+    /// Set environment catalog location
+    pub fn with_environment_catalog(mut self, directory_path: &str) -> Self {
+        self.environment_catalog = Some(EnvironmentCatalogLocation {
+            directory: Directory {
+                path: OSString::literal(directory_path.to_string()),
+            },
+        });
+        self
+    }
+
+    /// Set maneuver catalog location
+    pub fn with_maneuver_catalog(mut self, directory_path: &str) -> Self {
+        self.maneuver_catalog = Some(ManeuverCatalogLocation {
+            directory: Directory {
+                path: OSString::literal(directory_path.to_string()),
+            },
+        });
+        self
+    }
+
+    /// Set trajectory catalog location
+    pub fn with_trajectory_catalog(mut self, directory_path: &str) -> Self {
+        self.trajectory_catalog = Some(TrajectoryCatalogLocation {
+            directory: Directory {
+                path: OSString::literal(directory_path.to_string()),
+            },
+        });
+        self
+    }
+
+    /// Set route catalog location
+    pub fn with_route_catalog(mut self, directory_path: &str) -> Self {
+        self.route_catalog = Some(RouteCatalogLocation {
+            directory: Directory {
+                path: OSString::literal(directory_path.to_string()),
+            },
+        });
+        self
+    }
+
     /// Build the catalog locations
+    ///
+    /// Every kind is optional in the schema, so a builder with nothing set produces an empty
+    /// `CatalogLocations` – which is the correct value for a scenario that references no
+    /// catalogs, since the element itself is required.
     pub fn build(self) -> CatalogLocations {
         CatalogLocations {
             vehicle_catalog: self.vehicle_catalog,
             pedestrian_catalog: self.pedestrian_catalog,
             controller_catalog: self.controller_catalog,
-            misc_object_catalog: None,
-            environment_catalog: None,
-            maneuver_catalog: None,
-            trajectory_catalog: None,
-            route_catalog: None,
+            misc_object_catalog: self.misc_object_catalog,
+            environment_catalog: self.environment_catalog,
+            maneuver_catalog: self.maneuver_catalog,
+            trajectory_catalog: self.trajectory_catalog,
+            route_catalog: self.route_catalog,
         }
     }
 }
