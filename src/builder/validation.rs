@@ -7,7 +7,7 @@
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::scenario::storyboard::OpenScenario;
 use crate::types::ValidationContext;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Builder validation context that extends the existing validation framework
 #[derive(Default)]
@@ -131,9 +131,56 @@ pub trait BuilderValidationRule {
     fn description(&self) -> &str;
 }
 
+/// Serializes the assembled document so a rule can scan every attribute in it.
+///
+/// Both reference rules below need to see references wherever they occur – in `Init`, in
+/// actors, in triggering entities, in condition targets, in an action nested five levels
+/// down. Walking the typed tree would mean a branch per variant and a silent gap whenever a
+/// new one is added, which is the defect these rules previously had. Scanning the serialized
+/// form is complete by construction: anything the document actually emits is visible.
+///
+/// Serialization failure is not a validation error, so this yields `None` and the rule passes.
+/// A document that cannot serialize fails later, with a better message than this rule could give.
+fn serialized_for_scan(scenario: &OpenScenario) -> Option<String> {
+    crate::parser::xml::serialize_to_string(scenario).ok()
+}
+
 /// Validation rule for entity references
+///
+/// XSD validation cannot express cross-references, so a document naming an entity that was
+/// never declared is schema-valid and silently wrong. This rule closes that gap.
 #[derive(Debug)]
 pub struct EntityReferenceValidationRule;
+
+impl EntityReferenceValidationRule {
+    /// The attributes that carry an entity reference.
+    ///
+    /// The schema defines exactly three sites: the `entityRef` attribute (on `EntityRef`,
+    /// `Private`, and numerous conditions and actions) and `masterEntityRef` on
+    /// `SynchronizeAction`. Verified against `Schema/OpenSCENARIO.xsd`.
+    const REFERENCE_ATTRIBUTES: &'static [&'static str] = &["entityRef", "masterEntityRef"];
+
+    /// Names that a reference may legitimately resolve to: declared objects and selections.
+    fn declared_names(
+        scenario: &OpenScenario,
+        context: &BuilderValidationContext,
+    ) -> HashSet<String> {
+        let mut names: HashSet<String> = context.entity_refs.keys().cloned().collect();
+
+        if let Some(entities) = &scenario.entities {
+            names.extend(entities.scenario_objects.iter().map(|o| o.name.to_string()));
+            // A selection is a valid actor, so it counts as declared.
+            names.extend(
+                entities
+                    .entity_selections
+                    .iter()
+                    .map(|s| s.name.to_string()),
+            );
+        }
+
+        names
+    }
+}
 
 impl BuilderValidationRule for EntityReferenceValidationRule {
     fn validate(
@@ -141,20 +188,27 @@ impl BuilderValidationRule for EntityReferenceValidationRule {
         scenario: &OpenScenario,
         context: &BuilderValidationContext,
     ) -> BuilderResult<()> {
-        // Validate that all entity references in maneuver groups exist
-        if let Some(storyboard) = &scenario.storyboard {
-            for story in &storyboard.stories {
-                for act in &story.acts {
-                    for maneuver_group in &act.maneuver_groups {
-                        // Validate entity references in actors
-                        for entity_ref in &maneuver_group.actors.entity_refs {
-                            let entity_name = entity_ref.entity_ref.to_string();
-                            context.validate_entity_ref(&entity_name)?;
-                        }
-                    }
+        let Some(xml) = serialized_for_scan(scenario) else {
+            return Ok(());
+        };
+
+        let declared = Self::declared_names(scenario, context);
+
+        for attribute in Self::REFERENCE_ATTRIBUTES {
+            for referenced in attribute_values(&xml, attribute) {
+                // A parameterized reference resolves at run time, not here.
+                if referenced.starts_with("${") || referenced.starts_with('$') {
+                    continue;
+                }
+
+                if !declared.contains(&referenced) {
+                    let mut available: Vec<String> = declared.iter().cloned().collect();
+                    available.sort();
+                    return Err(BuilderError::invalid_entity_ref(&referenced, &available));
                 }
             }
         }
+
         Ok(())
     }
 
@@ -167,9 +221,93 @@ impl BuilderValidationRule for EntityReferenceValidationRule {
     }
 }
 
+/// Collects the values of every occurrence of `attribute="…"` in the serialized document.
+///
+/// Deliberately a string scan rather than an XML parse: the input is this crate's own
+/// serializer output, the attribute names are fixed, and values are already escaped.
+fn attribute_values(xml: &str, attribute: &str) -> Vec<String> {
+    let needle = format!("{attribute}=\"");
+    let mut values = Vec::new();
+    let mut rest = xml;
+
+    while let Some(start) = rest.find(&needle) {
+        // Require a delimiter before the name so `masterEntityRef` does not match `entityRef`.
+        let preceded_by_delimiter = rest[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|c| c.is_whitespace() || c == '<');
+
+        let after = &rest[start + needle.len()..];
+        let Some(end) = after.find('"') else { break };
+
+        if preceded_by_delimiter {
+            values.push(after[..end].to_string());
+        }
+        rest = &after[end + 1..];
+    }
+
+    values
+}
+
 /// Validation rule for parameter references
 #[derive(Debug)]
 pub struct ParameterReferenceValidationRule;
+
+impl ParameterReferenceValidationRule {
+    /// Names a `${…}` reference may resolve to: declared parameters, declared variables, and
+    /// anything the caller registered on the context.
+    ///
+    /// Variables are included because they share the `${…}` syntax on the wire; excluding them
+    /// would reject documents that are entirely correct.
+    fn declared_names(
+        scenario: &OpenScenario,
+        context: &BuilderValidationContext,
+    ) -> HashSet<String> {
+        let mut names: HashSet<String> = context.parameters.keys().cloned().collect();
+
+        if let Some(declarations) = &scenario.parameter_declarations {
+            names.extend(
+                declarations
+                    .parameter_declarations
+                    .iter()
+                    .map(|p| p.name.to_string()),
+            );
+        }
+
+        if let Some(declarations) = &scenario.variable_declarations {
+            names.extend(
+                declarations
+                    .variable_declarations
+                    .iter()
+                    .map(|v| v.name.to_string()),
+            );
+        }
+
+        names
+    }
+
+    /// Extracts the parameter names a single `${…}` body depends on.
+    ///
+    /// A plain name is the reference itself. Anything else is an expression, and is parsed so
+    /// that only genuine `Expr::Parameter` nodes are collected: scanning for identifiers would
+    /// flag the function and constant names the evaluator supports.
+    fn referenced_names(body: &str) -> Vec<String> {
+        if crate::types::basic::is_valid_parameter_name(body) {
+            return vec![body.to_string()];
+        }
+
+        let Ok(mut parser) = crate::expression::ExpressionParser::new(body) else {
+            return Vec::new();
+        };
+        let Ok(expr) = parser.parse() else {
+            return Vec::new();
+        };
+
+        let mut names = Vec::new();
+        collect_expression_parameters(&expr, &mut names);
+        names
+    }
+}
 
 impl BuilderValidationRule for ParameterReferenceValidationRule {
     fn validate(
@@ -177,17 +315,34 @@ impl BuilderValidationRule for ParameterReferenceValidationRule {
         scenario: &OpenScenario,
         context: &BuilderValidationContext,
     ) -> BuilderResult<()> {
-        // This would validate that all parameter references are declared
-        // For now, we'll do a basic check
-        if let Some(param_decls) = &scenario.parameter_declarations {
-            for param in &param_decls.parameter_declarations {
-                let param_name = param.name.to_string();
-                if !context.parameters.contains_key(&param_name) {
-                    // This is actually OK - parameters can be declared without being used
-                    // But we could warn about unused parameters
+        let Some(xml) = serialized_for_scan(scenario) else {
+            return Ok(());
+        };
+
+        let declared = Self::declared_names(scenario, context);
+
+        // `Value<T>` serializes both parameters and expressions as `${…}`, so one pattern
+        // covers every parameterized attribute in the document.
+        let mut rest = xml.as_str();
+        while let Some(start) = rest.find("${") {
+            let after = &rest[start + 2..];
+            let Some(end) = after.find('}') else { break };
+            let body = &after[..end];
+            rest = &after[end + 1..];
+
+            for name in Self::referenced_names(body) {
+                if !declared.contains(&name) {
+                    let mut available: Vec<String> = declared.iter().cloned().collect();
+                    available.sort();
+                    return Err(BuilderError::validation_error(&format!(
+                        "Parameter '{}' is referenced but never declared. Declared: [{}]",
+                        name,
+                        available.join(", ")
+                    )));
                 }
             }
         }
+
         Ok(())
     }
 
@@ -197,6 +352,29 @@ impl BuilderValidationRule for ParameterReferenceValidationRule {
 
     fn description(&self) -> &str {
         "Validates that all parameter references are properly declared"
+    }
+}
+
+/// Walks an expression AST collecting the parameters it depends on.
+///
+/// `Expr::Constant` and `Expr::FunctionCall` names are deliberately not collected: they are
+/// resolved by the evaluator, not by parameter declarations.
+fn collect_expression_parameters(expr: &crate::expression::Expr, names: &mut Vec<String>) {
+    use crate::expression::Expr;
+
+    match expr {
+        Expr::Parameter(name) => names.push(name.clone()),
+        Expr::BinaryOp { left, right, .. } => {
+            collect_expression_parameters(left, names);
+            collect_expression_parameters(right, names);
+        }
+        Expr::UnaryMinus(inner) => collect_expression_parameters(inner, names),
+        Expr::FunctionCall { args, .. } => {
+            for arg in args {
+                collect_expression_parameters(arg, names);
+            }
+        }
+        Expr::Number(_) | Expr::Constant(_) => {}
     }
 }
 

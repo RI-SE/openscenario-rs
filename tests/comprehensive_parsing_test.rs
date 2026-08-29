@@ -5,11 +5,9 @@ mod tests {
     use openscenario_rs::builder::actions::ActionBuilder;
     use openscenario_rs::builder::{
         actions::{
-            ActivateControllerActionBuilder,
-            EnvironmentActionBuilder, // EntityActionBuilder, VariableActionBuilder,
-            LaneChangeActionBuilder,
-            LaneOffsetActionBuilder,
-            LateralDistanceActionBuilder,
+            ActivateControllerActionBuilder, EntityActionBuilder, EnvironmentActionBuilder,
+            LaneChangeActionBuilder, LaneOffsetActionBuilder, LateralDistanceActionBuilder,
+            VariableActionBuilder,
         },
         conditions::{
             AccelerationConditionBuilder, CollisionConditionBuilder, ParameterConditionBuilder,
@@ -123,23 +121,30 @@ mod tests {
         );
         println!("✅ EnvironmentAction built successfully");
 
-        // Test EntityAction (delete) - commented out until implemented
-        // let entity_action = EntityActionBuilder::new()
-        //     .for_entity("target")
-        //     .delete_entity()
-        //     .build_action();
-        //
-        // assert!(entity_action.is_ok(), "Entity action should build successfully");
-        // println!("✅ EntityAction built successfully");
+        // Test EntityAction (delete) - a global action per the XSD
+        let entity_action = EntityActionBuilder::new()
+            .for_entity("target")
+            .delete_entity()
+            .build();
 
-        // Test VariableAction - commented out until implemented
-        // let variable_action = VariableActionBuilder::new()
-        //     .for_entity("ego")
-        //     .set_variable("speed_limit", 50.0)
-        //     .build_action();
-        //
-        // assert!(variable_action.is_ok(), "Variable action should build successfully");
-        // println!("✅ VariableAction built successfully");
+        assert!(
+            entity_action.is_ok(),
+            "Entity action should build successfully"
+        );
+        assert!(entity_action.unwrap().entity_action.is_some());
+        println!("✅ EntityAction built successfully");
+
+        // Test VariableAction - also a global action
+        let variable_action = VariableActionBuilder::new()
+            .set_variable("speed_limit", 50.0)
+            .build();
+
+        assert!(
+            variable_action.is_ok(),
+            "Variable action should build successfully"
+        );
+        assert!(variable_action.unwrap().variable_action.is_some());
+        println!("✅ VariableAction built successfully");
     }
 
     #[test]
@@ -317,6 +322,8 @@ mod tests {
             .with_catalog_locations(CatalogLocations::default())
             .with_road_network(RoadNetwork::default())
             .with_entities()
+            // The init actions below teleport "ego", so the entity has to be declared.
+            .add_vehicle("ego", |vehicle| vehicle.car())
             .create_storyboard()
             .create_init_actions()
             .add_global_environment_action()

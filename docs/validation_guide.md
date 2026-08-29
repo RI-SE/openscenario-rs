@@ -194,6 +194,17 @@ let ctx = ValidationContextBuilder::new()
 ctx.validate_scenario(&scenario)?;
 ```
 
+The two reference rules scan the serialized document rather than walking the typed tree. That
+is deliberate: a reference can appear in `Init`, in actors, in triggering entities, in a
+condition target, or in an action nested several levels down, and a typed walk grows a silent
+gap every time a new variant is modelled. Scanning what the document actually emits is complete
+by construction. Parameterized references (`entityRef="${target}"`) are skipped, since they
+resolve at run time.
+
+This is the only layer that checks cross-references at all. XSD validation cannot express them,
+so a document naming an entity or parameter that was never declared is schema-valid and
+silently wrong.
+
 `with_standard_rules` installs the four shipped rules:
 `EntityReferenceValidationRule`, `ParameterReferenceValidationRule`,
 `CatalogReferenceValidationRule` and `StoryboardStructureValidationRule`. Custom rules

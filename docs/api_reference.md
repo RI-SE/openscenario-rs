@@ -506,7 +506,7 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 
 ### Re-exports at `builder::`
 
-Actions: `ActivateControllerActionBuilder`, `EntityActionBuilder`, `EnvironmentActionBuilder`,
+Actions: `ActivateControllerActionBuilder`, `EnvironmentActionBuilder`,
 `FollowTrajectoryActionBuilder`, `LaneChangeActionBuilder`, `LaneOffsetActionBuilder`,
 `LateralDistanceActionBuilder`, `PolylineBuilder`, `SpeedActionBuilder`,
 `TeleportActionBuilder`, `TrajectoryBuilder`, `VariableActionBuilder`, `VertexBuilder`.
@@ -521,6 +521,10 @@ Conditions: `AccelerationConditionBuilder`, `CollisionConditionBuilder`,
 `VariableConditionBuilder`.
 
 Entities: `DetachedVehicleBuilder`, `VehicleBuilder`.
+
+Global actions: `EntityActionBuilder`, `EnvironmentActionBuilder`, `VariableActionBuilder`.
+All three produce a `GlobalAction` through `build()`, matching how the schema models them;
+none of them build a `PrivateAction`.
 
 Init: `GlobalActionBuilder`, `InitActionBuilder`, `PrivateActionBuilder`.
 

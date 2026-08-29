@@ -49,7 +49,10 @@ impl BasicScenarioTemplate {
             .build()
             .unwrap();
 
-        Self::create().with_storyboard(|storyboard| storyboard.with_init_actions(init))
+        // The init actions below reference `vehicle_name`, so the entity has to be declared.
+        Self::create()
+            .add_vehicle(vehicle_name, |vehicle| vehicle.car())
+            .with_storyboard(|storyboard| storyboard.with_init_actions(init))
     }
 
     /// Create a two-vehicle scenario (ego + target)
@@ -73,7 +76,10 @@ impl BasicScenarioTemplate {
             .build()
             .unwrap();
 
-        Self::create().with_storyboard(|storyboard| storyboard.with_init_actions(init))
+        Self::create()
+            .add_vehicle("ego", |vehicle| vehicle.car())
+            .add_vehicle("target", |vehicle| vehicle.car())
+            .with_storyboard(|storyboard| storyboard.with_init_actions(init))
     }
 
     /// Create an ALKS-style scenario template
@@ -100,6 +106,8 @@ impl BasicScenarioTemplate {
             .unwrap();
 
         Self::create_with_header("ALKS Scenario", "openscenario-rs")
+            .add_vehicle("Ego", |vehicle| vehicle.car())
+            .add_vehicle("TargetVehicle", |vehicle| vehicle.car())
             .with_storyboard(|storyboard| storyboard.with_init_actions(init))
     }
 }

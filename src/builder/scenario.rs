@@ -571,6 +571,126 @@ mod tests {
         );
     }
 
+    /// Regression for the entity-reference rule: an init action naming an entity that was
+    /// never declared is schema-valid, so only this rule can catch it. The shipped templates
+    /// committed exactly this mistake.
+    #[test]
+    fn build_rejects_an_init_action_referencing_an_undeclared_entity() {
+        use crate::builder::init::InitActionBuilder;
+        use crate::builder::positions::WorldPositionBuilder;
+
+        let position = WorldPositionBuilder::new()
+            .at_coordinates(0.0, 0.0, 0.0)
+            .build()
+            .unwrap();
+
+        let init = InitActionBuilder::new()
+            .add_teleport_action("ghost", position)
+            .build()
+            .unwrap();
+
+        let err = ScenarioBuilder::new()
+            .with_header("Undeclared entity", "Test Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities()
+            .add_vehicle("ego", |vehicle| vehicle.car())
+            .with_storyboard(|storyboard| storyboard.with_init_actions(init))
+            .build()
+            .unwrap_err();
+
+        assert!(
+            matches!(&err, BuilderError::InvalidEntityRef { entity, .. } if entity == "ghost"),
+            "expected an invalid-entity-ref error naming `ghost`, got {err:?}"
+        );
+    }
+
+    /// The same rule must not fire on an entity that *is* declared.
+    #[test]
+    fn build_accepts_an_init_action_referencing_a_declared_entity() {
+        use crate::builder::init::InitActionBuilder;
+        use crate::builder::positions::WorldPositionBuilder;
+
+        let position = WorldPositionBuilder::new()
+            .at_coordinates(0.0, 0.0, 0.0)
+            .build()
+            .unwrap();
+
+        let init = InitActionBuilder::new()
+            .add_teleport_action("ego", position)
+            .build()
+            .unwrap();
+
+        let scenario = ScenarioBuilder::new()
+            .with_header("Declared entity", "Test Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities()
+            .add_vehicle("ego", |vehicle| vehicle.car())
+            .with_storyboard(|storyboard| storyboard.with_init_actions(init))
+            .build();
+
+        assert!(scenario.is_ok(), "declared entity must pass: {scenario:?}");
+    }
+
+    /// Regression for the parameter-reference rule.
+    #[test]
+    fn build_rejects_a_reference_to_an_undeclared_parameter() {
+        use crate::types::basic::Double;
+
+        let mut builder = ScenarioBuilder::new()
+            .with_header("Undeclared parameter", "Test Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities();
+
+        // Reach past the builder API to plant a parameterized value that nothing declares.
+        builder = builder.add_vehicle("ego", |vehicle| vehicle.car());
+        if let Some(entities) = &mut builder.data.entities {
+            if let Some(vehicle) = entities.scenario_objects[0].vehicle.as_mut() {
+                vehicle.performance.max_speed = Double::parameter("undeclared_speed".to_string());
+            }
+        }
+
+        let err = builder
+            .with_storyboard(|storyboard| storyboard)
+            .build()
+            .unwrap_err();
+
+        let message = err.to_string();
+        assert!(
+            message.contains("undeclared_speed"),
+            "expected the undeclared parameter to be named, got: {message}"
+        );
+    }
+
+    /// A declared parameter must pass, including when reached through an expression.
+    #[test]
+    fn build_accepts_declared_parameters_and_expressions() {
+        use crate::types::basic::Double;
+        use crate::types::enums::ParameterType;
+
+        let mut builder = ScenarioBuilder::new()
+            .with_header("Declared parameter", "Test Author")
+            .add_parameter("base_speed", ParameterType::Double, "30.0")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities();
+
+        builder = builder.add_vehicle("ego", |vehicle| vehicle.car());
+        if let Some(entities) = &mut builder.data.entities {
+            if let Some(vehicle) = entities.scenario_objects[0].vehicle.as_mut() {
+                vehicle.performance.max_speed = Double::expression("base_speed * 1.1".to_string());
+            }
+        }
+
+        let scenario = builder.with_storyboard(|storyboard| storyboard).build();
+        assert!(
+            scenario.is_ok(),
+            "an expression over a declared parameter must pass: {scenario:?}"
+        );
+    }
+
     /// The whole point of the change: the minimal document now validates against the schema.
     #[cfg(feature = "validation")]
     #[test]

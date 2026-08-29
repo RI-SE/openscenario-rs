@@ -84,6 +84,24 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **The builder's cross-reference rules actually check something.**
+  `ParameterReferenceValidationRule` was a no-op whose body was an empty `if` with a comment,
+  and it asked the wrong question besides: whether declarations are *used*, which is fine
+  either way, rather than whether references *resolve*, which is not.
+  `EntityReferenceValidationRule` inspected only `ManeuverGroup.actors`, so an entity named
+  anywhere else went unchecked. Both now scan the serialized document, which is complete by
+  construction and does not grow a silent gap each time a new action or condition is modelled.
+  XSD validation cannot express cross-references, so these rules are the only thing standing
+  between a caller and a schema-valid document that names something which does not exist.
+  The three shipped templates were committing exactly that mistake and are fixed here.
+- **`EntityActionBuilder` can build something.** Its only method returned
+  `BuilderResult<PrivateAction>` and unconditionally returned `Err`, and its private enum had
+  one variant where the schema's choice has two. `EntityAction` is a *global* action
+  (`Schema/OpenSCENARIO.xsd:1128-1134`), so `build()` now returns a `GlobalAction`, and
+  `add_entity(position)` joins `delete_entity()`. `VariableActionBuilder` had the same defect
+  and gains a real `build()`; its `for_entity` is removed, since a variable action targets a
+  variable and the type has no entity reference. The always-erroring `build_action` methods
+  are gone from all three global builders.
 - **The builder's file header no longer claims OpenSCENARIO 1.0.** `with_header()` hard-coded
   `revMajor`/`revMinor` to 1/0 while the crate targets, validates against, and models 1.3, so
   every document it produced understated its own revision. The default is now 1.3, and
