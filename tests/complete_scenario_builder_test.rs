@@ -1,11 +1,16 @@
 #[cfg(feature = "builder")]
 mod complete_scenario_tests {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
     #[test]
     fn test_complete_scenario_with_actions() {
         let scenario = ScenarioBuilder::new()
             .with_header("Highway Test", "Test Author")
+            // Both are required of a scenario document by the XSD.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .add_vehicle("ego", |vehicle| vehicle.car())
             .add_vehicle("target", |vehicle| vehicle.car())
@@ -52,6 +57,8 @@ mod complete_scenario_tests {
 
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .with_storyboard(|storyboard| storyboard.with_init_actions(empty_init))
             .build()

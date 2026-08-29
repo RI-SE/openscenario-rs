@@ -16,6 +16,8 @@
 
 #[cfg(feature = "builder")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::types::scenario::triggers::Trigger;
     use openscenario_rs::{builder::StoryboardBuilder, ScenarioBuilder};
 
@@ -31,6 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 1: Create basic scenario (similar to working test)
     let scenario_builder = ScenarioBuilder::new()
         .with_header("Cut-in scenario", "OpenSCENARIO-rs Builder Demo")
+        // Required of a scenario document by the XSD, even when empty.
+        .with_catalog_locations(CatalogLocations::default())
+        .with_road_network(RoadNetwork::default())
         .with_entities();
 
     // Step 2: Create storyboard with the working pattern from tests

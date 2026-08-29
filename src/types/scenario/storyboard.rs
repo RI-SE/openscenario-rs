@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// Root OpenSCENARIO document structure supporting all document types
 /// This represents the flattened XSD group structure where OpenScenarioCategory
 /// is a choice between ScenarioDefinition, CatalogDefinition, and ParameterValueDistributionDefinition groups
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "OpenSCENARIO")]
 pub struct OpenScenario {
     #[serde(rename = "FileHeader")]
@@ -107,8 +107,7 @@ pub enum OpenScenarioDocumentType {
 }
 
 /// Scenario definition containing concrete scenario elements
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ScenarioDefinition {
     #[serde(
         rename = "ParameterDeclarations",
@@ -142,15 +141,14 @@ pub struct ScenarioDefinition {
 }
 
 /// Catalog definition for catalog files
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: CatalogContent,
 }
 
 /// File header with scenario metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FileHeader {
     #[serde(rename = "@author")]
     pub author: OSString,
@@ -188,8 +186,7 @@ pub struct License {
 // Entities is now imported from entities module
 
 /// Storyboard structure (simplified for MVP)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Storyboard {
     #[serde(rename = "Init")]
     pub init: Init,
@@ -203,7 +200,6 @@ pub struct Storyboard {
 pub use super::init::Init;
 
 // Story is now imported from story.rs module
-
 
 /// Constructs a concrete scenario document with explicit, non-invented test data.
 ///
@@ -285,8 +281,9 @@ mod tests {
         assert!(xml.contains("FileHeader"));
         // Verify it can be deserialized back
         let deserialized: OpenScenario = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(deserialized.document_type(), OpenScenarioDocumentType::Scenario);
+        assert_eq!(
+            deserialized.document_type(),
+            OpenScenarioDocumentType::Scenario
+        );
     }
 }
-
-

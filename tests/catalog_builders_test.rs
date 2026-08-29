@@ -78,6 +78,8 @@ mod catalog_builder_tests {
         let scenario = ScenarioBuilder::new()
             .with_header("Catalog Test", "Test Author")
             .with_catalog_locations(locations)
+            // Required of a scenario document by the XSD even when it names no road file.
+            .with_road_network(openscenario_rs::types::road::RoadNetwork::default())
             .with_entities()
             .with_storyboard(|storyboard| {
                 // Minimal storyboard with default init

@@ -7,6 +7,8 @@
 
 #[cfg(feature = "builder")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
     println!("🚗 OpenSCENARIO-rs Builder Basic Demo");
@@ -17,7 +19,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let scenario = ScenarioBuilder::new()
         .with_header("Basic Highway Scenario", "Builder Demo")
+        .with_catalog_locations(CatalogLocations::default())
+        .with_road_network(RoadNetwork::default())
         .with_entities()
+        .with_storyboard(|sb| sb)
         .build()?;
 
     println!("✅ Basic scenario built successfully!");

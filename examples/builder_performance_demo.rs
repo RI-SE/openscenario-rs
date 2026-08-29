@@ -7,6 +7,8 @@
 
 #[cfg(feature = "builder")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
     use std::time::Instant;
 
@@ -20,10 +22,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..1000 {
         let mut builder = ScenarioBuilder::new()
             .with_header(&format!("Test Scenario {}", i), "Benchmark")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         builder = builder.add_vehicle("ego", |v| v.car());
-        let _scenario = builder.build()?;
+        let _scenario = builder.with_storyboard(|storyboard| storyboard).build()?;
     }
 
     let duration = start.elapsed();
@@ -38,13 +42,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Reduced from 100 to 10 for simpler scenarios
         let mut builder = ScenarioBuilder::new()
             .with_header(&format!("Complex Scenario {}", i), "Benchmark")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         builder = builder.add_vehicle("vehicle_0", |v| v.car());
         builder = builder.add_vehicle("vehicle_1", |v| v.car());
         builder = builder.add_vehicle("vehicle_2", |v| v.car());
 
-        let _scenario = builder.build()?;
+        let _scenario = builder.with_storyboard(|storyboard| storyboard).build()?;
     }
 
     let duration = start.elapsed();
@@ -61,10 +67,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..100 {
         let mut builder = ScenarioBuilder::new()
             .with_header(&format!("Simple Scenario {}", i), "Benchmark")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         builder = builder.add_vehicle("ego", |v| v.car());
-        let _scenario = builder.build()?;
+        let _scenario = builder.with_storyboard(|storyboard| storyboard).build()?;
     }
 
     let duration = start.elapsed();
@@ -79,10 +87,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Reduced count for simpler demo
         let mut builder = ScenarioBuilder::new()
             .with_header(&format!("Memory Test {}", i), "Benchmark")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         builder = builder.add_vehicle("ego", |v| v.car());
-        let scenario = builder.build()?;
+        let scenario = builder.with_storyboard(|storyboard| storyboard).build()?;
         scenarios.push(scenario);
     }
 

@@ -16,12 +16,17 @@
 //!
 //! ```rust
 //! use openscenario_rs::builder::ScenarioBuilder;
+//! use openscenario_rs::types::catalogs::locations::CatalogLocations;
 //! use openscenario_rs::types::enums::ParameterType;
+//! use openscenario_rs::types::road::RoadNetwork;
 //!
-//! // Build a complete scenario
+//! // Build a complete scenario. CatalogLocations and RoadNetwork are required of a
+//! // scenario document by the XSD; the empty forms state nothing but satisfy it.
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Highway Merge Test", "Test Engineer")
 //!     .add_parameter("initial_speed", ParameterType::Double, "25.0")
+//!     .with_catalog_locations(CatalogLocations::default())
+//!     .with_road_network(RoadNetwork::default())
 //!     .with_entities()
 //!         .add_vehicle("ego_vehicle", |v| v.car())
 //!         .add_vehicle("target_vehicle", |v| v.truck())
@@ -66,12 +71,16 @@
 //!
 //! ```rust
 //! use openscenario_rs::builder::ScenarioBuilder;
+//! use openscenario_rs::types::catalogs::locations::CatalogLocations;
 //! use openscenario_rs::types::enums::ParameterType;
+//! use openscenario_rs::types::road::RoadNetwork;
 //!
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Parameterized Test", "Engineer")
 //!     .add_parameter("target_speed", ParameterType::Double, "30.0")
 //!     .add_parameter("following_distance", ParameterType::Double, "50.0")
+//!     .with_catalog_locations(CatalogLocations::default())
+//!     .with_road_network(RoadNetwork::default())
 //!     .with_entities()
 //!         .add_vehicle("ego", |v| v.car())
 //!     .with_storyboard(|storyboard| {
@@ -103,6 +112,8 @@
 //!
 //! ```rust
 //! use openscenario_rs::builder::{DetachedVehicleBuilder, DetachedManeuverBuilder};
+//! use openscenario_rs::types::catalogs::locations::CatalogLocations;
+//! use openscenario_rs::types::road::RoadNetwork;
 //! use openscenario_rs::ScenarioBuilder;
 //!
 //! // Build components separately
@@ -116,6 +127,8 @@
 //! // Combine into scenario using closure-based builders
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Complex Test", "Engineer")
+//!     .with_catalog_locations(CatalogLocations::default())
+//!     .with_road_network(RoadNetwork::default())
 //!     .with_entities()
 //!         .add_vehicle("ego", |v| v.car())
 //!     .with_storyboard(|storyboard| {

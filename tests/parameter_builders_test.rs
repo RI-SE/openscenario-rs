@@ -5,6 +5,8 @@ mod parameter_builder_tests {
     };
     use openscenario_rs::types::enums::ParameterType;
 
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     #[test]
     fn test_parameter_declarations_builder() {
         let params = ParameterDeclarationsBuilder::new()
@@ -114,6 +116,9 @@ mod parameter_builder_tests {
 
         let scenario = ScenarioBuilder::new()
             .with_header("Parameterized Test", "Test Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_parameters(params)
             .with_entities()
             .with_storyboard(|storyboard| {

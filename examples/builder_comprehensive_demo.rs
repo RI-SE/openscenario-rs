@@ -11,6 +11,7 @@
 
 #[cfg(feature = "builder")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
     use openscenario_rs::types::{enums::ParameterType, scenario::triggers::Trigger};
     use openscenario_rs::{builder::StoryboardBuilder, ScenarioBuilder};
 
@@ -29,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_parameter("initial_speed", ParameterType::Double, "25.0")
         .add_parameter("target_speed", ParameterType::Double, "35.0")
         .add_parameter("overtake_distance", ParameterType::Double, "50.0")
+        .with_catalog_locations(CatalogLocations::default())
         .with_road_file("highway.xodr")
         .with_entities();
 
@@ -81,6 +83,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let teleport_action = maneuver3
         .create_teleport_action()
         .named("lane_change")
+        .to()
+        .world_position(100.0, 0.0, 0.0)
         .with_trigger(Trigger {
             condition_groups: vec![],
         });

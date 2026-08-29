@@ -1,12 +1,17 @@
 #[cfg(feature = "builder")]
 mod vehicle_builder_tests {
     use openscenario_rs::types::basic::Value;
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
     #[test]
     fn test_vehicle_creation() {
         let mut scenario_builder = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
@@ -37,6 +42,9 @@ mod vehicle_builder_tests {
     fn test_multiple_vehicles() {
         let mut scenario_builder = ScenarioBuilder::new()
             .with_header("Multi Vehicle Test", "Test Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         scenario_builder = scenario_builder
@@ -65,6 +73,9 @@ mod vehicle_builder_tests {
     fn test_vehicle_with_custom_dimensions() {
         let mut scenario_builder = ScenarioBuilder::new()
             .with_header("Custom Vehicle Test", "Test Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         scenario_builder = scenario_builder.add_vehicle("custom", |v| {

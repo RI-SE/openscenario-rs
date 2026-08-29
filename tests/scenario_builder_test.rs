@@ -1,13 +1,18 @@
 #[cfg(feature = "builder")]
 mod builder_tests {
     use openscenario_rs::types::basic::Value;
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
     use openscenario_rs::types::enums::ParameterType;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
     #[test]
     fn test_minimal_scenario_creation() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .with_storyboard(|storyboard| {
                 // Minimal storyboard with default init
@@ -24,6 +29,9 @@ mod builder_tests {
     fn test_parameter_support() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .add_parameter("initial_speed", ParameterType::Double, "25.0")
             .add_parameter("target_lane", ParameterType::Int, "1")
             .with_entities()

@@ -5,11 +5,16 @@ mod detached_builders_tests {
     };
     use openscenario_rs::builder::{ScenarioBuilder, StoryboardBuilder};
 
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::road::RoadNetwork;
     #[test]
     fn test_detached_act_builder_creation() {
         // Test that DetachedActBuilder can be created and used without lifetime issues
         let scenario_builder = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
@@ -67,6 +72,9 @@ mod detached_builders_tests {
         // Test the complete workflow using only detached builders
         let scenario_builder = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);

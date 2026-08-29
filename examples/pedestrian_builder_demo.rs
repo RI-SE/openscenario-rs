@@ -4,7 +4,9 @@
 //! for creating pedestrians with different categories and specifications.
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
     use openscenario_rs::types::enums::Role;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
     println!("Pedestrian Builder Demo");
@@ -13,6 +15,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Build scenario with multiple pedestrian types
     let scenario = ScenarioBuilder::new()
         .with_header("Pedestrian Crossing Scenario", "Demo Author")
+        .with_catalog_locations(CatalogLocations::default())
+        .with_road_network(RoadNetwork::default())
         .with_entities()
         // Standard pedestrian
         .add_pedestrian("pedestrian1", |p| {
@@ -56,6 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .with_role(Role::Civil)
                 .finish()
         })
+        .with_storyboard(|storyboard| storyboard)
         .build()?;
 
     println!("\nScenario built successfully with 5 pedestrians!");

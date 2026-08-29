@@ -1,12 +1,17 @@
 #[cfg(feature = "builder")]
 mod pedestrian_builder_tests {
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
     use openscenario_rs::types::enums::{PedestrianCategory, Role};
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
     #[test]
     fn test_standard_pedestrian_builder() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
             .with_storyboard(|storyboard| {
@@ -34,6 +39,9 @@ mod pedestrian_builder_tests {
     fn test_wheel_pedestrian_builder() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .add_pedestrian("wheelchair1", |p| {
                 p.wheelchair()
@@ -61,6 +69,9 @@ mod pedestrian_builder_tests {
     fn test_animal_pedestrian_builder() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .add_pedestrian("dog1", |p| {
                 p.animal()
@@ -88,6 +99,9 @@ mod pedestrian_builder_tests {
     fn test_custom_dimensions() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .add_pedestrian("tall_person", |p| {
                 p.pedestrian()
@@ -121,6 +135,9 @@ mod pedestrian_builder_tests {
     fn test_multiple_pedestrians() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")
+            // Required of a scenario document by the XSD, even when empty.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
             .add_pedestrian("wheel1", |p| p.wheelchair().with_mass(85.0).finish())

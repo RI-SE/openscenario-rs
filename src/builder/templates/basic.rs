@@ -6,6 +6,8 @@ use crate::builder::{
     positions::WorldPositionBuilder,
     scenario::{Complete, HasEntities, ScenarioBuilder},
 };
+use crate::types::catalogs::locations::CatalogLocations;
+use crate::types::road::RoadNetwork;
 
 /// Basic scenario template providing common initialization patterns
 pub struct BasicScenarioTemplate;
@@ -15,9 +17,17 @@ impl ScenarioTemplate for BasicScenarioTemplate {
         Self::create_with_header("Basic Scenario", "openscenario-rs")
     }
 
+    /// Both `CatalogLocations` and `RoadNetwork` are required of a scenario document by the XSD
+    /// (`ScenarioDefinition`, `Schema/OpenSCENARIO.xsd:1989`), so they are set here rather than
+    /// left for the caller to remember. Every child of each is `minOccurs="0"`, so the empty
+    /// form is schema-valid and states nothing: a template that invented a catalog directory or
+    /// a road file would be putting words in the caller's mouth. Override either with
+    /// `.with_catalog_locations()` or `.with_road_file()` on the returned builder.
     fn create_with_header(name: &str, author: &str) -> ScenarioBuilder<HasEntities> {
         ScenarioBuilder::new()
             .with_header(name, author)
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
     }
 }

@@ -18,7 +18,9 @@ mod tests {
         },
         scenario::ScenarioBuilder,
     };
+    use openscenario_rs::types::catalogs::locations::CatalogLocations;
     use openscenario_rs::types::enums::ObjectType;
+    use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::types::{
         basic::Value,
         enums::{DynamicsShape, Rule},
@@ -255,6 +257,9 @@ mod tests {
 
         let scenario_builder = ScenarioBuilder::new()
             .with_header("Phase2Test", "TestAuthor")
+            // Both are required of a scenario document by the XSD.
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         let mut storyboard_builder = scenario_builder.create_storyboard();
@@ -271,6 +276,8 @@ mod tests {
         // Test stop when entity reaches position
         let scenario_builder2 = ScenarioBuilder::new()
             .with_header("Phase2Test2", "TestAuthor")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities();
 
         let storyboard_builder2 = scenario_builder2.create_storyboard();
@@ -307,6 +314,8 @@ mod tests {
         // Create a comprehensive scenario
         let scenario = ScenarioBuilder::new()
             .with_header("Phase2ComprehensiveTest", "TestAuthor")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
             .with_entities()
             .create_storyboard()
             .create_init_actions()

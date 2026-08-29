@@ -14,10 +14,15 @@
 //! # Example
 //!
 //! ```rust
+//! use openscenario_rs::types::catalogs::locations::CatalogLocations;
+//! use openscenario_rs::types::road::RoadNetwork;
 //! use openscenario_rs::ScenarioBuilder;
 //!
+//! // CatalogLocations and RoadNetwork are required of a scenario document by the XSD.
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Highway Test", "Test Author")
+//!     .with_catalog_locations(CatalogLocations::default())
+//!     .with_road_network(RoadNetwork::default())
 //!     .with_entities()
 //!         .add_vehicle("ego", |v| v.car())
 //!     .with_storyboard(|storyboard| {
@@ -27,6 +32,7 @@
 //!     .unwrap();
 //! ```
 
+use super::validation::ValidationContextBuilder;
 use super::{BuilderError, BuilderResult};
 use crate::types::{
     basic::{OSString, ParameterDeclaration, ParameterDeclarations, UnsignedShort},
@@ -339,34 +345,87 @@ impl ScenarioBuilder<HasEntities> {
 
     /// Build the final OpenScenario document
     pub fn build(self) -> BuilderResult<OpenScenario> {
-        let file_header = self
-            .data
-            .file_header
-            .ok_or_else(|| BuilderError::missing_field("file_header", ".with_header()"))?;
-
-        let entities = self
-            .data
-            .entities
-            .ok_or_else(|| BuilderError::missing_field("entities", ".with_entities()"))?;
-
-        let storyboard = self
-            .data
-            .storyboard
-            .ok_or_else(|| BuilderError::missing_field("storyboard", ".with_storyboard()"))?;
-
-        Ok(OpenScenario {
-            file_header,
-            parameter_declarations: self.data.parameter_declarations,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: self.data.catalog_locations,
-            road_network: self.data.road_network,
-            entities: Some(entities),
-            storyboard: Some(storyboard),
-            parameter_value_distribution: None,
-            catalog: None,
-        })
+        build_scenario(self.data)
     }
+}
+
+/// Assembles and validates the final document.
+///
+/// `ScenarioBuilder<HasEntities>` and `ScenarioBuilder<Complete>` both expose `build()` and both
+/// produce exactly the same document, so the assembly lives here rather than being duplicated in
+/// each impl.
+///
+/// Every scenario is run through [`BuilderValidationContext`] before it is returned. Those rules
+/// – entity references resolve, the storyboard hierarchy is populated – catch the semantic
+/// mistakes XSD validation cannot see, and returning `Err` here is the difference between the
+/// caller learning about a broken scenario at `build()` and shipping invalid XML.
+///
+/// # Required elements
+///
+/// The output type is [`OpenScenario`], the flattened union of the schema's three document
+/// kinds, so every field it carries is `Option`. A *scenario* document is narrower than that:
+/// the XSD group `ScenarioDefinition` (`Schema/OpenSCENARIO.xsd:1989`) declares
+/// `CatalogLocations` and `RoadNetwork` without `minOccurs="0"`, which makes both required
+/// alongside `Entities` and `Storyboard`. Nothing in `OpenScenario` enforces that, so this
+/// function does: omitting either one produced schema-invalid XML with no error at all.
+///
+/// They are rejected rather than defaulted. An empty-but-present `CatalogLocations` would
+/// satisfy the validator while stating something the caller never wrote, which is the
+/// invented-default pattern the type model removed elsewhere.
+fn build_scenario(data: PartialScenarioData) -> BuilderResult<OpenScenario> {
+    let file_header = data
+        .file_header
+        .ok_or_else(|| BuilderError::missing_field("file_header", ".with_header()"))?;
+
+    let entities = data
+        .entities
+        .ok_or_else(|| BuilderError::missing_field("entities", ".with_entities()"))?;
+
+    let storyboard = data
+        .storyboard
+        .ok_or_else(|| BuilderError::missing_field("storyboard", ".with_storyboard()"))?;
+
+    // The suggestions name the empty-but-present form deliberately: the schema requires both
+    // elements, but every child of each is optional, so a scenario with no catalogs and no road
+    // file still has to emit them.
+    let catalog_locations = data.catalog_locations.ok_or_else(|| {
+        BuilderError::missing_field(
+            "catalog_locations",
+            ".with_catalog_locations(CatalogLocations::default())",
+        )
+    })?;
+
+    let road_network = data.road_network.ok_or_else(|| {
+        BuilderError::missing_field(
+            "road_network",
+            ".with_road_file(path) or .with_road_network(RoadNetwork::default())",
+        )
+    })?;
+
+    let scenario = OpenScenario {
+        file_header,
+        parameter_declarations: data.parameter_declarations,
+        variable_declarations: None,
+        monitor_declarations: None,
+        catalog_locations: Some(catalog_locations),
+        road_network: Some(road_network),
+        entities: Some(entities),
+        storyboard: Some(storyboard),
+        parameter_value_distribution: None,
+        catalog: None,
+    };
+
+    // The rules resolve entity references against what the scenario actually declares, so the
+    // context is seeded from the assembled document rather than from builder state.
+    let mut context = ValidationContextBuilder::new().with_standard_rules();
+    if let Some(entities) = &scenario.entities {
+        for object in &entities.scenario_objects {
+            context = context.with_entity(&object.name.to_string(), "ScenarioObject");
+        }
+    }
+    context.build().validate_scenario(&scenario)?;
+
+    Ok(scenario)
 }
 
 // Implementation for Complete state (final scenarios with storyboard)
@@ -381,33 +440,7 @@ impl ScenarioBuilder<Complete> {
 
     /// Build the final scenario (same as HasEntities but with Complete state)
     pub fn build(self) -> BuilderResult<OpenScenario> {
-        let file_header = self
-            .data
-            .file_header
-            .ok_or_else(|| BuilderError::missing_field("file_header", ".with_header()"))?;
-
-        let entities = self
-            .data
-            .entities
-            .ok_or_else(|| BuilderError::missing_field("entities", ".with_entities()"))?;
-
-        let storyboard = self
-            .data
-            .storyboard
-            .ok_or_else(|| BuilderError::missing_field("storyboard", ".with_storyboard()"))?;
-
-        Ok(OpenScenario {
-            file_header,
-            parameter_declarations: self.data.parameter_declarations,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: self.data.catalog_locations,
-            road_network: self.data.road_network,
-            entities: Some(entities),
-            storyboard: Some(storyboard),
-            parameter_value_distribution: None,
-            catalog: None,
-        })
+        build_scenario(self.data)
     }
 }
 
@@ -421,17 +454,26 @@ impl Default for ScenarioBuilder<Empty> {
 mod tests {
     use super::*;
 
+    use crate::types::catalogs::locations::CatalogLocations;
+    use crate::types::road::RoadNetwork;
+
+    /// The smallest chain that builds a schema-valid scenario document.
+    ///
+    /// `CatalogLocations` and `RoadNetwork` are set to their empty forms rather than omitted:
+    /// the XSD requires both elements of a scenario document, and every child of each is
+    /// optional, so this is the minimum a document can state and still conform.
+    fn minimal_builder() -> ScenarioBuilder<Complete> {
+        ScenarioBuilder::new()
+            .with_header("Test Scenario", "Test Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities()
+            .with_storyboard(|storyboard| storyboard)
+    }
+
     #[test]
     fn test_minimal_scenario_builder() {
-        let scenario = ScenarioBuilder::new()
-            .with_header("Test Scenario", "Test Author")
-            .with_entities()
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init, no stories required
-                storyboard
-            })
-            .build()
-            .unwrap();
+        let scenario = minimal_builder().build().unwrap();
 
         // Verify basic structure
         if let crate::types::basic::Value::Literal(desc) = &scenario.file_header.description {
@@ -442,5 +484,58 @@ mod tests {
 
         assert!(scenario.entities.is_some());
         assert!(scenario.storyboard.is_some());
+        assert!(scenario.catalog_locations.is_some());
+        assert!(scenario.road_network.is_some());
+    }
+
+    /// Regression: omitting either element used to serialize to schema-invalid XML silently.
+    /// The XSD group `ScenarioDefinition` requires both, so `build()` has to refuse.
+    #[test]
+    fn build_rejects_missing_catalog_locations() {
+        let err = ScenarioBuilder::new()
+            .with_header("Test Scenario", "Test Author")
+            .with_road_network(RoadNetwork::default())
+            .with_entities()
+            .with_storyboard(|storyboard| storyboard)
+            .build()
+            .unwrap_err();
+
+        assert!(
+            matches!(&err, BuilderError::MissingField { field, .. } if field == "catalog_locations"),
+            "expected a missing catalog_locations error, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn build_rejects_missing_road_network() {
+        let err = ScenarioBuilder::new()
+            .with_header("Test Scenario", "Test Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_entities()
+            .with_storyboard(|storyboard| storyboard)
+            .build()
+            .unwrap_err();
+
+        assert!(
+            matches!(&err, BuilderError::MissingField { field, .. } if field == "road_network"),
+            "expected a missing road_network error, got {err:?}"
+        );
+    }
+
+    /// The whole point of the change: the minimal document now validates against the schema.
+    #[cfg(feature = "validation")]
+    #[test]
+    fn minimal_scenario_is_schema_valid() {
+        let scenario = minimal_builder().build().unwrap();
+        let xml = crate::serialize_to_string(&scenario).unwrap();
+
+        let mut validator =
+            crate::validation::XsdValidator::from_schema_file("Schema/OpenSCENARIO.xsd").unwrap();
+        let errors = validator.validate_str(&xml).unwrap();
+
+        assert!(
+            errors.is_empty(),
+            "expected schema-valid output, got {errors:?}"
+        );
     }
 }
