@@ -47,7 +47,7 @@ fn main() {
     if args.len() != 2 {
         eprintln!("Usage: {} <scenario_file.xosc>", args[0]);
         eprintln!();
-        eprintln!("Example: cargo run --example parse -- xosc/alks_scenario_4_1_1_free_driving_template.xosc");
+        eprintln!("Example: cargo run --example parse -- tests/data/simple_scenario.xosc");
         std::process::exit(1);
     }
 
