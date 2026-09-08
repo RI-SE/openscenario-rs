@@ -129,6 +129,7 @@ impl Axles {
 
 impl Axle {
     /// Create a standard car front axle
+    #[allow(clippy::approx_constant)] // 0.5236 rad is a scenario value (30 degrees), not an approximation of a math constant
     pub fn front_car() -> Self {
         Self {
             max_steering: Double::literal(0.5236), // 30 degrees in radians
@@ -184,6 +185,7 @@ impl Axle {
     }
 
     /// Create a motorcycle front axle
+    #[allow(clippy::approx_constant)] // 0.7854 rad is a scenario value (45 degrees), not an approximation of a math constant
     pub fn front_motorcycle() -> Self {
         Self {
             max_steering: Double::literal(0.7854), // 45 degrees in radians

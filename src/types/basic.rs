@@ -656,6 +656,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)] // 3.14 is a literal test input for Display formatting, not an approximation of PI
     fn test_value_display_trait() {
         // Test Display implementation for Value<T>
         let literal_value = Value::<f64>::literal(42.5);

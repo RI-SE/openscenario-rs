@@ -74,17 +74,24 @@ which asserts the emitted element name for every such site.
 
 ## The conformance gates
 
-Three gates run against the corpus in the sibling crate `../test`
+Three gates run against the corpus in the `conformance` workspace member
 (`openscenario-roundtrip-harness`), which depends on this crate by path with the `validation`
 feature. All three exit non-zero on failure.
 
+The corpus itself is third-party MPL-2.0 content, not vendored into this GPL-3.0-only repo.
+Fetch it once with:
+
+```bash
+bash scripts/fetch-corpus.sh
+```
+
 | Command | Compares | Catches |
 |---|---|---|
-| `cargo run --bin report` | `xml1` vs `xml2` | parse failures, instability across serialization |
-| `cargo run --bin lossy` | the original file vs `xml1` | data dropped or invented on the first parse |
-| `cargo run --bin validate` | `xml1` vs the XSD | schema-invalid output |
+| `cargo run -p openscenario-roundtrip-harness --bin report` | `xml1` vs `xml2` | parse failures, instability across serialization |
+| `cargo run -p openscenario-roundtrip-harness --bin lossy` | the original file vs `xml1` | data dropped or invented on the first parse |
+| `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs the XSD | schema-invalid output |
 
-Run them from `../test`. `lossy` is the one to check after adding a type, because it is the
+Run them from the repo root. `lossy` is the one to check after adding a type, because it is the
 only gate that sees first-parse data loss.
 
 Be careful how you read a green `report` run. serde drops unknown XML on every pass
@@ -101,7 +108,7 @@ running them, see [docs/xsd_gaps.md](docs/xsd_gaps.md).
 
 ## Local schema validation
 
-Without the sibling harness, the bundled binary validates individual files:
+Without the corpus, the bundled binary validates individual files:
 
 ```bash
 cargo run --bin xosc-validate --features validation -- tests/data/alks_scenario.xosc

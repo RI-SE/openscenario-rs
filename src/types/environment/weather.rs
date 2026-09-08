@@ -179,6 +179,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)] // 3.14 is a sun azimuth scenario value, not an approximation of PI
     fn test_custom_rain_weather() {
         let w = Weather {
             sun: Some(Sun {

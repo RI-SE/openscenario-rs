@@ -133,6 +133,12 @@ Breaking, unless noted.
   renames on the entity condition structs and on `ParameterAssignments`.
 - Catalog `Maneuver` entries now parse their `Event` sequence; `CatalogMiscObject` gained its
   missing XSD attributes.
+- **The conformance gates are runnable from a fresh checkout.** They previously lived in an
+  untracked sibling directory that CONTRIBUTING.md and docs/xsd_gaps.md described but a clone
+  of this repository did not contain. The repo is now a Cargo workspace; `conformance` is a
+  member crate holding the corpus binaries (`report`, `lossy`, `validate`, `builder`) that were
+  previously external, and `scripts/fetch-corpus.sh` fetches the (still unvendored, MPL-2.0)
+  corpus on demand. No change to `openscenario-rs`'s public API.
 
 ### Known gaps
 

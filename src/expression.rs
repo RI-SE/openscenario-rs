@@ -1013,6 +1013,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)] // 3.14 is a literal test input for abs(), not an approximation of PI
     fn test_mathematical_functions() {
         let params = HashMap::new();
 

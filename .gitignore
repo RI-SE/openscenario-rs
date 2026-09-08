@@ -39,3 +39,6 @@ examples/*_detached.xosc
 
 # Analysis and planning documents
 high-level-ideas.md
+
+# Third-party conformance corpus, fetched by scripts/fetch-corpus.sh (MPL-2.0)
+/conformance/corpus/

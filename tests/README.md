@@ -86,8 +86,8 @@ and licensing.
 ## What these tests do not cover
 
 The fixtures here are a handful of files, and they are not the conformance check. The corpus
-that exercises the schema more broadly lives in the sibling `../test` harness and covers about
-53% of the schema's element declarations even so.
+that exercises the schema more broadly lives in the `conformance` workspace member and covers
+about 53% of the schema's element declarations even so.
 
 Be careful how you read a green round-trip test. serde ignores unknown XML by default, so a
 field the Rust types do not model is dropped identically on every pass and the comparison

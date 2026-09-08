@@ -284,6 +284,7 @@ fn test_xml_serialization_relative_distance_condition() {
 }
 
 #[test]
+#[allow(clippy::approx_constant)] // 3.14 is a scenario heading value, not an approximation of PI
 fn test_xml_round_trip_reach_position() {
     let original = ReachPositionCondition::at_world_position(75.0, 125.0, 2.0, 3.14, 1.5);
 

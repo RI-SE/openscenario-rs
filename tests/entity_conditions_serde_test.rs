@@ -241,6 +241,7 @@ fn test_angle_condition_xml_round_trip() {
 }
 
 #[test]
+#[allow(clippy::approx_constant)] // 3.14 is a scenario angle value, not an approximation of PI
 fn test_angle_condition_with_coordinate_system_xml_round_trip() {
     let original = AngleCondition {
         angle_type: AngleType::Pitch,
@@ -267,6 +268,7 @@ fn test_angle_condition_raw_xml_deserialize_attributes() {
 
 /// Confirm optional `coordinateSystem` attribute is accepted.
 #[test]
+#[allow(clippy::approx_constant)] // 3.14 is a scenario angle value, not an approximation of PI
 fn test_angle_condition_raw_xml_deserialize_with_coordinate_system() {
     let xml = r#"<AngleCondition angleType="pitch" angle="3.14" angleTolerance="0.05" coordinateSystem="entity"/>"#;
     let condition: AngleCondition = quick_xml::de::from_str(xml)
