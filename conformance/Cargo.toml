@@ -1,0 +1,14 @@
+[package]
+name = "openscenario-roundtrip-harness"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+
+[dependencies]
+openscenario-rs = { path = "..", features = ["builder", "validation"] }
+quick-xml = "0.38"
+walkdir = "2"
+
+[build-dependencies]
+walkdir = "2"
