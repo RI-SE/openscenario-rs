@@ -23,6 +23,25 @@ Neither feature is enabled by default, so a change touching `src/builder/` or
 `src/validation.rs` needs the feature flags on the command line or it will not be compiled at
 all – which is an easy way to land code that does not build.
 
+### The pre-push gate
+
+There is no hosted CI. The full gate runs locally instead, as a `pre-push` hook. Enable it once
+per clone:
+
+```bash
+git config core.hooksPath scripts/hooks
+```
+
+`core.hooksPath` replaces `.git/hooks` wholesale, which costs nothing here – that directory holds
+only Git's stock `*.sample` files. The relative path is resolved against the top of the working
+tree (`git-config(1)`: "A relative path is taken as relative to the directory where the hooks are
+run"), so this one setting works from every `git worktree` of the repo.
+
+The hook runs everything above plus all four conformance gates, and aborts the push if any stage
+fails. It checks system prerequisites first – the MSRV, and `pkg-config`'s view of libxml2, which
+the `validation` feature links against – so a missing dependency reports itself instead of
+surfacing as a linker error halfway through a build.
+
 ## The one rule that matters
 
 **The schema decides.** Before adding or changing a type, read its declaration in
@@ -92,7 +111,9 @@ bash scripts/fetch-corpus.sh
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs the XSD | schema-invalid output |
 
 Run them from the repo root. `lossy` is the one to check after adding a type, because it is the
-only gate that sees first-parse data loss.
+only gate that sees first-parse data loss. All three, plus `cargo test -p
+openscenario-roundtrip-harness`, also run from [the pre-push hook](#the-pre-push-gate), so a push
+that reaches the remote has already cleared them.
 
 Be careful how you read a green `report` run. serde drops unknown XML on every pass
 identically, so the round-trip comparison still succeeds over data the types never modeled.
@@ -121,6 +142,11 @@ It takes `--recursive` for a directory and `--format json|junit` for machine-rea
 Commit messages follow the conventional-commit prefixes already in the history (`feat`,
 `fix`, `refactor`, `docs`), with a scope naming the area: `fix(schema):`, `feat(actions):`,
 `refactor(types):`. Write the subject as what the change does, not what it touches.
+
+The `pre-push` hook runs the full gate on every push. Note that it checks the working tree as it
+currently stands, not the commits being pushed – so a dirty tree, or a commit amended after the
+last green run, is not what was verified. `git push --no-verify` skips the hook; if you use it,
+say so in the pull request.
 
 A pull request should say which schema declaration it follows, name the gates it ran, and note
 any conformance gap it knowingly leaves open. Breaking changes belong in

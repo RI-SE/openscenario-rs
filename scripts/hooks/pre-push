@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# pre-push — run the full project gate before anything leaves this machine.
+#
+# This replaces what used to be a GitHub Actions workflow: the same stages, in
+# the same order, run locally instead. A non-zero exit here aborts the push
+# without sending anything (githooks(5): "If this hook exits with a non-zero
+# status, git push will abort without pushing anything").
+#
+# Install once per clone:
+#   git config core.hooksPath scripts/hooks
+#
+# Bypass deliberately with:
+#   git push --no-verify
+#
+# Caveat worth knowing: this checks the WORKING TREE as it currently sits, not
+# the commits being pushed. A dirty tree is what gets tested.
+#
+# Arguments: $1 = remote name, $2 = remote URL (equal when pushing to a URL).
+# Stdin: one line per ref, "<local-ref> <local-oid> <remote-ref> <remote-oid>".
+set -euo pipefail
+
+remote_name="${1:-}"
+
+# --- Early exit: nothing to verify ------------------------------------------
+# A deletion is signalled by an all-zero <local-oid>. If every line is a
+# deletion (or stdin is empty, as with `git push` on an up-to-date branch),
+# there is no new code to gate.
+has_work=0
+while read -r _local_ref local_oid _remote_ref _remote_oid; do
+  [[ -z "$local_oid" ]] && continue
+  if ! [[ "$local_oid" =~ ^0+$ ]]; then
+    has_work=1
+  fi
+done
+
+if [[ "$has_work" -eq 0 ]]; then
+  echo "pre-push: nothing to verify (no new commits${remote_name:+ for $remote_name}); skipping gate."
+  exit 0
+fi
+
+# --- Locate the repo ---------------------------------------------------------
+# `--show-toplevel` is correct under `git worktree`, unlike deriving paths from
+# $GIT_DIR (which points at the shared common dir's per-worktree subdirectory).
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+bold=""; red=""; green=""; reset=""
+if [[ -t 2 ]]; then
+  bold=$'\033[1m'; red=$'\033[31m'; green=$'\033[32m'; reset=$'\033[0m'
+fi
+
+fail() {
+  echo "${red}${bold}pre-push: $1${reset}" >&2
+  shift
+  for line in "$@"; do echo "  $line" >&2; done
+  echo >&2
+  echo "  Push aborted. To bypass this gate: git push --no-verify" >&2
+  exit 1
+}
+
+# --- Preflight: toolchain ----------------------------------------------------
+# The MSRV lives in Cargo.toml's `rust-version`. Bump both together: that field
+# and any CI/toolchain pin elsewhere in the repo.
+msrv="$(sed -n 's/^rust-version *= *"\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)"
+rustc_ver="$(rustc --version 2>/dev/null | awk '{print $2}')" ||
+  fail "rustc not found on PATH." "Install Rust: https://rustup.rs"
+
+if [[ -n "$msrv" ]]; then
+  # Sort the two versions and check the MSRV comes first.
+  lowest="$(printf '%s\n%s\n' "$msrv" "$rustc_ver" | sort -V | head -1)"
+  if [[ "$lowest" != "$msrv" && "$rustc_ver" != "$msrv" ]]; then
+    fail "rustc $rustc_ver is below the crate MSRV $msrv (Cargo.toml: rust-version)." \
+         "Run: rustup update stable"
+  fi
+fi
+
+for component in fmt clippy; do
+  cargo "$component" --version >/dev/null 2>&1 ||
+    fail "cargo $component is not available." "Run: rustup component add rust$component"
+done
+
+# --- Preflight: system libxml2 ----------------------------------------------
+# The `validation` feature links against system libxml2 via the `libxml` crate,
+# whose build.rs locates it through pkg-config
+# (see libxml's build.rs: `pkg_config::Config::new().probe("libxml-2.0")`).
+# Checking here turns an opaque mid-build linker error into a clear message.
+if ! pkg-config --exists libxml-2.0 2>/dev/null; then
+  fail "pkg-config cannot find libxml-2.0, required by the 'validation' feature." \
+       "Arch:          sudo pacman -S libxml2 pkgconf" \
+       "Debian/Ubuntu: sudo apt-get install -y libxml2-dev pkg-config" \
+       "Fedora:        sudo dnf install -y libxml2-devel pkgconf-pkg-config"
+fi
+
+# --- Stages ------------------------------------------------------------------
+TOTAL_STAGES=9
+stage_num=0
+
+stage() {
+  local name="$1"; shift
+  [[ "${1:-}" == "--" ]] && shift
+  stage_num=$((stage_num + 1))
+  echo
+  echo "${bold}[${stage_num}/${TOTAL_STAGES}] ${name}${reset}"
+  echo "      \$ ${STAGE_CMD_DISPLAY:-$*}"
+  if ! "$@"; then
+    fail "stage ${stage_num}/${TOTAL_STAGES} failed: ${name}" "Command: ${STAGE_CMD_DISPLAY:-$*}"
+  fi
+}
+
+# `.rustfmt.toml` sets options that are nightly-only (space_before_colon,
+# trailing_semicolon, brace_style, …); stable rustfmt ignores them and warns
+# once per file. The warnings do not affect the exit status, so drop them and
+# keep the real diff output.
+fmt_check() {
+  local out status=0
+  out="$(cargo fmt --all --check 2>&1)" || status=$?
+  printf '%s\n' "$out" | grep -v 'unstable features are only available in nightly channel' || true
+  return "$status"
+}
+
+echo "${bold}pre-push: running the full gate${remote_name:+ before pushing to $remote_name}${reset}"
+
+STAGE_CMD_DISPLAY="cargo fmt --all --check" \
+  stage "Check formatting"                    -- fmt_check
+unset STAGE_CMD_DISPLAY
+stage "Clippy"                                -- cargo clippy --features builder,validation --all-targets
+stage "Build"                                 -- cargo build --features builder,validation --all-targets
+stage "Test"                                  -- cargo test --features builder,validation
+
+# The corpus is third-party MPL-2.0 content, fetched (never vendored) by
+# scripts/fetch-corpus.sh, which pins two upstream repos by commit SHA. The
+# script is idempotent: when each clone's HEAD already matches its pinned SHA
+# it is a fast no-op, so this costs nothing on a warm checkout.
+stage "Fetch conformance corpus"              -- bash scripts/fetch-corpus.sh
+
+stage "Test conformance harness"              -- cargo test -p openscenario-roundtrip-harness
+stage "Conformance report (round-trip)"       -- cargo run -p openscenario-roundtrip-harness --bin report
+stage "Conformance lossy (dropped/invented)"  -- cargo run -p openscenario-roundtrip-harness --bin lossy
+stage "Conformance XSD validation"            -- cargo run -p openscenario-roundtrip-harness --bin validate
+
+echo
+echo "${green}${bold}pre-push: all ${TOTAL_STAGES} stages passed in ${SECONDS}s. Pushing.${reset}"

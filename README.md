@@ -97,6 +97,11 @@ cargo test
 cargo test --features builder
 ```
 
+The full gate – formatting, clippy, both test suites and the four conformance passes – runs
+locally as a `pre-push` hook rather than in hosted CI. Enable it once per clone with
+`git config core.hooksPath scripts/hooks`; see [CONTRIBUTING.md](CONTRIBUTING.md) for what it
+checks and how to bypass it.
+
 ## Documentation
 
 Start at the [documentation index](docs/README.md).
