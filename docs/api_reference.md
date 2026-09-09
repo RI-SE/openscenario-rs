@@ -1,6 +1,6 @@
 # API reference
 
-A reference to the public surface of `openscenario-rs` 0.3.2. Every signature here is taken
+A reference to the public surface of `openscenario-rs` 0.4.0. Every signature here is taken
 from the source; where a name is ambiguous or collides with another, that is flagged rather
 than glossed over.
 
@@ -12,7 +12,7 @@ For narrative introductions see the [user guide](user_guide.md) and
 
 | | |
 |---|---|
-| Version | 0.3.2 |
+| Version | 0.4.0 |
 | Edition | 2021 |
 | MSRV | **1.90** |
 | License | GPL-3.0-only |
@@ -29,7 +29,7 @@ Neither feature is enabled by default.
 
 ```toml
 [dependencies]
-openscenario-rs = { version = "0.3.2", features = ["builder", "validation"] }
+openscenario-rs = { version = "0.4.0", features = ["builder", "validation"] }
 ```
 
 ## Top-level functions

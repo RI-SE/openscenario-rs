@@ -7,7 +7,7 @@ wrong.
 
 ```toml
 [dependencies]
-openscenario-rs = { version = "0.3.2", features = ["builder"] }
+openscenario-rs = { version = "0.4.0", features = ["builder"] }
 ```
 
 Signatures in this guide are taken from `src/builder/`; the runnable examples referenced

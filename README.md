@@ -39,7 +39,7 @@ does not, and the one gap that remains open are recorded in
 
 ```toml
 [dependencies]
-openscenario-rs = "0.3.2"
+openscenario-rs = "0.4.0"
 ```
 
 Requires Rust 1.90 or later. Neither optional feature is enabled by default.

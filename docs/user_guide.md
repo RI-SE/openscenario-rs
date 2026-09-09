@@ -11,13 +11,13 @@ the [type system guide](type_system_guide.md).
 
 ```toml
 [dependencies]
-openscenario-rs = "0.3.2"
+openscenario-rs = "0.4.0"
 ```
 
 Neither optional feature is on by default:
 
 ```toml
-openscenario-rs = { version = "0.3.2", features = ["builder", "validation"] }
+openscenario-rs = { version = "0.4.0", features = ["builder", "validation"] }
 ```
 
 `builder` enables programmatic construction; `validation` enables XSD schema validation and
