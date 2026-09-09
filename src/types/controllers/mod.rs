@@ -165,7 +165,6 @@ pub struct ControllerProperties {
     pub properties: Vec<Property>,
 }
 
-
 /// Catalog location for controller definitions.
 ///
 /// Specifies where controller catalog files can be found.
@@ -177,7 +176,6 @@ pub struct ControllerCatalogLocation {
     #[serde(rename = "Directory")]
     pub directory: Directory,
 }
-
 
 // Helper implementations for common controller operations
 

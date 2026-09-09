@@ -46,8 +46,14 @@ fn test_relative_lane_position_xml_roundtrip() {
     assert_eq!(original, deserialized);
     assert_eq!(deserialized.entity_ref.as_literal().unwrap(), "EgoVehicle");
     assert_eq!(deserialized.d_lane.as_literal().unwrap(), &-1);
-    assert_eq!(deserialized.ds.as_ref().unwrap().as_literal().unwrap(), &15.0);
-    assert_eq!(deserialized.offset.as_ref().unwrap().as_literal().unwrap(), &0.5);
+    assert_eq!(
+        deserialized.ds.as_ref().unwrap().as_literal().unwrap(),
+        &15.0
+    );
+    assert_eq!(
+        deserialized.offset.as_ref().unwrap().as_literal().unwrap(),
+        &0.5
+    );
 }
 
 #[test]
@@ -221,8 +227,19 @@ fn test_default_implementations() {
         "DefaultEntity"
     );
     assert_eq!(rel_lane_default.d_lane.as_literal().unwrap(), &0);
-    assert_eq!(rel_lane_default.ds.as_ref().unwrap().as_literal().unwrap(), &0.0);
-    assert_eq!(rel_lane_default.offset.as_ref().unwrap().as_literal().unwrap(), &0.0);
+    assert_eq!(
+        rel_lane_default.ds.as_ref().unwrap().as_literal().unwrap(),
+        &0.0
+    );
+    assert_eq!(
+        rel_lane_default
+            .offset
+            .as_ref()
+            .unwrap()
+            .as_literal()
+            .unwrap(),
+        &0.0
+    );
     assert!(rel_lane_default.orientation.is_none());
 }
 

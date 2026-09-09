@@ -212,7 +212,12 @@ impl ActionBuilder for SpeedProfileActionBuilder {
 
         // Verify chronological order
         for i in 1..self.entries.len() {
-            let prev_time = self.entries[i - 1].time.as_ref().unwrap().as_literal().unwrap();
+            let prev_time = self.entries[i - 1]
+                .time
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap();
             let curr_time = self.entries[i].time.as_ref().unwrap().as_literal().unwrap();
             if curr_time <= prev_time {
                 return Err(BuilderError::validation_error(
@@ -367,9 +372,15 @@ mod tests {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {
                         assert_eq!(profile.entries.len(), 3);
-                        assert_eq!(profile.entries[0].time.as_ref().unwrap().as_literal(), Some(&0.0));
+                        assert_eq!(
+                            profile.entries[0].time.as_ref().unwrap().as_literal(),
+                            Some(&0.0)
+                        );
                         assert_eq!(profile.entries[0].speed.as_literal(), Some(&0.0));
-                        assert_eq!(profile.entries[2].time.as_ref().unwrap().as_literal(), Some(&10.0));
+                        assert_eq!(
+                            profile.entries[2].time.as_ref().unwrap().as_literal(),
+                            Some(&10.0)
+                        );
                         assert_eq!(profile.entries[2].speed.as_literal(), Some(&50.0));
                     }
                     _ => panic!("Expected SpeedProfileAction"),

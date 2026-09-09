@@ -48,7 +48,11 @@ impl std::fmt::Display for ValidationError {
             (Some(line), None) => line.to_string(),
             _ => "?".to_string(),
         };
-        write!(f, "Line {}: {} ({})", location, self.message, self.error_type)
+        write!(
+            f,
+            "Line {}: {} ({})",
+            location, self.message, self.error_type
+        )
     }
 }
 

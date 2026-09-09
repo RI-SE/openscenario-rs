@@ -57,22 +57,18 @@ pub use references::{
 use serde::{Deserialize, Serialize};
 
 /// Catalog type - container for all catalog entities
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Catalog {
     #[serde(flatten)]
     pub content: CatalogContent,
 }
 
 /// CatalogDefinition group - XSD group wrapper for catalog sequence
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: Catalog,
 }
-
-
 
 impl Catalog {
     /// Create new catalog with name

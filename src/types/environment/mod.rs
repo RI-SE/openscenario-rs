@@ -75,15 +75,13 @@ mod tests {
             environment.time_of_day.as_ref().unwrap().date_time,
             "2021-12-10T11:00:00"
         );
-        assert!(
-            !environment
-                .time_of_day
-                .as_ref()
-                .unwrap()
-                .animation
-                .as_literal()
-                .unwrap()
-        );
+        assert!(!environment
+            .time_of_day
+            .as_ref()
+            .unwrap()
+            .animation
+            .as_literal()
+            .unwrap());
     }
 
     #[test]

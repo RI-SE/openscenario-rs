@@ -94,10 +94,8 @@ fn test_by_entity_condition_collision_variants() {
     let triggering_entities = TriggeringEntities::default();
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-    let collision_type = ByEntityCondition::collision_with_type(
-        triggering_entities.clone(),
-        ObjectType::Pedestrian,
-    );
+    let collision_type =
+        ByEntityCondition::collision_with_type(triggering_entities.clone(), ObjectType::Pedestrian);
     let collision_any = ByEntityCondition::collision(triggering_entities);
 
     match collision_target.entity_condition {
@@ -208,10 +206,8 @@ fn test_by_entity_condition_safety_integration() {
     // Test collision conditions
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-    let collision_type = ByEntityCondition::collision_with_type(
-        triggering_entities.clone(),
-        ObjectType::Pedestrian,
-    );
+    let collision_type =
+        ByEntityCondition::collision_with_type(triggering_entities.clone(), ObjectType::Pedestrian);
     let collision_any = ByEntityCondition::collision(triggering_entities.clone());
 
     // Test safety conditions

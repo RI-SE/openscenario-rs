@@ -9,8 +9,7 @@ use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};
 
 /// Main trailer action wrapper containing all trailer action types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TrailerAction {
     /// Connect trailer action
     #[serde(
@@ -36,12 +35,10 @@ pub struct ConnectTrailerAction {
 }
 
 /// Disconnect trailer action for detaching trailers from vehicles
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct DisconnectTrailerAction {
     // Empty according to schema
 }
-
 
 impl Default for ConnectTrailerAction {
     fn default() -> Self {
@@ -50,7 +47,6 @@ impl Default for ConnectTrailerAction {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

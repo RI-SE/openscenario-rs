@@ -89,7 +89,11 @@ pub struct GeographicPosition {
     pub latitude: Option<Double>,
 
     /// Longitude in degrees (deprecated — XSD attribute `longitude`)
-    #[serde(rename = "@longitude", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@longitude",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub longitude: Option<Double>,
 
     /// Height above sea level in meters (deprecated — XSD attribute `height`)
@@ -97,11 +101,19 @@ pub struct GeographicPosition {
     pub height: Option<Double>,
 
     /// Latitude in degrees — XSD attribute `latitudeDeg` (current)
-    #[serde(rename = "@latitudeDeg", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@latitudeDeg",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub latitude_deg: Option<Double>,
 
     /// Longitude in degrees — XSD attribute `longitudeDeg` (current)
-    #[serde(rename = "@longitudeDeg", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@longitudeDeg",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub longitude_deg: Option<Double>,
 
     /// Altitude in meters — XSD attribute `altitude` (current)

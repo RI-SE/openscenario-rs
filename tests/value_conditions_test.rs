@@ -124,4 +124,3 @@ fn test_time_of_day_condition_with_chrono() {
         panic!("Expected literal datetime");
     }
 }
-

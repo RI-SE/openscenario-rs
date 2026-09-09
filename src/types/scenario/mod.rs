@@ -25,8 +25,7 @@ use crate::types::road::RoadNetwork;
 use serde::{Deserialize, Serialize};
 
 /// ScenarioDefinition group - XSD group wrapper for scenario sequence
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ScenarioDefinition {
     #[serde(
         rename = "ParameterDeclarations",
@@ -52,7 +51,6 @@ pub struct ScenarioDefinition {
     #[serde(rename = "Storyboard")]
     pub storyboard: Storyboard,
 }
-
 
 impl ScenarioDefinition {
     /// Create new scenario definition with required elements

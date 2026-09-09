@@ -37,8 +37,7 @@ pub struct VisibilityAction {
 }
 
 /// Set of sensor references for selective visibility control
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct SensorReferenceSet {
     /// Individual sensor references
     #[serde(rename = "SensorReference")]
@@ -54,8 +53,7 @@ pub struct SensorReference {
 }
 
 /// Appearance actions for visual changes and animations
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AppearanceAction {
     /// Light state action for lighting control
     #[serde(rename = "LightStateAction", skip_serializing_if = "Option::is_none")]
@@ -358,7 +356,6 @@ impl Default for VisibilityAction {
     }
 }
 
-
 impl Default for LightStateAction {
     fn default() -> Self {
         Self {
@@ -537,11 +534,7 @@ mod tests {
     fn test_animation_action_pedestrian_branch_roundtrip() {
         let xml = r#"<AnimationAction><AnimationType><PedestrianAnimation motion="walking" userDefinedPedestrianAnimation="limp"><PedestrianGesture gesture="wavingLeftArm"/><PedestrianGesture gesture="crossArms"/></PedestrianAnimation></AnimationType></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
-        let ped = action
-            .animation_type
-            .pedestrian_animation
-            .as_ref()
-            .unwrap();
+        let ped = action.animation_type.pedestrian_animation.as_ref().unwrap();
         assert_eq!(ped.motion, Some(PedestrianMotionType::Walking));
         assert_eq!(ped.pedestrian_gestures.len(), 2);
         assert_eq!(

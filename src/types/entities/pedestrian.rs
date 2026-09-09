@@ -230,7 +230,10 @@ mod tests {
         assert_eq!(pedestrian.model.as_deref(), Some("oldModel.osgb"));
 
         let serialized = quick_xml::se::to_string(&pedestrian).unwrap();
-        assert!(serialized.contains(r#"model="oldModel.osgb""#), "serialized: {serialized}");
+        assert!(
+            serialized.contains(r#"model="oldModel.osgb""#),
+            "serialized: {serialized}"
+        );
         let reparsed: Pedestrian = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(pedestrian, reparsed);
     }

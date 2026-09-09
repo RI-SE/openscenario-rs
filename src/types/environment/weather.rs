@@ -16,7 +16,11 @@ use serde::{Deserialize, Serialize};
 pub struct Weather {
     /// Deprecated cloud state; prefer `fractional_cloud_cover`.
     #[allow(deprecated)]
-    #[serde(rename = "@cloudState", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@cloudState",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub cloud_state: Option<CloudState>,
     #[serde(
         rename = "@atmosphericPressure",
@@ -24,7 +28,11 @@ pub struct Weather {
         skip_serializing_if = "Option::is_none"
     )]
     pub atmospheric_pressure: Option<Double>,
-    #[serde(rename = "@temperature", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@temperature",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub temperature: Option<Double>,
     #[serde(
         rename = "@fractionalCloudCover",
@@ -52,7 +60,11 @@ pub struct Weather {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Sun {
     /// Deprecated sun intensity; prefer `illuminance`.
-    #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@intensity",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub intensity: Option<Double>,
     #[serde(rename = "@azimuth")]
     pub azimuth: Double,
@@ -85,7 +97,11 @@ pub struct Precipitation {
     #[serde(rename = "@precipitationType")]
     pub precipitation_type: PrecipitationType,
     /// Deprecated intensity; prefer `precipitation_intensity`.
-    #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@intensity",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub intensity: Option<Double>,
     #[serde(
         rename = "@precipitationIntensity",

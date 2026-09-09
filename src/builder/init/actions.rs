@@ -26,9 +26,7 @@ impl InitActionBuilder {
         let global_action = GlobalAction {
             environment_action: Some(EnvironmentAction {
                 environment: Some(Environment {
-                    name: crate::types::basic::OSString::literal(
-                        "DefaultEnvironment".to_string(),
-                    ),
+                    name: crate::types::basic::OSString::literal("DefaultEnvironment".to_string()),
                     parameter_declarations: None,
                     time_of_day: None,
                     weather: None,

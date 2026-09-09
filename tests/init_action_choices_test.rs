@@ -82,8 +82,7 @@ fn global_action_infrastructure_action_round_trip() {
 #[test]
 fn global_action_set_monitor_action_round_trip() {
     // XSD SetMonitorAction: required @monitorRef and @value.
-    let xml =
-        r#"<GlobalAction><SetMonitorAction monitorRef="speedMonitor" value="true"/></GlobalAction>"#;
+    let xml = r#"<GlobalAction><SetMonitorAction monitorRef="speedMonitor" value="true"/></GlobalAction>"#;
     let action: GlobalAction = de(xml);
     let monitor = action
         .set_monitor_action
@@ -177,7 +176,9 @@ fn global_action_choice_cardinality_is_validated() {
     assert_eq!(empty.get_action_type(), None);
 
     let multiple = GlobalAction {
-        set_monitor_action: Some(openscenario_rs::types::actions::wrappers::SetMonitorAction::default()),
+        set_monitor_action: Some(
+            openscenario_rs::types::actions::wrappers::SetMonitorAction::default(),
+        ),
         traffic_action: Some(openscenario_rs::types::actions::wrappers::TrafficAction::default()),
         ..Default::default()
     };
@@ -240,7 +241,10 @@ fn private_action_trailer_action_connect_round_trip() {
 fn private_action_trailer_action_disconnect_round_trip() {
     let xml = r#"<PrivateAction><TrailerAction><DisconnectTrailerAction/></TrailerAction></PrivateAction>"#;
     let action: PrivateAction = de(xml);
-    let trailer = action.trailer_action.as_ref().expect("TrailerAction branch");
+    let trailer = action
+        .trailer_action
+        .as_ref()
+        .expect("TrailerAction branch");
     assert!(trailer.connect_trailer_action.is_none());
     assert!(trailer.disconnect_trailer_action.is_some());
     assert!(action.validate().is_ok());
@@ -279,7 +283,10 @@ fn init_actions_carry_non_environment_global_actions() {
     let init: openscenario_rs::types::scenario::init::Init = de(xml);
     assert_eq!(init.actions.global_actions.len(), 2);
     for ga in &init.actions.global_actions {
-        assert!(ga.validate().is_ok(), "each GlobalAction must hold a branch");
+        assert!(
+            ga.validate().is_ok(),
+            "each GlobalAction must hold a branch"
+        );
     }
     assert_eq!(
         init.actions.global_actions[0].get_action_type(),

@@ -15,7 +15,6 @@ use crate::types::enums::VehicleCategory;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-
 /// Traffic source action for traffic generation with rate and position
 ///
 /// This action generates traffic vehicles at a specified position with a given rate.
@@ -42,9 +41,17 @@ pub struct TrafficSourceAction {
     #[serde(rename = "Position")]
     pub position: Position,
     /// Deprecated in favor of TrafficDistribution; kept optional per XSD (minOccurs=0)
-    #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficDefinition",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_definition: Option<TrafficDefinition>,
-    #[serde(rename = "TrafficDistribution", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficDistribution",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_distribution: Option<TrafficDistribution>,
 }
 
@@ -67,7 +74,11 @@ pub struct TrafficSinkAction {
     pub radius: Double,
     #[serde(rename = "Position")]
     pub position: Position,
-    #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficDefinition",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_definition: Option<TrafficDefinition>,
 }
 
@@ -125,11 +136,23 @@ pub struct TrafficSwarmAction {
     pub velocity: Option<Double>,
     #[serde(rename = "CentralObject")]
     pub central_object: CentralSwarmObject,
-    #[serde(rename = "TrafficDefinition", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficDefinition",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_definition: Option<TrafficDefinition>,
-    #[serde(rename = "TrafficDistribution", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "TrafficDistribution",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_distribution: Option<TrafficDistribution>,
-    #[serde(rename = "InitialSpeedRange", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "InitialSpeedRange",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub initial_speed_range: Option<Range>,
     #[serde(
         rename = "DirectionOfTravelDistribution",
@@ -241,7 +264,6 @@ pub struct TrafficSignalGroupState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficStopAction {}
 
-
 /// Traffic definition for vehicle category and controller distribution
 ///
 /// Defines the properties of traffic that should be generated, including
@@ -311,7 +333,11 @@ pub struct ControllerDistribution {
 pub struct ControllerDistributionEntry {
     #[serde(rename = "@weight")]
     pub weight: Double,
-    #[serde(rename = "Controller", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Controller",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub controller: Option<Controller>,
     #[serde(
         rename = "CatalogReference",
@@ -407,7 +433,11 @@ pub struct TrafficDistributionEntry {
     pub weight: Double,
     #[serde(rename = "EntityDistribution")]
     pub entity_distribution: EntityDistribution,
-    #[serde(rename = "Properties", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Properties",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub properties: Option<Properties>,
 }
 
@@ -422,7 +452,6 @@ pub struct DirectionOfTravelDistribution {
     #[serde(rename = "@opposite")]
     pub opposite: Double,
 }
-
 
 impl Default for TrafficSourceAction {
     fn default() -> Self {
@@ -466,7 +495,6 @@ impl Default for TrafficSwarmAction {
         }
     }
 }
-
 
 impl Default for TrafficSignalAction {
     fn default() -> Self {
@@ -608,7 +636,11 @@ impl Default for TrafficArea {
 impl Default for Polygon {
     fn default() -> Self {
         Self {
-            position: vec![Position::default(), Position::default(), Position::default()],
+            position: vec![
+                Position::default(),
+                Position::default(),
+                Position::default(),
+            ],
         }
     }
 }
@@ -634,7 +666,9 @@ impl Default for RoadCursor {
 
 impl Default for Lane {
     fn default() -> Self {
-        Self { id: Int::literal(0) }
+        Self {
+            id: Int::literal(0),
+        }
     }
 }
 
@@ -675,8 +709,6 @@ impl Default for TrafficAreaAction {
         }
     }
 }
-
-
 
 impl TrafficSourceAction {
     /// Create traffic source with radius, rate and position
@@ -1151,12 +1183,8 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_creation() {
-        let source = TrafficSourceAction::new(
-            5.0,
-            15.0,
-            Position::default(),
-            TrafficDefinition::default(),
-        );
+        let source =
+            TrafficSourceAction::new(5.0, 15.0, Position::default(), TrafficDefinition::default());
 
         assert_eq!(source.radius.as_literal(), Some(&5.0));
         assert_eq!(source.rate.as_literal(), Some(&15.0));
@@ -1775,7 +1803,10 @@ mod tests {
         assert_eq!(action.speed.clone().unwrap().as_literal(), Some(&15.0));
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
-        assert!(serialized.contains(r#"speed="15""#), "serialized: {serialized}");
+        assert!(
+            serialized.contains(r#"speed="15""#),
+            "serialized: {serialized}"
+        );
         let reparsed: TrafficSourceAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action, reparsed);
     }
@@ -1862,7 +1893,9 @@ mod tests {
                     RoadCursor {
                         road_id: OSString::literal("Road1".to_string()),
                         s: Some(Double::literal(0.0)),
-                        lane: vec![Lane { id: Int::literal(-1) }],
+                        lane: vec![Lane {
+                            id: Int::literal(-1),
+                        }],
                     },
                     RoadCursor {
                         road_id: OSString::literal("Road1".to_string()),
@@ -1879,7 +1912,12 @@ mod tests {
         assert!(reparsed.polygon.is_none());
         assert_eq!(reparsed.road_range.len(), 1);
         assert_eq!(reparsed.road_range[0].road_cursor.len(), 2);
-        assert_eq!(reparsed.road_range[0].road_cursor[0].lane[0].id.as_literal(), Some(&-1));
+        assert_eq!(
+            reparsed.road_range[0].road_cursor[0].lane[0]
+                .id
+                .as_literal(),
+            Some(&-1)
+        );
     }
 
     #[test]
@@ -1946,7 +1984,11 @@ mod tests {
         let reparsed: TrafficSwarmAction = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(swarm, reparsed);
         assert_eq!(
-            reparsed.initial_speed_range.unwrap().lower_limit.as_literal(),
+            reparsed
+                .initial_speed_range
+                .unwrap()
+                .lower_limit
+                .as_literal(),
             Some(&5.0)
         );
         assert_eq!(

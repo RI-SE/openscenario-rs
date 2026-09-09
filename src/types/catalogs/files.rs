@@ -277,7 +277,10 @@ mod tests {
         assert_eq!(env.name, "Sunny");
         let weather = env.weather.as_ref().expect("Weather must be preserved");
         let sun = weather.sun.as_ref().expect("Sun must be preserved");
-        assert_eq!(sun.illuminance.as_ref().unwrap().as_literal().unwrap(), &100000.0);
+        assert_eq!(
+            sun.illuminance.as_ref().unwrap().as_literal().unwrap(),
+            &100000.0
+        );
 
         let serialized = quick_xml::se::to_string(&catalog).unwrap();
         assert!(

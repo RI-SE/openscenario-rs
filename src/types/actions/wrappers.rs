@@ -149,7 +149,11 @@ impl Default for CustomCommandAction {
 /// `CatalogReference` (to a `CatalogEnvironment` catalog entry).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct EnvironmentAction {
-    #[serde(rename = "Environment", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Environment",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub environment: Option<crate::types::environment::Environment>,
     #[serde(
         rename = "CatalogReference",
@@ -346,9 +350,6 @@ impl Default for TrafficAction {
     }
 }
 
-
-
-
 impl Default for NamedAction {
     fn default() -> Self {
         NamedAction {
@@ -462,7 +463,10 @@ mod tests {
     #[test]
     fn test_action_default_is_private_teleport() {
         let action = Action::default();
-        assert!(matches!(action, Action::PrivateAction(PrivateAction::TeleportAction(_))));
+        assert!(matches!(
+            action,
+            Action::PrivateAction(PrivateAction::TeleportAction(_))
+        ));
     }
 
     #[test]
@@ -475,14 +479,20 @@ mod tests {
     fn test_entity_action_default() {
         let ea = EntityAction::default();
         assert_eq!(ea.entity_ref.as_literal().unwrap(), "defaultEntity");
-        assert!(matches!(ea.action, EntityActionChoice::DeleteEntityAction(_)));
+        assert!(matches!(
+            ea.action,
+            EntityActionChoice::DeleteEntityAction(_)
+        ));
     }
 
     #[test]
     fn test_variable_action_default() {
         let va = VariableAction::default();
         assert_eq!(va.variable_ref.as_literal().unwrap(), "defaultVariable");
-        assert!(matches!(va.action, VariableActionChoice::VariableSetAction(_)));
+        assert!(matches!(
+            va.action,
+            VariableActionChoice::VariableSetAction(_)
+        ));
     }
 
     #[test]
@@ -563,7 +573,11 @@ mod tests {
         let xml = r#"<UserDefinedAction><CustomCommandAction type="myCommand">payload</CustomCommandAction></UserDefinedAction>"#;
         let action: UserDefinedAction = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
-            action.custom_command_action.command_type.as_literal().unwrap(),
+            action
+                .custom_command_action
+                .command_type
+                .as_literal()
+                .unwrap(),
             &"myCommand".to_string()
         );
 
@@ -599,4 +613,3 @@ mod tests {
         assert_eq!(action, reparsed);
     }
 }
-

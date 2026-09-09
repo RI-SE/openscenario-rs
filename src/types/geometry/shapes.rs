@@ -398,7 +398,11 @@ pub struct ClothoidSplineSegment {
     pub length: Double,
     #[serde(rename = "@hOffset", default, skip_serializing_if = "Option::is_none")]
     pub h_offset: Option<Double>,
-    #[serde(rename = "@timeStart", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@timeStart",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub time_start: Option<Double>,
 }
 
@@ -546,11 +550,21 @@ mod tests {
 
         assert_eq!(polyline.vertices.len(), 2);
         assert_eq!(
-            polyline.vertices[0].time.as_ref().unwrap().as_literal().unwrap(),
+            polyline.vertices[0]
+                .time
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap(),
             &0.0
         );
         assert_eq!(
-            polyline.vertices[1].time.as_ref().unwrap().as_literal().unwrap(),
+            polyline.vertices[1]
+                .time
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap(),
             &0.04
         );
     }
@@ -594,7 +608,10 @@ mod tests {
         };
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
-        assert!(!xml.contains("time="), "time attr must be absent when None: {xml}");
+        assert!(
+            !xml.contains("time="),
+            "time attr must be absent when None: {xml}"
+        );
     }
 
     #[test]

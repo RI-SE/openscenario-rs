@@ -69,8 +69,7 @@ fn lane_change_target_absolute_round_trip() {
 
 #[test]
 fn lane_offset_target_absolute_round_trip() {
-    let xml =
-        r#"<LaneOffsetTarget><AbsoluteTargetLaneOffset value="1.5"/></LaneOffsetTarget>"#;
+    let xml = r#"<LaneOffsetTarget><AbsoluteTargetLaneOffset value="1.5"/></LaneOffsetTarget>"#;
     let target: LaneOffsetTarget = de(xml);
     match &target.target_choice {
         LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(a) => {
@@ -92,7 +91,10 @@ fn lateral_action_lateral_distance_round_trip() {
     match &action.lateral_choice {
         LateralActionChoice::LateralDistanceAction(a) => {
             assert_eq!(a.entity_ref.to_string(), "ego");
-            assert_eq!(a.distance.as_ref().and_then(|d| d.as_literal().copied()), Some(5.0));
+            assert_eq!(
+                a.distance.as_ref().and_then(|d| d.as_literal().copied()),
+                Some(5.0)
+            );
         }
         other => panic!("expected LateralDistanceAction, got {other:?}"),
     }
@@ -110,7 +112,10 @@ fn longitudinal_action_longitudinal_distance_round_trip() {
     match &action.longitudinal_action_choice {
         LongitudinalActionChoice::LongitudinalDistanceAction(a) => {
             assert_eq!(a.entity_ref.to_string(), "lead");
-            assert_eq!(a.distance.as_ref().and_then(|d| d.as_literal().copied()), Some(12.0));
+            assert_eq!(
+                a.distance.as_ref().and_then(|d| d.as_literal().copied()),
+                Some(12.0)
+            );
         }
         other => panic!("expected LongitudinalDistanceAction, got {other:?}"),
     }
@@ -340,7 +345,8 @@ fn traffic_signal_action_controller_round_trip() {
 
 #[test]
 fn override_brake_action_brake_percent_round_trip() {
-    let xml = r#"<OverrideBrakeAction active="true"><BrakePercent value="0.5"/></OverrideBrakeAction>"#;
+    let xml =
+        r#"<OverrideBrakeAction active="true"><BrakePercent value="0.5"/></OverrideBrakeAction>"#;
     let action: OverrideBrakeAction = de(xml);
     match &action.brake_input {
         Some(BrakeInput::BrakePercent(b)) => {
@@ -358,7 +364,10 @@ fn override_brake_action_brake_percent_round_trip() {
 fn override_parking_brake_action_brake_force_round_trip() {
     let xml = r#"<OverrideParkingBrakeAction active="true"><BrakeForce value="1000"/></OverrideParkingBrakeAction>"#;
     let action: OverrideParkingBrakeAction = de(xml);
-    assert!(matches!(action.brake_input, Some(BrakeInput::BrakeForce(_))));
+    assert!(matches!(
+        action.brake_input,
+        Some(BrakeInput::BrakeForce(_))
+    ));
     let out = ser("OverrideParkingBrakeAction", &action);
     assert!(out.contains("BrakeForce"), "got: {out}");
 }

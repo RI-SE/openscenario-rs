@@ -164,15 +164,15 @@ pub struct CatalogPerformance {
 /// Axles with parameter support
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogAxles {
-    #[serde(
-        rename = "FrontAxle",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "FrontAxle", default, skip_serializing_if = "Option::is_none")]
     pub front_axle: Option<CatalogFrontAxle>,
     #[serde(rename = "RearAxle")]
     pub rear_axle: CatalogRearAxle,
-    #[serde(rename = "AdditionalAxle", default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "AdditionalAxle",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub additional_axles: Vec<CatalogRearAxle>,
 }
 
@@ -221,7 +221,10 @@ impl CatalogEntity for CatalogVehicle {
             mass: self
                 .mass
                 .as_ref()
-                .map(|m| m.resolve(&parameters).map(crate::types::basic::Double::literal))
+                .map(|m| {
+                    m.resolve(&parameters)
+                        .map(crate::types::basic::Double::literal)
+                })
                 .transpose()?,
             model3d: self
                 .model3d
@@ -241,7 +244,10 @@ impl CatalogEntity for CatalogVehicle {
                     .performance
                     .max_acceleration_rate
                     .as_ref()
-                    .map(|v| v.resolve(&parameters).map(crate::types::basic::Double::literal))
+                    .map(|v| {
+                        v.resolve(&parameters)
+                            .map(crate::types::basic::Double::literal)
+                    })
                     .transpose()?,
                 max_deceleration: crate::types::basic::Double::literal(
                     self.performance.max_deceleration.resolve(&parameters)?,
@@ -250,7 +256,10 @@ impl CatalogEntity for CatalogVehicle {
                     .performance
                     .max_deceleration_rate
                     .as_ref()
-                    .map(|v| v.resolve(&parameters).map(crate::types::basic::Double::literal))
+                    .map(|v| {
+                        v.resolve(&parameters)
+                            .map(crate::types::basic::Double::literal)
+                    })
                     .transpose()?,
             },
             axles: crate::types::Axles {
@@ -538,7 +547,11 @@ pub struct CatalogMiscObject {
     pub bounding_box: BoundingBox,
 
     /// Optional additional properties — XSD child element `<Properties>`
-    #[serde(rename = "Properties", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Properties",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub properties: Option<vehicle::Properties>,
 
     #[serde(
@@ -972,10 +985,7 @@ mod tests {
             .unwrap();
         assert_eq!(resolved.name.as_literal().unwrap(), "TrafficCone");
         assert_eq!(resolved.mass.as_literal().unwrap(), &5.0);
-        assert_eq!(
-            resolved.misc_object_category,
-            MiscObjectCategory::Obstacle
-        );
+        assert_eq!(resolved.misc_object_category, MiscObjectCategory::Obstacle);
         assert_eq!(
             resolved.model3d.as_ref().unwrap().as_literal().unwrap(),
             "cone.obj"
@@ -1003,10 +1013,7 @@ mod tests {
 
         assert_eq!(resolved.name.as_literal().unwrap(), "LogAndSetVariables");
         assert_eq!(resolved.events.len(), 1);
-        assert_eq!(
-            resolved.events[0].name.as_literal().unwrap(),
-            "AtCollision"
-        );
+        assert_eq!(resolved.events[0].name.as_literal().unwrap(), "AtCollision");
     }
 
     /// The XSD requires a Maneuver to carry at least one Event, so an empty
@@ -1187,7 +1194,10 @@ mod tests {
             max_speed.parameter_type,
             crate::types::enums::ParameterType::Double
         );
-        assert_eq!(max_speed.value.as_literal().map(String::as_str), Some("50.0"));
+        assert_eq!(
+            max_speed.value.as_literal().map(String::as_str),
+            Some("50.0")
+        );
     }
 
     /// Regression: catalog entities previously used a bespoke
@@ -1334,11 +1344,19 @@ mod tests {
         let xml = r#"<Performance maxSpeed="50" maxAcceleration="5" maxAccelerationRate="2.5" maxDeceleration="6" maxDecelerationRate="3.5"/>"#;
         let performance: CatalogPerformance = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
-            performance.max_acceleration_rate.clone().unwrap().as_literal(),
+            performance
+                .max_acceleration_rate
+                .clone()
+                .unwrap()
+                .as_literal(),
             Some(&2.5)
         );
         assert_eq!(
-            performance.max_deceleration_rate.clone().unwrap().as_literal(),
+            performance
+                .max_deceleration_rate
+                .clone()
+                .unwrap()
+                .as_literal(),
             Some(&3.5)
         );
 
@@ -1357,7 +1375,10 @@ mod tests {
         assert_eq!(axles.additional_axles.len(), 1);
 
         let serialized = quick_xml::se::to_string(&axles).unwrap();
-        assert!(serialized.contains("<AdditionalAxle"), "serialized: {serialized}");
+        assert!(
+            serialized.contains("<AdditionalAxle"),
+            "serialized: {serialized}"
+        );
         let reparsed: CatalogAxles = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(axles, reparsed);
     }

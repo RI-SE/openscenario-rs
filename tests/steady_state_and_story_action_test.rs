@@ -25,7 +25,8 @@ fn ser<T: serde::Serialize>(root: &str, v: &T) -> String {
 
 #[test]
 fn absolute_speed_target_distance_steady_state_round_trip() {
-    let xml = r#"<AbsoluteSpeed value="0"><TargetDistanceSteadyState distance="5"/></AbsoluteSpeed>"#;
+    let xml =
+        r#"<AbsoluteSpeed value="0"><TargetDistanceSteadyState distance="5"/></AbsoluteSpeed>"#;
     let speed: AbsoluteSpeed = de(xml);
     assert_eq!(speed.value.as_literal().copied(), Some(0.0));
     assert_eq!(
@@ -87,7 +88,10 @@ fn relative_speed_to_master_round_trip() {
     );
 
     let out = ser("RelativeSpeedToMaster", &speed);
-    assert!(out.contains(r#"speedTargetValueType="delta""#), "got: {out}");
+    assert!(
+        out.contains(r#"speedTargetValueType="delta""#),
+        "got: {out}"
+    );
     assert_eq!(de::<RelativeSpeedToMaster>(&out), speed);
 }
 
@@ -100,7 +104,10 @@ fn story_action_global_action_round_trip() {
     match action.global_action.as_ref().map(|g| &g.action) {
         Some(GlobalAction::EntityAction(e)) => {
             assert_eq!(e.entity_ref.to_string(), "e");
-            assert!(matches!(e.action, EntityActionChoice::DeleteEntityAction(_)));
+            assert!(matches!(
+                e.action,
+                EntityActionChoice::DeleteEntityAction(_)
+            ));
         }
         other => panic!("expected EntityAction, got {other:?}"),
     }

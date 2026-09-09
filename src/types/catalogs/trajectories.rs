@@ -122,7 +122,11 @@ pub struct CatalogClothoid {
     pub curvature: Double,
 
     /// Curvature derivative - clothoid parameter (can be parameterized) — deprecated per XSD
-    #[serde(rename = "@curvatureDot", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@curvatureDot",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub curvature_dot: Option<Double>,
 
     /// Curvature derivative (current replacement for `curvatureDot`, can be parameterized)
@@ -138,7 +142,11 @@ pub struct CatalogClothoid {
     pub length: Double,
 
     /// Start time (can be parameterized)
-    #[serde(rename = "@startTime", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@startTime",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub start_time: Option<Double>,
 
     /// Stop time (can be parameterized)
@@ -241,9 +249,7 @@ impl CatalogTrajectory {
         &self,
         parameters: &std::collections::HashMap<String, String>,
     ) -> crate::error::Result<crate::types::actions::movement::Trajectory> {
-        use crate::types::geometry::shapes::{
-            ControlPoint, Knot, Nurbs, Polyline, Shape, Vertex,
-        };
+        use crate::types::geometry::shapes::{ControlPoint, Knot, Nurbs, Polyline, Shape, Vertex};
 
         let empty_shape = Shape {
             polyline: None,
@@ -481,7 +487,9 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogTrajectory {
                 name: "Closed".to_string(),
                 parameter_type: "Boolean".to_string(),
                 default_value: Some("false".to_string()),
-                description: Some("Whether the trajectory is closed (loops back to start)".to_string()),
+                description: Some(
+                    "Whether the trajectory is closed (loops back to start)".to_string(),
+                ),
             },
         ]
     }
@@ -567,10 +575,7 @@ mod tests {
         );
 
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.1);
-        assert!(matches!(
-            clothoid.curvature_dot,
-            Some(Value::Parameter(_))
-        ));
+        assert!(matches!(clothoid.curvature_dot, Some(Value::Parameter(_))));
         assert_eq!(clothoid.length.as_literal().unwrap(), &50.0);
     }
 
@@ -636,10 +641,7 @@ mod tests {
         let trajectory =
             CatalogTrajectory::with_closed("ClosedTrajectory".to_string(), shape, true);
 
-        assert_eq!(
-            trajectory.closed.as_literal().unwrap(),
-            &true
-        );
+        assert_eq!(trajectory.closed.as_literal().unwrap(), &true);
     }
 
     #[test]
@@ -696,7 +698,11 @@ mod tests {
         .into_scenario_entity(std::collections::HashMap::new())
         .unwrap();
 
-        let resolved_nurbs = trajectory.shape.nurbs.as_ref().expect("expected NURBS shape");
+        let resolved_nurbs = trajectory
+            .shape
+            .nurbs
+            .as_ref()
+            .expect("expected NURBS shape");
         assert_eq!(resolved_nurbs.order.as_literal(), Some(&3u32));
         assert_eq!(resolved_nurbs.control_points.len(), 2);
         assert_eq!(resolved_nurbs.knots.len(), 2);
@@ -751,9 +757,18 @@ mod tests {
     <Position><WorldPosition x="0" y="0"/></Position>
 </Clothoid>"#;
         let clothoid: CatalogClothoid = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(clothoid.curvature_prime.as_ref().unwrap().as_literal(), Some(&0.02));
-        assert_eq!(clothoid.start_time.as_ref().unwrap().as_literal(), Some(&1.0));
-        assert_eq!(clothoid.stop_time.as_ref().unwrap().as_literal(), Some(&5.0));
+        assert_eq!(
+            clothoid.curvature_prime.as_ref().unwrap().as_literal(),
+            Some(&0.02)
+        );
+        assert_eq!(
+            clothoid.start_time.as_ref().unwrap().as_literal(),
+            Some(&1.0)
+        );
+        assert_eq!(
+            clothoid.stop_time.as_ref().unwrap().as_literal(),
+            Some(&5.0)
+        );
 
         let serialized = quick_xml::se::to_string(&clothoid).unwrap();
         let reparsed: CatalogClothoid = quick_xml::de::from_str(&serialized).unwrap();
@@ -769,7 +784,10 @@ mod tests {
         assert_eq!(cp.time.as_ref().unwrap().as_literal(), Some(&2.5));
 
         let serialized = quick_xml::se::to_string(&cp).unwrap();
-        assert!(serialized.contains(r#"time="2.5""#), "serialized: {serialized}");
+        assert!(
+            serialized.contains(r#"time="2.5""#),
+            "serialized: {serialized}"
+        );
         let reparsed: NurbsControlPoint = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(cp, reparsed);
     }

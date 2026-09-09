@@ -178,14 +178,20 @@ fn test_entity_distribution_xml_parsing() {
         .iter()
         .find(|e| e.weight.as_literal() == Some(&0.6))
         .unwrap();
-    assert!(weight_06.scenario_object_template.entity_catalog_reference.is_some());
+    assert!(weight_06
+        .scenario_object_template
+        .entity_catalog_reference
+        .is_some());
 
     let weight_04 = distribution
         .entries
         .iter()
         .find(|e| e.weight.as_literal() == Some(&0.4))
         .unwrap();
-    assert!(weight_04.scenario_object_template.entity_catalog_reference.is_some());
+    assert!(weight_04
+        .scenario_object_template
+        .entity_catalog_reference
+        .is_some());
 }
 
 #[test]

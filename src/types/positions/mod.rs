@@ -16,15 +16,15 @@ pub mod route;
 pub mod trajectory;
 pub mod world;
 
+pub use crate::types::actions::movement::TrajectoryRef;
 pub use relative::RelativeObjectPosition;
+pub use road::{
+    LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition,
+};
 pub use route::{
     InRoutePosition, PositionInLaneCoordinates, PositionInRoadCoordinates, PositionOfCurrentEntity,
     RoutePosition, RouteRefElement,
 };
-pub use road::{
-    LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition,
-};
-pub use crate::types::actions::movement::TrajectoryRef;
 pub use trajectory::{Trajectory, TrajectoryPosition};
 pub use world::{GeographicPosition, WorldPosition};
 
@@ -79,7 +79,11 @@ pub struct RelativeWorldPosition {
     #[serde(rename = "@dz", default, skip_serializing_if = "Option::is_none")]
     pub dz: Option<Double>,
     /// Orientation relative to the reference entity — XSD:1912, `minOccurs="0"`
-    #[serde(rename = "Orientation", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Orientation",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub orientation: Option<Orientation>,
 }
 

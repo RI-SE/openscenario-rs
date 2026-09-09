@@ -225,8 +225,6 @@ pub type Boolean = Value<bool>;
 
 pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
 
-
-
 /// Parse a parameter reference from a string
 ///
 /// Returns the parameter name if the string matches ${paramName} pattern

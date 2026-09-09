@@ -272,8 +272,10 @@ impl EntityDistribution {
 
     /// Add a distribution entry from a scenario object template and weight
     pub fn add_entry(&mut self, scenario_object_template: ScenarioObjectTemplate, weight: f64) {
-        self.entries
-            .push(EntityDistributionEntry::new(scenario_object_template, weight));
+        self.entries.push(EntityDistributionEntry::new(
+            scenario_object_template,
+            weight,
+        ));
     }
 
     /// Create a uniform distribution from scenario object templates
@@ -546,8 +548,8 @@ mod tests {
 
     #[test]
     fn test_scenario_object_template_catalog_reference_roundtrip() {
-        use crate::types::catalogs::references::CatalogReference;
         use crate::types::catalogs::entities::CatalogVehicle;
+        use crate::types::catalogs::references::CatalogReference;
 
         let catalog_ref: CatalogReference<CatalogVehicle> =
             CatalogReference::new("VehicleCatalog".to_string(), "Sedan".to_string());

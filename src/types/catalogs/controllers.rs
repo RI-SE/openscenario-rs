@@ -60,7 +60,6 @@ pub struct ControllerProperties {
     pub properties: Vec<ControllerProperty>,
 }
 
-
 /// Individual property for catalog controllers
 ///
 /// Represents a single configuration parameter for a controller that

@@ -169,13 +169,16 @@ impl<'parent> VehicleBuilder<'parent> {
             model3d: None,
             parameter_declarations: None,
             bounding_box: self.vehicle_data.bounding_box.unwrap_or_default(),
-            performance: self.vehicle_data.performance.unwrap_or_else(|| Performance {
-                max_speed: Double::literal(200.0),
-                max_acceleration: Double::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Double::literal(10.0),
-                max_deceleration_rate: None,
-            }),
+            performance: self
+                .vehicle_data
+                .performance
+                .unwrap_or_else(|| Performance {
+                    max_speed: Double::literal(200.0),
+                    max_acceleration: Double::literal(10.0),
+                    max_acceleration_rate: None,
+                    max_deceleration: Double::literal(10.0),
+                    max_deceleration_rate: None,
+                }),
             axles: self.vehicle_data.axles.unwrap_or_else(|| Axles::car()),
             properties: self.vehicle_data.properties,
             trailer_hitch: None,
@@ -329,13 +332,16 @@ impl DetachedVehicleBuilder {
             model3d: None,
             parameter_declarations: None,
             bounding_box: self.vehicle_data.bounding_box.unwrap_or_default(),
-            performance: self.vehicle_data.performance.unwrap_or_else(|| Performance {
-                max_speed: Double::literal(200.0),
-                max_acceleration: Double::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Double::literal(10.0),
-                max_deceleration_rate: None,
-            }),
+            performance: self
+                .vehicle_data
+                .performance
+                .unwrap_or_else(|| Performance {
+                    max_speed: Double::literal(200.0),
+                    max_acceleration: Double::literal(10.0),
+                    max_acceleration_rate: None,
+                    max_deceleration: Double::literal(10.0),
+                    max_deceleration_rate: None,
+                }),
             axles: self.vehicle_data.axles.unwrap_or_else(|| Axles::car()),
             properties: self.vehicle_data.properties,
             trailer_hitch: None,

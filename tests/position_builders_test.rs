@@ -77,7 +77,10 @@ mod position_builder_tests {
         assert_eq!(lane_pos.road_id.as_literal().unwrap(), "highway_1");
         assert_eq!(lane_pos.lane_id.as_literal().unwrap(), "1");
         assert_eq!(lane_pos.s.as_literal().unwrap(), &100.0);
-        assert_eq!(lane_pos.offset.as_ref().unwrap().as_literal().unwrap(), &0.0);
+        assert_eq!(
+            lane_pos.offset.as_ref().unwrap().as_literal().unwrap(),
+            &0.0
+        );
     }
 
     #[test]
@@ -123,8 +126,14 @@ mod position_builder_tests {
             rel_lane_pos.entity_ref.as_literal().unwrap(),
             "lead_vehicle"
         );
-        assert_eq!(rel_lane_pos.ds.as_ref().unwrap().as_literal().unwrap(), &10.0);
+        assert_eq!(
+            rel_lane_pos.ds.as_ref().unwrap().as_literal().unwrap(),
+            &10.0
+        );
         assert_eq!(rel_lane_pos.d_lane.as_literal().unwrap(), &0);
-        assert_eq!(rel_lane_pos.offset.as_ref().unwrap().as_literal().unwrap(), &0.0);
+        assert_eq!(
+            rel_lane_pos.offset.as_ref().unwrap().as_literal().unwrap(),
+            &0.0
+        );
     }
 }

@@ -173,7 +173,11 @@ pub struct ManeuverGroup {
     pub actors: Actors,
 
     /// Optional catalog references instead of direct maneuvers
-    #[serde(rename = "CatalogReference", default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "CatalogReference",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub catalog_reference: Vec<CatalogReference>,
 
     /// Direct maneuver definitions
@@ -403,10 +407,7 @@ mod tests {
 
         assert_eq!(maneuver_group.name.as_literal().unwrap(), "TestGroup");
         assert_eq!(
-            maneuver_group
-                .maximum_execution_count
-                .as_literal()
-                .unwrap(),
+            maneuver_group.maximum_execution_count.as_literal().unwrap(),
             &3
         );
         assert_eq!(maneuver_group.actors.entity_refs.len(), 2);
@@ -511,7 +512,11 @@ mod tests {
             </Action>
         </Event>"#;
         let result = quick_xml::de::from_str::<Event>(xml);
-        assert!(result.is_ok(), "Event with @priority should parse: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Event with @priority should parse: {:?}",
+            result.err()
+        );
         assert_eq!(result.unwrap().priority, Priority::Override);
     }
 }

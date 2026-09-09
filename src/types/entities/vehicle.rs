@@ -53,11 +53,7 @@ pub struct TrailerCoupler {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Trailer {
     /// Inline scenario object defining the trailer (boxed to break recursion)
-    #[serde(
-        rename = "Trailer",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "Trailer", default, skip_serializing_if = "Option::is_none")]
     pub trailer: Option<Box<crate::types::entities::ScenarioObject>>,
 
     /// Reference to an existing entity acting as the trailer
@@ -124,11 +120,7 @@ pub struct Vehicle {
     pub mass: Option<Double>,
 
     /// Path to an external 3D model
-    #[serde(
-        rename = "@model3d",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "@model3d", default, skip_serializing_if = "Option::is_none")]
     pub model3d: Option<OSString>,
 
     /// Parameter declarations
@@ -172,11 +164,7 @@ pub struct Vehicle {
     pub trailer_coupler: Option<TrailerCoupler>,
 
     /// Attached trailer (inline definition or reference)
-    #[serde(
-        rename = "Trailer",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "Trailer", default, skip_serializing_if = "Option::is_none")]
     pub trailer: Option<Trailer>,
 }
 

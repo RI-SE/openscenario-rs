@@ -160,9 +160,7 @@ mod tests {
 
     #[test]
     fn test_default_type_is_world_and_fails_without_offsets() {
-        let result = RelativePositionBuilder::new()
-            .to_entity("ego")
-            .finish();
+        let result = RelativePositionBuilder::new().to_entity("ego").finish();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("World offsets"));
     }

@@ -9,8 +9,7 @@ use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
 /// Road network definition for scenario
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct RoadNetwork {
     /// Logic file reference containing road network data
     #[serde(rename = "LogicFile", skip_serializing_if = "Option::is_none")]
@@ -98,7 +97,6 @@ impl SceneGraphFile {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,9 +162,7 @@ mod tests {
             logic_file: Some(LogicFile::new("test.xodr".to_string())),
             scene_graph_file: None,
             traffic_signals: Some(TrafficSignals {
-                traffic_signal_controller: vec![TrafficSignalController::new(
-                    "intersection_1",
-                )],
+                traffic_signal_controller: vec![TrafficSignalController::new("intersection_1")],
             }),
             used_area: Some(UsedArea {
                 position: vec![Position {

@@ -12,8 +12,7 @@ use crate::types::enums::ReferenceContext;
 use serde::{Deserialize, Serialize};
 
 /// Orientation definition for positions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Orientation {
     /// Heading angle (rotation around z-axis)
     #[serde(rename = "@h", skip_serializing_if = "Option::is_none")]
@@ -485,7 +484,10 @@ mod tests {
         );
 
         let serialized = quick_xml::se::to_string(&orientation).unwrap();
-        assert!(serialized.contains(r#"type="relative""#), "serialized: {serialized}");
+        assert!(
+            serialized.contains(r#"type="relative""#),
+            "serialized: {serialized}"
+        );
         let deserialized: Orientation = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(orientation, deserialized);
     }

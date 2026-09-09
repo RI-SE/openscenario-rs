@@ -336,12 +336,7 @@ mod tests {
         let deserialized: ScenarioObject = quick_xml::de::from_str(&xml).unwrap();
         assert!(deserialized.misc_object.is_some());
         assert_eq!(
-            deserialized
-                .misc_object
-                .unwrap()
-                .name
-                .as_literal()
-                .unwrap(),
+            deserialized.misc_object.unwrap().name.as_literal().unwrap(),
             "Barrier1"
         );
     }
@@ -352,13 +347,13 @@ mod tests {
         use crate::types::controllers::Controller;
         use crate::types::enums::ControllerType;
 
-        let mut obj =
-            ScenarioObject::new_vehicle("TestVehicle".to_string(), Vehicle::default());
+        let mut obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), Vehicle::default());
 
-        obj.object_controller.push(ObjectController::with_controller(Controller::new(
-            "InlineController".to_string(),
-            ControllerType::Movement,
-        )));
+        obj.object_controller
+            .push(ObjectController::with_controller(Controller::new(
+                "InlineController".to_string(),
+                ControllerType::Movement,
+            )));
         obj.object_controller
             .push(ObjectController::with_catalog_reference(
                 ControllerCatalogReference::new(

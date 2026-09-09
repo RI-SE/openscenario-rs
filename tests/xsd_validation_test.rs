@@ -9,8 +9,8 @@
 //! - Document structure validation
 
 use openscenario_rs::types::actions::movement::{
-    FollowTrajectoryAction, LongitudinalDistanceAction, SpeedAction, SpeedProfileAction,
-    TimeReference, Timing, Trajectory, TrajectoryFollowingMode, TrajectoryRef, NoneElement,
+    FollowTrajectoryAction, LongitudinalDistanceAction, NoneElement, SpeedAction,
+    SpeedProfileAction, TimeReference, Timing, Trajectory, TrajectoryFollowingMode, TrajectoryRef,
 };
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;

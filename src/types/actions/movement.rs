@@ -8,8 +8,8 @@
 //! - Trajectory following and path planning actions
 //!
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations};
-use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
+use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::enums::{
     CoordinateSystem, DynamicsDimension, DynamicsShape, FollowingMode, LateralDisplacement,
     LongitudinalDisplacement, ReferenceContext, SpeedTargetValueType,
@@ -107,7 +107,11 @@ pub struct TransitionDynamics {
     pub dynamics_dimension: DynamicsDimension,
     #[serde(rename = "@dynamicsShape")]
     pub dynamics_shape: DynamicsShape,
-    #[serde(rename = "@followingMode", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@followingMode",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub following_mode: Option<FollowingMode>,
     #[serde(rename = "@value")]
     pub value: Double,
@@ -275,8 +279,7 @@ pub struct AssignRouteAction {
 ///
 /// XSD `RoutingAction` (:1981-1988) is a choice of `AssignRouteAction` |
 /// `FollowTrajectoryAction` | `AcquirePositionAction` | `RandomRouteAction`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RoutingAction {
     /// Assign route action
     #[serde(rename = "AssignRouteAction", skip_serializing_if = "Option::is_none")]
@@ -301,11 +304,8 @@ pub struct RoutingAction {
     pub random_route_action: Option<crate::types::actions::wrappers::RandomRouteAction>,
 }
 
-
-
 /// Lane change action for lateral lane movements
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct LaneChangeAction {
     #[serde(
         rename = "@targetLaneOffset",
@@ -431,11 +431,23 @@ pub struct LateralDistanceAction {
     pub freespace: Boolean,
     #[serde(rename = "@continuous")]
     pub continuous: Boolean,
-    #[serde(rename = "@displacement", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@displacement",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub displacement: Option<LateralDisplacement>,
-    #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@coordinateSystem",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub coordinate_system: Option<CoordinateSystem>,
-    #[serde(rename = "DynamicConstraints", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "DynamicConstraints",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub dynamic_constraints: Option<DynamicConstraints>,
 }
 
@@ -488,7 +500,11 @@ pub struct LongitudinalDistanceAction {
 /// Speed profile action for time-based speed control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedProfileAction {
-    #[serde(rename = "@entityRef", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@entityRef",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub entity_ref: Option<OSString>,
     #[serde(rename = "@followingMode")]
     pub following_mode: FollowingMode,
@@ -508,16 +524,31 @@ pub struct SpeedProfileEntry {
 }
 
 /// Dynamic constraints for movement actions
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct DynamicConstraints {
-    #[serde(rename = "@maxAcceleration", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@maxAcceleration",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_acceleration: Option<Double>,
-    #[serde(rename = "@maxAccelerationRate", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@maxAccelerationRate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_acceleration_rate: Option<Double>,
-    #[serde(rename = "@maxDeceleration", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@maxDeceleration",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_deceleration: Option<Double>,
-    #[serde(rename = "@maxDecelerationRate", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@maxDecelerationRate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_deceleration_rate: Option<Double>,
     #[serde(rename = "@maxSpeed", default, skip_serializing_if = "Option::is_none")]
     pub max_speed: Option<Double>,
@@ -644,8 +675,7 @@ pub struct RelativeSpeedToMaster {
 }
 
 /// Acquire position action for moving to a specific position
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AcquirePositionAction {
     #[serde(rename = "Position")]
     pub position: Position,
@@ -711,7 +741,6 @@ impl Default for TrajectoryFollowingMode {
     }
 }
 
-
 impl Default for Timing {
     fn default() -> Self {
         Self {
@@ -741,8 +770,6 @@ impl Default for TrajectoryRef {
         }
     }
 }
-
-
 
 // Helper implementations for catalog-based actions
 
@@ -898,7 +925,6 @@ impl RoutingAction {
     }
 }
 
-
 impl LaneChangeAction {
     /// Create a new LaneChangeAction with the specified dynamics and target
     pub fn new(dynamics: TransitionDynamics, target: LaneChangeTarget) -> Self {
@@ -955,7 +981,6 @@ impl AbsoluteTargetLane {
         }
     }
 }
-
 
 impl LaneOffsetAction {
     /// Create a new LaneOffsetAction with the specified dynamics and target
@@ -1038,7 +1063,6 @@ impl AbsoluteTargetLaneOffset {
     }
 }
 
-
 impl LateralAction {
     /// Create a lateral action with lane change
     pub fn lane_change(action: LaneChangeAction) -> Self {
@@ -1061,8 +1085,6 @@ impl LateralAction {
         }
     }
 }
-
-
 
 impl Default for LaneChangeTarget {
     fn default() -> Self {
@@ -1202,7 +1224,6 @@ impl Default for SpeedProfileEntry {
     }
 }
 
-
 impl Default for SynchronizeAction {
     fn default() -> Self {
         Self {
@@ -1244,7 +1265,6 @@ impl Default for RelativeSpeedToMaster {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1829,7 +1849,10 @@ mod tests {
         assert_eq!(dynamics.following_mode, Some(FollowingMode::Position));
 
         let serialized = quick_xml::se::to_string(&dynamics).unwrap();
-        assert!(serialized.contains(r#"followingMode="position""#), "serialized: {serialized}");
+        assert!(
+            serialized.contains(r#"followingMode="position""#),
+            "serialized: {serialized}"
+        );
         let deserialized: TransitionDynamics = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(dynamics, deserialized);
     }
@@ -1854,7 +1877,10 @@ mod tests {
         assert_eq!(decls.parameter_declarations.len(), 1);
 
         let serialized = quick_xml::se::to_string(&trajectory).unwrap();
-        assert!(serialized.contains("<ParameterDeclarations>"), "serialized: {serialized}");
+        assert!(
+            serialized.contains("<ParameterDeclarations>"),
+            "serialized: {serialized}"
+        );
         let reparsed: Trajectory = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(trajectory, reparsed);
     }

@@ -96,10 +96,8 @@ mod tests {
 
     #[test]
     fn test_invalid_entity_ref_joins_available() {
-        let err = BuilderError::invalid_entity_ref(
-            "ghost",
-            &["ego".to_string(), "lead".to_string()],
-        );
+        let err =
+            BuilderError::invalid_entity_ref("ghost", &["ego".to_string(), "lead".to_string()]);
         let msg = err.to_string();
         assert!(msg.contains("ghost"));
         assert!(msg.contains("ego, lead"));

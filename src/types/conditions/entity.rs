@@ -74,8 +74,7 @@ pub struct StandStillCondition {
 }
 
 /// Condition for detecting collisions
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct CollisionCondition {
     /// Specific target entity (optional) — XSD child `<EntityRef entityRef="..."/>`
     #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
@@ -209,7 +208,11 @@ pub struct AngleCondition {
     pub angle_tolerance: Double,
 
     /// Coordinate system for angle measurement — XSD optional attr `coordinateSystem`
-    #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@coordinateSystem",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
@@ -237,7 +240,11 @@ pub struct RelativeSpeedCondition {
     pub value: Double,
 
     /// Direction of speed measurement (optional) — XSD optional attr `direction`
-    #[serde(rename = "@direction", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@direction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub direction: Option<DirectionalDimension>,
 }
 
@@ -269,11 +276,19 @@ pub struct RelativeClearanceCondition {
     pub opposite_lanes: Boolean,
 
     /// Distance to check forward (optional) — XSD optional attr `distanceForward`
-    #[serde(rename = "@distanceForward", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@distanceForward",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub distance_forward: Option<Double>,
 
     /// Distance to check backward (optional) — XSD optional attr `distanceBackward`
-    #[serde(rename = "@distanceBackward", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@distanceBackward",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub distance_backward: Option<Double>,
 
     /// Whether to use free space measurement — XSD required attr `freeSpace`
@@ -301,7 +316,11 @@ pub struct RelativeAngleCondition {
     pub angle_tolerance: Double,
 
     /// Coordinate system for angle measurement — XSD optional attr `coordinateSystem`
-    #[serde(rename = "@coordinateSystem", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@coordinateSystem",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
@@ -315,8 +334,7 @@ pub struct TraveledDistanceCondition {
 
 /// Schema-compliant ByEntityCondition structure matching OpenSCENARIO XSD exactly
 /// This is the main ByEntityCondition type that should be used
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ByEntityCondition {
     /// Entities that can trigger this condition
     #[serde(rename = "TriggeringEntities")]
@@ -861,7 +879,6 @@ impl Default for StandStillCondition {
     }
 }
 
-
 impl Default for CollisionTarget {
     fn default() -> Self {
         Self {
@@ -996,7 +1013,6 @@ impl Default for EntityCondition {
         EntityCondition::Speed(SpeedCondition::default())
     }
 }
-
 
 // Convenience constructors for ByEntityCondition
 impl ByEntityCondition {
@@ -1635,10 +1651,16 @@ mod tests {
     fn test_time_headway_condition_along_route_round_trip() {
         let xml = r#"<TimeHeadwayCondition entityRef="Ego" value="1.5" freespace="true" rule="lessThan" alongRoute="true"/>"#;
         let condition: TimeHeadwayCondition = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(condition.along_route.clone().unwrap().as_literal(), Some(&true));
+        assert_eq!(
+            condition.along_route.clone().unwrap().as_literal(),
+            Some(&true)
+        );
 
         let serialized = quick_xml::se::to_string(&condition).unwrap();
-        assert!(serialized.contains(r#"alongRoute="true""#), "serialized: {serialized}");
+        assert!(
+            serialized.contains(r#"alongRoute="true""#),
+            "serialized: {serialized}"
+        );
         let deserialized: TimeHeadwayCondition = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(condition, deserialized);
     }
@@ -1651,7 +1673,10 @@ mod tests {
     </TimeToCollisionConditionTarget>
 </TimeToCollisionCondition>"#;
         let condition: TimeToCollisionCondition = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(condition.along_route.clone().unwrap().as_literal(), Some(&false));
+        assert_eq!(
+            condition.along_route.clone().unwrap().as_literal(),
+            Some(&false)
+        );
 
         let serialized = quick_xml::se::to_string(&condition).unwrap();
         let deserialized: TimeToCollisionCondition = quick_xml::de::from_str(&serialized).unwrap();

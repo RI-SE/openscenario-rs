@@ -34,7 +34,11 @@ pub struct Clothoid {
     #[serde(rename = "@curvature")]
     pub curvature: Double,
     /// Curvature derivative (clothoid parameter) — deprecated, use `curvature_prime`
-    #[serde(rename = "@curvatureDot", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@curvatureDot",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub curvature_dot: Option<Double>,
     /// Curvature derivative (current replacement for `curvatureDot`)
     #[serde(
@@ -47,7 +51,11 @@ pub struct Clothoid {
     #[serde(rename = "@length")]
     pub length: Double,
     /// Start time
-    #[serde(rename = "@startTime", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@startTime",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub start_time: Option<Double>,
     /// Stop time
     #[serde(rename = "@stopTime", default, skip_serializing_if = "Option::is_none")]
@@ -125,7 +133,9 @@ impl Default for Trajectory {
             closed: false,
             parameter_declarations: None,
             shape: Shape {
-                polyline: Some(crate::types::geometry::shapes::Polyline { vertices: Vec::new() }),
+                polyline: Some(crate::types::geometry::shapes::Polyline {
+                    vertices: Vec::new(),
+                }),
                 clothoid: None,
                 clothoid_spline: None,
                 nurbs: None,
@@ -283,10 +293,10 @@ mod tests {
             },
         };
         let xml = quick_xml::se::to_string(&clothoid).unwrap();
-        assert!(xml.contains(r#"curvature="0.1""#),    "serialized: {xml}");
+        assert!(xml.contains(r#"curvature="0.1""#), "serialized: {xml}");
         assert!(xml.contains(r#"curvatureDot="0.01""#), "serialized: {xml}");
-        assert!(xml.contains(r#"length="50""#),         "serialized: {xml}");
-        assert!(xml.contains("Position"),               "serialized: {xml}");
+        assert!(xml.contains(r#"length="50""#), "serialized: {xml}");
+        assert!(xml.contains("Position"), "serialized: {xml}");
 
         let deserialized: Clothoid = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(clothoid, deserialized);
@@ -311,7 +321,10 @@ mod tests {
             },
         };
         let xml = quick_xml::se::to_string(&clothoid).unwrap();
-        assert!(!xml.contains("curvatureDot"), "curvatureDot attr must be absent: {xml}");
+        assert!(
+            !xml.contains("curvatureDot"),
+            "curvatureDot attr must be absent: {xml}"
+        );
         let deserialized: Clothoid = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(clothoid, deserialized);
     }
@@ -338,7 +351,10 @@ mod tests {
         assert_eq!(decls.parameter_declarations.len(), 1);
 
         let serialized = quick_xml::se::to_string(&trajectory).unwrap();
-        assert!(serialized.contains("<ParameterDeclarations>"), "serialized: {serialized}");
+        assert!(
+            serialized.contains("<ParameterDeclarations>"),
+            "serialized: {serialized}"
+        );
         let reparsed: Trajectory = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(trajectory, reparsed);
     }

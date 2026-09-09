@@ -15,38 +15,16 @@ pub mod trailer; // Trailer actions
 pub mod wrappers; // Action wrapper types matching XSD schema
 
 pub use movement::{
-    AbsoluteTargetLane,
-    AbsoluteTargetLaneOffset,
-    AcquirePositionAction,
-    AssignRouteAction,
-    DynamicConstraints,
-    FinalSpeed,
-    FollowTrajectoryAction,
-    LaneChangeAction,
-    LaneChangeTarget,
-    LaneChangeTargetChoice,
-    LaneOffsetAction,
-    LaneOffsetActionDynamics,
-    LaneOffsetTarget,
-    LaneOffsetTargetChoice,
-    LateralAction,
-    LateralActionChoice,
-    LateralDistanceAction,
-    LongitudinalAction,
-    LongitudinalDistanceAction,
-    RelativeTargetLane,
-    RelativeTargetLaneOffset,
-    RoutingAction,
-    SpeedAction,
-    SpeedProfileAction,
-    SynchronizeAction,
-    TargetDistanceSteadyState,
-    TargetTimeSteadyState,
-    TeleportAction,
-    Trajectory,
-    TrajectoryFollowingMode,
+    AbsoluteTargetLane, AbsoluteTargetLaneOffset, AcquirePositionAction, AssignRouteAction,
+    DynamicConstraints, FinalSpeed, FollowTrajectoryAction, LaneChangeAction, LaneChangeTarget,
+    LaneChangeTargetChoice, LaneOffsetAction, LaneOffsetActionDynamics, LaneOffsetTarget,
+    LaneOffsetTargetChoice, LateralAction, LateralActionChoice, LateralDistanceAction,
+    LongitudinalAction, LongitudinalDistanceAction, RelativeTargetLane, RelativeTargetLaneOffset,
+    RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction, TargetDistanceSteadyState,
+    TargetTimeSteadyState, TeleportAction, Trajectory, TrajectoryFollowingMode,
 };
 
+pub use crate::types::enums::VehicleCategory;
 pub use traffic::{
     CentralSwarmObject,
     ControllerDistribution,
@@ -58,10 +36,10 @@ pub use traffic::{
     RoadRange,
     TrafficArea,
     TrafficAreaAction,
-    TrafficDistribution,
-    TrafficDistributionEntry,
     // Supporting types
     TrafficDefinition,
+    TrafficDistribution,
+    TrafficDistributionEntry,
     TrafficSignalAction,
     TrafficSignalController,
     TrafficSignalControllerAction,
@@ -74,7 +52,6 @@ pub use traffic::{
     TrafficSwarmAction,
     VehicleCategoryDistribution,
 };
-pub use crate::types::enums::VehicleCategory;
 
 // Export appearance actions
 pub use appearance::{
@@ -90,20 +67,9 @@ pub use trailer::{ConnectTrailerAction, DisconnectTrailerAction, TrailerAction};
 
 // Export updated controller action
 pub use control::{
-    ActivateControllerAction,
-    AssignControllerAction,
-    AutomaticGear,
-    AutomaticGearType,
-    Brake,
-    BrakeInput,
-    ControllerAction,
-    Gear,
-    ManualGear,
-    OverrideBrakeAction,
-    OverrideClutchAction,
-    OverrideGearAction,
-    OverrideParkingBrakeAction,
-    OverrideSteeringWheelAction,
+    ActivateControllerAction, AssignControllerAction, AutomaticGear, AutomaticGearType, Brake,
+    BrakeInput, ControllerAction, Gear, ManualGear, OverrideBrakeAction, OverrideClutchAction,
+    OverrideGearAction, OverrideParkingBrakeAction, OverrideSteeringWheelAction,
     OverrideThrottleAction,
 };
 

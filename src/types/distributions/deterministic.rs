@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Container for deterministic parameter distributions (matches XSD Deterministic type)
 /// This version handles interspersed elements by collecting them all in one place
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Deterministic {
     pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
     pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
@@ -162,9 +161,13 @@ impl DeterministicSingleParameterDistribution {
             Some(DeterministicSingleParameterDistributionType::DistributionSet(set.clone()))
         } else if let Some(range) = &self.distribution_range {
             Some(DeterministicSingleParameterDistributionType::DistributionRange(range.clone()))
-        } else { self.user_defined_distribution.as_ref().map(|user_defined| DeterministicSingleParameterDistributionType::UserDefinedDistribution(
+        } else {
+            self.user_defined_distribution.as_ref().map(|user_defined| {
+                DeterministicSingleParameterDistributionType::UserDefinedDistribution(
                     user_defined.clone(),
-                )) }
+                )
+            })
+        }
     }
 
     /// Check if this has a distribution set
@@ -184,8 +187,7 @@ impl DeterministicSingleParameterDistribution {
 }
 
 /// Multi-parameter deterministic distribution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeterministicMultiParameterDistribution {
     #[serde(rename = "ValueSetDistribution")]
     pub distribution_type: ValueSetDistribution,
@@ -299,7 +301,6 @@ impl Deterministic {
     }
 }
 
-
 impl ValidateDistribution for Deterministic {
     fn validate(&self) -> Result<()> {
         for dist in &self.single_distributions {
@@ -400,7 +401,6 @@ impl Default for DeterministicSingleParameterDistributionType {
         Self::DistributionSet(DistributionSet::default())
     }
 }
-
 
 impl Default for DistributionSet {
     fn default() -> Self {

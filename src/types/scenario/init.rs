@@ -7,12 +7,12 @@
 //! - Integration with existing action and environment systems
 //!
 use crate::types::actions::appearance::{AppearanceAction, VisibilityAction};
-use crate::types::actions::trailer::TrailerAction;
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{
     LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction,
     TeleportAction,
 };
+use crate::types::actions::trailer::TrailerAction;
 use crate::types::basic::OSString;
 use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
@@ -147,7 +147,11 @@ impl GlobalAction {
 /// Environment setup action: XSD choice of an inline Environment or a CatalogReference
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct EnvironmentAction {
-    #[serde(rename = "Environment", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Environment",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub environment: Option<Environment>,
     #[serde(
         rename = "CatalogReference",
@@ -173,8 +177,7 @@ pub struct Private {
 /// Private actions that can be applied to individual entities
 /// XSD requires exactly one child element (choice group)
 /// The PrivateAction element in XML contains one of these action types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct PrivateAction {
     /// Exactly one of these fields should be present (XML choice group)
     #[serde(
@@ -294,7 +297,6 @@ impl PrivateAction {
         }
     }
 }
-
 
 /// Longitudinal movement actions (speed control, etc.)
 /// XSD requires exactly one child element (choice group)

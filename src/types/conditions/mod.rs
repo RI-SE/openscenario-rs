@@ -33,4 +33,3 @@ pub use value::{
 // `Condition`/`ConditionWrapper` pair used to live here with an internally-tagged
 // `#[serde(tag = "type")]` representation and only two variants; it matched no schema type
 // and shadowed the real one on import, so it was removed.
-

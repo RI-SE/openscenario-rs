@@ -293,9 +293,8 @@ impl CatalogLoader {
     pub fn load_route_catalogs_from_directory(
         &self,
         directory: &Directory,
-    ) -> Result<
-        std::collections::HashMap<String, Vec<crate::types::catalogs::routes::CatalogRoute>>,
-    > {
+    ) -> Result<std::collections::HashMap<String, Vec<crate::types::catalogs::routes::CatalogRoute>>>
+    {
         let catalog_files = self.discover_catalog_files(directory)?;
         let mut catalogs = std::collections::HashMap::new();
 

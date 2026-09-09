@@ -110,8 +110,14 @@ mod tests {
         decls.add_monitor("monitor2".to_string(), false);
 
         assert_eq!(decls.len(), 2);
-        assert_eq!(decls.monitor_declarations[0].value.as_literal(), Some(&true));
-        assert_eq!(decls.monitor_declarations[1].value.as_literal(), Some(&false));
+        assert_eq!(
+            decls.monitor_declarations[0].value.as_literal(),
+            Some(&true)
+        );
+        assert_eq!(
+            decls.monitor_declarations[1].value.as_literal(),
+            Some(&false)
+        );
     }
 
     #[test]

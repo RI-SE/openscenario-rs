@@ -4,10 +4,10 @@
 //! environment configurations across multiple scenarios with parameter substitution.
 
 use crate::types::basic::{Boolean, Double, OSString, ParameterDeclarations, Value};
+use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType, Wetness};
 use crate::types::environment::{
     Environment, Fog, Precipitation, RoadCondition, Sun, TimeOfDay, Weather,
 };
-use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType, Wetness};
 use serde::{Deserialize, Serialize};
 
 /// Environment definition within a catalog
@@ -89,7 +89,11 @@ pub struct CatalogWeather {
     pub atmospheric_pressure: Option<Double>,
 
     /// Temperature in Kelvin (optional, can be parameterized)
-    #[serde(rename = "@temperature", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@temperature",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub temperature: Option<Double>,
 
     /// Fractional cloud cover (optional) — XSD `@fractionalCloudCover` attribute
@@ -130,7 +134,11 @@ pub struct CatalogWeather {
 #[serde(rename = "Sun")]
 pub struct CatalogSun {
     /// Light intensity (0.0-1.0, can be parameterized) — deprecated per XSD
-    #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@intensity",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub intensity: Option<Double>,
 
     /// Sun azimuth angle in radians (can be parameterized)
@@ -142,7 +150,11 @@ pub struct CatalogSun {
     pub elevation: Double,
 
     /// Illuminance in lux (optional, current replacement for `intensity`)
-    #[serde(rename = "@illuminance", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@illuminance",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub illuminance: Option<Double>,
 }
 
@@ -177,7 +189,11 @@ pub struct CatalogPrecipitation {
     pub precipitation_type: PrecipitationType,
 
     /// Precipitation intensity (0.0-1.0, can be parameterized) — deprecated per XSD
-    #[serde(rename = "@intensity", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@intensity",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub intensity: Option<Double>,
 
     /// Precipitation intensity (current replacement for `intensity`)
@@ -497,7 +513,15 @@ mod tests {
 
         assert_eq!(sunny.cloud_state, Some(CloudState::Free));
         assert_eq!(
-            sunny.sun.as_ref().unwrap().intensity.as_ref().unwrap().as_literal().unwrap(),
+            sunny
+                .sun
+                .as_ref()
+                .unwrap()
+                .intensity
+                .as_ref()
+                .unwrap()
+                .as_literal()
+                .unwrap(),
             &1.0
         );
         assert_eq!(
@@ -565,7 +589,14 @@ mod tests {
         assert_eq!(environment.name, "ParameterizedEnvironment");
         assert!(environment.parameter_declarations.is_some());
         assert!(matches!(
-            environment.weather.as_ref().unwrap().fog.as_ref().unwrap().visual_range,
+            environment
+                .weather
+                .as_ref()
+                .unwrap()
+                .fog
+                .as_ref()
+                .unwrap()
+                .visual_range,
             Value::Parameter(_)
         ));
     }
@@ -649,14 +680,13 @@ mod tests {
         assert_eq!(resolved.name.as_literal().unwrap(), "Rainy");
         let weather = resolved.weather.as_ref().unwrap();
         assert_eq!(
-            weather
-                .precipitation
-                .as_ref()
-                .unwrap()
-                .precipitation_type,
+            weather.precipitation.as_ref().unwrap().precipitation_type,
             crate::types::enums::PrecipitationType::Rain
         );
-        assert_eq!(weather.fog.as_ref().unwrap().visual_range, Value::Literal(5000.0));
+        assert_eq!(
+            weather.fog.as_ref().unwrap().visual_range,
+            Value::Literal(5000.0)
+        );
 
         let road_condition = resolved.road_condition.as_ref().unwrap();
         assert_eq!(
@@ -701,7 +731,10 @@ mod tests {
             serialized.contains(r#"fractionalCloudCover="threeOktas""#),
             "serialized as attribute: {serialized}"
         );
-        assert!(!serialized.contains("<FractionalCloudCover"), "serialized: {serialized}");
+        assert!(
+            !serialized.contains("<FractionalCloudCover"),
+            "serialized: {serialized}"
+        );
 
         let reparsed: CatalogWeather = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(weather, reparsed);

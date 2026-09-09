@@ -153,11 +153,7 @@ mod tests {
 
     #[test]
     fn test_build_alias_works_same_as_finish() {
-        let pos = WorldPositionBuilder::new()
-            .x(5.0)
-            .y(6.0)
-            .build()
-            .unwrap();
+        let pos = WorldPositionBuilder::new().x(5.0).y(6.0).build().unwrap();
         assert!(pos.world_position.is_some());
     }
 }

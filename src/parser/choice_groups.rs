@@ -110,7 +110,7 @@ impl ChoiceGroupParser {
 
         let start_pos = if let Some(pos) = self.xml.find(&container_start_tag) {
             // Find the end of the opening tag
-            
+
             (self.xml[pos..]
                 .find('>')
                 .ok_or_else(|| Error::validation_error("xml", "Malformed container start tag"))?

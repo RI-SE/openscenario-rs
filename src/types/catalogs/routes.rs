@@ -434,7 +434,10 @@ mod tests {
         assert_eq!(resolved.name.as_literal().unwrap(), "ResolvedRoute");
         assert_eq!(resolved.closed.as_literal(), Some(&true));
         assert_eq!(resolved.waypoints.len(), 2);
-        assert_eq!(resolved.waypoints[0].route_strategy, RouteStrategy::Shortest);
+        assert_eq!(
+            resolved.waypoints[0].route_strategy,
+            RouteStrategy::Shortest
+        );
         assert_eq!(resolved.waypoints[1].route_strategy, RouteStrategy::Fastest);
     }
 

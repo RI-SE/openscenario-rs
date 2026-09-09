@@ -12,13 +12,11 @@ use crate::types::catalogs::references::CatalogReference;
 use crate::types::controllers::{Controller, ObjectController};
 use serde::{Deserialize, Serialize};
 
-
 /// Main controller action wrapper containing all controller action types
 ///
 /// XSD `ControllerAction` (:978-984): a 3-way choice of `AssignControllerAction`
 /// | `OverrideControllerValueAction` | `ActivateControllerAction`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ControllerAction {
     /// Assign controller action
     #[serde(
@@ -100,7 +98,10 @@ pub struct ActivateControllerAction {
     #[serde(rename = "@controllerRef", skip_serializing_if = "Option::is_none")]
     pub controller_ref: Option<OSString>,
     /// Reference to an object controller — XSD `@objectControllerRef`
-    #[serde(rename = "@objectControllerRef", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "@objectControllerRef",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub object_controller_ref: Option<OSString>,
     #[serde(rename = "@longitudinal", skip_serializing_if = "Option::is_none")]
     pub longitudinal: Option<Boolean>,
@@ -182,7 +183,6 @@ pub struct OverrideClutchAction {
     pub max_rate: Option<Double>,
 }
 
-
 /// Manual gear specification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ManualGear {
@@ -198,8 +198,7 @@ pub struct AutomaticGear {
 }
 
 /// Automatic gear type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum AutomaticGearType {
     #[serde(rename = "p")]
     Park,
@@ -239,7 +238,6 @@ pub enum Gear {
     AutomaticGear(AutomaticGear),
 }
 
-
 impl Default for AssignControllerAction {
     fn default() -> Self {
         Self {
@@ -253,7 +251,6 @@ impl Default for AssignControllerAction {
         }
     }
 }
-
 
 impl Default for ActivateControllerAction {
     fn default() -> Self {
@@ -284,7 +281,6 @@ impl Default for AutomaticGear {
     }
 }
 
-
 impl Default for Brake {
     fn default() -> Self {
         Self {
@@ -305,7 +301,6 @@ impl Default for Gear {
         Self::AutomaticGear(AutomaticGear::default())
     }
 }
-
 
 impl AssignControllerAction {
     /// Create assignment with direct controller
@@ -716,13 +711,22 @@ mod tests {
 
         let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
         assert!(action.object_controller.is_some());
-        assert_eq!(action.activate_lateral.clone().unwrap().as_literal(), Some(&true));
+        assert_eq!(
+            action.activate_lateral.clone().unwrap().as_literal(),
+            Some(&true)
+        );
         assert_eq!(
             action.activate_longitudinal.clone().unwrap().as_literal(),
             Some(&false)
         );
-        assert_eq!(action.activate_animation.clone().unwrap().as_literal(), Some(&true));
-        assert_eq!(action.activate_lighting.clone().unwrap().as_literal(), Some(&false));
+        assert_eq!(
+            action.activate_animation.clone().unwrap().as_literal(),
+            Some(&true)
+        );
+        assert_eq!(
+            action.activate_lighting.clone().unwrap().as_literal(),
+            Some(&false)
+        );
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
         let reparsed: AssignControllerAction = quick_xml::de::from_str(&serialized).unwrap();

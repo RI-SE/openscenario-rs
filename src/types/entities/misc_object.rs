@@ -22,11 +22,7 @@ pub struct MiscObject {
     pub name: OSString,
 
     /// Path to an external 3D model
-    #[serde(
-        rename = "@model3d",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "@model3d", default, skip_serializing_if = "Option::is_none")]
     pub model3d: Option<OSString>,
 
     /// Parameter declarations
@@ -42,7 +38,11 @@ pub struct MiscObject {
     pub bounding_box: BoundingBox,
 
     /// Additional properties
-    #[serde(rename = "Properties", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "Properties",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub properties: Option<Properties>,
 }
 
