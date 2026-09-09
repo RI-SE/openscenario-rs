@@ -55,40 +55,99 @@ fi
 
 mkdir -p "$CORPUS_DIR"
 
+# git_at <dir> <args...>
+#
+# Runs git against $dir with an explicit --git-dir/--work-tree rather than
+# `git -C $dir`. This matters because the corpus lives *inside* this
+# repository's working tree: when $dir is not a valid repo, `git -C $dir`
+# silently walks up and operates on openscenario-rs itself — reporting the
+# outer repo's HEAD, finding the outer repo's `origin`, and fetching the
+# pinned corpus SHA from git@github.com:RI-SE/openscenario-rs.git, which
+# fails with the baffling "upload-pack: not our ref <sha>". An explicit
+# --git-dir refuses to escape and errors instead.
+git_at() {
+  local dir="$1"
+  shift
+  git --git-dir="${dir}/.git" --work-tree="$dir" "$@"
+}
+
+# clone_sha_at <dir>
+#
+# Prints the HEAD SHA if $dir is a usable clone, otherwise fails. A directory
+# that exists but holds a half-built or broken .git (an interrupted earlier
+# run) fails here rather than reporting a nonsense SHA.
+clone_sha_at() {
+  local dir="$1"
+  [[ -d "${dir}/.git" ]] || return 1
+  git_at "$dir" rev-parse HEAD 2>/dev/null
+}
+
 # fetch_pinned <name> <url> <sha> <dest>
 #
 # Clones a single commit of a repo into $dest, pinned to $sha. Idempotent: if
-# $dest already exists and its HEAD already matches $sha, this is a fast
-# no-op. Relies on the "fetch an arbitrary SHA" idiom below, which requires
-# the server to allow fetching by commit hash rather than just by ref
+# $dest is already a clone whose HEAD matches $sha, this is a fast no-op.
+# Relies on the "fetch an arbitrary SHA" idiom below, which requires the
+# server to allow fetching by commit hash rather than just by ref
 # (uploadpack.allowReachableSHA1InWant). This has been verified to work
 # against GitHub for both repos used here.
+#
+# The clone is built in a temporary directory and moved into place only after
+# its SHA is verified, so an interrupted or failed run can never leave a
+# broken clone at $dest for the next run to trip over.
 fetch_pinned() {
   local name="$1" url="$2" sha="$3" dest="$4"
 
-  if [[ -d "$dest/.git" ]]; then
-    local current_sha
-    current_sha="$(git -C "$dest" rev-parse HEAD 2>/dev/null || true)"
-    if [[ "$current_sha" == "$sha" ]]; then
-      echo "==> ${name}: already at ${sha}, skipping"
-      return 0
-    fi
-    echo "==> ${name}: present but at ${current_sha:-<unknown>}, expected ${sha}; re-fetching"
-    rm -rf "$dest"
+  local current_sha
+  if current_sha="$(clone_sha_at "$dest")" && [[ "$current_sha" == "$sha" ]]; then
+    echo "==> ${name}: already at ${sha}, skipping"
+    return 0
   fi
+
+  if [[ -e "$dest" ]]; then
+    if [[ -n "${current_sha:-}" ]]; then
+      echo "==> ${name}: present but at ${current_sha}, expected ${sha}; re-fetching"
+    else
+      echo "==> ${name}: present but not a usable clone; re-fetching"
+    fi
+  fi
+
+  local tmp="${CORPUS_DIR}/.tmp-${name}.$$"
+  rm -rf "$tmp"
+  # shellcheck disable=SC2064  # $tmp is intentionally expanded now, not at trap time
+  trap "rm -rf '${tmp}'" RETURN
 
   echo "==> ${name}: fetching ${sha} from ${url}"
-  git init -q "$dest"
-  git -C "$dest" remote add origin "$url" 2>/dev/null || true
-  git -C "$dest" fetch -q --depth 1 origin "$sha"
-  git -C "$dest" checkout -q FETCH_HEAD
+  git init -q "$tmp"
+  git_at "$tmp" remote add origin "$url"
+
+  # Retry the fetch: GitHub intermittently answers a fetch-by-SHA with
+  # "not our ref" even for a current branch tip, and a corpus fetch is not
+  # worth failing a whole push over a blip.
+  local attempt
+  for attempt in 1 2 3; do
+    if git_at "$tmp" fetch -q --depth 1 origin "$sha"; then
+      break
+    fi
+    if [[ "$attempt" -eq 3 ]]; then
+      echo "==> ${name}: ERROR: could not fetch ${sha} from ${url} after 3 attempts" >&2
+      return 1
+    fi
+    echo "==> ${name}: fetch attempt ${attempt} failed; retrying in $((attempt * 3))s" >&2
+    sleep "$((attempt * 3))"
+  done
+
+  git_at "$tmp" checkout -q FETCH_HEAD
 
   local got_sha
-  got_sha="$(git -C "$dest" rev-parse HEAD)"
+  got_sha="$(git_at "$tmp" rev-parse HEAD)"
   if [[ "$got_sha" != "$sha" ]]; then
     echo "==> ${name}: ERROR: fetched HEAD ${got_sha} does not match pinned SHA ${sha}" >&2
-    exit 1
+    return 1
   fi
+
+  # Only now is the old clone replaced.
+  rm -rf "$dest"
+  mv "$tmp" "$dest"
 }
 
 fetch_pinned "OSC-ALKS-scenarios" "$ALKS_URL" "$ALKS_SHA" "${CORPUS_DIR}/OSC-ALKS-scenarios"
