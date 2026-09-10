@@ -381,13 +381,40 @@ fabricating impl was replaced with `#[derive(Default)]`, matching the sibling `P
 outside this issue's file list: `ControllerCatalogLocation` (`src/types/controllers/mod.rs`),
 an apparently-unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
 
-**The Default policy stated above is not yet enforced.** OSR-03 and OSR-04 agents A, A′, B, C, D
-and E removed every fabricating `Default` impl in the files each was assigned, but that left a
-coverage gap: ten fabricating impls in files no agent owned — `types/entities/vehicle.rs`,
-`types/scenario/{monitors,variables,story}.rs`, `types/positions/{relative,mod}.rs`, and three
-more in `src/builder/**` outside `builder/conditions/*` — plus the impls in
-`builder/conditions/*` itself. Both are now assigned: the former to OSR-04 agent G, the latter to
-OSR-04 agent F. Do not assume a type without a doc comment is clean until both close.
+OSR-04 agent G (`entities/vehicle.rs`, `scenario/{monitors,variables,story}.rs`,
+`positions/{relative,mod}.rs`, `builder/**` outside `builder/conditions/*`) closed the coverage
+gap agent E's file set left. `Vehicle::default()` (invented name `"DefaultVehicle"`, a full
+bounding box and performance figures), `MonitorDeclaration::default()` (`"DefaultMonitor"`),
+`VariableDeclaration::default()` (`"DefaultVariable"`), `RelativeObjectPosition::default()` and
+`positions::mod::RelativeWorldPosition::default()` (both `"DefaultEntity"`) were removed with no
+replacement; each type already had, or gained, an explicit `::new`-style constructor.
+`StoryAction`/`StoryPrivateAction` (`scenario/story.rs`) — the whole-child fabricators OSR-03
+deliberately deferred — were also removed with no replacement `Default`: `StoryAction`'s
+`@name` is `use="required"` with no schema default, and `StoryPrivateAction` mirrors XSD
+`PrivateAction` (`:1777-1791`), a bare `xsd:choice` with no `minOccurs="0"` override, so an
+all-`None` value is *also* not schema-valid — the F16 trap, avoided here by giving both types
+explicit per-branch constructors (`StoryAction::private`, `StoryPrivateAction::{longitudinal,
+visibility, teleport}`) instead of a container-style derived default. In `src/builder/`:
+`VisibilityActionBuilder`'s `Default` (fabricating "fully visible" for three XSD-required,
+schema-default-less attributes) was removed and inlined into its own `new()`, silencing the
+resulting `clippy::new_without_default` rather than reintroducing the impl.
+`add_global_environment_action`/`add_default_environment_action` (`builder/init/{actions,
+private}.rs`), which invented `Environment::name = "DefaultEnvironment"` on every call, now take
+an explicit `name: &str`, threaded up through `InitActionBuilder::{with_default_environment,
+for_single_vehicle, for_multiple_vehicles}` and `InitActionBuilderForStoryboard`.
+`CatalogEntityBuilder`'s and `ScenarioBuilder<Empty>`'s `Default` impls (`builder/catalog.rs`,
+`builder/scenario.rs`) were left in place — both simply delegate to their own `::new()` and
+invent nothing.
+
+**The Default policy stated above is enforced everywhere except `src/builder/conditions/*`.**
+`grep -rn "^impl Default for" src/` plus manual review confirms every fabricating impl outside
+that one directory is gone. The seven `Default` impls remaining there
+(`AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`,
+`TraveledDistanceConditionBuilder` in `entity.rs`; `SpeedConditionBuilder`,
+`ParameterConditionBuilder`, `VariableConditionBuilder` in `value.rs`;
+`RelativeDistanceConditionBuilder` in `spatial.rs`) are OSR-04 agent F's assigned scope and have
+not been touched. Do not assume those seven are clean; do not claim full enforcement until agent
+F closes that file set.
 
 ## A trap: unknown fields are silent
 

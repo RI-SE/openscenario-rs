@@ -145,11 +145,13 @@ fn test_relative_object_position_right_of() {
 }
 
 #[test]
-fn test_relative_object_position_default() {
-    let position = RelativeObjectPosition::default();
+fn test_relative_object_position_zero_offset() {
+    // OSR-04 (agent G): `RelativeObjectPosition` no longer has a fabricating `Default`
+    // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
+    let position = RelativeObjectPosition::new("reference", 0.0, 0.0);
     assert_eq!(
         position.entity_ref,
-        OSString::literal("DefaultEntity".to_string())
+        OSString::literal("reference".to_string())
     );
     assert_eq!(position.dx, Double::literal(0.0));
     assert_eq!(position.dy, Double::literal(0.0));

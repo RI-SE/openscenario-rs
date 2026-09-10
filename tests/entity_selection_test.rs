@@ -121,15 +121,21 @@ fn test_selected_entities_xml_parsing() {
 #[test]
 fn test_entity_distribution_creation() {
     let mut distribution = EntityDistribution::new();
-    distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.6);
-    distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.4);
+    distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.6,
+    );
+    distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.4,
+    );
 
     assert_eq!(distribution.entries.len(), 2);
     assert_eq!(distribution.total_weight(), 1.0);
 
     // Test uniform distribution
     let templates: Vec<ScenarioObjectTemplate> = (0..4)
-        .map(|_| ScenarioObjectTemplate::new_vehicle(Vehicle::default()))
+        .map(|_| ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())))
         .collect();
     let uniform_dist = EntityDistribution::uniform(templates);
     assert_eq!(uniform_dist.entries.len(), 4);
@@ -144,8 +150,8 @@ fn test_entity_distribution_creation() {
 #[test]
 fn test_entity_distribution_xml_serialization() {
     let templates = vec![
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
     ];
     let distribution = EntityDistribution::uniform(templates);
     let xml = quick_xml::se::to_string(&distribution).unwrap();
@@ -200,21 +206,23 @@ fn test_entity_distribution_xml_parsing() {
 
 #[test]
 fn test_entity_distribution_entry() {
-    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
     let entry = EntityDistributionEntry::new(template, 0.75);
     assert!(entry.scenario_object_template.vehicle.is_some());
     assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
 
     // Test construction via ::new
-    let default_entry =
-        EntityDistributionEntry::new(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 1.0);
+    let default_entry = EntityDistributionEntry::new(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        1.0,
+    );
     assert!(default_entry.scenario_object_template.vehicle.is_some());
     assert_eq!(default_entry.weight.as_literal().unwrap(), &1.0);
 }
 
 #[test]
 fn test_scenario_object_template_basic() {
-    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
     assert!(template.vehicle.is_some());
     assert!(template.pedestrian.is_none());
     assert!(template.external_object_reference.is_none());
@@ -341,11 +349,21 @@ fn test_complex_entity_selection_scenario() {
     let selected_pedestrians = SelectedEntities::from_names(vec!["Walker1", "Walker2"]);
 
     let mut vehicle_distribution = EntityDistribution::new();
-    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.5);
-    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.3);
-    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.2);
+    vehicle_distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.5,
+    );
+    vehicle_distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.3,
+    );
+    vehicle_distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.2,
+    );
 
-    let vehicle_template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let vehicle_template =
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
 
     // Verify all components work together
     assert_eq!(vehicle_selection.members.by_type.len(), 1);
@@ -394,9 +412,12 @@ fn test_all_defaults() {
     let _entity_selection = EntitySelection::new("Selection1", SelectedEntities::new());
     let _selected_entities = SelectedEntities::default();
     let _entity_distribution = EntityDistribution::new();
-    let _entity_distribution_entry =
-        EntityDistributionEntry::new(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 1.0);
-    let _scenario_object_template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let _entity_distribution_entry = EntityDistributionEntry::new(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        1.0,
+    );
+    let _scenario_object_template =
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
     let _external_object_reference = ExternalObjectReference::new("Sedan");
     let _by_object_type = ByObjectType::vehicle();
     let _by_type = ByType::new(ObjectType::Vehicle);
@@ -421,8 +442,8 @@ fn test_serialization_roundtrip() {
     assert_eq!(original_entities, parsed_entities);
 
     let templates = vec![
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
     ];
     let original_distribution = EntityDistribution::uniform(templates);
     let xml = quick_xml::se::to_string(&original_distribution).unwrap();

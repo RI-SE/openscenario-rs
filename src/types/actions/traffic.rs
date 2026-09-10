@@ -1721,7 +1721,7 @@ mod tests {
 
         EntityDistribution {
             entries: vec![crate::types::entities::EntityDistributionEntry::new(
-                ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+                ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
                 1.0,
             )],
         }

@@ -22,17 +22,15 @@ impl InitActionBuilder {
         Self::default()
     }
 
-    /// Add a global environment action with default environment
-    pub fn add_global_environment_action(mut self) -> Self {
+    /// Add a global environment action with a named environment
+    ///
+    /// XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`) requires `@name`; there is no
+    /// schema default, so the caller supplies it rather than getting a silently invented
+    /// `"DefaultEnvironment"` (OSR-04, agent G).
+    pub fn add_global_environment_action(mut self, name: &str) -> Self {
         let global_action = GlobalAction {
             environment_action: Some(EnvironmentAction {
-                environment: Some(Environment {
-                    name: crate::types::basic::OSString::literal("DefaultEnvironment".to_string()),
-                    parameter_declarations: None,
-                    time_of_day: None,
-                    weather: None,
-                    road_condition: None,
-                }),
+                environment: Some(Environment::new(name)),
                 catalog_reference: None,
             }),
             ..Default::default()
@@ -208,7 +206,7 @@ mod tests {
     #[test]
     fn test_init_action_builder_with_environment() {
         let init = InitActionBuilder::new()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .build()
             .unwrap();
 

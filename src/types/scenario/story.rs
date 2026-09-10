@@ -265,22 +265,31 @@ pub struct EntityRef {
     pub entity_ref: OSString,
 }
 
-// Default implementations for all structs
-impl Default for StoryAction {
-    fn default() -> Self {
+// (OSR-04, agent G) `Default` impls removed for both types below. `StoryAction`'s `@name`
+// is `use="required"` (XSD `Action`, :705-712) with no schema default, and its old impl
+// additionally fabricated a whole `PrivateAction` child nobody wrote. `StoryPrivateAction`
+// mirrors XSD `PrivateAction` (:1777-1791), a bare `xsd:choice` with no `minOccurs="0"`
+// override — the choice itself is required, so an all-`None` value (which F16 flags as the
+// wrong reasoning for "states nothing") is *also* not schema-valid content, on top of the old
+// impl's fabricated `SpeedAction` branch. Neither type gets a replacement `Default`; callers
+// build one branch explicitly via the constructors below.
+impl StoryAction {
+    /// Create a named `PrivateAction` (XSD `Action` choice member; `@name` is required and has
+    /// no schema default, so it must be supplied).
+    pub fn private(name: &str, private_action: StoryPrivateAction) -> Self {
         Self {
-            name: OSString::literal("DefaultAction".to_string()),
+            name: OSString::literal(name.to_string()),
             global_action: None,
             user_defined_action: None,
-            private_action: Some(StoryPrivateAction::default()),
+            private_action: Some(private_action),
         }
     }
 }
 
-impl Default for StoryPrivateAction {
-    fn default() -> Self {
+impl StoryPrivateAction {
+    fn empty() -> Self {
         Self {
-            longitudinal_action: Some(crate::types::scenario::init::LongitudinalAction::default()),
+            longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
             synchronize_action: None,
@@ -290,6 +299,30 @@ impl Default for StoryPrivateAction {
             routing_action: None,
             appearance_action: None,
             trailer_action: None,
+        }
+    }
+
+    /// `PrivateAction` choosing the `LongitudinalAction` branch.
+    pub fn longitudinal(action: crate::types::scenario::init::LongitudinalAction) -> Self {
+        Self {
+            longitudinal_action: Some(action),
+            ..Self::empty()
+        }
+    }
+
+    /// `PrivateAction` choosing the `VisibilityAction` branch.
+    pub fn visibility(action: crate::types::actions::VisibilityAction) -> Self {
+        Self {
+            visibility_action: Some(action),
+            ..Self::empty()
+        }
+    }
+
+    /// `PrivateAction` choosing the `TeleportAction` branch.
+    pub fn teleport(action: crate::types::actions::movement::TeleportAction) -> Self {
+        Self {
+            teleport_action: Some(action),
+            ..Self::empty()
         }
     }
 }
@@ -444,14 +477,24 @@ mod tests {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
                     priority: Value::Literal(Priority::Override),
-                    actions: vec![StoryAction::default()],
+                    actions: vec![StoryAction::private(
+                        "TestAction",
+                        StoryPrivateAction::visibility(
+                            crate::types::actions::VisibilityAction::new(true, true, true),
+                        ),
+                    )],
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
                     priority: Value::Literal(Priority::Overwrite),
-                    actions: vec![StoryAction::default()],
+                    actions: vec![StoryAction::private(
+                        "TestAction",
+                        StoryPrivateAction::visibility(
+                            crate::types::actions::VisibilityAction::new(true, true, true),
+                        ),
+                    )],
                     start_trigger: None,
                 },
             ],
@@ -469,7 +512,12 @@ mod tests {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
             priority: Value::Literal(Priority::Parallel),
-            actions: vec![StoryAction::default()],
+            actions: vec![StoryAction::private(
+                "TestAction",
+                StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
+                    true, true, true,
+                )),
+            )],
             start_trigger: None,
         };
 

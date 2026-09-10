@@ -248,7 +248,7 @@ fn demonstrate_traffic_actions() {
     use openscenario_rs::types::entities::{ScenarioObjectTemplate, Vehicle};
     let entity_distribution = EntityDistribution {
         entries: vec![EntityDistributionEntry::new(
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
             1.0,
         )],
     };

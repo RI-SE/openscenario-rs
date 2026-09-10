@@ -87,12 +87,13 @@ pub struct RelativeWorldPosition {
     pub orientation: Option<Orientation>,
 }
 
-impl Default for RelativeWorldPosition {
-    fn default() -> Self {
+impl RelativeWorldPosition {
+    /// Create a new relative world position (required `entityRef`, `dx`, `dy`; XSD:1910-1922)
+    pub fn new(entity_ref: &str, dx: f64, dy: f64) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            dx: Double::literal(0.0),
-            dy: Double::literal(0.0),
+            entity_ref: OSString::literal(entity_ref.to_string()),
+            dx: Double::literal(dx),
+            dy: Double::literal(dy),
             dz: None,
             orientation: None,
         }
@@ -207,10 +208,12 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_world_position_default() {
-        let rwp = RelativeWorldPosition::default();
-        assert_eq!(rwp.entity_ref.as_literal().unwrap(), "DefaultEntity");
-        assert_eq!(rwp.dx.as_literal().unwrap(), &0.0);
+    fn test_relative_world_position_new() {
+        // OSR-04 (agent G): `RelativeWorldPosition` no longer has a fabricating `Default`
+        // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
+        let rwp = RelativeWorldPosition::new("Ego", 1.0, 2.0);
+        assert_eq!(rwp.entity_ref.as_literal().unwrap(), "Ego");
+        assert_eq!(rwp.dx.as_literal().unwrap(), &1.0);
         assert!(rwp.dz.is_none());
     }
 
@@ -223,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_relative_world_position_serialize_none_dz_omitted() {
-        let pos = RelativeWorldPosition::default();
+        let pos = RelativeWorldPosition::new("Ego", 1.0, 2.0);
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(!xml.contains("dz="), "serialized: {xml}");
     }

@@ -86,18 +86,6 @@ impl RelativeObjectPosition {
     }
 }
 
-impl Default for RelativeObjectPosition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            dx: Double::literal(0.0),
-            dy: Double::literal(0.0),
-            dz: None,
-            orientation: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

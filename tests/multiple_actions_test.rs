@@ -1,4 +1,5 @@
 use openscenario_rs::parser::xml::parse_from_str;
+use openscenario_rs::types::actions::VisibilityAction;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::Priority;
 use openscenario_rs::types::scenario::story::{Event, StoryAction, StoryPrivateAction};
@@ -15,13 +16,17 @@ fn test_event_multiple_actions_struct() {
                 global_action: None,
                 user_defined_action: None,
                 name: Value::literal("Action1".to_string()),
-                private_action: Some(StoryPrivateAction::default()),
+                private_action: Some(StoryPrivateAction::visibility(VisibilityAction::new(
+                    true, true, true,
+                ))),
             },
             StoryAction {
                 global_action: None,
                 user_defined_action: None,
                 name: Value::literal("Action2".to_string()),
-                private_action: Some(StoryPrivateAction::default()),
+                private_action: Some(StoryPrivateAction::visibility(VisibilityAction::new(
+                    true, true, true,
+                ))),
             },
         ],
         start_trigger: None,
@@ -82,7 +87,9 @@ fn test_event_new_starts_with_no_actions() {
         global_action: None,
         user_defined_action: None,
         name: Value::literal("Action1".to_string()),
-        private_action: Some(StoryPrivateAction::default()),
+        private_action: Some(StoryPrivateAction::visibility(VisibilityAction::new(
+            true, true, true,
+        ))),
     });
     assert_eq!(event.actions.len(), 1);
     assert_eq!(event.actions[0].name.as_literal().unwrap(), "Action1");

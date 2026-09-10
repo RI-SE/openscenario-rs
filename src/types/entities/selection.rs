@@ -370,17 +370,23 @@ mod tests {
     #[test]
     fn test_entity_distribution() {
         let mut distribution = EntityDistribution::new();
-        distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.6);
-        distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.4);
+        distribution.add_entry(
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+            0.6,
+        );
+        distribution.add_entry(
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+            0.4,
+        );
 
         assert_eq!(distribution.entries.len(), 2);
         assert_eq!(distribution.total_weight(), 1.0);
 
         let templates = vec![
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
         ];
         let uniform_dist = EntityDistribution::uniform(templates);
         assert_eq!(uniform_dist.entries.len(), 4);
@@ -389,7 +395,8 @@ mod tests {
 
     #[test]
     fn test_entity_distribution_entry() {
-        let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+        let template =
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
         let entry = EntityDistributionEntry::new(template, 0.75);
         assert!(entry.scenario_object_template.vehicle.is_some());
         assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
@@ -397,7 +404,8 @@ mod tests {
 
     #[test]
     fn test_scenario_object_template() {
-        let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+        let template =
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
         assert!(template.vehicle.is_some());
         assert!(template.pedestrian.is_none());
 
@@ -456,8 +464,8 @@ mod tests {
         assert!(xml.contains("entityRef=\"Target\""));
 
         let templates = vec![
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
         ];
         let distribution = EntityDistribution::uniform(templates);
         let xml = quick_xml::se::to_string(&distribution).unwrap();
@@ -525,7 +533,8 @@ mod tests {
         use crate::types::controllers::Controller;
         use crate::types::enums::ControllerType;
 
-        let mut template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+        let mut template =
+            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
         template
             .object_controller
             .push(ObjectController::with_controller(Controller::new(

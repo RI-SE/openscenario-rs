@@ -437,6 +437,63 @@ Breaking, unless noted.
   This closes out all fabricating `Default` impls in `types/entities/selection.rs`,
   `types/geometry/shapes.rs`, `types/scenario/triggers.rs`, `types/basic.rs`,
   `types/positions/road.rs` and `types/scenario/init.rs`.
+- **`Default` impls that invent scenario data (OSR-04, agent G: coverage gap — 10 fabricating
+  impls in files no prior OSR-04 agent was assigned, added 2026-09-10).** All 10 removed, 0
+  benign found.
+  `types/entities/vehicle.rs`: `Vehicle` (invented `"DefaultVehicle"` for `@name`, a fabricated
+  `BoundingBox`/`Performance`, XSD:2007-2012 `use="required"` name with no schema default —
+  `new_car`/`new_truck`/`new_motorcycle` already existed as non-fabricating constructors).
+  `types/scenario/monitors.rs`: `MonitorDeclaration` (invented `"DefaultMonitor"`/`false`,
+  XSD `MonitorDeclaration` — both attributes `use="required"` — `::new` already existed).
+  `types/scenario/variables.rs`: `VariableDeclaration` (invented `"DefaultVariable"`/
+  `ParameterType::String`/`""` — `::new` and the `string_variable`/`int_variable`/
+  `double_variable`/`bool_variable` helpers already existed).
+  `types/positions/relative.rs`: `RelativeObjectPosition` (invented `"DefaultEntity"`/`0.0`/
+  `0.0`, XSD `RelativeObjectPosition` — `::new` already existed).
+  `types/positions/mod.rs`: `RelativeWorldPosition` (invented `"DefaultEntity"`/`0.0`/`0.0`,
+  XSD:1910-1922 — gained `::new(entity_ref, dx, dy)`, no constructor previously existed).
+  `types/scenario/story.rs`: `StoryAction`/`StoryPrivateAction` — the whole-child fabricators
+  OSR-03 deliberately deferred (`StoryAction` invented `"DefaultAction"` for a `use="required"`
+  `@name` with no schema default, XSD `Action` :705-712, plus a fabricated
+  `StoryPrivateAction::default()` child; that impl in turn invented a whole `LongitudinalAction`
+  child). Both removed with **no** replacement `Default`: `StoryPrivateAction` mirrors XSD
+  `PrivateAction` (:1777-1791), a bare `xsd:choice` with no `minOccurs="0"` override, so an
+  all-`None` derived default would *also* be schema-invalid (the F16 trap — not repeated here).
+  Both types gained explicit constructors instead: `StoryAction::private(name,
+  private_action)`; `StoryPrivateAction::{longitudinal, visibility, teleport}`, one per branch
+  actually exercised by existing call sites.
+  In `src/builder/` (outside `builder/conditions/*`, agent F's territory, untouched):
+  `VisibilityActionBuilder` (`builder/actions/visibility.rs`) invented "fully visible" —
+  `graphics`/`sensors`/`traffic` all `true` — for three XSD-required attributes with no
+  schema default (`Schema/OpenSCENARIO.xsd:2554-2556`); the `Default` impl was removed and its
+  body inlined into the pre-existing `new()`, with `clippy::new_without_default` silenced by
+  `#[allow]` rather than reintroducing the impl — the point was to stop the value being
+  reachable via `..Default::default()`/a derive bound, not to change what `new()` returns.
+  `add_global_environment_action` (`builder/init/actions.rs`,
+  `builder/storyboard/story.rs`) and `add_default_environment_action` — renamed
+  `add_named_environment_action` — (`builder/init/private.rs`) invented
+  `Environment::name = "DefaultEnvironment"` on every call (XSD `Environment` :1186-1194,
+  `@name` `use="required"`, no schema default); both now take an explicit `name: &str`.
+  `Environment::new(name)` was added (`types/environment/mod.rs`) as the non-fabricating
+  constructor these methods, and `InitActionBuilder::{with_default_environment,
+  for_single_vehicle, for_multiple_vehicles}` (`builder/init/mod.rs`), now build on.
+  `CatalogEntityBuilder::default()`/`ScenarioBuilder<Empty>::default()`
+  (`builder/catalog.rs`, `builder/scenario.rs`) were reviewed and kept: both simply delegate
+  to their own `::new()` and invent nothing beyond what `::new()` already does.
+  None of the underlying XSD attributes carries a `default="…"` (checked individually;
+  running total across OSR-03 and every OSR-04 agent: still no genuine schema default found
+  anywhere in this series). `cargo test --features builder,validation`: 742 lib tests (same
+  count as baseline), and the conformance harness (`report`/`lossy`/`validate`/`builder`) is
+  unchanged from baseline (172/172/172/13, 0 dropped/invented).
+  `grep -rn 'literal("Default' src/ | wc -l` went from 9 to 1 — the one survivor
+  (`types/conditions/spatial.rs:345`) belongs to OSR-04 agent C's already-closed file and was
+  left alone as out of this issue's scope.
+  This closes the OSR-04 coverage gap: every fabricating `Default` impl in `src/` is now gone
+  **except** the seven `Default` impls in `src/builder/conditions/*`
+  (`AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`,
+  `TraveledDistanceConditionBuilder`, `SpeedConditionBuilder`, `ParameterConditionBuilder`,
+  `VariableConditionBuilder`, `RelativeDistanceConditionBuilder`), which remain OSR-04 agent
+  F's assigned scope and were not touched here.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

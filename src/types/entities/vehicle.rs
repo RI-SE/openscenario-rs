@@ -283,44 +283,20 @@ impl Vehicle {
     }
 }
 
-impl Default for Vehicle {
-    fn default() -> Self {
-        Self {
-            name: crate::types::basic::Value::literal("DefaultVehicle".to_string()),
-            vehicle_category: Value::Literal(VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            performance: Performance {
-                max_speed: Double::literal(200.0),
-                max_acceleration: Double::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Double::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: Axles::default(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_vehicle_default() {
-        let vehicle = Vehicle::default();
+    fn test_vehicle_new_car_defaults() {
+        // OSR-04 (agent G): `Vehicle` no longer has a `Default` impl (it used to fabricate
+        // name "DefaultVehicle", a full bounding box, and performance figures nobody wrote).
+        // `Vehicle::new_car` requires the name explicitly and fills in the same car-shaped
+        // bounding box/performance as a named, deliberate constructor rather than a silent
+        // trait default.
+        let vehicle = Vehicle::new_car("TestCar".to_string());
 
-        assert_eq!(vehicle.name.as_literal().unwrap(), "DefaultVehicle");
+        assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
         assert_eq!(
             vehicle.vehicle_category,
             Value::Literal(VehicleCategory::Car)
@@ -369,11 +345,11 @@ mod tests {
 
     #[test]
     fn test_vehicle_serialization() {
-        let vehicle = Vehicle::default();
+        let vehicle = Vehicle::new_car("TestCar".to_string());
 
         // Test that serialization works
         let xml = quick_xml::se::to_string(&vehicle).unwrap();
-        assert!(xml.contains("name=\"DefaultVehicle\""));
+        assert!(xml.contains("name=\"TestCar\""));
         assert!(xml.contains("vehicleCategory=\"car\""));
         assert!(xml.contains("BoundingBox"));
     }

@@ -41,21 +41,25 @@ pub struct VisibilityActionBuilder {
     traffic: bool,
 }
 
-impl Default for VisibilityActionBuilder {
-    fn default() -> Self {
+impl VisibilityActionBuilder {
+    /// Create new visibility action builder with all visibility enabled by default
+    ///
+    /// XSD `VisibilityAction` (`Schema/OpenSCENARIO.xsd:2554-2556`) declares `graphics`,
+    /// `sensors` and `traffic` all `use="required"` with no schema default — "fully visible"
+    /// is this builder's own deliberate starting point, chosen so callers can flip individual
+    /// flags with `.graphics()/.sensors()/.traffic()` rather than a `Default` impl reachable
+    /// via `..Default::default()` (OSR-04, agent G). `clippy::new_without_default` is silenced
+    /// rather than satisfied by re-adding `Default`: the crate's policy (`docs/type_system_guide.md`)
+    /// is that a `Default` impl invites silent construction of scenario content nobody wrote,
+    /// which is exactly what this constructor's explicit name and doc comment are meant to avoid.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
         Self {
             entity_ref: None,
             graphics: true,
             sensors: true,
             traffic: true,
         }
-    }
-}
-
-impl VisibilityActionBuilder {
-    /// Create new visibility action builder with all visibility enabled by default
-    pub fn new() -> Self {
-        Self::default()
     }
 
     /// Set target entity for this action

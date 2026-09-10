@@ -295,16 +295,14 @@ impl GlobalActionBuilder {
         self
     }
 
-    /// Add an environment action with default environment
-    pub fn add_default_environment_action(mut self) -> Self {
+    /// Add an environment action with a named environment
+    ///
+    /// XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`) requires `@name`; there is no
+    /// schema default, so the caller supplies it rather than getting a silently invented
+    /// `"DefaultEnvironment"` (OSR-04, agent G).
+    pub fn add_named_environment_action(mut self, name: &str) -> Self {
         self.environment_action = Some(EnvironmentAction {
-            environment: Some(Environment {
-                name: crate::types::basic::OSString::literal("DefaultEnvironment".to_string()),
-                parameter_declarations: None,
-                time_of_day: None,
-                weather: None,
-                road_condition: None,
-            }),
+            environment: Some(Environment::new(name)),
             catalog_reference: None,
         });
         self
@@ -403,7 +401,7 @@ mod tests {
     #[test]
     fn test_global_action_builder() {
         let global = GlobalActionBuilder::new(InitActionBuilder::new())
-            .add_default_environment_action()
+            .add_named_environment_action("TestEnvironment")
             .build()
             .unwrap();
 
@@ -414,7 +412,7 @@ mod tests {
     fn test_global_action_builder_fluent() {
         let init = InitActionBuilder::new()
             .create_global_action()
-            .add_default_environment_action()
+            .add_named_environment_action("TestEnvironment")
             .finish()
             .build()
             .unwrap();
@@ -432,7 +430,7 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .create_global_action()
-            .add_default_environment_action()
+            .add_named_environment_action("TestEnvironment")
             .finish()
             .create_private_action("ego")
             .add_teleport_action(position)

@@ -25,15 +25,6 @@ pub struct MonitorDeclaration {
     pub value: Boolean,
 }
 
-impl Default for MonitorDeclaration {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultMonitor".to_string()),
-            value: Boolean::literal(false),
-        }
-    }
-}
-
 impl MonitorDeclarations {
     /// Create empty monitor declarations
     pub fn new() -> Self {

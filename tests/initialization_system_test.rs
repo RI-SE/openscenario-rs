@@ -18,7 +18,7 @@ mod tests {
     fn test_init_action_builder_basic() {
         // Test that InitActionBuilder creates proper Init structure
         let init = InitActionBuilder::new()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .build()
             .unwrap();
 
@@ -40,7 +40,7 @@ mod tests {
             .unwrap();
 
         let init = InitActionBuilder::new()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .add_teleport_action("ego", position)
             .add_speed_action("ego", 30.0)
             .build()
@@ -96,7 +96,7 @@ mod tests {
             .unwrap();
 
         let init = InitActionBuilder::new()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .add_teleport_action("ego", ego_pos)
             .add_speed_action("ego", 30.0)
             .add_teleport_action("target", target_pos)
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn test_convenience_methods() {
         // Test convenience methods for common patterns
-        let init_single = InitActionBuilder::for_single_vehicle("ego")
+        let init_single = InitActionBuilder::for_single_vehicle("ego", "TestEnvironment")
             .build()
             .unwrap();
 
@@ -192,9 +192,12 @@ mod tests {
             "ego"
         );
 
-        let init_multi = InitActionBuilder::for_multiple_vehicles(&["ego", "target", "obstacle"])
-            .build()
-            .unwrap();
+        let init_multi = InitActionBuilder::for_multiple_vehicles(
+            &["ego", "target", "obstacle"],
+            "TestEnvironment",
+        )
+        .build()
+        .unwrap();
 
         assert_eq!(init_multi.actions.global_actions.len(), 1);
         assert_eq!(init_multi.actions.private_actions.len(), 3);
@@ -255,7 +258,7 @@ mod tests {
             .unwrap();
 
         let init = InitActionBuilder::new()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .add_teleport_action("Ego", position)
             .add_speed_action("Ego", 16.67)
             .build()

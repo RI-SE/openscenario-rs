@@ -25,16 +25,6 @@ pub struct VariableDeclaration {
     pub value: OSString,
 }
 
-impl Default for VariableDeclaration {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultVariable".to_string()),
-            variable_type: Value::Literal(ParameterType::String),
-            value: OSString::literal("".to_string()),
-        }
-    }
-}
-
 impl VariableDeclarations {
     /// Create empty variable declarations
     pub fn new() -> Self {
