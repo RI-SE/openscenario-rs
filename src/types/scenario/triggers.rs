@@ -8,8 +8,9 @@
 //! - Event priority and execution order management
 //!
 use crate::types::basic::{Double, OSString, Value};
+use crate::types::conditions::value::SimulationTimeCondition;
 use crate::types::conditions::{ByEntityCondition, ByValueCondition};
-use crate::types::enums::{ConditionEdge, TriggeringEntitiesRule};
+use crate::types::enums::{ConditionEdge, Rule, TriggeringEntitiesRule};
 use serde::{Deserialize, Serialize};
 
 /// Trigger definition containing condition groups
@@ -118,7 +119,14 @@ impl Default for Condition {
             name: OSString::literal("DefaultCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: Some(ByValueCondition::default()),
+            // NOTE (OSR-04 agent C): `ByValueCondition::default()` is gone — it silently
+            // picked the `SimulationTimeCondition` branch of an `xsd:choice`. This call site
+            // is now explicit about which branch it fabricates, but `Condition::default()`
+            // itself (owned by OSR-04 agent E, `scenario/triggers.rs`) still invents a whole
+            // child element. That is unchanged behavior, not something agent C introduced.
+            by_value_condition: Some(ByValueCondition::simulation_time(
+                SimulationTimeCondition::new(10.0, Rule::GreaterThan),
+            )),
             by_entity_condition: None,
         }
     }
@@ -126,7 +134,9 @@ impl Default for Condition {
 
 impl Default for ConditionType {
     fn default() -> Self {
-        ConditionType::ByValue(ByValueCondition::default())
+        ConditionType::ByValue(ByValueCondition::simulation_time(
+            SimulationTimeCondition::new(10.0, Rule::GreaterThan),
+        ))
     }
 }
 

@@ -303,9 +303,36 @@ invented a name/id/state string), `TrafficDefinition`, `VehicleCategoryDistribut
 (`src/types/actions/wrappers.rs`) lost its `#[derive(Default)]`, which had transitively
 required the removed `TrafficSignalAction: Default`, and gained `InfrastructureAction::new`.
 
-The remaining ~58 fabricating impls outside `movement.rs`/`route.rs`/`routing/mod.rs`/
-`traffic.rs` are tracked as separate passes (OSR-04 agents C–F); do not assume a type without a
-doc comment saying otherwise is clean.
+OSR-04 agent C (`src/types/conditions/{entity,value,spatial}.rs`) removed all 26 fabricating
+impls across those three files. In `entity.rs`: `SpeedCondition`, `AccelerationCondition`,
+`StandStillCondition`, `CollisionTarget`, `OffroadCondition`, `EndOfRoadCondition`,
+`TimeHeadwayCondition`, `TimeToCollisionCondition`, `TimeToCollisionTarget` (a choice —
+silently picked the `EntityRef` branch), `AngleCondition`, `RelativeSpeedCondition`,
+`RelativeLaneRange`, `RelativeClearanceCondition`, `RelativeAngleCondition`,
+`TraveledDistanceCondition`, and `EntityCondition` (the `EntityCondition` XSD choice group —
+silently picked the `Speed` branch). `ByEntityCondition` lost its `#[derive(Default)]`, since
+both of its fields are XSD-required and one (`EntityCondition`) is itself a choice with no
+"nothing" state; it gained `ByEntityCondition::new` plus the pre-existing named condition
+constructors. In `value.rs`: `SimulationTimeCondition`, `ParameterCondition`,
+`TimeOfDayCondition`, `StoryboardElementStateCondition`, `UserDefinedValueCondition`,
+`TrafficSignalCondition`, `TrafficSignalControllerCondition`, `VariableCondition`, and
+`ByValueCondition` (the `ByValueCondition` XSD choice group — silently picked the
+`SimulationTimeCondition` branch). `ByValueCondition` gained per-branch constructors
+(`::parameter`, `::time_of_day`, `::simulation_time`, `::storyboard_element_state`,
+`::user_defined_value`, `::traffic_signal`, `::traffic_signal_controller`, `::variable`),
+following `RouteRef::direct`/`::catalog` and `SpeedActionTarget::absolute`/`::relative`. In
+`spatial.rs`: `ReachPositionCondition`, `DistanceCondition`, `RelativeDistanceCondition` — each
+already had an explicit `::new`/builder constructor, so only the fabricating `Default` impls
+were removed. Two call sites outside agent C's files needed fixing: `Condition::default()` and
+`ConditionType::default()` in `src/types/scenario/triggers.rs` (owned by OSR-04 agent E) called
+`ByValueCondition::default()`; both were updated to call
+`ByValueCondition::simulation_time(SimulationTimeCondition::new(10.0, Rule::GreaterThan))`
+explicitly instead — the same fabricated `SimulationTimeCondition` content as before, now named
+rather than defaulted. Agent E's own `Default` impls in that file were left untouched.
+
+The remaining ~32 fabricating impls outside `movement.rs`/`route.rs`/`routing/mod.rs`/
+`traffic.rs`/`conditions/{entity,value,spatial}.rs` are tracked as separate passes (OSR-04
+agents D–F); do not assume a type without a doc comment saying otherwise is clean.
 
 ## A trap: unknown fields are silent
 

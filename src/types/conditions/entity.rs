@@ -49,6 +49,24 @@ pub struct SpeedCondition {
     pub direction: Option<Value<DirectionalDimension>>,
 }
 
+impl SpeedCondition {
+    /// Create a new speed condition. XSD:2055-2059 `SpeedCondition` — `value` and `rule` are
+    /// both `use="required"`; `direction` is optional and left unset.
+    pub fn new(value: f64, rule: Rule) -> Self {
+        Self {
+            value: Double::literal(value),
+            rule: Value::Literal(rule),
+            direction: None,
+        }
+    }
+
+    /// Set direction of speed measurement
+    pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
+        self.direction = Some(Value::Literal(direction));
+        self
+    }
+}
+
 /// Condition based on entity acceleration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AccelerationCondition {
@@ -334,7 +352,12 @@ pub struct TraveledDistanceCondition {
 
 /// Schema-compliant ByEntityCondition structure matching OpenSCENARIO XSD exactly
 /// This is the main ByEntityCondition type that should be used
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default` impl: both fields are XSD-required (`TriggeringEntities`, `EntityCondition`),
+/// and `EntityCondition` is itself an `xsd:choice` with no "nothing" state — any default would
+/// silently pick a branch. Use `ByEntityCondition::new` or one of the per-condition
+/// constructors below instead.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ByEntityCondition {
     /// Entities that can trigger this condition
     #[serde(rename = "TriggeringEntities")]
@@ -653,6 +676,15 @@ impl StandStillCondition {
     }
 }
 
+impl CollisionTarget {
+    /// Create a new collision target. XSD:831-833 `ByObjectType` — `type` is `use="required"`.
+    pub fn new(target_type: ObjectType) -> Self {
+        Self {
+            target_type: Value::Literal(target_type),
+        }
+    }
+}
+
 impl CollisionCondition {
     /// Create a new collision condition with specific target
     pub fn with_target(target: &str) -> Self {
@@ -840,6 +872,104 @@ impl TimeToCollisionCondition {
     }
 }
 
+impl AngleCondition {
+    /// Create a new angle condition. XSD:734-739 `AngleCondition` — `angleType`, `angle`, and
+    /// `angleTolerance` are all `use="required"`; `coordinateSystem` is optional and left unset.
+    pub fn new(angle_type: AngleType, angle: f64, angle_tolerance: f64) -> Self {
+        Self {
+            angle_type: Value::Literal(angle_type),
+            angle: Double::literal(angle),
+            angle_tolerance: Double::literal(angle_tolerance),
+            coordinate_system: None,
+        }
+    }
+
+    /// Set coordinate system for angle measurement
+    pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
+        self.coordinate_system = Some(Value::Literal(system));
+        self
+    }
+}
+
+impl RelativeSpeedCondition {
+    /// Create a new relative speed condition. XSD:1883-1888 `RelativeSpeedCondition` —
+    /// `entityRef`, `rule`, and `value` are all `use="required"`; `direction` is optional and
+    /// left unset.
+    pub fn new(entity_ref: &str, rule: Rule, value: f64) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref.to_string()),
+            rule: Value::Literal(rule),
+            value: Double::literal(value),
+            direction: None,
+        }
+    }
+
+    /// Set direction of speed measurement
+    pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
+        self.direction = Some(Value::Literal(direction));
+        self
+    }
+}
+
+impl RelativeAngleCondition {
+    /// Create a new relative angle condition. XSD:1826-1831 `RelativeAngleCondition` —
+    /// `entityRef`, `angleType`, `angle`, and `angleTolerance` are all `use="required"`;
+    /// `coordinateSystem` is optional and left unset.
+    pub fn new(entity_ref: &str, angle_type: AngleType, angle: f64, angle_tolerance: f64) -> Self {
+        Self {
+            entity_ref: OSString::literal(entity_ref.to_string()),
+            angle_type: Value::Literal(angle_type),
+            angle: Double::literal(angle),
+            angle_tolerance: Double::literal(angle_tolerance),
+            coordinate_system: None,
+        }
+    }
+
+    /// Set coordinate system for angle measurement
+    pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
+        self.coordinate_system = Some(Value::Literal(system));
+        self
+    }
+}
+
+impl TraveledDistanceCondition {
+    /// Create a new traveled distance condition. XSD:2392-2394 `TraveledDistanceCondition` —
+    /// `value` is `use="required"`.
+    pub fn new(value: f64) -> Self {
+        Self {
+            value: Double::literal(value),
+        }
+    }
+}
+
+impl RelativeLaneRange {
+    /// Create a new relative lane range. XSD:1862-1865 `RelativeLaneRange` — both `from` and
+    /// `to` are optional attributes with no schema-declared default.
+    pub fn new(from: Option<i32>, to: Option<i32>) -> Self {
+        Self {
+            from: from.map(Int::literal),
+            to: to.map(Int::literal),
+        }
+    }
+}
+
+impl RelativeClearanceCondition {
+    /// Create a new relative clearance condition with no lane ranges or entity refs and no
+    /// forward/backward distance limits. XSD:1833-1842 `RelativeClearanceCondition` —
+    /// `oppositeLanes` and `freeSpace` are `use="required"`; `distanceForward` and
+    /// `distanceBackward` are optional with no schema-declared default.
+    pub fn new(opposite_lanes: bool, free_space: bool) -> Self {
+        Self {
+            relative_lane_ranges: Vec::new(),
+            entity_refs: Vec::new(),
+            opposite_lanes: Boolean::literal(opposite_lanes),
+            distance_forward: None,
+            distance_backward: None,
+            free_space: Boolean::literal(free_space),
+        }
+    }
+}
+
 impl TimeToCollisionTarget {
     /// Create target with entity reference
     pub fn entity(entity_ref: &str) -> Self {
@@ -857,160 +987,6 @@ impl TimeToCollisionTarget {
             entity_ref: None,
             position: Some(position),
         }
-    }
-}
-
-// Default implementations for testing and fallback scenarios
-impl Default for AccelerationCondition {
-    fn default() -> Self {
-        Self {
-            value: Double::literal(2.0),
-            rule: Value::Literal(Rule::GreaterThan),
-            direction: None,
-        }
-    }
-}
-
-impl Default for StandStillCondition {
-    fn default() -> Self {
-        Self {
-            duration: Double::literal(1.0),
-        }
-    }
-}
-
-impl Default for CollisionTarget {
-    fn default() -> Self {
-        Self {
-            target_type: Value::Literal(ObjectType::Vehicle),
-        }
-    }
-}
-
-impl Default for OffroadCondition {
-    fn default() -> Self {
-        Self {
-            duration: Double::literal(1.0),
-        }
-    }
-}
-
-impl Default for EndOfRoadCondition {
-    fn default() -> Self {
-        Self {
-            duration: Double::literal(1.0),
-        }
-    }
-}
-
-impl Default for TimeHeadwayCondition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            value: Double::literal(2.0),
-            rule: Value::Literal(Rule::LessThan),
-            freespace: Boolean::literal(true),
-            along_route: None,
-            coordinate_system: None,
-            relative_distance_type: None,
-            routing_algorithm: None,
-        }
-    }
-}
-
-impl Default for TimeToCollisionCondition {
-    fn default() -> Self {
-        Self {
-            value: Double::literal(5.0),
-            rule: Value::Literal(Rule::LessThan),
-            freespace: Boolean::literal(true),
-            along_route: None,
-            coordinate_system: None,
-            relative_distance_type: None,
-            routing_algorithm: None,
-            target: TimeToCollisionTarget::default(),
-        }
-    }
-}
-
-impl Default for TimeToCollisionTarget {
-    fn default() -> Self {
-        Self {
-            entity_ref: Some(EntityRef {
-                entity_ref: OSString::literal("DefaultEntity".to_string()),
-            }),
-            position: None,
-        }
-    }
-}
-
-impl Default for AngleCondition {
-    fn default() -> Self {
-        Self {
-            angle_type: Value::Literal(AngleType::Heading),
-            angle: Double::literal(0.0),
-            angle_tolerance: Double::literal(0.1),
-            coordinate_system: None,
-        }
-    }
-}
-
-impl Default for RelativeSpeedCondition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            rule: Value::Literal(Rule::GreaterThan),
-            value: Double::literal(5.0),
-            direction: None,
-        }
-    }
-}
-
-impl Default for RelativeLaneRange {
-    fn default() -> Self {
-        Self {
-            from: Some(Int::literal(-1)),
-            to: Some(Int::literal(1)),
-        }
-    }
-}
-
-impl Default for RelativeClearanceCondition {
-    fn default() -> Self {
-        Self {
-            relative_lane_ranges: vec![RelativeLaneRange::default()],
-            entity_refs: Vec::new(),
-            opposite_lanes: Boolean::literal(false),
-            distance_forward: Some(Double::literal(50.0)),
-            distance_backward: Some(Double::literal(10.0)),
-            free_space: Boolean::literal(true),
-        }
-    }
-}
-
-impl Default for RelativeAngleCondition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            angle_type: Value::Literal(AngleType::Heading),
-            angle: Double::literal(0.0),
-            angle_tolerance: Double::literal(0.1),
-            coordinate_system: None,
-        }
-    }
-}
-
-impl Default for TraveledDistanceCondition {
-    fn default() -> Self {
-        Self {
-            value: Double::literal(100.0),
-        }
-    }
-}
-
-impl Default for EntityCondition {
-    fn default() -> Self {
-        EntityCondition::Speed(SpeedCondition::default())
     }
 }
 
@@ -1384,8 +1360,8 @@ mod tests {
     }
 
     #[test]
-    fn test_acceleration_condition_default() {
-        let condition = AccelerationCondition::default();
+    fn test_acceleration_condition_new_no_direction() {
+        let condition = AccelerationCondition::new(2.0, Rule::GreaterThan);
         assert_eq!(condition.value, Double::literal(2.0));
         assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
         assert_eq!(condition.direction, None);
@@ -1404,8 +1380,8 @@ mod tests {
     }
 
     #[test]
-    fn test_standstill_condition_default() {
-        let condition = StandStillCondition::default();
+    fn test_standstill_condition_new_value() {
+        let condition = StandStillCondition::new(1.0);
         assert_eq!(condition.duration, Double::literal(1.0));
     }
 
@@ -1549,8 +1525,8 @@ mod tests {
     }
 
     #[test]
-    fn test_off_road_condition_default() {
-        let condition = OffroadCondition::default();
+    fn test_off_road_condition_new_value() {
+        let condition = OffroadCondition::new(1.0);
         assert_eq!(condition.duration, Double::literal(1.0));
     }
 
@@ -1567,8 +1543,8 @@ mod tests {
     }
 
     #[test]
-    fn test_end_of_road_condition_default() {
-        let condition = EndOfRoadCondition::default();
+    fn test_end_of_road_condition_new_value() {
+        let condition = EndOfRoadCondition::new(1.0);
         assert_eq!(condition.duration, Double::literal(1.0));
     }
 

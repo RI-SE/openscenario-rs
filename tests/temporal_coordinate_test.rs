@@ -299,27 +299,24 @@ fn test_by_entity_condition_time_to_collision_position() {
     }
 }
 
-// ========== Default Implementation Tests ==========
+// ========== Constructor Tests ==========
 
 #[test]
-fn test_temporal_condition_defaults() {
-    let headway_default = TimeHeadwayCondition::default();
-    assert_eq!(
-        headway_default.entity_ref.as_literal().unwrap(),
-        "DefaultEntity"
-    );
-    assert_eq!(headway_default.value, Double::literal(2.0));
-    assert_eq!(headway_default.rule, Value::Literal(Rule::LessThan));
-    assert_eq!(headway_default.freespace, Boolean::literal(true));
+fn test_temporal_condition_constructors() {
+    let headway = TimeHeadwayCondition::new("DefaultEntity", 2.0, Rule::LessThan, true);
+    assert_eq!(headway.entity_ref.as_literal().unwrap(), "DefaultEntity");
+    assert_eq!(headway.value, Double::literal(2.0));
+    assert_eq!(headway.rule, Value::Literal(Rule::LessThan));
+    assert_eq!(headway.freespace, Boolean::literal(true));
 
-    let ttc_default = TimeToCollisionCondition::default();
-    assert_eq!(ttc_default.value, Double::literal(5.0));
-    assert_eq!(ttc_default.rule, Value::Literal(Rule::LessThan));
-    assert_eq!(ttc_default.freespace, Boolean::literal(true));
-    assert!(ttc_default.target.entity_ref.is_some());
+    let ttc =
+        TimeToCollisionCondition::with_entity_target("DefaultEntity", 5.0, Rule::LessThan, true);
+    assert_eq!(ttc.value, Double::literal(5.0));
+    assert_eq!(ttc.rule, Value::Literal(Rule::LessThan));
+    assert_eq!(ttc.freespace, Boolean::literal(true));
+    assert!(ttc.target.entity_ref.is_some());
     assert_eq!(
-        ttc_default
-            .target
+        ttc.target
             .entity_ref
             .as_ref()
             .unwrap()
@@ -329,10 +326,10 @@ fn test_temporal_condition_defaults() {
         "DefaultEntity"
     );
 
-    let target_default = TimeToCollisionTarget::default();
-    assert!(target_default.entity_ref.is_some());
+    let target = TimeToCollisionTarget::entity("DefaultEntity");
+    assert!(target.entity_ref.is_some());
     assert_eq!(
-        target_default
+        target
             .entity_ref
             .as_ref()
             .unwrap()
@@ -341,7 +338,7 @@ fn test_temporal_condition_defaults() {
             .unwrap(),
         "DefaultEntity"
     );
-    assert!(target_default.position.is_none());
+    assert!(target.position.is_none());
 }
 
 // ========== Serialization Tests ==========

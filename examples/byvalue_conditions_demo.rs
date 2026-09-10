@@ -33,9 +33,14 @@ fn main() {
     };
     println!("2. Parameter Condition: trigger when vehicleSpeed > 50");
 
-    // 3. TimeOfDayCondition - trigger at specific time of day
-    let time_of_day_condition = TimeOfDayCondition::default();
-    println!("3. Time of Day Condition: trigger at specific time");
+    // 3. TimeOfDayCondition - trigger at a specific time of day
+    let time_of_day_condition = TimeOfDayCondition::new(
+        chrono::DateTime::parse_from_rfc3339("2024-01-01T12:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc),
+        Rule::GreaterThan,
+    );
+    println!("3. Time of Day Condition: trigger after 2024-01-01T12:00:00Z");
 
     // 4. StoryboardElementStateCondition - trigger when story element completes
     let storyboard_condition = StoryboardElementStateCondition {

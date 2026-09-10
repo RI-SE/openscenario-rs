@@ -252,6 +252,50 @@ Breaking, unless noted.
   `src/types/actions/wrappers.rs`, `tests/actions_serialization_test.rs` and
   `examples/action_wrappers_demo.rs`. This closes out all fabricating `Default` impls in
   `types/actions/traffic.rs`.
+- **`Default` impls that invent scenario data (OSR-04, agent C:
+  `types/conditions/{entity,value,spatial}.rs`).** All 26 fabricating impls removed; no
+  benign `Default` impls existed in these three files to begin with (every retained `Default`
+  in scope was already a container/choice struct with a derived, all-`None`/empty impl, e.g.
+  `CollisionCondition`, `ByEntityCondition`'s own field defaults). In `entity.rs` (15):
+  `SpeedCondition` (invented `10.0`/`GreaterThan`), `AccelerationCondition` (invented `2.0`),
+  `StandStillCondition` (invented `1.0`), `CollisionTarget` (invented `ObjectType::Vehicle`),
+  `OffroadCondition`/`EndOfRoadCondition` (each invented `1.0`), `TimeHeadwayCondition`
+  (invented `"DefaultEntity"`/`2.0`/`LessThan`/`true`), `TimeToCollisionCondition` (invented
+  `5.0`/`LessThan`/`true` and depended on the fabricated `TimeToCollisionTarget`),
+  `TimeToCollisionTarget` (a choice — silently picked the `EntityRef` branch, inventing
+  `"DefaultEntity"`), `AngleCondition`/`RelativeAngleCondition` (each invented
+  `AngleType::Heading`/`0.0`/`0.1`, the latter also `"DefaultEntity"`),
+  `RelativeSpeedCondition` (invented `"DefaultEntity"`/`GreaterThan`/`5.0`),
+  `RelativeLaneRange` (invented `from: -1`/`to: 1` — both are optional XSD attributes with no
+  `default="…"`), `RelativeClearanceCondition` (invented a whole-child
+  `RelativeLaneRange`, `distanceForward: 50.0`, `distanceBackward: 10.0`, `free_space: true`),
+  `TraveledDistanceCondition` (invented `100.0`), and `EntityCondition` (the XSD
+  `EntityCondition` choice group — silently picked the `Speed` branch). `ByEntityCondition`
+  lost its `#[derive(Default)]`: both fields are XSD-required, and `EntityCondition` is
+  itself a choice with no "nothing" state, so no non-fabricating default was possible; it
+  gained `ByEntityCondition::new` (the file's existing per-condition convenience
+  constructors were kept). In `value.rs` (8): `SimulationTimeCondition`, `ParameterCondition`,
+  `TimeOfDayCondition` (invented `chrono::Utc::now()` — a *non-deterministic* fabricated
+  value), `StoryboardElementStateCondition`, `UserDefinedValueCondition`,
+  `TrafficSignalCondition`, `TrafficSignalControllerCondition`, `VariableCondition` (each
+  invented a name/ref/rule/value string), and `ByValueCondition` (the XSD `ByValueCondition`
+  choice group — silently picked the `SimulationTimeCondition` branch). `ByValueCondition`
+  gained per-branch constructors (`::parameter`, `::time_of_day`, `::simulation_time`,
+  `::storyboard_element_state`, `::user_defined_value`, `::traffic_signal`,
+  `::traffic_signal_controller`, `::variable`), following `RouteRef::direct`/`::catalog` and
+  `SpeedActionTarget::absolute`/`::relative`. In `spatial.rs` (3): `ReachPositionCondition`,
+  `DistanceCondition`, `RelativeDistanceCondition` — each already had an explicit
+  `::new`/builder constructor from an earlier pass, so only the fabricating `Default` impls
+  needed removing. None of the underlying XSD attributes carry a `default="…"` — all are
+  `use="required"`, checked individually against `Schema/OpenSCENARIO.xsd`. Two call sites
+  outside `conditions/`: `Condition::default()` and `ConditionType::default()`
+  (`src/types/scenario/triggers.rs`, owned by OSR-04 agent E) called
+  `ByValueCondition::default()`; both now call
+  `ByValueCondition::simulation_time(SimulationTimeCondition::new(10.0, Rule::GreaterThan))`
+  explicitly — the same fabricated content as before, now named rather than defaulted. Agent
+  E's own `Default` impls in `triggers.rs` were left in place. This closes out all
+  fabricating `Default` impls in `types/conditions/entity.rs`, `types/conditions/value.rs`
+  and `types/conditions/spatial.rs`.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

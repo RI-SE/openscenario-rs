@@ -257,45 +257,6 @@ impl RelativeDistanceCondition {
     }
 }
 
-// Default implementations for testing and fallback scenarios
-impl Default for ReachPositionCondition {
-    fn default() -> Self {
-        Self {
-            position: Position::default(),
-            tolerance: Double::literal(1.0),
-        }
-    }
-}
-
-impl Default for DistanceCondition {
-    fn default() -> Self {
-        Self {
-            position: Position::default(),
-            value: Double::literal(10.0),
-            freespace: Boolean::literal(true),
-            rule: Value::Literal(Rule::LessThan),
-            along_route: None,
-            coordinate_system: None,
-            relative_distance_type: None,
-            routing_algorithm: None,
-        }
-    }
-}
-
-impl Default for RelativeDistanceCondition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            value: Double::literal(10.0),
-            freespace: Boolean::literal(true),
-            relative_distance_type: Value::Literal(RelativeDistanceType::Cartesian),
-            rule: Value::Literal(Rule::LessThan),
-            coordinate_system: None,
-            routing_algorithm: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,15 +333,21 @@ mod tests {
     }
 
     #[test]
-    fn test_spatial_condition_defaults() {
-        let reach_pos = ReachPositionCondition::default();
+    fn test_spatial_condition_constructors() {
+        let reach_pos = ReachPositionCondition::new(Position::default(), 1.0);
         assert_eq!(reach_pos.tolerance, Double::literal(1.0));
 
-        let distance = DistanceCondition::default();
+        let distance = DistanceCondition::new(Position::default(), 10.0, true, Rule::LessThan);
         assert_eq!(distance.value, Double::literal(10.0));
         assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
 
-        let relative_distance = RelativeDistanceCondition::default();
+        let relative_distance = RelativeDistanceCondition::new(
+            OSString::literal("DefaultEntity".to_string()),
+            10.0,
+            true,
+            RelativeDistanceType::Cartesian,
+            Rule::LessThan,
+        );
         assert_eq!(
             relative_distance.relative_distance_type,
             Value::Literal(RelativeDistanceType::Cartesian)

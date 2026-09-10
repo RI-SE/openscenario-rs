@@ -49,8 +49,8 @@ fn test_collision_condition_default() {
 }
 
 #[test]
-fn test_collision_target_default() {
-    let target = CollisionTarget::default();
+fn test_collision_target_new() {
+    let target = CollisionTarget::new(ObjectType::Vehicle);
     assert_eq!(target.target_type, Value::Literal(ObjectType::Vehicle));
 }
 
@@ -67,8 +67,8 @@ fn test_off_road_condition_with_duration() {
 }
 
 #[test]
-fn test_off_road_condition_default() {
-    let condition = OffroadCondition::default();
+fn test_off_road_condition_new_value() {
+    let condition = OffroadCondition::new(1.0);
     assert_eq!(condition.duration, Double::literal(1.0));
 }
 
@@ -85,8 +85,8 @@ fn test_end_of_road_condition_with_duration() {
 }
 
 #[test]
-fn test_end_of_road_condition_default() {
-    let condition = EndOfRoadCondition::default();
+fn test_end_of_road_condition_new_value() {
+    let condition = EndOfRoadCondition::new(1.0);
     assert_eq!(condition.duration, Double::literal(1.0));
 }
 

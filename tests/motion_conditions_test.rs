@@ -119,14 +119,14 @@ fn test_by_entity_condition_standstill_variant() {
 }
 
 #[test]
-fn test_default_implementations() {
-    let acc_default = AccelerationCondition::default();
-    assert_eq!(acc_default.value, Double::literal(2.0));
-    assert_eq!(acc_default.rule, Value::Literal(Rule::GreaterThan));
-    assert_eq!(acc_default.direction, None);
+fn test_constructors() {
+    let acc = AccelerationCondition::new(2.0, Rule::GreaterThan);
+    assert_eq!(acc.value, Double::literal(2.0));
+    assert_eq!(acc.rule, Value::Literal(Rule::GreaterThan));
+    assert_eq!(acc.direction, None);
 
-    let standstill_default = StandStillCondition::default();
-    assert_eq!(standstill_default.duration, Double::literal(1.0));
+    let standstill = StandStillCondition::new(1.0);
+    assert_eq!(standstill.duration, Double::literal(1.0));
 }
 
 #[test]

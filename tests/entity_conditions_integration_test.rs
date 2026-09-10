@@ -96,15 +96,17 @@ fn test_by_entity_condition_relative_distance() {
 }
 
 #[test]
-fn test_by_entity_condition_default() {
-    let default_condition = ByEntityCondition::default();
+fn test_by_entity_condition_speed_construction() {
+    let triggering_entities = TriggeringEntities::default();
+    let condition =
+        ByEntityCondition::speed(triggering_entities, 10.0, Rule::GreaterThan, "ego_vehicle");
 
-    match default_condition.entity_condition {
+    match condition.entity_condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
             assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
-        _ => panic!("Expected default to be Speed condition"),
+        _ => panic!("Expected Speed condition"),
     }
 }
 

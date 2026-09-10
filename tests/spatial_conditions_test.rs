@@ -211,17 +211,23 @@ fn test_relative_distance_condition_with_options() {
 }
 
 #[test]
-fn test_spatial_condition_defaults() {
-    let reach_pos = ReachPositionCondition::default();
+fn test_spatial_condition_constructors() {
+    let reach_pos = ReachPositionCondition::new(Position::default(), 1.0);
     assert_eq!(reach_pos.tolerance, Double::literal(1.0));
     assert!(reach_pos.position.world_position.is_none());
 
-    let distance = DistanceCondition::default();
+    let distance = DistanceCondition::new(Position::default(), 10.0, true, Rule::LessThan);
     assert_eq!(distance.value, Double::literal(10.0));
     assert_eq!(distance.freespace, Boolean::literal(true));
     assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
 
-    let relative_distance = RelativeDistanceCondition::default();
+    let relative_distance = RelativeDistanceCondition::new(
+        OSString::literal("DefaultEntity".to_string()),
+        10.0,
+        true,
+        RelativeDistanceType::Cartesian,
+        Rule::LessThan,
+    );
     assert_eq!(
         relative_distance.entity_ref,
         OSString::literal("DefaultEntity".to_string())
