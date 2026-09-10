@@ -12,6 +12,7 @@
 
 use openscenario_rs::types::actions::movement::{AbsoluteSpeed, RelativeSpeedToMaster};
 use openscenario_rs::types::actions::wrappers::{EntityActionChoice, GlobalAction};
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::SpeedTargetValueType;
 use openscenario_rs::types::scenario::story::StoryAction;
 
@@ -77,7 +78,10 @@ fn absolute_speed_without_steady_state_round_trip() {
 fn relative_speed_to_master_round_trip() {
     let xml = r#"<RelativeSpeedToMaster speedTargetValueType="delta" value="-5"><TargetTimeSteadyState time="1.5"/></RelativeSpeedToMaster>"#;
     let speed: RelativeSpeedToMaster = de(xml);
-    assert_eq!(speed.speed_target_value_type, SpeedTargetValueType::Delta);
+    assert_eq!(
+        speed.speed_target_value_type,
+        Value::Literal(SpeedTargetValueType::Delta)
+    );
     assert_eq!(speed.value.as_literal().copied(), Some(-5.0));
     assert_eq!(
         speed

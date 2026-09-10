@@ -604,7 +604,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("length".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("100.0".to_string()),
                 constraint_groups: Vec::new(),
             }],

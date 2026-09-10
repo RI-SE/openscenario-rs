@@ -10,7 +10,7 @@
 //! - ByObjectType: Entity selection by object type (vehicle, pedestrian, etc.)
 //! - ByType: Generic type-based selection criteria
 
-use crate::types::basic::{Double, OSString};
+use crate::types::basic::{Double, OSString, Value};
 use crate::types::controllers::ObjectController;
 use crate::types::entities::{MiscObject, Pedestrian, ScenarioEntityReference, Vehicle};
 use crate::types::enums::ObjectType;
@@ -131,7 +131,7 @@ pub struct ExternalObjectReference {
 pub struct ByObjectType {
     /// Type of object to select
     #[serde(rename = "@type")]
-    pub object_type: ObjectType,
+    pub object_type: Value<ObjectType>,
 }
 
 /// Generic type-based selection criteria
@@ -139,7 +139,7 @@ pub struct ByObjectType {
 pub struct ByType {
     /// Type specification for selection
     #[serde(rename = "@objectType")]
-    pub type_spec: ObjectType,
+    pub type_spec: Value<ObjectType>,
 }
 
 // Default implementations
@@ -193,7 +193,7 @@ impl Default for ExternalObjectReference {
 impl Default for ByObjectType {
     fn default() -> Self {
         Self {
-            object_type: ObjectType::Vehicle,
+            object_type: Value::Literal(ObjectType::Vehicle),
         }
     }
 }
@@ -201,7 +201,7 @@ impl Default for ByObjectType {
 impl Default for ByType {
     fn default() -> Self {
         Self {
-            type_spec: ObjectType::Vehicle,
+            type_spec: Value::Literal(ObjectType::Vehicle),
         }
     }
 }
@@ -363,7 +363,9 @@ impl ExternalObjectReference {
 impl ByObjectType {
     /// Create a new object type selector
     pub fn new(object_type: ObjectType) -> Self {
-        Self { object_type }
+        Self {
+            object_type: Value::Literal(object_type),
+        }
     }
 
     /// Create a vehicle selector
@@ -385,7 +387,9 @@ impl ByObjectType {
 impl ByType {
     /// Create a new type selector
     pub fn new(type_spec: ObjectType) -> Self {
-        Self { type_spec }
+        Self {
+            type_spec: Value::Literal(type_spec),
+        }
     }
 }
 
@@ -468,19 +472,28 @@ mod tests {
     #[test]
     fn test_by_object_type() {
         let vehicle_selector = ByObjectType::vehicle();
-        assert_eq!(vehicle_selector.object_type, ObjectType::Vehicle);
+        assert_eq!(
+            vehicle_selector.object_type,
+            Value::Literal(ObjectType::Vehicle)
+        );
 
         let pedestrian_selector = ByObjectType::pedestrian();
-        assert_eq!(pedestrian_selector.object_type, ObjectType::Pedestrian);
+        assert_eq!(
+            pedestrian_selector.object_type,
+            Value::Literal(ObjectType::Pedestrian)
+        );
 
         let misc_selector = ByObjectType::miscellaneous_object();
-        assert_eq!(misc_selector.object_type, ObjectType::MiscellaneousObject);
+        assert_eq!(
+            misc_selector.object_type,
+            Value::Literal(ObjectType::MiscellaneousObject)
+        );
     }
 
     #[test]
     fn test_by_type() {
         let type_selector = ByType::new(ObjectType::Vehicle);
-        assert_eq!(type_selector.type_spec, ObjectType::Vehicle);
+        assert_eq!(type_selector.type_spec, Value::Literal(ObjectType::Vehicle));
     }
 
     #[test]
@@ -530,7 +543,10 @@ mod tests {
         let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
         assert!(selection.members.entity_refs.is_empty());
         assert_eq!(selection.members.by_type.len(), 1);
-        assert_eq!(selection.members.by_type[0].type_spec, ObjectType::Vehicle);
+        assert_eq!(
+            selection.members.by_type[0].type_spec,
+            Value::Literal(ObjectType::Vehicle)
+        );
 
         let serialized = quick_xml::se::to_string(&selection).unwrap();
         let roundtripped: EntitySelection = quick_xml::de::from_str(&serialized).unwrap();
@@ -588,11 +604,14 @@ mod tests {
         // XSD: ByObjectType has attribute `type`; ByType has attribute `objectType`.
         let by_object_type: ByObjectType =
             quick_xml::de::from_str(r#"<ByObjectType type="vehicle"/>"#).unwrap();
-        assert_eq!(by_object_type.object_type, ObjectType::Vehicle);
+        assert_eq!(
+            by_object_type.object_type,
+            Value::Literal(ObjectType::Vehicle)
+        );
 
         let by_type: ByType =
             quick_xml::de::from_str(r#"<ByType objectType="pedestrian"/>"#).unwrap();
-        assert_eq!(by_type.type_spec, ObjectType::Pedestrian);
+        assert_eq!(by_type.type_spec, Value::Literal(ObjectType::Pedestrian));
     }
 
     #[test]

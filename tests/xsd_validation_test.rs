@@ -12,6 +12,7 @@ use openscenario_rs::types::actions::movement::{
     FollowTrajectoryAction, LongitudinalDistanceAction, NoneElement, SpeedAction,
     SpeedProfileAction, TimeReference, Timing, Trajectory, TrajectoryFollowingMode, TrajectoryRef,
 };
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;
 use openscenario_rs::types::controllers::{Controller, ObjectController};
@@ -60,14 +61,14 @@ fn test_follow_trajectory_action_complete() {
         time_reference: TimeReference {
             none: None,
             timing: Some(Timing {
-                domain_absolute_relative: ReferenceContext::Absolute,
+                domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
             }),
         },
         trajectory_ref: None,
         trajectory_following_mode: TrajectoryFollowingMode {
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(FollowingMode::Follow),
         },
         initial_distance_offset: None,
     };
@@ -80,7 +81,7 @@ fn test_follow_trajectory_action_complete() {
         time_reference: TimeReference {
             none: None,
             timing: Some(Timing {
-                domain_absolute_relative: ReferenceContext::Absolute,
+                domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
             }),
@@ -98,7 +99,7 @@ fn test_follow_trajectory_action_complete() {
         time_reference: TimeReference {
             none: None,
             timing: Some(Timing {
-                domain_absolute_relative: ReferenceContext::Absolute,
+                domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
                 scale: Double::literal(1.0),
                 offset: Double::literal(0.0),
             }),
@@ -141,8 +142,8 @@ fn test_lane_change_action_serialization_fixes() {
     let lane_change_none = LaneChangeAction {
         target_lane_offset: None,
         lane_change_action_dynamics: TransitionDynamics {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             following_mode: None,
             value: Double::literal(2.0),
         },
@@ -158,8 +159,8 @@ fn test_lane_change_action_serialization_fixes() {
     let lane_change_some = LaneChangeAction {
         target_lane_offset: Some(Double::literal(0.5)),
         lane_change_action_dynamics: TransitionDynamics {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             following_mode: None,
             value: Double::literal(2.0),
         },

@@ -192,9 +192,10 @@ fn test_parameter_support() {
     let xml = quick_xml::se::to_string(&rel_road).expect("Failed to serialize");
     println!("RelativeRoadPosition with parameters XML: {}", xml);
 
-    // Verify parameter syntax is preserved
-    assert!(xml.contains("entityRef=\"${TargetEntity}\""));
-    assert!(xml.contains("ds=\"${RelativeDistance}\""));
+    // Verify parameter syntax is preserved. `$name` is the schema's `parameter`
+    // production (`Schema/OpenSCENARIO.xsd:4-8`); the braced spelling is `expression`.
+    assert!(xml.contains("entityRef=\"$TargetEntity\""));
+    assert!(xml.contains("ds=\"$RelativeDistance\""));
     assert!(xml.contains("dt=\"-1.5\""));
 
     // Deserialize back

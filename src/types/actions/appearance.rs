@@ -8,7 +8,7 @@
 //! - Custom user-defined animation support
 //! - Visibility actions for entity appearance control
 //!
-use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::entities::vehicle::File;
 use crate::types::enums::{
     ColorType, LightMode, PedestrianGestureType, PedestrianMotionType, VehicleComponentType,
@@ -101,7 +101,7 @@ pub struct LightType {
 pub struct VehicleLight {
     /// Type of the vehicle light
     #[serde(rename = "@vehicleLightType")]
-    pub vehicle_light_type: VehicleLightType,
+    pub vehicle_light_type: Value<VehicleLightType>,
 }
 
 /// User-defined light identified by a free-form type name
@@ -117,7 +117,7 @@ pub struct UserDefinedLight {
 pub struct LightState {
     /// Light mode (on, off, flashing)
     #[serde(rename = "@mode")]
-    pub mode: LightMode,
+    pub mode: Value<LightMode>,
 
     /// Luminous intensity in lumen
     #[serde(
@@ -153,7 +153,7 @@ pub struct LightState {
 pub struct Color {
     /// Coarse color classification
     #[serde(rename = "@colorType")]
-    pub color_type: ColorType,
+    pub color_type: Value<ColorType>,
 
     /// RGB definition of the color
     #[serde(rename = "ColorRgb", skip_serializing_if = "Option::is_none")]
@@ -270,7 +270,7 @@ pub struct ComponentAnimation {
 pub struct VehicleComponent {
     /// Type of the vehicle component
     #[serde(rename = "@vehicleComponentType")]
-    pub vehicle_component_type: VehicleComponentType,
+    pub vehicle_component_type: Value<VehicleComponentType>,
 }
 
 /// User-defined component identified by a free-form type name
@@ -286,7 +286,7 @@ pub struct UserDefinedComponent {
 pub struct PedestrianAnimation {
     /// Type of pedestrian motion
     #[serde(rename = "@motion", default, skip_serializing_if = "Option::is_none")]
-    pub motion: Option<PedestrianMotionType>,
+    pub motion: Option<Value<PedestrianMotionType>>,
 
     /// User-defined pedestrian animation name
     #[serde(
@@ -310,7 +310,7 @@ pub struct PedestrianAnimation {
 pub struct PedestrianGesture {
     /// Type of the gesture
     #[serde(rename = "@gesture")]
-    pub gesture: PedestrianGestureType,
+    pub gesture: Value<PedestrianGestureType>,
 }
 
 /// Animation defined by an external file
@@ -362,7 +362,7 @@ impl Default for LightStateAction {
             transition_time: None,
             light_type: LightType {
                 vehicle_light: Some(VehicleLight {
-                    vehicle_light_type: VehicleLightType::LowBeam,
+                    vehicle_light_type: Value::Literal(VehicleLightType::LowBeam),
                 }),
                 user_defined_light: None,
             },
@@ -374,7 +374,7 @@ impl Default for LightStateAction {
 impl Default for LightState {
     fn default() -> Self {
         Self {
-            mode: LightMode::On,
+            mode: Value::Literal(LightMode::On),
             luminous_intensity: None,
             flashing_on_duration: None,
             flashing_off_duration: None,
@@ -447,9 +447,9 @@ mod tests {
                 .as_ref()
                 .unwrap()
                 .vehicle_light_type,
-            VehicleLightType::LowBeam
+            Value::Literal(VehicleLightType::LowBeam)
         );
-        assert_eq!(action.light_state.mode, LightMode::On);
+        assert_eq!(action.light_state.mode, Value::Literal(LightMode::On));
         assert!(action.transition_time.is_none());
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
@@ -471,14 +471,15 @@ mod tests {
         );
 
         let color = action.light_state.color.as_ref().unwrap();
-        assert_eq!(color.color_type, ColorType::Red);
+        assert_eq!(color.color_type, Value::Literal(ColorType::Red));
         assert_eq!(
             color.color_rgb.as_ref().unwrap().red.as_literal(),
             Some(&1.0)
         );
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
-        assert!(serialized.contains("transitionTime=\"${transition}\""));
+        // `$transition` is the schema's `parameter` production; see `Value`'s `Serialize`.
+        assert!(serialized.contains("transitionTime=\"$transition\""));
         let reparsed: LightStateAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action, reparsed);
     }
@@ -519,7 +520,7 @@ mod tests {
                 .as_ref()
                 .unwrap()
                 .vehicle_component_type,
-            VehicleComponentType::DoorFrontLeft
+            Value::Literal(VehicleComponentType::DoorFrontLeft)
         );
         assert_eq!(
             action.animation_state.as_ref().unwrap().state.as_literal(),
@@ -535,11 +536,14 @@ mod tests {
         let xml = r#"<AnimationAction><AnimationType><PedestrianAnimation motion="walking" userDefinedPedestrianAnimation="limp"><PedestrianGesture gesture="wavingLeftArm"/><PedestrianGesture gesture="crossArms"/></PedestrianAnimation></AnimationType></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
         let ped = action.animation_type.pedestrian_animation.as_ref().unwrap();
-        assert_eq!(ped.motion, Some(PedestrianMotionType::Walking));
+        assert_eq!(
+            ped.motion,
+            Some(Value::Literal(PedestrianMotionType::Walking))
+        );
         assert_eq!(ped.pedestrian_gestures.len(), 2);
         assert_eq!(
             ped.pedestrian_gestures[0].gesture,
-            PedestrianGestureType::WavingLeftArm
+            Value::Literal(PedestrianGestureType::WavingLeftArm)
         );
         let serialized = quick_xml::se::to_string(&action).unwrap();
         let reparsed: AnimationAction = quick_xml::de::from_str(&serialized).unwrap();

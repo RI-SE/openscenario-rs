@@ -201,10 +201,41 @@ Variant-level drift against the schema is common and cheap to check; method 5 in
 [xsd_gaps.md](xsd_gaps.md) describes the sweep. As of pass 4 all 37 match exactly in both
 directions.
 
-One structural gap remains open. Each of those 37 enumerations is an `xsd:union` carrying a
-`parameter` member, which makes `vehicleCategory="${cat}"` schema-valid across 75 attributes.
-A bare Rust enum cannot represent that, so parameterized enumeration attributes are currently
-rejected. The analysis is in [xsd_gaps.md](xsd_gaps.md).
+Each of those 37 enumerations is an `xsd:union` carrying a `parameter` member, which makes
+`vehicleCategory="$cat"` schema-valid across 75 attributes. A bare Rust enum cannot represent
+that, so every enum-typed attribute is wrapped: **90 fields across 25 files** hold `Value<E>`
+(54 required) or `Option<Value<E>>` (36 optional — absent and present-but-parameterized are
+different states and are not collapsed).
+
+```rust
+#[serde(rename = "@vehicleCategory")]
+pub vehicle_category: Value<VehicleCategory>,     // required
+
+#[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
+pub role: Option<Value<Role>>,                    // optional
+```
+
+This is not a stringly-typed escape hatch. `Value`'s `Deserialize` falls through to
+`s.parse::<T>()` for anything without a `$` sigil, so `vehicleCategory="spaceship"` is still a
+hard parse error.
+
+**Mind the sigil.** The schema defines two productions (`Schema/OpenSCENARIO.xsd:4-13`):
+`parameter` is `[$][A-Za-z_][A-Za-z0-9_]*` — unbraced — and `expression` is `[$][{]…[\}]`.
+Every scalar union (`Double`, `Int`, `Boolean`, …) lists both members, so both spellings
+validate there; **all 37 enumeration unions list `parameter` alone**. `vehicleCategory="${cat}"`
+is therefore schema-invalid. `Value::Parameter` serializes as `$name` accordingly — valid on
+every union in the schema — while `Value::Expression` keeps `${…}`. Deserialization accepts
+either spelling, so documents written the other way still parse.
+
+Builder setters keep taking the bare enum and wrap internally, so the common case needs no
+migration; each has a parallel `*_param(&str)` for the parameter form:
+
+```rust
+vehicle.with_category(VehicleCategory::Truck)   // vehicleCategory="truck"
+vehicle.with_category_param("cat")              // vehicleCategory="$cat"
+```
+
+The analysis is in [xsd_gaps.md](xsd_gaps.md).
 
 ## The `Default` policy
 

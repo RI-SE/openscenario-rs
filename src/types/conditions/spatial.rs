@@ -7,7 +7,7 @@
 //! - Coordinate system and routing algorithm support
 //! - Distance measurement type configurations
 //!
-use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::enums::{CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,7 @@ pub struct DistanceCondition {
 
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Whether to measure distance along route (deprecated)
     #[serde(rename = "@alongRoute", skip_serializing_if = "Option::is_none")]
@@ -53,18 +53,18 @@ pub struct DistanceCondition {
 
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 
     /// Type of relative distance measurement
     #[serde(
         rename = "@relativeDistanceType",
         skip_serializing_if = "Option::is_none"
     )]
-    pub relative_distance_type: Option<RelativeDistanceType>,
+    pub relative_distance_type: Option<Value<RelativeDistanceType>>,
 
     /// Algorithm for route-based distance calculation
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
-    pub routing_algorithm: Option<RoutingAlgorithm>,
+    pub routing_algorithm: Option<Value<RoutingAlgorithm>>,
 }
 
 /// Condition based on relative distance between entities
@@ -85,19 +85,19 @@ pub struct RelativeDistanceCondition {
 
     /// Type of relative distance measurement
     #[serde(rename = "@relativeDistanceType")]
-    pub relative_distance_type: RelativeDistanceType,
+    pub relative_distance_type: Value<RelativeDistanceType>,
 
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 
     /// Algorithm for route-based distance calculation
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
-    pub routing_algorithm: Option<RoutingAlgorithm>,
+    pub routing_algorithm: Option<Value<RoutingAlgorithm>>,
 }
 
 // Builder implementations for ergonomic construction
@@ -139,7 +139,7 @@ impl DistanceCondition {
             position,
             value: Double::literal(value),
             freespace: Boolean::literal(freespace),
-            rule,
+            rule: Value::Literal(rule),
             along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
@@ -149,19 +149,19 @@ impl DistanceCondition {
 
     /// Set coordinate system for distance measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
-        self.coordinate_system = Some(system);
+        self.coordinate_system = Some(Value::Literal(system));
         self
     }
 
     /// Set distance measurement type
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
-        self.relative_distance_type = Some(distance_type);
+        self.relative_distance_type = Some(Value::Literal(distance_type));
         self
     }
 
     /// Set routing algorithm for route-based distance
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
-        self.routing_algorithm = Some(algorithm);
+        self.routing_algorithm = Some(Value::Literal(algorithm));
         self
     }
 
@@ -189,8 +189,8 @@ impl RelativeDistanceCondition {
             entity_ref: entity_ref.into(),
             value: Double::literal(value),
             freespace: Boolean::literal(freespace),
-            relative_distance_type: distance_type,
-            rule,
+            relative_distance_type: Value::Literal(distance_type),
+            rule: Value::Literal(rule),
             coordinate_system: None,
             routing_algorithm: None,
         }
@@ -198,13 +198,13 @@ impl RelativeDistanceCondition {
 
     /// Set coordinate system for distance measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
-        self.coordinate_system = Some(system);
+        self.coordinate_system = Some(Value::Literal(system));
         self
     }
 
     /// Set routing algorithm for route-based distance
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
-        self.routing_algorithm = Some(algorithm);
+        self.routing_algorithm = Some(Value::Literal(algorithm));
         self
     }
 
@@ -273,7 +273,7 @@ impl Default for DistanceCondition {
             position: Position::default(),
             value: Double::literal(10.0),
             freespace: Boolean::literal(true),
-            rule: Rule::LessThan,
+            rule: Value::Literal(Rule::LessThan),
             along_route: None,
             coordinate_system: None,
             relative_distance_type: None,
@@ -288,8 +288,8 @@ impl Default for RelativeDistanceCondition {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
             value: Double::literal(10.0),
             freespace: Boolean::literal(true),
-            relative_distance_type: RelativeDistanceType::Cartesian,
-            rule: Rule::LessThan,
+            relative_distance_type: Value::Literal(RelativeDistanceType::Cartesian),
+            rule: Value::Literal(Rule::LessThan),
             coordinate_system: None,
             routing_algorithm: None,
         }
@@ -322,11 +322,14 @@ mod tests {
 
         assert_eq!(condition.value, Double::literal(50.0));
         assert_eq!(condition.freespace, Boolean::literal(true));
-        assert_eq!(condition.rule, Rule::LessThan);
-        assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Entity));
+        assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
+        assert_eq!(
+            condition.coordinate_system,
+            Some(Value::Literal(CoordinateSystem::Entity))
+        );
         assert_eq!(
             condition.relative_distance_type,
-            Some(RelativeDistanceType::Cartesian)
+            Some(Value::Literal(RelativeDistanceType::Cartesian))
         );
     }
 
@@ -342,7 +345,7 @@ mod tests {
         );
         assert_eq!(
             longitudinal.relative_distance_type,
-            RelativeDistanceType::Longitudinal
+            Value::Literal(RelativeDistanceType::Longitudinal)
         );
 
         let lateral = RelativeDistanceCondition::lateral(
@@ -353,7 +356,7 @@ mod tests {
         );
         assert_eq!(
             lateral.relative_distance_type,
-            RelativeDistanceType::Lateral
+            Value::Literal(RelativeDistanceType::Lateral)
         );
 
         let cartesian = RelativeDistanceCondition::cartesian(
@@ -364,7 +367,7 @@ mod tests {
         );
         assert_eq!(
             cartesian.relative_distance_type,
-            RelativeDistanceType::Cartesian
+            Value::Literal(RelativeDistanceType::Cartesian)
         );
     }
 
@@ -375,14 +378,14 @@ mod tests {
 
         let distance = DistanceCondition::default();
         assert_eq!(distance.value, Double::literal(10.0));
-        assert_eq!(distance.rule, Rule::LessThan);
+        assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
 
         let relative_distance = RelativeDistanceCondition::default();
         assert_eq!(
             relative_distance.relative_distance_type,
-            RelativeDistanceType::Cartesian
+            Value::Literal(RelativeDistanceType::Cartesian)
         );
-        assert_eq!(relative_distance.rule, Rule::LessThan);
+        assert_eq!(relative_distance.rule, Value::Literal(Rule::LessThan));
     }
 
     #[test]

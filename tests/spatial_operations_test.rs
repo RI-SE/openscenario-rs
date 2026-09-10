@@ -1,5 +1,6 @@
 //! Simple test to verify spatial conditions compile and work
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     enums::{RelativeDistanceType, Rule},
@@ -27,22 +28,22 @@ fn test_spatial_conditions_exist() {
         position: Position::default(),
         value: Double::literal(50.0),
         freespace: Boolean::literal(true),
-        rule: Rule::LessThan,
+        rule: Value::Literal(Rule::LessThan),
         along_route: None,
         coordinate_system: None,
         relative_distance_type: None,
         routing_algorithm: None,
     };
     assert_eq!(distance.value, Double::literal(50.0));
-    assert_eq!(distance.rule, Rule::LessThan);
+    assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
 
     // Test RelativeDistanceCondition
     let relative_distance = RelativeDistanceCondition {
         entity_ref: OSString::literal("target_vehicle".to_string()),
         value: Double::literal(15.0),
         freespace: Boolean::literal(false),
-        relative_distance_type: RelativeDistanceType::Longitudinal,
-        rule: Rule::GreaterThan,
+        relative_distance_type: Value::Literal(RelativeDistanceType::Longitudinal),
+        rule: Value::Literal(Rule::GreaterThan),
         coordinate_system: None,
         routing_algorithm: None,
     };
@@ -52,7 +53,7 @@ fn test_spatial_conditions_exist() {
     );
     assert_eq!(
         relative_distance.relative_distance_type,
-        RelativeDistanceType::Longitudinal
+        Value::Literal(RelativeDistanceType::Longitudinal)
     );
 }
 
@@ -69,7 +70,7 @@ fn test_spatial_condition_builders() {
     let distance = DistanceCondition::new(Position::default(), 25.0, true, Rule::GreaterThan);
     assert_eq!(distance.value, Double::literal(25.0));
     assert_eq!(distance.freespace, Boolean::literal(true));
-    assert_eq!(distance.rule, Rule::GreaterThan);
+    assert_eq!(distance.rule, Value::Literal(Rule::GreaterThan));
 
     let relative_distance = RelativeDistanceCondition::new(
         OSString::literal("vehicle1".to_string()),
@@ -81,7 +82,7 @@ fn test_spatial_condition_builders() {
     assert_eq!(relative_distance.value, Double::literal(10.0));
     assert_eq!(
         relative_distance.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
-    assert_eq!(relative_distance.rule, Rule::EqualTo);
+    assert_eq!(relative_distance.rule, Value::Literal(Rule::EqualTo));
 }

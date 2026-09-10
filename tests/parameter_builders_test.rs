@@ -3,6 +3,7 @@ mod parameter_builder_tests {
     use openscenario_rs::builder::{
         ParameterContext, ParameterDeclarationsBuilder, ParameterizedValueBuilder, ScenarioBuilder,
     };
+    use openscenario_rs::types::basic::Value;
     use openscenario_rs::types::enums::ParameterType;
 
     use openscenario_rs::types::catalogs::locations::CatalogLocations;
@@ -24,19 +25,28 @@ mod parameter_builder_tests {
         // Check string parameter
         let vehicle_param = &params.parameter_declarations[0];
         assert_eq!(vehicle_param.name.to_string(), "vehicle_name");
-        assert_eq!(vehicle_param.parameter_type, ParameterType::String);
+        assert_eq!(
+            vehicle_param.parameter_type,
+            Value::Literal(ParameterType::String)
+        );
         assert_eq!(vehicle_param.value.to_string(), "ego");
 
         // Check double parameter
         let speed_param = &params.parameter_declarations[1];
         assert_eq!(speed_param.name.to_string(), "initial_speed");
-        assert_eq!(speed_param.parameter_type, ParameterType::Double);
+        assert_eq!(
+            speed_param.parameter_type,
+            Value::Literal(ParameterType::Double)
+        );
         assert_eq!(speed_param.value.to_string(), "25");
 
         // Check boolean parameter
         let logging_param = &params.parameter_declarations[3];
         assert_eq!(logging_param.name.to_string(), "enable_logging");
-        assert_eq!(logging_param.parameter_type, ParameterType::Boolean);
+        assert_eq!(
+            logging_param.parameter_type,
+            Value::Literal(ParameterType::Boolean)
+        );
         assert_eq!(logging_param.value.to_string(), "true");
     }
 
@@ -135,15 +145,24 @@ mod parameter_builder_tests {
         // Verify parameter names and types
         let ego_param = &param_decls.parameter_declarations[0];
         assert_eq!(ego_param.name.to_string(), "ego_vehicle");
-        assert_eq!(ego_param.parameter_type, ParameterType::String);
+        assert_eq!(
+            ego_param.parameter_type,
+            Value::Literal(ParameterType::String)
+        );
 
         let speed_param = &param_decls.parameter_declarations[1];
         assert_eq!(speed_param.name.to_string(), "target_speed");
-        assert_eq!(speed_param.parameter_type, ParameterType::Double);
+        assert_eq!(
+            speed_param.parameter_type,
+            Value::Literal(ParameterType::Double)
+        );
 
         let lane_param = &param_decls.parameter_declarations[2];
         assert_eq!(lane_param.name.to_string(), "target_lane");
-        assert_eq!(lane_param.parameter_type, ParameterType::Int);
+        assert_eq!(
+            lane_param.parameter_type,
+            Value::Literal(ParameterType::Int)
+        );
     }
 
     #[test]

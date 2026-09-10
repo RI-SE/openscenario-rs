@@ -22,7 +22,7 @@ pub struct CatalogController {
 
     /// Type of controller (interactive, external, etc.)
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
-    pub controller_type: Option<ControllerType>,
+    pub controller_type: Option<Value<ControllerType>>,
 
     /// Parameter declarations for this controller
     #[serde(
@@ -40,7 +40,7 @@ impl Default for CatalogController {
     fn default() -> Self {
         Self {
             name: "DefaultCatalogController".to_string(),
-            controller_type: Some(ControllerType::Movement),
+            controller_type: Some(Value::Literal(ControllerType::Movement)),
             parameter_declarations: None,
             properties: None,
         }
@@ -92,7 +92,7 @@ impl CatalogController {
     pub fn new(name: String, controller_type: ControllerType) -> Self {
         Self {
             name,
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
         }
@@ -106,7 +106,7 @@ impl CatalogController {
     ) -> Self {
         Self {
             name,
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: Some(parameters),
             properties: None,
         }
@@ -120,7 +120,7 @@ impl CatalogController {
     ) -> Self {
         Self {
             name,
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: Some(properties),
         }
@@ -217,7 +217,10 @@ mod tests {
             CatalogController::new("TestController".to_string(), ControllerType::Movement);
 
         assert_eq!(controller.name, "TestController");
-        assert_eq!(controller.controller_type, Some(ControllerType::Movement));
+        assert_eq!(
+            controller.controller_type,
+            Some(Value::Literal(ControllerType::Movement))
+        );
         assert!(controller.parameter_declarations.is_none());
         assert!(controller.properties.is_none());
     }
@@ -259,7 +262,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("speed".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("30.0".to_string()),
                 constraint_groups: Vec::new(),
             }],
@@ -306,7 +309,7 @@ mod tests {
         );
         assert_eq!(
             scenario_controller.controller_type,
-            Some(ControllerType::Movement)
+            Some(Value::Literal(ControllerType::Movement))
         );
         assert!(scenario_controller.properties.is_some());
     }

@@ -200,7 +200,7 @@ use crate::{
             storyboard::Storyboard,
             ScenarioStory,
         },
-        EntityRef, ObjectType, ValidationContext,
+        EntityRef, ObjectType, ValidationContext, Value,
     },
     FileHeader, OpenScenario,
 };
@@ -418,13 +418,13 @@ impl ScenarioValidator {
             for obj in &entities.scenario_objects {
                 let entity_ref = EntityRef {
                     name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
-                    object_type: if obj.vehicle.is_some() {
+                    object_type: Value::Literal(if obj.vehicle.is_some() {
                         ObjectType::Vehicle
                     } else if obj.pedestrian.is_some() {
                         ObjectType::Pedestrian
                     } else {
                         ObjectType::MiscellaneousObject
-                    },
+                    }),
                 };
                 context.add_entity(entity_ref.name.clone(), entity_ref);
             }
@@ -850,7 +850,7 @@ mod tests {
 
         let vehicle = Vehicle {
             name: Value::literal("TestVehicle".to_string()),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
@@ -932,7 +932,7 @@ mod tests {
 
         let vehicle = Vehicle {
             name: Value::literal("TestVehicle".to_string()),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
@@ -1003,7 +1003,7 @@ mod tests {
 
         let vehicle1 = Vehicle {
             name: Value::literal("Car1".to_string()),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
@@ -1025,7 +1025,7 @@ mod tests {
 
         let vehicle2 = Vehicle {
             name: Value::literal("Car1".to_string()), // Duplicate name
-            vehicle_category: VehicleCategory::Truck,
+            vehicle_category: Value::Literal(VehicleCategory::Truck),
             role: None,
             mass: None,
             model3d: None,
@@ -1136,7 +1136,7 @@ mod tests {
         // Create scenario with entities to ensure validation occurs
         let vehicle = crate::types::entities::vehicle::Vehicle {
             name: crate::types::basic::Value::literal("TestCar".to_string()),
-            vehicle_category: crate::types::enums::VehicleCategory::Car,
+            vehicle_category: Value::Literal(crate::types::enums::VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,

@@ -34,6 +34,7 @@
 
 use super::validation::ValidationContextBuilder;
 use super::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     basic::{OSString, ParameterDeclaration, ParameterDeclarations, UnsignedShort},
     catalogs::locations::CatalogLocations,
@@ -240,7 +241,7 @@ impl ScenarioBuilder<HasHeader> {
 
         params.parameter_declarations.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: param_type,
+            parameter_type: Value::Literal(param_type),
             value: OSString::literal(value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -501,7 +502,7 @@ mod tests {
         let scenario = minimal_builder().build().unwrap();
 
         // Verify basic structure
-        if let crate::types::basic::Value::Literal(desc) = &scenario.file_header.description {
+        if let Value::Literal(desc) = &scenario.file_header.description {
             assert_eq!(desc, "Test Scenario");
         } else {
             panic!("Description should be literal");

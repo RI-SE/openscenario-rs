@@ -160,6 +160,7 @@ impl Position {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::basic::Value;
 
     #[test]
     fn test_position_default_is_all_none() {
@@ -246,7 +247,9 @@ mod tests {
                 h: Some(Double::literal(1.57)),
                 p: None,
                 r: None,
-                reference_context: Some(crate::types::enums::ReferenceContext::Relative),
+                reference_context: Some(Value::Literal(
+                    crate::types::enums::ReferenceContext::Relative,
+                )),
             }),
         };
 

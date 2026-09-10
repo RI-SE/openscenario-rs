@@ -67,7 +67,7 @@ fn test_catalog_file_parsing() {
     assert_eq!(vehicle.name, "TestCar");
     assert_eq!(
         vehicle.vehicle_category,
-        openscenario_rs::types::enums::VehicleCategory::Car
+        Value::Literal(openscenario_rs::types::enums::VehicleCategory::Car)
     );
 }
 

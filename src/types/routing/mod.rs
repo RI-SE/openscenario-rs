@@ -7,7 +7,7 @@
 //! - Integration with existing position and action systems
 //! - Support for parameterizable routes and waypoints
 //!
-use crate::types::basic::{Boolean, Double, OSString};
+use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::enums::{ParameterType, RouteStrategy};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,7 @@ pub struct ParameterDeclaration {
 
     /// Parameter type
     #[serde(rename = "@parameterType")]
-    pub parameter_type: ParameterType,
+    pub parameter_type: Value<ParameterType>,
 
     /// Default value
     #[serde(rename = "@value")]
@@ -115,7 +115,7 @@ pub struct Waypoint {
 
     /// Routing strategy to reach this waypoint
     #[serde(rename = "@routeStrategy")]
-    pub route_strategy: RouteStrategy,
+    pub route_strategy: Value<RouteStrategy>,
 }
 
 /// Route reference - can contain direct route or catalog reference
@@ -158,7 +158,7 @@ impl Default for Waypoint {
     fn default() -> Self {
         Self {
             position: Position::default(),
-            route_strategy: RouteStrategy::Shortest,
+            route_strategy: Value::Literal(RouteStrategy::Shortest),
         }
     }
 }
@@ -320,7 +320,7 @@ impl Waypoint {
     pub fn new(position: Position, route_strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy,
+            route_strategy: Value::Literal(route_strategy),
         }
     }
 
@@ -442,11 +442,11 @@ mod tests {
     fn test_waypoint_convenience_constructors() {
         let wp1 = Waypoint::world_position(100.0, 200.0, 0.0, RouteStrategy::Shortest);
         assert!(wp1.position.world_position.is_some());
-        assert_eq!(wp1.route_strategy, RouteStrategy::Shortest);
+        assert_eq!(wp1.route_strategy, Value::Literal(RouteStrategy::Shortest));
 
         let wp2 = Waypoint::lane_position("road1", "lane1", 50.0, RouteStrategy::Fastest);
         assert!(wp2.position.lane_position.is_some());
-        assert_eq!(wp2.route_strategy, RouteStrategy::Fastest);
+        assert_eq!(wp2.route_strategy, Value::Literal(RouteStrategy::Fastest));
 
         let wp3 = Waypoint::relative_world_position(
             "entity1",
@@ -456,7 +456,10 @@ mod tests {
             RouteStrategy::LeastIntersections,
         );
         assert!(wp3.position.relative_world_position.is_some());
-        assert_eq!(wp3.route_strategy, RouteStrategy::LeastIntersections);
+        assert_eq!(
+            wp3.route_strategy,
+            Value::Literal(RouteStrategy::LeastIntersections)
+        );
     }
 
     #[test]
@@ -626,7 +629,7 @@ mod tests {
             .parameter_declarations
             .push(ParameterDeclaration {
                 name: OSString::literal("routeSpeed".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("50.0".to_string()),
                 constraint_groups: Vec::new(),
             });

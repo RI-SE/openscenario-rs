@@ -7,7 +7,7 @@
 //! - Temporal conditions (time headway, time-to-collision)
 //! - Relative conditions comparing entities to each other
 //!
-use crate::types::basic::{Boolean, Double, Int, OSString};
+use crate::types::basic::{Boolean, Double, Int, OSString, Value};
 use crate::types::enums::{
     AngleType, CoordinateSystem, DirectionalDimension, ObjectType, RelativeDistanceType,
     RoutingAlgorithm, Rule,
@@ -42,11 +42,11 @@ pub struct SpeedCondition {
 
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Direction of speed measurement (optional)
     #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
-    pub direction: Option<DirectionalDimension>,
+    pub direction: Option<Value<DirectionalDimension>>,
 }
 
 /// Condition based on entity acceleration
@@ -58,11 +58,11 @@ pub struct AccelerationCondition {
 
     /// Comparison rule (greater than, less than, etc.)
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Direction of acceleration measurement (optional)
     #[serde(rename = "@direction", skip_serializing_if = "Option::is_none")]
-    pub direction: Option<DirectionalDimension>,
+    pub direction: Option<Value<DirectionalDimension>>,
 }
 
 /// Condition for detecting standstill state
@@ -91,7 +91,7 @@ pub struct CollisionCondition {
 pub struct CollisionTarget {
     /// XSD:832 required attribute `type` on complexType `ByObjectType`
     #[serde(rename = "@type")]
-    pub target_type: ObjectType,
+    pub target_type: Value<ObjectType>,
 }
 
 /// Condition for detecting end-of-road state
@@ -115,7 +115,7 @@ pub struct TimeHeadwayCondition {
 
     /// Comparison rule
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Whether to measure in freespace or bounding box
     #[serde(rename = "@freespace")]
@@ -127,18 +127,18 @@ pub struct TimeHeadwayCondition {
 
     /// Optional coordinate system for measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 
     /// Optional relative distance type
     #[serde(
         rename = "@relativeDistanceType",
         skip_serializing_if = "Option::is_none"
     )]
-    pub relative_distance_type: Option<RelativeDistanceType>,
+    pub relative_distance_type: Option<Value<RelativeDistanceType>>,
 
     /// Optional routing algorithm for route-based measurement
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
-    pub routing_algorithm: Option<RoutingAlgorithm>,
+    pub routing_algorithm: Option<Value<RoutingAlgorithm>>,
 }
 
 /// Time to collision condition for collision prediction
@@ -150,7 +150,7 @@ pub struct TimeToCollisionCondition {
 
     /// Comparison rule
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Whether to measure in freespace or bounding box
     #[serde(rename = "@freespace")]
@@ -162,18 +162,18 @@ pub struct TimeToCollisionCondition {
 
     /// Optional coordinate system for measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 
     /// Optional relative distance type
     #[serde(
         rename = "@relativeDistanceType",
         skip_serializing_if = "Option::is_none"
     )]
-    pub relative_distance_type: Option<RelativeDistanceType>,
+    pub relative_distance_type: Option<Value<RelativeDistanceType>>,
 
     /// Optional routing algorithm for route-based measurement
     #[serde(rename = "@routingAlgorithm", skip_serializing_if = "Option::is_none")]
-    pub routing_algorithm: Option<RoutingAlgorithm>,
+    pub routing_algorithm: Option<Value<RoutingAlgorithm>>,
 
     /// Target specification for collision detection — XSD child `<TimeToCollisionConditionTarget>`
     #[serde(rename = "TimeToCollisionConditionTarget")]
@@ -197,7 +197,7 @@ pub struct TimeToCollisionTarget {
 pub struct AngleCondition {
     /// Type of angle measurement (relative or absolute) — XSD required attr `angleType`
     #[serde(rename = "@angleType")]
-    pub angle_type: AngleType,
+    pub angle_type: Value<AngleType>,
 
     /// Target angle value in radians — XSD required attr `angle`
     #[serde(rename = "@angle")]
@@ -213,7 +213,7 @@ pub struct AngleCondition {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 }
 
 /// Off-road detection condition - matches XSD OffroadCondition
@@ -233,7 +233,7 @@ pub struct RelativeSpeedCondition {
 
     /// Comparison rule (greater than, less than, etc.) — XSD required attr `rule`
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 
     /// Speed difference value — XSD required attr `value`
     #[serde(rename = "@value")]
@@ -245,7 +245,7 @@ pub struct RelativeSpeedCondition {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub direction: Option<DirectionalDimension>,
+    pub direction: Option<Value<DirectionalDimension>>,
 }
 
 /// Relative lane range specification for clearance conditions
@@ -305,7 +305,7 @@ pub struct RelativeAngleCondition {
 
     /// Type of angle measurement (relative or absolute) — XSD required attr `angleType`
     #[serde(rename = "@angleType")]
-    pub angle_type: AngleType,
+    pub angle_type: Value<AngleType>,
 
     /// Target angle value in radians — XSD required attr `angle`
     #[serde(rename = "@angle")]
@@ -321,7 +321,7 @@ pub struct RelativeAngleCondition {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 }
 
 /// Distance-based condition triggering
@@ -591,7 +591,7 @@ impl Default for SpeedCondition {
     fn default() -> Self {
         Self {
             value: Double::literal(10.0),
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
             direction: None,
         }
     }
@@ -602,14 +602,14 @@ impl AccelerationCondition {
     pub fn new(value: f64, rule: Rule) -> Self {
         Self {
             value: Double::literal(value),
-            rule,
+            rule: Value::Literal(rule),
             direction: None,
         }
     }
 
     /// Set direction of acceleration measurement
     pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
-        self.direction = Some(direction);
+        self.direction = Some(Value::Literal(direction));
         self
     }
 
@@ -669,7 +669,7 @@ impl CollisionCondition {
         Self {
             target: None,
             by_type: Some(CollisionTarget {
-                target_type: entity_type,
+                target_type: Value::Literal(entity_type),
             }),
         }
     }
@@ -717,7 +717,7 @@ impl TimeHeadwayCondition {
         Self {
             entity_ref: OSString::literal(entity_ref.to_string()),
             value: Double::literal(value),
-            rule,
+            rule: Value::Literal(rule),
             freespace: Boolean::literal(freespace),
             along_route: None,
             coordinate_system: None,
@@ -738,19 +738,19 @@ impl TimeHeadwayCondition {
 
     /// Set coordinate system for measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
-        self.coordinate_system = Some(system);
+        self.coordinate_system = Some(Value::Literal(system));
         self
     }
 
     /// Set relative distance type for measurement
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
-        self.relative_distance_type = Some(distance_type);
+        self.relative_distance_type = Some(Value::Literal(distance_type));
         self
     }
 
     /// Set routing algorithm for route-based measurement
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
-        self.routing_algorithm = Some(algorithm);
+        self.routing_algorithm = Some(Value::Literal(algorithm));
         self
     }
 }
@@ -767,7 +767,7 @@ impl TimeToCollisionCondition {
 
         Self {
             value: Double::literal(value),
-            rule,
+            rule: Value::Literal(rule),
             freespace: Boolean::literal(freespace),
             along_route: None,
             coordinate_system: None,
@@ -791,7 +791,7 @@ impl TimeToCollisionCondition {
 
         Self {
             value: Double::literal(value),
-            rule,
+            rule: Value::Literal(rule),
             freespace: Boolean::literal(freespace),
             along_route: None,
             coordinate_system: None,
@@ -823,19 +823,19 @@ impl TimeToCollisionCondition {
 
     /// Set coordinate system for measurement
     pub fn with_coordinate_system(mut self, system: CoordinateSystem) -> Self {
-        self.coordinate_system = Some(system);
+        self.coordinate_system = Some(Value::Literal(system));
         self
     }
 
     /// Set relative distance type for measurement
     pub fn with_distance_type(mut self, distance_type: RelativeDistanceType) -> Self {
-        self.relative_distance_type = Some(distance_type);
+        self.relative_distance_type = Some(Value::Literal(distance_type));
         self
     }
 
     /// Set routing algorithm for route-based measurement
     pub fn with_routing_algorithm(mut self, algorithm: RoutingAlgorithm) -> Self {
-        self.routing_algorithm = Some(algorithm);
+        self.routing_algorithm = Some(Value::Literal(algorithm));
         self
     }
 }
@@ -865,7 +865,7 @@ impl Default for AccelerationCondition {
     fn default() -> Self {
         Self {
             value: Double::literal(2.0),
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
             direction: None,
         }
     }
@@ -882,7 +882,7 @@ impl Default for StandStillCondition {
 impl Default for CollisionTarget {
     fn default() -> Self {
         Self {
-            target_type: ObjectType::Vehicle,
+            target_type: Value::Literal(ObjectType::Vehicle),
         }
     }
 }
@@ -908,7 +908,7 @@ impl Default for TimeHeadwayCondition {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
             value: Double::literal(2.0),
-            rule: Rule::LessThan,
+            rule: Value::Literal(Rule::LessThan),
             freespace: Boolean::literal(true),
             along_route: None,
             coordinate_system: None,
@@ -922,7 +922,7 @@ impl Default for TimeToCollisionCondition {
     fn default() -> Self {
         Self {
             value: Double::literal(5.0),
-            rule: Rule::LessThan,
+            rule: Value::Literal(Rule::LessThan),
             freespace: Boolean::literal(true),
             along_route: None,
             coordinate_system: None,
@@ -947,7 +947,7 @@ impl Default for TimeToCollisionTarget {
 impl Default for AngleCondition {
     fn default() -> Self {
         Self {
-            angle_type: AngleType::Heading,
+            angle_type: Value::Literal(AngleType::Heading),
             angle: Double::literal(0.0),
             angle_tolerance: Double::literal(0.1),
             coordinate_system: None,
@@ -959,7 +959,7 @@ impl Default for RelativeSpeedCondition {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
             value: Double::literal(5.0),
             direction: None,
         }
@@ -992,7 +992,7 @@ impl Default for RelativeAngleCondition {
     fn default() -> Self {
         Self {
             entity_ref: OSString::literal("DefaultEntity".to_string()),
-            angle_type: AngleType::Heading,
+            angle_type: Value::Literal(AngleType::Heading),
             angle: Double::literal(0.0),
             angle_tolerance: Double::literal(0.1),
             coordinate_system: None,
@@ -1038,7 +1038,7 @@ impl ByEntityCondition {
             triggering_entities,
             EntityCondition::Speed(SpeedCondition {
                 value: Double::literal(value),
-                rule,
+                rule: Value::Literal(rule),
                 direction: None,
             }),
         )
@@ -1233,7 +1233,7 @@ impl ByEntityCondition {
         Self::new(
             triggering_entities,
             EntityCondition::Angle(AngleCondition {
-                angle_type,
+                angle_type: Value::Literal(angle_type),
                 angle: Double::literal(angle),
                 angle_tolerance: Double::literal(angle_tolerance),
                 coordinate_system: None,
@@ -1252,7 +1252,7 @@ impl ByEntityCondition {
             triggering_entities,
             EntityCondition::RelativeSpeed(RelativeSpeedCondition {
                 entity_ref: OSString::literal(entity_ref.to_string()),
-                rule,
+                rule: Value::Literal(rule),
                 value: Double::literal(value),
                 direction: None,
             }),
@@ -1300,7 +1300,7 @@ impl ByEntityCondition {
             triggering_entities,
             EntityCondition::RelativeAngle(RelativeAngleCondition {
                 entity_ref: OSString::literal(entity_ref.to_string()),
-                angle_type,
+                angle_type: Value::Literal(angle_type),
                 angle: Double::literal(angle),
                 angle_tolerance: Double::literal(angle_tolerance),
                 coordinate_system: None,
@@ -1318,7 +1318,7 @@ mod tests {
     fn test_acceleration_condition_new() {
         let condition = AccelerationCondition::new(5.0, Rule::GreaterThan);
         assert_eq!(condition.value, Double::literal(5.0));
-        assert_eq!(condition.rule, Rule::GreaterThan);
+        assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
         assert_eq!(condition.direction, None);
     }
 
@@ -1327,10 +1327,10 @@ mod tests {
         let condition = AccelerationCondition::new(3.0, Rule::LessThan)
             .with_direction(DirectionalDimension::Longitudinal);
         assert_eq!(condition.value, Double::literal(3.0));
-        assert_eq!(condition.rule, Rule::LessThan);
+        assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
         assert_eq!(
             condition.direction,
-            Some(DirectionalDimension::Longitudinal)
+            Some(Value::Literal(DirectionalDimension::Longitudinal))
         );
     }
 
@@ -1338,7 +1338,7 @@ mod tests {
     fn test_acceleration_condition_greater_than() {
         let condition = AccelerationCondition::greater_than(2.5);
         assert_eq!(condition.value, Double::literal(2.5));
-        assert_eq!(condition.rule, Rule::GreaterThan);
+        assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
         assert_eq!(condition.direction, None);
     }
 
@@ -1346,7 +1346,7 @@ mod tests {
     fn test_acceleration_condition_less_than() {
         let condition = AccelerationCondition::less_than(1.0);
         assert_eq!(condition.value, Double::literal(1.0));
-        assert_eq!(condition.rule, Rule::LessThan);
+        assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
         assert_eq!(condition.direction, None);
     }
 
@@ -1354,10 +1354,10 @@ mod tests {
     fn test_acceleration_condition_longitudinal() {
         let condition = AccelerationCondition::longitudinal(4.0, Rule::EqualTo);
         assert_eq!(condition.value, Double::literal(4.0));
-        assert_eq!(condition.rule, Rule::EqualTo);
+        assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
         assert_eq!(
             condition.direction,
-            Some(DirectionalDimension::Longitudinal)
+            Some(Value::Literal(DirectionalDimension::Longitudinal))
         );
     }
 
@@ -1365,23 +1365,29 @@ mod tests {
     fn test_acceleration_condition_lateral() {
         let condition = AccelerationCondition::lateral(2.0, Rule::GreaterOrEqual);
         assert_eq!(condition.value, Double::literal(2.0));
-        assert_eq!(condition.rule, Rule::GreaterOrEqual);
-        assert_eq!(condition.direction, Some(DirectionalDimension::Lateral));
+        assert_eq!(condition.rule, Value::Literal(Rule::GreaterOrEqual));
+        assert_eq!(
+            condition.direction,
+            Some(Value::Literal(DirectionalDimension::Lateral))
+        );
     }
 
     #[test]
     fn test_acceleration_condition_vertical() {
         let condition = AccelerationCondition::vertical(1.5, Rule::LessOrEqual);
         assert_eq!(condition.value, Double::literal(1.5));
-        assert_eq!(condition.rule, Rule::LessOrEqual);
-        assert_eq!(condition.direction, Some(DirectionalDimension::Vertical));
+        assert_eq!(condition.rule, Value::Literal(Rule::LessOrEqual));
+        assert_eq!(
+            condition.direction,
+            Some(Value::Literal(DirectionalDimension::Vertical))
+        );
     }
 
     #[test]
     fn test_acceleration_condition_default() {
         let condition = AccelerationCondition::default();
         assert_eq!(condition.value, Double::literal(2.0));
-        assert_eq!(condition.rule, Rule::GreaterThan);
+        assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
         assert_eq!(condition.direction, None);
     }
 
@@ -1411,7 +1417,7 @@ mod tests {
         match condition.entity_condition {
             EntityCondition::Acceleration(acc_condition) => {
                 assert_eq!(acc_condition.value, Double::literal(3.0));
-                assert_eq!(acc_condition.rule, Rule::GreaterThan);
+                assert_eq!(acc_condition.rule, Value::Literal(Rule::GreaterThan));
                 assert_eq!(acc_condition.direction, None);
             }
             _ => panic!("Expected Acceleration variant"),
@@ -1430,8 +1436,11 @@ mod tests {
         match condition.entity_condition {
             EntityCondition::Acceleration(acc_condition) => {
                 assert_eq!(acc_condition.value, Double::literal(2.5));
-                assert_eq!(acc_condition.rule, Rule::LessThan);
-                assert_eq!(acc_condition.direction, Some(DirectionalDimension::Lateral));
+                assert_eq!(acc_condition.rule, Value::Literal(Rule::LessThan));
+                assert_eq!(
+                    acc_condition.direction,
+                    Some(Value::Literal(DirectionalDimension::Lateral))
+                );
             }
             _ => panic!("Expected Acceleration variant"),
         }
@@ -1509,7 +1518,7 @@ mod tests {
         assert_eq!(condition.target, None);
         assert!(condition.by_type.is_some());
         if let Some(by_type) = condition.by_type {
-            assert_eq!(by_type.target_type, ObjectType::Pedestrian);
+            assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
         }
     }
 

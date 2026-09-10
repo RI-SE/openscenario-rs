@@ -1,7 +1,7 @@
 //! Vehicle entity definition
 
 use super::axles::Axles;
-use crate::types::basic::{Double, OSString, ParameterDeclarations};
+use crate::types::basic::{Double, OSString, ParameterDeclarations, Value};
 use crate::types::enums::{Role, VehicleCategory};
 use crate::types::geometry::BoundingBox;
 use crate::types::scenario::story::EntityRef;
@@ -109,11 +109,11 @@ pub struct Vehicle {
 
     /// Category of the vehicle (car, truck, bus, etc.)
     #[serde(rename = "@vehicleCategory")]
-    pub vehicle_category: VehicleCategory,
+    pub vehicle_category: Value<VehicleCategory>,
 
     /// Role of the vehicle (e.g. ambulance, police)
     #[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
-    pub role: Option<Role>,
+    pub role: Option<Value<Role>>,
 
     /// Mass of the vehicle in kg
     #[serde(rename = "@mass", default, skip_serializing_if = "Option::is_none")]
@@ -173,7 +173,7 @@ impl Vehicle {
     pub fn new_car(name: String) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
@@ -198,7 +198,7 @@ impl Vehicle {
     pub fn new_truck(name: String) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle_category: VehicleCategory::Truck,
+            vehicle_category: Value::Literal(VehicleCategory::Truck),
             role: None,
             mass: None,
             model3d: None,
@@ -226,7 +226,7 @@ impl Vehicle {
     pub fn new_motorcycle(name: String) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle_category: VehicleCategory::Motorbike,
+            vehicle_category: Value::Literal(VehicleCategory::Motorbike),
             role: None,
             mass: None,
             model3d: None,
@@ -284,7 +284,7 @@ impl Default for Vehicle {
     fn default() -> Self {
         Self {
             name: crate::types::basic::Value::literal("DefaultVehicle".to_string()),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
@@ -315,7 +315,10 @@ mod tests {
         let vehicle = Vehicle::default();
 
         assert_eq!(vehicle.name.as_literal().unwrap(), "DefaultVehicle");
-        assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
+        assert_eq!(
+            vehicle.vehicle_category,
+            Value::Literal(VehicleCategory::Car)
+        );
 
         // Should have default bounding box
         assert_eq!(
@@ -328,7 +331,7 @@ mod tests {
     fn test_vehicle_creation() {
         let vehicle = Vehicle {
             name: crate::types::basic::Value::literal("TestCar".to_string()),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
@@ -349,7 +352,10 @@ mod tests {
         };
 
         assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
-        assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
+        assert_eq!(
+            vehicle.vehicle_category,
+            Value::Literal(VehicleCategory::Car)
+        );
     }
 
     #[test]
@@ -368,7 +374,7 @@ mod tests {
         let car = Vehicle::new_car("TestCar".to_string());
 
         assert_eq!(car.name.as_literal().unwrap(), "TestCar");
-        assert_eq!(car.vehicle_category, VehicleCategory::Car);
+        assert_eq!(car.vehicle_category, Value::Literal(VehicleCategory::Car));
         assert_eq!(car.axle_count(), 2);
     }
 
@@ -377,7 +383,10 @@ mod tests {
         let truck = Vehicle::new_truck("TestTruck".to_string());
 
         assert_eq!(truck.name.as_literal().unwrap(), "TestTruck");
-        assert_eq!(truck.vehicle_category, VehicleCategory::Truck);
+        assert_eq!(
+            truck.vehicle_category,
+            Value::Literal(VehicleCategory::Truck)
+        );
         assert_eq!(truck.axle_count(), 3); // Front + rear + additional
     }
 
@@ -386,7 +395,10 @@ mod tests {
         let motorcycle = Vehicle::new_motorcycle("TestBike".to_string());
 
         assert_eq!(motorcycle.name.as_literal().unwrap(), "TestBike");
-        assert_eq!(motorcycle.vehicle_category, VehicleCategory::Motorbike);
+        assert_eq!(
+            motorcycle.vehicle_category,
+            Value::Literal(VehicleCategory::Motorbike)
+        );
         assert_eq!(motorcycle.axle_count(), 2);
     }
 

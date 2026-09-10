@@ -59,7 +59,7 @@ pub struct RouteWaypoint {
 
     /// Routing strategy to reach this waypoint (required per XSD)
     #[serde(rename = "@routeStrategy")]
-    pub route_strategy: RouteStrategy,
+    pub route_strategy: Value<RouteStrategy>,
 }
 
 impl Default for RouteWaypoint {
@@ -86,7 +86,7 @@ impl Default for RouteWaypoint {
                 geographic_position: None,
                 relative_object_position: None,
             },
-            route_strategy: RouteStrategy::Fastest,
+            route_strategy: Value::Literal(RouteStrategy::Fastest),
         }
     }
 }
@@ -155,7 +155,7 @@ impl CatalogRoute {
     pub fn add_position_waypoint(&mut self, position: Position, route_strategy: RouteStrategy) {
         self.waypoints.push(RouteWaypoint {
             position,
-            route_strategy,
+            route_strategy: Value::Literal(route_strategy),
         });
     }
 
@@ -170,7 +170,7 @@ impl RouteWaypoint {
     pub fn new(position: Position, route_strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy,
+            route_strategy: Value::Literal(route_strategy),
         }
     }
 
@@ -178,7 +178,7 @@ impl RouteWaypoint {
     pub fn with_strategy(position: Position, strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy: strategy,
+            route_strategy: Value::Literal(strategy),
         }
     }
 }
@@ -334,8 +334,14 @@ mod tests {
         route.add_waypoint(waypoint2);
 
         assert_eq!(route.waypoint_count(), 2);
-        assert_eq!(route.waypoints[0].route_strategy, RouteStrategy::Shortest);
-        assert_eq!(route.waypoints[1].route_strategy, RouteStrategy::Fastest);
+        assert_eq!(
+            route.waypoints[0].route_strategy,
+            Value::Literal(RouteStrategy::Shortest)
+        );
+        assert_eq!(
+            route.waypoints[1].route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 
     #[test]
@@ -345,8 +351,14 @@ mod tests {
         let waypoint1 = RouteWaypoint::new(pos.clone(), RouteStrategy::Fastest);
         let waypoint2 = RouteWaypoint::with_strategy(pos, RouteStrategy::Shortest);
 
-        assert_eq!(waypoint1.route_strategy, RouteStrategy::Fastest);
-        assert_eq!(waypoint2.route_strategy, RouteStrategy::Shortest);
+        assert_eq!(
+            waypoint1.route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
+        assert_eq!(
+            waypoint2.route_strategy,
+            Value::Literal(RouteStrategy::Shortest)
+        );
     }
 
     #[test]
@@ -354,7 +366,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("targetSpeed".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("50.0".to_string()),
                 constraint_groups: Vec::new(),
             }],
@@ -436,9 +448,12 @@ mod tests {
         assert_eq!(resolved.waypoints.len(), 2);
         assert_eq!(
             resolved.waypoints[0].route_strategy,
-            RouteStrategy::Shortest
+            Value::Literal(RouteStrategy::Shortest)
         );
-        assert_eq!(resolved.waypoints[1].route_strategy, RouteStrategy::Fastest);
+        assert_eq!(
+            resolved.waypoints[1].route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 
     #[test]
@@ -447,6 +462,9 @@ mod tests {
         let waypoint = RouteWaypoint::default();
 
         assert_eq!(route.name, "DefaultCatalogRoute");
-        assert_eq!(waypoint.route_strategy, RouteStrategy::Fastest);
+        assert_eq!(
+            waypoint.route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 }

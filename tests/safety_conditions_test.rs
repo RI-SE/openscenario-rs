@@ -1,5 +1,6 @@
 //! Tests for safety conditions: CollisionCondition, OffroadCondition, EndOfRoadCondition
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     conditions::{
@@ -29,7 +30,7 @@ fn test_collision_condition_with_type() {
     assert_eq!(condition.target, None);
     assert!(condition.by_type.is_some());
     if let Some(by_type) = condition.by_type {
-        assert_eq!(by_type.target_type, ObjectType::Pedestrian);
+        assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
     }
 }
 
@@ -50,7 +51,7 @@ fn test_collision_condition_default() {
 #[test]
 fn test_collision_target_default() {
     let target = CollisionTarget::default();
-    assert_eq!(target.target_type, ObjectType::Vehicle);
+    assert_eq!(target.target_type, Value::Literal(ObjectType::Vehicle));
 }
 
 #[test]

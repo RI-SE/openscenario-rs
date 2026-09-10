@@ -24,15 +24,18 @@ A Rust library for parsing, validating, and manipulating [OpenSCENARIO](https://
 This crate targets **OpenSCENARIO 1.3**, as defined by the bundled schema in
 [`Schema/OpenSCENARIO.xsd`](Schema/OpenSCENARIO.xsd) (1.4 support is planned). Field
 optionality follows the XSD: attributes and elements the schema marks optional are `Option<T>`
-in the Rust model, and no default values are invented beyond what the schema defines. Known
-remaining gaps against the XSD are tracked in [docs/xsd_gaps.md](docs/xsd_gaps.md).
+in the Rust model, and no default values are invented beyond what the schema defines.
+Parameter references are supported on every attribute the schema allows them on, enumerations
+included — `vehicleCategory="$cat"` parses to `Value::Parameter("cat")` and resolves through
+the usual parameter context. Known remaining gaps against the XSD are tracked in
+[docs/xsd_gaps.md](docs/xsd_gaps.md).
 
 ## Status
 
 Core parsing and serialization is functional. The type model has been audited element by
-element against the schema over four conformance passes; what the test corpus proves, what it
-does not, and the one gap that remains open are recorded in
-[docs/xsd_gaps.md](docs/xsd_gaps.md). Recent changes, including breaking ones, are in
+element against the schema over five conformance passes; what the test corpus proves and what
+it does not are recorded in [docs/xsd_gaps.md](docs/xsd_gaps.md), which currently tracks no
+open structural gap. Recent changes, including breaking ones, are in
 [CHANGELOG.md](CHANGELOG.md).
 
 ## Quick Start

@@ -501,7 +501,7 @@ impl DistributionSampler for DistributionRange {
 
     fn sample(&self) -> Result<Self::Output> {
         match &self.range.lower_limit {
-            crate::types::basic::Value::Literal(val) => Ok(val.to_string()),
+            Value::Literal(val) => Ok(val.to_string()),
             crate::types::basic::Value::Parameter(_) => Err(crate::error::Error::validation_error(
                 "sampling",
                 "Cannot sample from parameterized distribution without parameter resolution",

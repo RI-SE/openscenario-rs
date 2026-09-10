@@ -3,6 +3,7 @@
 //! This example demonstrates basic usage of spatial conditions
 //! using direct struct construction to avoid import issues.
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     enums::{RelativeDistanceType, Rule},
@@ -36,7 +37,7 @@ fn main() {
         position: Position::default(),
         value: Double::literal(50.0),
         freespace: Boolean::literal(true),
-        rule: Rule::LessThan,
+        rule: Value::Literal(Rule::LessThan),
         along_route: None,
         coordinate_system: None,
         relative_distance_type: None,
@@ -56,8 +57,8 @@ fn main() {
         entity_ref: OSString::literal("target_vehicle".to_string()),
         value: Double::literal(20.0),
         freespace: Boolean::literal(true),
-        relative_distance_type: RelativeDistanceType::Longitudinal,
-        rule: Rule::GreaterThan,
+        relative_distance_type: Value::Literal(RelativeDistanceType::Longitudinal),
+        rule: Value::Literal(Rule::GreaterThan),
         coordinate_system: None,
         routing_algorithm: None,
     };

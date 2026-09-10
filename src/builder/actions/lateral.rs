@@ -2,6 +2,7 @@
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
         AbsoluteTargetLane, AbsoluteTargetLaneOffset, DynamicConstraints, LaneChangeAction,
@@ -50,8 +51,8 @@ impl LaneChangeActionBuilder {
     /// Set dynamics with simple parameters
     pub fn with_simple_dynamics(mut self, duration: f64) -> Self {
         self.dynamics = Some(TransitionDynamics {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             following_mode: None,
             value: Double::literal(duration),
         });
@@ -87,8 +88,8 @@ impl ActionBuilder for LaneChangeActionBuilder {
         let lane_change_action = LaneChangeAction {
             target_lane_offset: self.target_lane_offset.map(Double::literal),
             lane_change_action_dynamics: self.dynamics.unwrap_or_else(|| TransitionDynamics {
-                dynamics_dimension: DynamicsDimension::Time,
-                dynamics_shape: DynamicsShape::Linear,
+                dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(DynamicsShape::Linear),
                 following_mode: None,
                 value: Double::literal(2.0),
             }),
@@ -240,14 +241,31 @@ impl LaneOffsetActionBuilder {
         self
     }
 
-    /// Set simple dynamics
+    /// Set simple dynamics with a literal `dynamicsShape`.
+    ///
+    /// The signature is unchanged by OSR-06: it still takes the bare enum and wraps it
+    /// internally. See [`Self::with_simple_dynamics_param`] for the parameter form.
     pub fn with_simple_dynamics(
         mut self,
         shape: DynamicsShape,
         max_lateral_acc: Option<f64>,
     ) -> Self {
         self.dynamics = Some(LaneOffsetActionDynamics {
-            dynamics_shape: shape,
+            dynamics_shape: Value::Literal(shape),
+            max_lateral_acc: max_lateral_acc.map(Double::literal),
+        });
+        self
+    }
+
+    /// Set simple dynamics with `dynamicsShape="$name"`, the parameter form the
+    /// attribute's `xsd:union` admits. `name` is the parameter name without the `$`.
+    pub fn with_simple_dynamics_param(
+        mut self,
+        shape_param: &str,
+        max_lateral_acc: Option<f64>,
+    ) -> Self {
+        self.dynamics = Some(LaneOffsetActionDynamics {
+            dynamics_shape: Value::Parameter(shape_param.to_string()),
             max_lateral_acc: max_lateral_acc.map(Double::literal),
         });
         self
@@ -282,7 +300,7 @@ impl ActionBuilder for LaneOffsetActionBuilder {
         let lane_offset_action = LaneOffsetAction {
             continuous: Boolean::literal(self.continuous),
             dynamics: self.dynamics.unwrap_or_else(|| LaneOffsetActionDynamics {
-                dynamics_shape: DynamicsShape::Linear,
+                dynamics_shape: Value::Literal(DynamicsShape::Linear),
                 max_lateral_acc: None,
             }),
             target: LaneOffsetTarget {

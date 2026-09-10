@@ -2,6 +2,7 @@
 //! Tests the enhanced BoundingBox geometric operations and comprehensive
 //! Axle system implementation for various vehicle types.
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     entities::{
         axles::{Axle, Axles},
@@ -196,15 +197,15 @@ fn test_vehicle_factory_methods() {
     // Test categories
     assert_eq!(
         car.vehicle_category,
-        openscenario_rs::types::enums::VehicleCategory::Car
+        Value::Literal(openscenario_rs::types::enums::VehicleCategory::Car)
     );
     assert_eq!(
         truck.vehicle_category,
-        openscenario_rs::types::enums::VehicleCategory::Truck
+        Value::Literal(openscenario_rs::types::enums::VehicleCategory::Truck)
     );
     assert_eq!(
         motorcycle.vehicle_category,
-        openscenario_rs::types::enums::VehicleCategory::Motorbike
+        Value::Literal(openscenario_rs::types::enums::VehicleCategory::Motorbike)
     );
 
     // Test axle counts

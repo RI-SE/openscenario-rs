@@ -1,5 +1,6 @@
 //! Vehicle entity builder with fluent API
 
+use crate::types::basic::Value;
 use crate::types::{
     basic::{Double, OSString},
     entities::axles::Axles,
@@ -27,7 +28,7 @@ pub struct DetachedVehicleBuilder {
 #[derive(Debug, Default)]
 struct PartialVehicleData {
     name: Option<String>,
-    vehicle_category: Option<VehicleCategory>,
+    vehicle_category: Option<Value<VehicleCategory>>,
     properties: Option<Properties>,
     bounding_box: Option<BoundingBox>,
     performance: Option<Performance>,
@@ -50,7 +51,7 @@ impl<'parent> VehicleBuilder<'parent> {
 
     /// Set vehicle as passenger car
     pub fn car(mut self) -> Self {
-        self.vehicle_data.vehicle_category = Some(VehicleCategory::Car);
+        self.vehicle_data.vehicle_category = Some(Value::Literal(VehicleCategory::Car));
         self.vehicle_data.name = Some("PassengerCar".to_string());
 
         // Default car dimensions
@@ -82,9 +83,29 @@ impl<'parent> VehicleBuilder<'parent> {
         self
     }
 
+    /// Set the vehicle category to a literal enum value.
+    ///
+    /// The literal case keeps the bare enum, so existing call sites are unchanged; see
+    /// [`Self::with_category_param`] for the `$name` parameter form the schema also allows
+    /// on this attribute.
+    pub fn with_category(mut self, category: VehicleCategory) -> Self {
+        self.vehicle_data.vehicle_category = Some(Value::Literal(category));
+        self
+    }
+
+    /// Set the vehicle category to a parameter reference.
+    ///
+    /// `@vehicleCategory` is declared with an `xsd:union` whose second member is
+    /// `<xsd:restriction base="parameter"/>`, so `vehicleCategory="$cat"` is schema-valid;
+    /// `name` is the bare parameter name, without the `$`.
+    pub fn with_category_param(mut self, name: &str) -> Self {
+        self.vehicle_data.vehicle_category = Some(Value::Parameter(name.to_string()));
+        self
+    }
+
     /// Set vehicle as truck
     pub fn truck(mut self) -> Self {
-        self.vehicle_data.vehicle_category = Some(VehicleCategory::Truck);
+        self.vehicle_data.vehicle_category = Some(Value::Literal(VehicleCategory::Truck));
         self.vehicle_data.name = Some("Truck".to_string());
 
         // Default truck dimensions
@@ -163,7 +184,7 @@ impl<'parent> VehicleBuilder<'parent> {
             vehicle_category: self
                 .vehicle_data
                 .vehicle_category
-                .unwrap_or(VehicleCategory::Car),
+                .unwrap_or(Value::Literal(VehicleCategory::Car)),
             role: None,
             mass: None,
             model3d: None,
@@ -216,7 +237,7 @@ impl DetachedVehicleBuilder {
 
     /// Set vehicle as passenger car
     pub fn car(mut self) -> Self {
-        self.vehicle_data.vehicle_category = Some(VehicleCategory::Car);
+        self.vehicle_data.vehicle_category = Some(Value::Literal(VehicleCategory::Car));
         self.vehicle_data.name = Some("PassengerCar".to_string());
 
         // Default car dimensions
@@ -248,9 +269,29 @@ impl DetachedVehicleBuilder {
         self
     }
 
+    /// Set the vehicle category to a literal enum value.
+    ///
+    /// The literal case keeps the bare enum, so existing call sites are unchanged; see
+    /// [`Self::with_category_param`] for the `$name` parameter form the schema also allows
+    /// on this attribute.
+    pub fn with_category(mut self, category: VehicleCategory) -> Self {
+        self.vehicle_data.vehicle_category = Some(Value::Literal(category));
+        self
+    }
+
+    /// Set the vehicle category to a parameter reference.
+    ///
+    /// `@vehicleCategory` is declared with an `xsd:union` whose second member is
+    /// `<xsd:restriction base="parameter"/>`, so `vehicleCategory="$cat"` is schema-valid;
+    /// `name` is the bare parameter name, without the `$`.
+    pub fn with_category_param(mut self, name: &str) -> Self {
+        self.vehicle_data.vehicle_category = Some(Value::Parameter(name.to_string()));
+        self
+    }
+
     /// Set vehicle as truck
     pub fn truck(mut self) -> Self {
-        self.vehicle_data.vehicle_category = Some(VehicleCategory::Truck);
+        self.vehicle_data.vehicle_category = Some(Value::Literal(VehicleCategory::Truck));
         self.vehicle_data.name = Some("Truck".to_string());
 
         // Default truck dimensions
@@ -326,7 +367,7 @@ impl DetachedVehicleBuilder {
             vehicle_category: self
                 .vehicle_data
                 .vehicle_category
-                .unwrap_or(VehicleCategory::Car),
+                .unwrap_or(Value::Literal(VehicleCategory::Car)),
             role: None,
             mass: None,
             model3d: None,
@@ -362,23 +403,47 @@ mod tests {
         let obj = DetachedVehicleBuilder::new("ego").build();
         let v = obj.vehicle.as_ref().unwrap();
         assert_eq!(v.name.as_literal(), Some(&"DefaultVehicle".to_string()));
-        assert_eq!(v.vehicle_category, VehicleCategory::Car);
+        assert_eq!(v.vehicle_category, Value::Literal(VehicleCategory::Car));
     }
 
     #[test]
     fn test_car_preset_sets_category_and_dimensions() {
         let obj = DetachedVehicleBuilder::new("ego").car().build();
         let v = obj.vehicle.as_ref().unwrap();
-        assert_eq!(v.vehicle_category, VehicleCategory::Car);
+        assert_eq!(v.vehicle_category, Value::Literal(VehicleCategory::Car));
         assert_eq!(v.name.as_literal(), Some(&"PassengerCar".to_string()));
         assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&4.5));
+    }
+
+    #[test]
+    fn category_setters_cover_both_the_literal_and_the_parameter_case() {
+        // OSR-06: the literal setter keeps the bare enum, so no existing call site
+        // changed; the parallel `_param` setter reaches the `$name` form that the
+        // attribute's `xsd:union` also admits.
+        let literal = DetachedVehicleBuilder::new("ego")
+            .car()
+            .with_category(VehicleCategory::Van)
+            .build();
+        assert_eq!(
+            literal.vehicle.as_ref().unwrap().vehicle_category,
+            Value::Literal(VehicleCategory::Van)
+        );
+
+        let parameterized = DetachedVehicleBuilder::new("ego")
+            .car()
+            .with_category_param("cat")
+            .build();
+        assert_eq!(
+            parameterized.vehicle.as_ref().unwrap().vehicle_category,
+            Value::Parameter("cat".to_string())
+        );
     }
 
     #[test]
     fn test_truck_preset_overrides_car_preset() {
         let obj = DetachedVehicleBuilder::new("ego").car().truck().build();
         let v = obj.vehicle.as_ref().unwrap();
-        assert_eq!(v.vehicle_category, VehicleCategory::Truck);
+        assert_eq!(v.vehicle_category, Value::Literal(VehicleCategory::Truck));
         assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&8.0));
         assert_eq!(v.performance.max_speed.as_literal(), Some(&120.0));
     }

@@ -7,7 +7,7 @@
 //! - TriggeringEntities for entity-based condition evaluation
 //! - Event priority and execution order management
 //!
-use crate::types::basic::{Double, OSString};
+use crate::types::basic::{Double, OSString, Value};
 use crate::types::conditions::{ByEntityCondition, ByValueCondition};
 use crate::types::enums::{ConditionEdge, TriggeringEntitiesRule};
 use serde::{Deserialize, Serialize};
@@ -47,7 +47,7 @@ pub struct Condition {
 
     /// Edge detection mode (rising, falling, risingOrFalling, none)
     #[serde(rename = "@conditionEdge")]
-    pub condition_edge: ConditionEdge,
+    pub condition_edge: Value<ConditionEdge>,
 
     /// Delay before condition fires (required by XSD Condition complexType)
     #[serde(rename = "@delay")]
@@ -80,7 +80,7 @@ pub enum ConditionType {
 pub struct TriggeringEntities {
     /// Rule for combining multiple triggering entities (all, any)
     #[serde(rename = "@triggeringEntitiesRule")]
-    pub triggering_entities_rule: TriggeringEntitiesRule,
+    pub triggering_entities_rule: Value<TriggeringEntitiesRule>,
 
     /// References to entities that can trigger this condition
     #[serde(rename = "EntityRef")]
@@ -116,7 +116,7 @@ impl Default for Condition {
     fn default() -> Self {
         Self {
             name: OSString::literal("DefaultCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition::default()),
             by_entity_condition: None,
@@ -133,7 +133,7 @@ impl Default for ConditionType {
 impl Default for TriggeringEntities {
     fn default() -> Self {
         Self {
-            triggering_entities_rule: TriggeringEntitiesRule::Any,
+            triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
             entity_refs: Vec::new(),
         }
     }
@@ -192,7 +192,7 @@ impl Condition {
 
         Self {
             name: OSString::literal(name.into()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition,
             by_entity_condition,
@@ -201,7 +201,7 @@ impl Condition {
 
     /// Set the condition edge detection mode
     pub fn with_edge(mut self, edge: ConditionEdge) -> Self {
-        self.condition_edge = edge;
+        self.condition_edge = Value::Literal(edge);
         self
     }
 
@@ -216,7 +216,7 @@ impl TriggeringEntities {
     /// Create a new triggering entities specification
     pub fn new(rule: TriggeringEntitiesRule, entity_refs: Vec<EntityRef>) -> Self {
         Self {
-            triggering_entities_rule: rule,
+            triggering_entities_rule: Value::Literal(rule),
             entity_refs,
         }
     }
@@ -303,7 +303,10 @@ mod tests {
             .with_delay(Value::literal(2.5));
 
         assert_eq!(condition.name.as_literal().unwrap(), "TimedCondition");
-        assert_eq!(condition.condition_edge, ConditionEdge::Falling);
+        assert_eq!(
+            condition.condition_edge,
+            Value::Literal(ConditionEdge::Falling)
+        );
         assert_eq!(condition.delay.as_literal().unwrap(), &2.5);
     }
 
@@ -316,11 +319,11 @@ mod tests {
 
         assert_eq!(
             any_entities.triggering_entities_rule,
-            TriggeringEntitiesRule::Any
+            Value::Literal(TriggeringEntitiesRule::Any)
         );
         assert_eq!(
             all_entities.triggering_entities_rule,
-            TriggeringEntitiesRule::All
+            Value::Literal(TriggeringEntitiesRule::All)
         );
         assert_eq!(any_entities.entity_refs.len(), 2);
         assert_eq!(

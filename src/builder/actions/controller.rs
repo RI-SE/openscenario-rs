@@ -2,10 +2,11 @@
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     actions::control::{ActivateControllerAction, AssignControllerAction, ControllerAction},
     actions::wrappers::PrivateAction,
-    basic::{Boolean, Value},
+    basic::Boolean,
     controllers::Controller,
     enums::ControllerType,
 };
@@ -130,10 +131,23 @@ impl AssignControllerActionBuilder {
     }
 
     /// Create controller with name and type
+    /// Create controller with name and a parameterized `controllerType` --
+    /// the attribute's `xsd:union` admits a `parameter` member alongside the enumeration, so `$name` is schema-valid here; `name` omits the `$`.
+    pub fn with_controller_type_param(mut self, name: &str, type_param: &str) -> Self {
+        self.controller = Some(Controller {
+            name: Value::Literal(name.to_string()),
+            controller_type: Some(Value::Parameter(type_param.to_string())),
+            parameter_declarations: None,
+            properties: None,
+        });
+        self
+    }
+
+    /// Create controller with name and type
     pub fn with_controller(mut self, name: &str, controller_type: ControllerType) -> Self {
         self.controller = Some(Controller {
             name: Value::Literal(name.to_string()),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
         });
@@ -206,7 +220,7 @@ mod tests {
     fn test_assign_controller_action_builder() {
         let controller = Controller {
             name: Value::Literal("TestController".to_string()),
-            controller_type: Some(ControllerType::Movement),
+            controller_type: Some(Value::Literal(ControllerType::Movement)),
             parameter_declarations: None,
             properties: None,
         };

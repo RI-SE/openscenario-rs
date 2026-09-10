@@ -26,7 +26,7 @@ pub struct Controller {
 
     /// Type of controller (interactive, external, etc.)
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
-    pub controller_type: Option<ControllerType>,
+    pub controller_type: Option<Value<ControllerType>>,
 
     /// Parameter declarations for the controller
     #[serde(
@@ -184,7 +184,7 @@ impl Controller {
     pub fn new(name: String, controller_type: ControllerType) -> Self {
         Self {
             name: Value::Literal(name),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
         }
@@ -198,7 +198,7 @@ impl Controller {
     ) -> Self {
         Self {
             name: Value::Literal(name),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: Some(parameters),
             properties: None,
         }
@@ -212,7 +212,7 @@ impl Controller {
     ) -> Self {
         Self {
             name: Value::Literal(name),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: Some(properties),
         }
@@ -288,7 +288,10 @@ mod tests {
         let controller = Controller::new("TestController".to_string(), ControllerType::Movement);
 
         assert_eq!(controller.name.as_literal().unwrap(), "TestController");
-        assert_eq!(controller.controller_type, Some(ControllerType::Movement));
+        assert_eq!(
+            controller.controller_type,
+            Some(Value::Literal(ControllerType::Movement))
+        );
     }
 
     #[test]

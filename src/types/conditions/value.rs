@@ -9,7 +9,7 @@
 //! - User-defined custom condition support
 //!
 use crate::types::basic::DateTime;
-use crate::types::basic::{Double, OSString};
+use crate::types::basic::{Double, OSString, Value};
 use crate::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +19,7 @@ pub struct SimulationTimeCondition {
     #[serde(rename = "@value")]
     pub value: Double,
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 }
 
 /// Parameter-based condition for monitoring scenario parameters
@@ -28,7 +28,7 @@ pub struct ParameterCondition {
     #[serde(rename = "@parameterRef")]
     pub parameter_ref: OSString,
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
     #[serde(rename = "@value")]
     pub value: OSString,
 }
@@ -39,7 +39,7 @@ pub struct TimeOfDayCondition {
     #[serde(rename = "@dateTime")]
     pub date_time: DateTime,
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
 }
 
 /// Storyboard element state condition for execution flow control
@@ -48,9 +48,9 @@ pub struct StoryboardElementStateCondition {
     #[serde(rename = "@storyboardElementRef")]
     pub storyboard_element_ref: OSString,
     #[serde(rename = "@state")]
-    pub state: StoryboardElementState,
+    pub state: Value<StoryboardElementState>,
     #[serde(rename = "@storyboardElementType")]
-    pub storyboard_element_type: StoryboardElementType,
+    pub storyboard_element_type: Value<StoryboardElementType>,
 }
 
 /// User-defined custom condition for extensible condition logic
@@ -59,7 +59,7 @@ pub struct UserDefinedValueCondition {
     #[serde(rename = "@name")]
     pub name: OSString,
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
     #[serde(rename = "@value")]
     pub value: OSString,
 }
@@ -88,7 +88,7 @@ pub struct VariableCondition {
     #[serde(rename = "@variableRef")]
     pub variable_ref: OSString,
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
     #[serde(rename = "@value")]
     pub value: OSString,
 }
@@ -149,7 +149,7 @@ impl Default for SimulationTimeCondition {
     fn default() -> Self {
         Self {
             value: Double::literal(10.0),
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
         }
     }
 }
@@ -158,7 +158,7 @@ impl Default for ParameterCondition {
     fn default() -> Self {
         Self {
             parameter_ref: OSString::literal("defaultParam".to_string()),
-            rule: Rule::EqualTo,
+            rule: Value::Literal(Rule::EqualTo),
             value: OSString::literal("defaultValue".to_string()),
         }
     }
@@ -168,7 +168,7 @@ impl Default for TimeOfDayCondition {
     fn default() -> Self {
         Self {
             date_time: DateTime::literal(chrono::Utc::now()),
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
         }
     }
 }
@@ -177,8 +177,8 @@ impl Default for StoryboardElementStateCondition {
     fn default() -> Self {
         Self {
             storyboard_element_ref: OSString::literal("defaultElement".to_string()),
-            state: StoryboardElementState::RunningState,
-            storyboard_element_type: StoryboardElementType::Story,
+            state: Value::Literal(StoryboardElementState::RunningState),
+            storyboard_element_type: Value::Literal(StoryboardElementType::Story),
         }
     }
 }
@@ -187,7 +187,7 @@ impl Default for UserDefinedValueCondition {
     fn default() -> Self {
         Self {
             name: OSString::literal("defaultCondition".to_string()),
-            rule: Rule::EqualTo,
+            rule: Value::Literal(Rule::EqualTo),
             value: OSString::literal("defaultValue".to_string()),
         }
     }
@@ -215,7 +215,7 @@ impl Default for VariableCondition {
     fn default() -> Self {
         Self {
             variable_ref: OSString::literal("defaultVariable".to_string()),
-            rule: Rule::EqualTo,
+            rule: Value::Literal(Rule::EqualTo),
             value: OSString::literal("defaultValue".to_string()),
         }
     }
@@ -244,14 +244,14 @@ mod tests {
     fn test_simulation_time_condition_default() {
         let cond = SimulationTimeCondition::default();
         assert_eq!(cond.value.as_literal().unwrap(), &10.0);
-        assert_eq!(cond.rule, Rule::GreaterThan);
+        assert_eq!(cond.rule, Value::Literal(Rule::GreaterThan));
     }
 
     #[test]
     fn test_simulation_time_condition_xml_roundtrip() {
         let cond = SimulationTimeCondition {
             value: Double::literal(5.0),
-            rule: Rule::EqualTo,
+            rule: Value::Literal(Rule::EqualTo),
         };
         let xml = quick_xml::se::to_string(&cond).unwrap();
         let deserialized: SimulationTimeCondition = quick_xml::de::from_str(&xml).unwrap();
@@ -262,7 +262,7 @@ mod tests {
     fn test_parameter_condition_default() {
         let cond = ParameterCondition::default();
         assert_eq!(cond.parameter_ref.as_literal().unwrap(), "defaultParam");
-        assert_eq!(cond.rule, Rule::EqualTo);
+        assert_eq!(cond.rule, Value::Literal(Rule::EqualTo));
         assert_eq!(cond.value.as_literal().unwrap(), "defaultValue");
     }
 
@@ -288,15 +288,21 @@ mod tests {
     #[test]
     fn test_storyboard_element_state_condition_default() {
         let cond = StoryboardElementStateCondition::default();
-        assert_eq!(cond.state, StoryboardElementState::RunningState);
-        assert_eq!(cond.storyboard_element_type, StoryboardElementType::Story);
+        assert_eq!(
+            cond.state,
+            Value::Literal(StoryboardElementState::RunningState)
+        );
+        assert_eq!(
+            cond.storyboard_element_type,
+            Value::Literal(StoryboardElementType::Story)
+        );
     }
 
     #[test]
     fn test_variable_condition_xml_roundtrip() {
         let cond = VariableCondition {
             variable_ref: OSString::literal("speed".to_string()),
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
             value: OSString::literal("100".to_string()),
         };
         let xml = quick_xml::se::to_string(&cond).unwrap();

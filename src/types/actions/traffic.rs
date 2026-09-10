@@ -7,7 +7,7 @@
 //! - Traffic signal control actions for intersection management
 //! - Background traffic definition and distribution specifications
 //!
-use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt};
+use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::controllers::Controller;
 use crate::types::entities::{EntityDistribution, Properties};
@@ -302,7 +302,7 @@ pub struct VehicleRoleDistributionEntry {
     #[serde(rename = "@weight")]
     pub weight: Double,
     #[serde(rename = "@role")]
-    pub role: crate::types::enums::Role,
+    pub role: Value<crate::types::enums::Role>,
 }
 
 /// Vehicle category distribution for traffic composition
@@ -316,7 +316,7 @@ pub struct VehicleCategoryDistribution {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleCategoryDistributionEntry {
     #[serde(rename = "@category")]
-    pub category: VehicleCategory,
+    pub category: Value<VehicleCategory>,
     #[serde(rename = "@weight")]
     pub weight: Double,
 }
@@ -585,15 +585,15 @@ impl Default for VehicleCategoryDistribution {
         Self {
             entries: vec![
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Car,
+                    category: Value::Literal(VehicleCategory::Car),
                     weight: Double::literal(0.7), // 70% cars
                 },
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Truck,
+                    category: Value::Literal(VehicleCategory::Truck),
                     weight: Double::literal(0.2), // 20% trucks
                 },
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Van,
+                    category: Value::Literal(VehicleCategory::Van),
                     weight: Double::literal(0.1), // 10% vans
                 },
             ],
@@ -1063,7 +1063,7 @@ impl VehicleCategoryDistribution {
     pub fn single_category(category: VehicleCategory, weight: f64) -> Self {
         Self {
             entries: vec![VehicleCategoryDistributionEntry {
-                category,
+                category: Value::Literal(category),
                 weight: Double::literal(weight),
             }],
         }
@@ -1079,15 +1079,15 @@ impl VehicleCategoryDistribution {
         Self {
             entries: vec![
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Car,
+                    category: Value::Literal(VehicleCategory::Car),
                     weight: Double::literal(0.85),
                 },
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Bus,
+                    category: Value::Literal(VehicleCategory::Bus),
                     weight: Double::literal(0.1),
                 },
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Van,
+                    category: Value::Literal(VehicleCategory::Van),
                     weight: Double::literal(0.05),
                 },
             ],
@@ -1316,7 +1316,7 @@ mod tests {
         assert!(mixed
             .entries
             .iter()
-            .any(|e| matches!(e.category, VehicleCategory::Car)));
+            .any(|e| matches!(e.category, Value::Literal(VehicleCategory::Car))));
 
         let urban = VehicleCategoryDistribution::urban_traffic();
         assert_eq!(urban.entries.len(), 3);
@@ -1363,15 +1363,15 @@ mod tests {
 
         // Test that enum variants exist and can be used
         let entry1 = VehicleCategoryDistributionEntry {
-            category: car,
+            category: Value::Literal(car),
             weight: Double::literal(0.6),
         };
         let entry2 = VehicleCategoryDistributionEntry {
-            category: truck,
+            category: Value::Literal(truck),
             weight: Double::literal(0.3),
         };
         let entry3 = VehicleCategoryDistributionEntry {
-            category: bike,
+            category: Value::Literal(bike),
             weight: Double::literal(0.1),
         };
 

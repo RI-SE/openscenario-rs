@@ -6,7 +6,7 @@
 //! - Fog conditions with visibility parameters
 //! - Precipitation types (rain, snow, dry) with intensity specifications
 //!
-use crate::types::basic::Double;
+use crate::types::basic::{Double, Value};
 use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType};
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ pub struct Weather {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub cloud_state: Option<CloudState>,
+    pub cloud_state: Option<Value<CloudState>>,
     #[serde(
         rename = "@atmosphericPressure",
         default,
@@ -39,7 +39,7 @@ pub struct Weather {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub fractional_cloud_cover: Option<FractionalCloudCover>,
+    pub fractional_cloud_cover: Option<Value<FractionalCloudCover>>,
     #[serde(rename = "Sun", default, skip_serializing_if = "Option::is_none")]
     pub sun: Option<Sun>,
     #[serde(rename = "Fog", default, skip_serializing_if = "Option::is_none")]
@@ -95,7 +95,7 @@ pub struct Fog {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Precipitation {
     #[serde(rename = "@precipitationType")]
-    pub precipitation_type: PrecipitationType,
+    pub precipitation_type: Value<PrecipitationType>,
     /// Deprecated intensity; prefer `precipitation_intensity`.
     #[serde(
         rename = "@intensity",
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_weather_roundtrip_fractional_cloud_cover() {
         let w = Weather {
-            fractional_cloud_cover: Some(FractionalCloudCover::ThreeOktas),
+            fractional_cloud_cover: Some(Value::Literal(FractionalCloudCover::ThreeOktas)),
             ..Default::default()
         };
         let xml = quick_xml::se::to_string(&w).unwrap();
@@ -209,7 +209,7 @@ mod tests {
                 bounding_box: None,
             }),
             precipitation: Some(Precipitation {
-                precipitation_type: PrecipitationType::Rain,
+                precipitation_type: Value::Literal(PrecipitationType::Rain),
                 intensity: None,
                 precipitation_intensity: Some(Double::literal(0.8)),
             }),
@@ -217,7 +217,7 @@ mod tests {
         };
         assert_eq!(
             w.precipitation.as_ref().unwrap().precipitation_type,
-            PrecipitationType::Rain
+            Value::Literal(PrecipitationType::Rain)
         );
         assert_eq!(
             w.precipitation

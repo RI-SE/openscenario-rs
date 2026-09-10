@@ -19,7 +19,7 @@ mod condition_builder_tests {
 
         let time_condition = by_value.simulation_time_condition.unwrap();
         assert_eq!(time_condition.value.as_literal().unwrap(), &5.0);
-        assert_eq!(time_condition.rule, Rule::GreaterThan);
+        assert_eq!(time_condition.rule, Value::Literal(Rule::GreaterThan));
     }
 
     #[test]
@@ -32,7 +32,7 @@ mod condition_builder_tests {
         let by_value = condition.by_value_condition.unwrap();
         let time_condition = by_value.simulation_time_condition.unwrap();
         assert_eq!(time_condition.value.as_literal().unwrap(), &10.0);
-        assert_eq!(time_condition.rule, Rule::LessThan);
+        assert_eq!(time_condition.rule, Value::Literal(Rule::LessThan));
     }
 
     #[test]
@@ -60,7 +60,7 @@ mod condition_builder_tests {
         match by_entity.entity_condition {
             openscenario_rs::types::conditions::entity::EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &30.0);
-                assert_eq!(speed_condition.rule, Rule::GreaterThan);
+                assert_eq!(speed_condition.rule, Value::Literal(Rule::GreaterThan));
             }
             _ => panic!("Expected Speed condition"),
         }
@@ -78,7 +78,7 @@ mod condition_builder_tests {
         match by_entity.entity_condition {
             openscenario_rs::types::conditions::entity::EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &15.0);
-                assert_eq!(speed_condition.rule, Rule::LessThan);
+                assert_eq!(speed_condition.rule, Value::Literal(Rule::LessThan));
             }
             _ => panic!("Expected Speed condition"),
         }
@@ -121,7 +121,7 @@ mod condition_builder_tests {
                 distance_condition,
             ) => {
                 assert_eq!(distance_condition.value.as_literal().unwrap(), &10.0);
-                assert_eq!(distance_condition.rule, Rule::LessThan);
+                assert_eq!(distance_condition.rule, Value::Literal(Rule::LessThan));
                 assert_eq!(distance_condition.freespace.as_literal().unwrap(), &false);
             }
             _ => panic!("Expected Distance condition"),

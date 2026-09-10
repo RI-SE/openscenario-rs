@@ -21,6 +21,7 @@
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::positions::PositionBuilder;
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
         AbsoluteTargetSpeed, LongitudinalAction, LongitudinalActionChoice, SpeedAction,
@@ -70,8 +71,8 @@ impl ActionBuilder for SpeedActionBuilder {
 
         let speed_action = SpeedAction {
             speed_action_dynamics: TransitionDynamics {
-                dynamics_dimension: DynamicsDimension::Time,
-                dynamics_shape: DynamicsShape::Linear,
+                dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(DynamicsShape::Linear),
                 following_mode: None,
                 value: Double::literal(1.0),
             },

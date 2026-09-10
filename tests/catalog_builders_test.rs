@@ -135,9 +135,11 @@ mod catalog_builder_tests {
 
         let catalog_pedestrian = CatalogPedestrian {
             name: "TestPedestrian".to_string(),
-            pedestrian_category: openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
+            pedestrian_category: Value::Literal(
+                openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
+            ),
             mass: Value::Literal("75.0".to_string()),
-            role: Some(openscenario_rs::types::enums::Role::Civil),
+            role: Some(Value::Literal(openscenario_rs::types::enums::Role::Civil)),
             model3d: Some("./models/ped.glb".to_string()),
             bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
             properties: None,
@@ -158,9 +160,11 @@ mod catalog_builder_tests {
 
         let catalog_pedestrian = CatalogPedestrian {
             name: "ParamPedestrian".to_string(),
-            pedestrian_category: openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
+            pedestrian_category: Value::Literal(
+                openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
+            ),
             mass: Value::Literal("75.0".to_string()),
-            role: Some(openscenario_rs::types::enums::Role::Civil),
+            role: Some(Value::Literal(openscenario_rs::types::enums::Role::Civil)),
             model3d: Some("./models/ped.glb".to_string()),
             bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
             properties: None,
@@ -175,7 +179,7 @@ mod catalog_builder_tests {
         assert_eq!(resolved.mass.as_literal().unwrap(), &75.0);
         assert_eq!(
             resolved.role.unwrap(),
-            openscenario_rs::types::enums::Role::Civil
+            Value::Literal(openscenario_rs::types::enums::Role::Civil)
         );
         assert_eq!(resolved.model3d, Some("./models/ped.glb".to_string()));
     }
@@ -188,9 +192,11 @@ mod catalog_builder_tests {
 
         let catalog_pedestrian = CatalogPedestrian {
             name: "MassParamPedestrian".to_string(),
-            pedestrian_category: openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
+            pedestrian_category: Value::Literal(
+                openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
+            ),
             mass: Value::Literal("80.0".to_string()), // Parameterized mass
-            role: Some(openscenario_rs::types::enums::Role::Police),
+            role: Some(Value::Literal(openscenario_rs::types::enums::Role::Police)),
             model3d: None,
             bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
             properties: None,
@@ -204,7 +210,7 @@ mod catalog_builder_tests {
         assert_eq!(resolved.mass.as_literal().unwrap(), &80.0);
         assert_eq!(
             resolved.role.unwrap(),
-            openscenario_rs::types::enums::Role::Police
+            Value::Literal(openscenario_rs::types::enums::Role::Police)
         );
     }
 

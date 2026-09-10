@@ -3,6 +3,7 @@
 //! This example shows how to create and use all the different
 //! ByValueCondition types in OpenSCENARIO-rs.
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     conditions::{
@@ -20,14 +21,14 @@ fn main() {
     // 1. SimulationTimeCondition - trigger when simulation time > 15.5 seconds
     let sim_time_condition = SimulationTimeCondition {
         value: Double::literal(15.5),
-        rule: Rule::GreaterThan,
+        rule: Value::Literal(Rule::GreaterThan),
     };
     println!("1. Simulation Time Condition: trigger when time > 15.5s");
 
     // 2. ParameterCondition - trigger when parameter equals a value
     let param_condition = ParameterCondition {
         parameter_ref: OSString::literal("vehicleSpeed".to_string()),
-        rule: Rule::GreaterThan,
+        rule: Value::Literal(Rule::GreaterThan),
         value: OSString::literal("50".to_string()),
     };
     println!("2. Parameter Condition: trigger when vehicleSpeed > 50");
@@ -39,15 +40,15 @@ fn main() {
     // 4. StoryboardElementStateCondition - trigger when story element completes
     let storyboard_condition = StoryboardElementStateCondition {
         storyboard_element_ref: OSString::literal("overtakeManeuver".to_string()),
-        state: StoryboardElementState::CompleteState,
-        storyboard_element_type: StoryboardElementType::Maneuver,
+        state: Value::Literal(StoryboardElementState::CompleteState),
+        storyboard_element_type: Value::Literal(StoryboardElementType::Maneuver),
     };
     println!("4. Storyboard Element State: trigger when overtakeManeuver completes");
 
     // 5. UserDefinedValueCondition - custom condition logic
     let user_defined_condition = UserDefinedValueCondition {
         name: OSString::literal("weatherCondition".to_string()),
-        rule: Rule::EqualTo,
+        rule: Value::Literal(Rule::EqualTo),
         value: OSString::literal("rainy".to_string()),
     };
     println!("5. User Defined Value: trigger when weatherCondition equals 'rainy'");
@@ -69,7 +70,7 @@ fn main() {
     // 8. VariableCondition - trigger on variable value
     let variable_condition = VariableCondition {
         variable_ref: OSString::literal("fuelLevel".to_string()),
-        rule: Rule::LessThan,
+        rule: Value::Literal(Rule::LessThan),
         value: OSString::literal("10".to_string()),
     };
     println!("8. Variable Condition: trigger when fuelLevel < 10");
@@ -92,7 +93,7 @@ fn main() {
     // Show parameter reference usage
     let param_ref_condition = ParameterCondition {
         parameter_ref: OSString::parameter("dynamicParam".to_string()),
-        rule: Rule::EqualTo,
+        rule: Value::Literal(Rule::EqualTo),
         value: OSString::parameter("dynamicValue".to_string()),
     };
     println!("\nParameter Reference Example:");
@@ -118,7 +119,7 @@ fn main() {
     for (name, rule) in rules {
         let condition = ParameterCondition {
             parameter_ref: OSString::literal("testParam".to_string()),
-            rule,
+            rule: Value::Literal(rule),
             value: OSString::literal("testValue".to_string()),
         };
         println!("- {}: {:?}", name, condition.rule);

@@ -3,6 +3,7 @@
 //! Tests the integration of spatial conditions with the ByEntityCondition enum
 //! and verifies that all condition types work together seamlessly.
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     conditions::{
@@ -23,7 +24,7 @@ fn test_by_entity_condition_speed() {
     match speed_condition.entity_condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
-            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
         _ => panic!("Expected Speed condition"),
     }
@@ -58,7 +59,7 @@ fn test_by_entity_condition_distance() {
         EntityCondition::Distance(distance) => {
             assert_eq!(distance.value, Double::literal(40.0));
             assert_eq!(distance.freespace, Boolean::literal(true));
-            assert_eq!(distance.rule, Rule::LessThan);
+            assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
         }
         _ => panic!("Expected Distance condition"),
     }
@@ -86,9 +87,9 @@ fn test_by_entity_condition_relative_distance() {
             assert_eq!(relative.freespace, Boolean::literal(false));
             assert_eq!(
                 relative.relative_distance_type,
-                RelativeDistanceType::Longitudinal
+                Value::Literal(RelativeDistanceType::Longitudinal)
             );
-            assert_eq!(relative.rule, Rule::GreaterOrEqual);
+            assert_eq!(relative.rule, Value::Literal(Rule::GreaterOrEqual));
         }
         _ => panic!("Expected RelativeDistance condition"),
     }
@@ -101,7 +102,7 @@ fn test_by_entity_condition_default() {
     match default_condition.entity_condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
-            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
         _ => panic!("Expected default to be Speed condition"),
     }
@@ -115,11 +116,11 @@ fn test_spatial_condition_builders() {
 
     // Test DistanceCondition builders
     let distance_less = DistanceCondition::less_than(Position::default(), 50.0, true);
-    assert_eq!(distance_less.rule, Rule::LessThan);
+    assert_eq!(distance_less.rule, Value::Literal(Rule::LessThan));
     assert_eq!(distance_less.value, Double::literal(50.0));
 
     let distance_greater = DistanceCondition::greater_than(Position::default(), 30.0, false);
-    assert_eq!(distance_greater.rule, Rule::GreaterThan);
+    assert_eq!(distance_greater.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(distance_greater.value, Double::literal(30.0));
 
     // Test RelativeDistanceCondition builders
@@ -131,7 +132,7 @@ fn test_spatial_condition_builders() {
     );
     assert_eq!(
         longitudinal.relative_distance_type,
-        RelativeDistanceType::Longitudinal
+        Value::Literal(RelativeDistanceType::Longitudinal)
     );
 
     let lateral = RelativeDistanceCondition::lateral(
@@ -142,7 +143,7 @@ fn test_spatial_condition_builders() {
     );
     assert_eq!(
         lateral.relative_distance_type,
-        RelativeDistanceType::Lateral
+        Value::Literal(RelativeDistanceType::Lateral)
     );
 
     let cartesian = RelativeDistanceCondition::cartesian(
@@ -153,7 +154,7 @@ fn test_spatial_condition_builders() {
     );
     assert_eq!(
         cartesian.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
 }
 
@@ -218,9 +219,9 @@ fn test_entity_condition_xml_deserialization() {
             assert_eq!(rel_dist.freespace, Boolean::literal(true));
             assert_eq!(
                 rel_dist.relative_distance_type,
-                RelativeDistanceType::Longitudinal
+                Value::Literal(RelativeDistanceType::Longitudinal)
             );
-            assert_eq!(rel_dist.rule, Rule::LessThan);
+            assert_eq!(rel_dist.rule, Value::Literal(Rule::LessThan));
         }
         _ => panic!("Expected RelativeDistanceCondition, got: {:?}", condition),
     }
@@ -246,7 +247,7 @@ fn test_entity_condition_xml_deserialization_speed() {
     match condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
-            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
         _ => panic!("Expected SpeedCondition, got: {:?}", condition),
     }

@@ -32,6 +32,7 @@
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
         LongitudinalAction, LongitudinalActionChoice, LongitudinalDistanceAction,
@@ -147,7 +148,7 @@ impl ManeuverAction for LongitudinalDistanceActionBuilder {
 #[derive(Debug, Default)]
 pub struct SpeedProfileActionBuilder {
     entity_ref: Option<String>,
-    following_mode: Option<FollowingMode>,
+    following_mode: Option<Value<FollowingMode>>,
     entries: Vec<SpeedProfileEntry>,
 }
 
@@ -164,8 +165,16 @@ impl SpeedProfileActionBuilder {
     }
 
     /// Set the required `followingMode` attribute
+    /// Set `followingMode` to a parameter reference (`followingMode="$name"`) --
+    /// the attribute's `xsd:union` admits a `parameter` member alongside the enumeration, so `$name` is schema-valid here; `name` omits the `$`.
+    pub fn with_following_mode_param(mut self, name: &str) -> Self {
+        self.following_mode = Some(Value::Parameter(name.to_string()));
+        self
+    }
+
+    /// Set the required `followingMode` attribute
     pub fn with_following_mode(mut self, following_mode: FollowingMode) -> Self {
-        self.following_mode = Some(following_mode);
+        self.following_mode = Some(Value::Literal(following_mode));
         self
     }
 
@@ -193,7 +202,9 @@ impl ActionBuilder for SpeedProfileActionBuilder {
                 .entity_ref
                 .as_ref()
                 .map(|s| OSString::literal(s.clone())),
-            following_mode: self.following_mode.unwrap_or(FollowingMode::Follow),
+            following_mode: self
+                .following_mode
+                .unwrap_or(Value::Literal(FollowingMode::Follow)),
             entries: self.entries,
             dynamic_constraints: None,
         };

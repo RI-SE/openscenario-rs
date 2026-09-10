@@ -7,6 +7,7 @@
 //! - XML serialization/deserialization round-trips
 //! - Builder pattern functionality and ergonomic APIs
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     conditions::{DistanceCondition, ReachPositionCondition, RelativeDistanceCondition},
@@ -55,7 +56,7 @@ fn test_distance_condition_basic() {
 
     assert_eq!(condition.value, Double::literal(25.0));
     assert_eq!(condition.freespace, Boolean::literal(true));
-    assert_eq!(condition.rule, Rule::LessThan);
+    assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
     assert!(condition.coordinate_system.is_none());
     assert!(condition.relative_distance_type.is_none());
     assert!(condition.routing_algorithm.is_none());
@@ -71,15 +72,18 @@ fn test_distance_condition_builder() {
 
     assert_eq!(condition.value, Double::literal(30.0));
     assert_eq!(condition.freespace, Boolean::literal(false));
-    assert_eq!(condition.rule, Rule::LessThan);
-    assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Road));
+    assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
+    assert_eq!(
+        condition.coordinate_system,
+        Some(Value::Literal(CoordinateSystem::Road))
+    );
     assert_eq!(
         condition.relative_distance_type,
-        Some(RelativeDistanceType::Longitudinal)
+        Some(Value::Literal(RelativeDistanceType::Longitudinal))
     );
     assert_eq!(
         condition.routing_algorithm,
-        Some(RoutingAlgorithm::Shortest)
+        Some(Value::Literal(RoutingAlgorithm::Shortest))
     );
 }
 
@@ -88,12 +92,12 @@ fn test_distance_condition_convenience_methods() {
     let position = Position::default();
 
     let less_than = DistanceCondition::less_than(position.clone(), 15.0, true);
-    assert_eq!(less_than.rule, Rule::LessThan);
+    assert_eq!(less_than.rule, Value::Literal(Rule::LessThan));
     assert_eq!(less_than.value, Double::literal(15.0));
     assert_eq!(less_than.freespace, Boolean::literal(true));
 
     let greater_than = DistanceCondition::greater_than(position, 20.0, false);
-    assert_eq!(greater_than.rule, Rule::GreaterThan);
+    assert_eq!(greater_than.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(greater_than.value, Double::literal(20.0));
     assert_eq!(greater_than.freespace, Boolean::literal(false));
 }
@@ -116,9 +120,9 @@ fn test_relative_distance_condition_basic() {
     assert_eq!(condition.freespace, Boolean::literal(true));
     assert_eq!(
         condition.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
-    assert_eq!(condition.rule, Rule::GreaterThan);
+    assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
     assert!(condition.coordinate_system.is_none());
     assert!(condition.routing_algorithm.is_none());
 }
@@ -133,7 +137,7 @@ fn test_relative_distance_condition_types() {
     );
     assert_eq!(
         longitudinal.relative_distance_type,
-        RelativeDistanceType::Longitudinal
+        Value::Literal(RelativeDistanceType::Longitudinal)
     );
     assert_eq!(
         longitudinal.entity_ref,
@@ -141,7 +145,7 @@ fn test_relative_distance_condition_types() {
     );
     assert_eq!(longitudinal.value, Double::literal(20.0));
     assert_eq!(longitudinal.freespace, Boolean::literal(false));
-    assert_eq!(longitudinal.rule, Rule::LessThan);
+    assert_eq!(longitudinal.rule, Value::Literal(Rule::LessThan));
 
     let lateral = RelativeDistanceCondition::lateral(
         OSString::literal("vehicle2".to_string()),
@@ -151,7 +155,7 @@ fn test_relative_distance_condition_types() {
     );
     assert_eq!(
         lateral.relative_distance_type,
-        RelativeDistanceType::Lateral
+        Value::Literal(RelativeDistanceType::Lateral)
     );
     assert_eq!(
         lateral.entity_ref,
@@ -159,7 +163,7 @@ fn test_relative_distance_condition_types() {
     );
     assert_eq!(lateral.value, Double::literal(5.0));
     assert_eq!(lateral.freespace, Boolean::literal(true));
-    assert_eq!(lateral.rule, Rule::GreaterThan);
+    assert_eq!(lateral.rule, Value::Literal(Rule::GreaterThan));
 
     let cartesian = RelativeDistanceCondition::cartesian(
         OSString::literal("vehicle3".to_string()),
@@ -169,7 +173,7 @@ fn test_relative_distance_condition_types() {
     );
     assert_eq!(
         cartesian.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
     assert_eq!(
         cartesian.entity_ref,
@@ -177,7 +181,7 @@ fn test_relative_distance_condition_types() {
     );
     assert_eq!(cartesian.value, Double::literal(15.0));
     assert_eq!(cartesian.freespace, Boolean::literal(false));
-    assert_eq!(cartesian.rule, Rule::EqualTo);
+    assert_eq!(cartesian.rule, Value::Literal(Rule::EqualTo));
 }
 
 #[test]
@@ -191,13 +195,19 @@ fn test_relative_distance_condition_with_options() {
     .with_coordinate_system(CoordinateSystem::Lane)
     .with_routing_algorithm(RoutingAlgorithm::Fastest);
 
-    assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Lane));
-    assert_eq!(condition.routing_algorithm, Some(RoutingAlgorithm::Fastest));
+    assert_eq!(
+        condition.coordinate_system,
+        Some(Value::Literal(CoordinateSystem::Lane))
+    );
+    assert_eq!(
+        condition.routing_algorithm,
+        Some(Value::Literal(RoutingAlgorithm::Fastest))
+    );
     assert_eq!(
         condition.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
-    assert_eq!(condition.rule, Rule::LessOrEqual);
+    assert_eq!(condition.rule, Value::Literal(Rule::LessOrEqual));
 }
 
 #[test]
@@ -209,7 +219,7 @@ fn test_spatial_condition_defaults() {
     let distance = DistanceCondition::default();
     assert_eq!(distance.value, Double::literal(10.0));
     assert_eq!(distance.freespace, Boolean::literal(true));
-    assert_eq!(distance.rule, Rule::LessThan);
+    assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
 
     let relative_distance = RelativeDistanceCondition::default();
     assert_eq!(
@@ -220,9 +230,9 @@ fn test_spatial_condition_defaults() {
     assert_eq!(relative_distance.freespace, Boolean::literal(true));
     assert_eq!(
         relative_distance.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
-    assert_eq!(relative_distance.rule, Rule::LessThan);
+    assert_eq!(relative_distance.rule, Value::Literal(Rule::LessThan));
 }
 
 #[test]
@@ -377,7 +387,7 @@ fn test_real_world_scenario_examples() {
         .with_distance_type(RelativeDistanceType::Cartesian);
 
     assert_eq!(intersection_condition.value, Double::literal(50.0));
-    assert_eq!(intersection_condition.rule, Rule::LessThan);
+    assert_eq!(intersection_condition.rule, Value::Literal(Rule::LessThan));
 
     // Example 3: Maintain longitudinal distance > 20m from lead vehicle
     let following_condition = RelativeDistanceCondition::longitudinal(
@@ -390,10 +400,10 @@ fn test_real_world_scenario_examples() {
 
     assert_eq!(
         following_condition.relative_distance_type,
-        RelativeDistanceType::Longitudinal
+        Value::Literal(RelativeDistanceType::Longitudinal)
     );
     assert_eq!(following_condition.value, Double::literal(20.0));
-    assert_eq!(following_condition.rule, Rule::GreaterThan);
+    assert_eq!(following_condition.rule, Value::Literal(Rule::GreaterThan));
 
     // Example 4: Lane change safety check - lateral distance > 3m from adjacent vehicle
     let lane_change_condition = RelativeDistanceCondition::lateral(
@@ -406,11 +416,11 @@ fn test_real_world_scenario_examples() {
 
     assert_eq!(
         lane_change_condition.relative_distance_type,
-        RelativeDistanceType::Lateral
+        Value::Literal(RelativeDistanceType::Lateral)
     );
     assert_eq!(
         lane_change_condition.coordinate_system,
-        Some(CoordinateSystem::Lane)
+        Some(Value::Literal(CoordinateSystem::Lane))
     );
 }
 
@@ -421,8 +431,8 @@ fn test_parameter_support() {
         entity_ref: OSString::parameter("target_entity".to_string()),
         value: Double::parameter("safety_distance".to_string()),
         freespace: Boolean::parameter("use_freespace".to_string()),
-        relative_distance_type: RelativeDistanceType::Cartesian,
-        rule: Rule::GreaterThan,
+        relative_distance_type: Value::Literal(RelativeDistanceType::Cartesian),
+        rule: Value::Literal(Rule::GreaterThan),
         coordinate_system: None,
         routing_algorithm: None,
     };

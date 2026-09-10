@@ -199,7 +199,6 @@ impl SpeedConditionGroupBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::basic::Value;
 
     #[test]
     fn test_trigger_builder_basic() {

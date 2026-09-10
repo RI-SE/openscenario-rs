@@ -321,25 +321,50 @@ impl BuilderValidationRule for ParameterReferenceValidationRule {
 
         let declared = Self::declared_names(scenario, context);
 
-        // `Value<T>` serializes both parameters and expressions as `${…}`, so one pattern
-        // covers every parameterized attribute in the document.
-        let mut rest = xml.as_str();
-        while let Some(start) = rest.find("${") {
-            let after = &rest[start + 2..];
-            let Some(end) = after.find('}') else { break };
-            let body = &after[..end];
-            rest = &after[end + 1..];
-
-            for name in Self::referenced_names(body) {
-                if !declared.contains(&name) {
-                    let mut available: Vec<String> = declared.iter().cloned().collect();
-                    available.sort();
-                    return Err(BuilderError::validation_error(&format!(
-                        "Parameter '{}' is referenced but never declared. Declared: [{}]",
-                        name,
-                        available.join(", ")
-                    )));
+        // The wire carries two distinct spellings, and both must be scanned
+        // (`Schema/OpenSCENARIO.xsd:4-13`):
+        //
+        //   * `${…}` -- the `expression` production. `Value::Expression` emits it, and its
+        //     body may name several parameters, so it goes through `referenced_names`.
+        //   * `$name` -- the `parameter` production, which is what `Value::Parameter` emits
+        //     and the only spelling the 37 enumeration unions accept. Scanning for `${`
+        //     alone used to be sufficient because `Value::Parameter` also emitted braces;
+        //     since OSR-06 it does not, and a `$name`-only scan gap would let an undeclared
+        //     parameter through this rule silently.
+        let bytes = xml.as_bytes();
+        let mut i = 0usize;
+        let mut referenced: Vec<String> = Vec::new();
+        while i < bytes.len() {
+            if bytes[i] != b'$' {
+                i += 1;
+                continue;
+            }
+            if bytes.get(i + 1) == Some(&b'{') {
+                let after = &xml[i + 2..];
+                let Some(end) = after.find('}') else { break };
+                referenced.extend(Self::referenced_names(&after[..end]));
+                i += 2 + end + 1;
+            } else {
+                let after = &xml[i + 1..];
+                let len = after
+                    .find(|c: char| !(c.is_alphanumeric() || c == '_'))
+                    .unwrap_or(after.len());
+                if len > 0 {
+                    referenced.push(after[..len].to_string());
                 }
+                i += 1 + len.max(1);
+            }
+        }
+
+        for name in referenced {
+            if !declared.contains(&name) {
+                let mut available: Vec<String> = declared.iter().cloned().collect();
+                available.sort();
+                return Err(BuilderError::validation_error(&format!(
+                    "Parameter '{}' is referenced but never declared. Declared: [{}]",
+                    name,
+                    available.join(", ")
+                )));
             }
         }
 

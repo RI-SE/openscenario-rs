@@ -7,7 +7,7 @@
 //! - Spatial relationship actions (distance keeping, synchronization)
 //! - Trajectory following and path planning actions
 //!
-use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations};
+use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::enums::{
@@ -104,15 +104,15 @@ pub struct TeleportAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransitionDynamics {
     #[serde(rename = "@dynamicsDimension")]
-    pub dynamics_dimension: DynamicsDimension,
+    pub dynamics_dimension: Value<DynamicsDimension>,
     #[serde(rename = "@dynamicsShape")]
-    pub dynamics_shape: DynamicsShape,
+    pub dynamics_shape: Value<DynamicsShape>,
     #[serde(
         rename = "@followingMode",
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub following_mode: Option<FollowingMode>,
+    pub following_mode: Option<Value<FollowingMode>>,
     #[serde(rename = "@value")]
     pub value: Double,
 }
@@ -144,7 +144,7 @@ pub struct RelativeTargetSpeed {
     #[serde(rename = "@entityRef")]
     pub entity_ref: String,
     #[serde(rename = "@speedTargetValueType")]
-    pub value_type: SpeedTargetValueType,
+    pub value_type: Value<SpeedTargetValueType>,
     #[serde(rename = "@continuous")]
     pub continuous: bool,
 }
@@ -187,7 +187,7 @@ pub struct TrajectoryRef {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrajectoryFollowingMode {
     #[serde(rename = "@followingMode")]
-    pub following_mode: FollowingMode,
+    pub following_mode: Value<FollowingMode>,
 }
 
 /// Empty element representing the absence of timing in a `TimeReference`.
@@ -211,7 +211,7 @@ pub struct TimeReference {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Timing {
     #[serde(rename = "@domainAbsoluteRelative")]
-    pub domain_absolute_relative: ReferenceContext,
+    pub domain_absolute_relative: Value<ReferenceContext>,
     #[serde(rename = "@scale")]
     pub scale: Double,
     #[serde(rename = "@offset")]
@@ -366,7 +366,7 @@ pub struct LaneOffsetAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneOffsetActionDynamics {
     #[serde(rename = "@dynamicsShape")]
-    pub dynamics_shape: DynamicsShape,
+    pub dynamics_shape: Value<DynamicsShape>,
     #[serde(rename = "@maxLateralAcc", skip_serializing_if = "Option::is_none")]
     pub max_lateral_acc: Option<Double>,
 }
@@ -436,13 +436,13 @@ pub struct LateralDistanceAction {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub displacement: Option<LateralDisplacement>,
+    pub displacement: Option<Value<LateralDisplacement>>,
     #[serde(
         rename = "@coordinateSystem",
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
     #[serde(
         rename = "DynamicConstraints",
         default,
@@ -483,11 +483,11 @@ pub struct LongitudinalDistanceAction {
 
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 
     /// Displacement type for leading referenced entity
     #[serde(rename = "@displacement", skip_serializing_if = "Option::is_none")]
-    pub displacement: Option<LongitudinalDisplacement>,
+    pub displacement: Option<Value<LongitudinalDisplacement>>,
 
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
@@ -507,7 +507,7 @@ pub struct SpeedProfileAction {
     )]
     pub entity_ref: Option<OSString>,
     #[serde(rename = "@followingMode")]
-    pub following_mode: FollowingMode,
+    pub following_mode: Value<FollowingMode>,
     #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
     #[serde(rename = "SpeedProfileEntry", default)]
@@ -652,7 +652,7 @@ pub struct AbsoluteSpeed {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeSpeedToMaster {
     #[serde(rename = "@speedTargetValueType")]
-    pub speed_target_value_type: SpeedTargetValueType,
+    pub speed_target_value_type: Value<SpeedTargetValueType>,
 
     #[serde(rename = "@value")]
     pub value: Double,
@@ -686,8 +686,8 @@ pub struct AcquirePositionAction {
 impl Default for TransitionDynamics {
     fn default() -> Self {
         Self {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             following_mode: None,
             value: Double::literal(1.0),
         }
@@ -716,7 +716,7 @@ impl Default for RelativeTargetSpeed {
         Self {
             value: Double::literal(0.0),
             entity_ref: "DefaultEntity".to_string(),
-            value_type: SpeedTargetValueType::Delta,
+            value_type: Value::Literal(SpeedTargetValueType::Delta),
             continuous: false,
         }
     }
@@ -736,7 +736,7 @@ impl Default for Trajectory {
 impl Default for TrajectoryFollowingMode {
     fn default() -> Self {
         Self {
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(FollowingMode::Follow),
         }
     }
 }
@@ -744,7 +744,7 @@ impl Default for TrajectoryFollowingMode {
 impl Default for Timing {
     fn default() -> Self {
         Self {
-            domain_absolute_relative: ReferenceContext::Absolute,
+            domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
             scale: Double::literal(1.0),
             offset: Double::literal(0.0),
         }
@@ -817,7 +817,9 @@ impl FollowTrajectoryAction {
             catalog_reference: None,
             time_reference: TimeReference::default(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode { following_mode },
+            trajectory_following_mode: TrajectoryFollowingMode {
+                following_mode: Value::Literal(following_mode),
+            },
             initial_distance_offset: None,
         }
     }
@@ -852,7 +854,9 @@ impl FollowTrajectoryAction {
             catalog_reference: Some(catalog_reference),
             time_reference: TimeReference::default(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode { following_mode },
+            trajectory_following_mode: TrajectoryFollowingMode {
+                following_mode: Value::Literal(following_mode),
+            },
             initial_distance_offset: None,
         }
     }
@@ -1007,7 +1011,7 @@ impl LaneOffsetActionDynamics {
     /// Create new lane offset action dynamics
     pub fn new(dynamics_shape: DynamicsShape) -> Self {
         Self {
-            dynamics_shape,
+            dynamics_shape: Value::Literal(dynamics_shape),
             max_lateral_acc: None,
         }
     }
@@ -1159,7 +1163,7 @@ impl Default for LateralAction {
 impl Default for LaneOffsetActionDynamics {
     fn default() -> Self {
         Self {
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             max_lateral_acc: None,
         }
     }
@@ -1208,7 +1212,7 @@ impl Default for SpeedProfileAction {
     fn default() -> Self {
         Self {
             entity_ref: None,
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(FollowingMode::Follow),
             dynamic_constraints: None,
             entries: vec![SpeedProfileEntry::default()],
         }
@@ -1258,7 +1262,7 @@ impl Default for AbsoluteSpeed {
 impl Default for RelativeSpeedToMaster {
     fn default() -> Self {
         Self {
-            speed_target_value_type: SpeedTargetValueType::Delta,
+            speed_target_value_type: Value::Literal(SpeedTargetValueType::Delta),
             value: Double::literal(0.0),
             target_distance_steady_state: None,
             target_time_steady_state: None,
@@ -1278,11 +1282,11 @@ mod tests {
         assert!(action.target_lane_offset.is_none());
         assert_eq!(
             action.lane_change_action_dynamics.dynamics_dimension,
-            DynamicsDimension::Time
+            Value::Literal(DynamicsDimension::Time)
         );
         assert_eq!(
             action.lane_change_action_dynamics.dynamics_shape,
-            DynamicsShape::Linear
+            Value::Literal(DynamicsShape::Linear)
         );
     }
 
@@ -1412,8 +1416,8 @@ mod tests {
     fn test_xml_round_trip() {
         let original = LaneChangeAction::new(
             TransitionDynamics {
-                dynamics_dimension: DynamicsDimension::Time,
-                dynamics_shape: DynamicsShape::Linear,
+                dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(DynamicsShape::Linear),
                 following_mode: None,
                 value: Double::literal(2.0),
             },
@@ -1438,7 +1442,10 @@ mod tests {
     fn test_lane_offset_action_creation() {
         let action = LaneOffsetAction::default();
         assert_eq!(action.continuous.as_literal(), Some(&false));
-        assert_eq!(action.dynamics.dynamics_shape, DynamicsShape::Linear);
+        assert_eq!(
+            action.dynamics.dynamics_shape,
+            Value::Literal(DynamicsShape::Linear)
+        );
     }
 
     #[test]
@@ -1612,7 +1619,7 @@ mod tests {
 
         let action = SpeedProfileAction {
             entity_ref: Some(OSString::literal("RefEntity".to_string())),
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(FollowingMode::Follow),
             dynamic_constraints: Some(DynamicConstraints {
                 max_acceleration: Some(Double::literal(1.5)),
                 max_speed: Some(Double::literal(30.0)),
@@ -1742,7 +1749,7 @@ mod tests {
         // Test relative speed to master
         let rel_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
-                speed_target_value_type: SpeedTargetValueType::Delta,
+                speed_target_value_type: Value::Literal(SpeedTargetValueType::Delta),
                 value: Double::literal(-5.0),
                 target_distance_steady_state: None,
                 target_time_steady_state: None,
@@ -1846,7 +1853,10 @@ mod tests {
     fn test_transition_dynamics_following_mode_round_trip() {
         let xml = r#"<TransitionDynamics dynamicsDimension="time" dynamicsShape="linear" followingMode="position" value="2.0"/>"#;
         let dynamics: TransitionDynamics = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(dynamics.following_mode, Some(FollowingMode::Position));
+        assert_eq!(
+            dynamics.following_mode,
+            Some(Value::Literal(FollowingMode::Position))
+        );
 
         let serialized = quick_xml::se::to_string(&dynamics).unwrap();
         assert!(
@@ -1891,11 +1901,13 @@ mod tests {
         let action: LateralDistanceAction = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
             action.displacement,
-            Some(crate::types::enums::LateralDisplacement::LeftToReferencedEntity)
+            Some(Value::Literal(
+                crate::types::enums::LateralDisplacement::LeftToReferencedEntity
+            ))
         );
         assert_eq!(
             action.coordinate_system,
-            Some(crate::types::enums::CoordinateSystem::Road)
+            Some(Value::Literal(crate::types::enums::CoordinateSystem::Road))
         );
 
         let serialized = quick_xml::se::to_string(&action).unwrap();

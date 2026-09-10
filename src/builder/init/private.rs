@@ -3,18 +3,18 @@
 use super::actions::InitActionBuilder;
 use crate::builder::actions::ActionBuilder as ActionBuilderTrait;
 use crate::builder::actions::{
-    AssignRouteActionBuilder, FollowTrajectoryActionBuilder, LongitudinalDistanceActionBuilder,
-    SpeedProfileActionBuilder, SynchronizeActionBuilder, VisibilityActionBuilder,
+    AssignRouteActionBuilder, LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder,
+    SynchronizeActionBuilder, VisibilityActionBuilder,
 };
 use crate::builder::BuilderResult;
+use crate::types::basic::Value;
 use crate::types::{
-    actions::appearance::VisibilityAction,
     actions::movement::{
-        LateralAction, LongitudinalAction as LongitudinalActionType, RoutingAction, SpeedAction,
-        SpeedActionTarget, SynchronizeAction, TeleportAction, TransitionDynamics,
+        LongitudinalAction as LongitudinalActionType, SpeedAction, SpeedActionTarget,
+        TeleportAction, TransitionDynamics,
     },
     actions::wrappers::PrivateAction as PrivateActionWrapper,
-    basic::{Double, Value},
+    basic::Double,
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
     positions::Position,
@@ -51,8 +51,8 @@ impl PrivateActionBuilder {
     pub fn add_speed_action(mut self, speed: f64) -> Self {
         let speed_action = SpeedAction {
             speed_action_dynamics: TransitionDynamics {
-                dynamics_dimension: DynamicsDimension::Time,
-                dynamics_shape: DynamicsShape::Step,
+                dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(DynamicsShape::Step),
                 following_mode: None,
                 value: Double::literal(1.0),
             },

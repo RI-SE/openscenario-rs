@@ -10,6 +10,7 @@
 //! - ByObjectType
 //! - ByType
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     entities::{
@@ -63,7 +64,10 @@ fn test_entity_selection_xml_parsing_by_type() {
     let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
     assert!(selection.members.entity_refs.is_empty());
     assert_eq!(selection.members.by_type.len(), 1);
-    assert_eq!(selection.members.by_type[0].type_spec, ObjectType::Vehicle);
+    assert_eq!(
+        selection.members.by_type[0].type_spec,
+        Value::Literal(ObjectType::Vehicle)
+    );
 }
 
 #[test]
@@ -268,17 +272,29 @@ fn test_external_object_reference_xml_parsing() {
 #[test]
 fn test_by_object_type() {
     let vehicle_selector = ByObjectType::vehicle();
-    assert_eq!(vehicle_selector.object_type, ObjectType::Vehicle);
+    assert_eq!(
+        vehicle_selector.object_type,
+        Value::Literal(ObjectType::Vehicle)
+    );
 
     let pedestrian_selector = ByObjectType::pedestrian();
-    assert_eq!(pedestrian_selector.object_type, ObjectType::Pedestrian);
+    assert_eq!(
+        pedestrian_selector.object_type,
+        Value::Literal(ObjectType::Pedestrian)
+    );
 
     let misc_selector = ByObjectType::miscellaneous_object();
-    assert_eq!(misc_selector.object_type, ObjectType::MiscellaneousObject);
+    assert_eq!(
+        misc_selector.object_type,
+        Value::Literal(ObjectType::MiscellaneousObject)
+    );
 
     // Test custom creation
     let custom_selector = ByObjectType::new(ObjectType::Vehicle);
-    assert_eq!(custom_selector.object_type, ObjectType::Vehicle);
+    assert_eq!(
+        custom_selector.object_type,
+        Value::Literal(ObjectType::Vehicle)
+    );
 }
 
 #[test]
@@ -286,17 +302,23 @@ fn test_by_object_type_xml_parsing() {
     // XSD: ByObjectType has attribute `type`.
     let xml = r#"<ByObjectType type="pedestrian"/>"#;
     let selector: ByObjectType = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(selector.object_type, ObjectType::Pedestrian);
+    assert_eq!(selector.object_type, Value::Literal(ObjectType::Pedestrian));
 }
 
 #[test]
 fn test_by_type() {
     let type_selector = ByType::new(ObjectType::MiscellaneousObject);
-    assert_eq!(type_selector.type_spec, ObjectType::MiscellaneousObject);
+    assert_eq!(
+        type_selector.type_spec,
+        Value::Literal(ObjectType::MiscellaneousObject)
+    );
 
     // Test default
     let default_selector = ByType::default();
-    assert_eq!(default_selector.type_spec, ObjectType::Vehicle);
+    assert_eq!(
+        default_selector.type_spec,
+        Value::Literal(ObjectType::Vehicle)
+    );
 }
 
 #[test]
@@ -304,7 +326,7 @@ fn test_by_type_xml_parsing() {
     // XSD: ByType has attribute `objectType`.
     let xml = r#"<ByType objectType="pedestrian"/>"#;
     let selector: ByType = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(selector.type_spec, ObjectType::Pedestrian);
+    assert_eq!(selector.type_spec, Value::Literal(ObjectType::Pedestrian));
 }
 
 #[test]

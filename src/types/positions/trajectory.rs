@@ -202,7 +202,6 @@ mod tests {
     /// A Vertex element with a `time` attribute must round-trip correctly.
     #[test]
     fn test_vertex_xml_roundtrip_with_time() {
-        use crate::types::basic::Value;
         use crate::types::geometry::shapes::Vertex;
         use crate::types::positions::{Position, WorldPosition};
 

@@ -7,7 +7,7 @@
 //! - RelativeLanePosition for lane-relative positioning
 //! - Road network integration and coordinate validation
 //!
-use crate::types::basic::{Double, Int, OSString};
+use crate::types::basic::{Double, Int, OSString, Value};
 use crate::types::enums::ReferenceContext;
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +28,7 @@ pub struct Orientation {
 
     /// Whether the orientation is relative or absolute
     #[serde(rename = "@type", default, skip_serializing_if = "Option::is_none")]
-    pub reference_context: Option<ReferenceContext>,
+    pub reference_context: Option<Value<ReferenceContext>>,
 }
 
 /// Road-based position definition
@@ -480,7 +480,9 @@ mod tests {
         let orientation: Orientation = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
             orientation.reference_context,
-            Some(crate::types::enums::ReferenceContext::Relative)
+            Some(Value::Literal(
+                crate::types::enums::ReferenceContext::Relative
+            ))
         );
 
         let serialized = quick_xml::se::to_string(&orientation).unwrap();

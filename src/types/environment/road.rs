@@ -4,7 +4,7 @@
 //! - RoadCondition with friction scale factors for surface properties
 //! - Road surface properties affecting vehicle dynamics
 //!
-use crate::types::basic::Double;
+use crate::types::basic::{Double, Value};
 use crate::types::entities::vehicle::Properties;
 use crate::types::enums::Wetness;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct RoadCondition {
     #[serde(rename = "@frictionScaleFactor")]
     pub friction_scale_factor: Double,
     #[serde(rename = "@wetness", default, skip_serializing_if = "Option::is_none")]
-    pub wetness: Option<Wetness>,
+    pub wetness: Option<Value<Wetness>>,
     #[serde(
         rename = "Properties",
         default,
@@ -41,7 +41,7 @@ mod tests {
     fn test_road_condition_roundtrip_wetness() {
         let rc = RoadCondition {
             friction_scale_factor: Double::literal(0.8),
-            wetness: Some(Wetness::Moist),
+            wetness: Some(Value::Literal(Wetness::Moist)),
             properties: None,
         };
         let xml = quick_xml::se::to_string(&rc).unwrap();

@@ -4,35 +4,39 @@
 //! compile and have correct defaults.
 
 use openscenario_rs::types::basic::OSString;
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::conditions::*;
 use openscenario_rs::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
 
 #[test]
 fn test_simulation_time_condition() {
     let condition = SimulationTimeCondition::default();
-    assert_eq!(condition.rule, Rule::GreaterThan);
+    assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
 }
 
 #[test]
 fn test_parameter_condition() {
     let condition = ParameterCondition::default();
-    assert_eq!(condition.rule, Rule::EqualTo);
+    assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
 }
 
 #[test]
 fn test_storyboard_element_state_condition() {
     let condition = StoryboardElementStateCondition::default();
-    assert_eq!(condition.state, StoryboardElementState::RunningState);
+    assert_eq!(
+        condition.state,
+        Value::Literal(StoryboardElementState::RunningState)
+    );
     assert_eq!(
         condition.storyboard_element_type,
-        StoryboardElementType::Story
+        Value::Literal(StoryboardElementType::Story)
     );
 }
 
 #[test]
 fn test_user_defined_value_condition() {
     let condition = UserDefinedValueCondition::default();
-    assert_eq!(condition.rule, Rule::EqualTo);
+    assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
 }
 
 #[test]
@@ -60,7 +64,7 @@ fn test_traffic_signal_controller_condition() {
 #[test]
 fn test_variable_condition() {
     let condition = VariableCondition::default();
-    assert_eq!(condition.rule, Rule::EqualTo);
+    assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
 }
 
 #[test]
@@ -87,14 +91,14 @@ fn test_byvalue_condition_with_specific_conditions() {
     // Set a parameter condition
     condition.parameter_condition = Some(ParameterCondition {
         parameter_ref: OSString::literal("testParam".to_string()),
-        rule: Rule::GreaterThan,
+        rule: Value::Literal(Rule::GreaterThan),
         value: OSString::literal("10".to_string()),
     });
 
     // Set a variable condition
     condition.variable_condition = Some(VariableCondition {
         variable_ref: OSString::literal("testVar".to_string()),
-        rule: Rule::LessThan,
+        rule: Value::Literal(Rule::LessThan),
         value: OSString::literal("5".to_string()),
     });
 
@@ -103,11 +107,11 @@ fn test_byvalue_condition_with_specific_conditions() {
     assert!(condition.variable_condition.is_some());
 
     if let Some(param_cond) = &condition.parameter_condition {
-        assert_eq!(param_cond.rule, Rule::GreaterThan);
+        assert_eq!(param_cond.rule, Value::Literal(Rule::GreaterThan));
     }
 
     if let Some(var_cond) = &condition.variable_condition {
-        assert_eq!(var_cond.rule, Rule::LessThan);
+        assert_eq!(var_cond.rule, Value::Literal(Rule::LessThan));
     }
 }
 

@@ -1,6 +1,7 @@
 //! Entity condition builders for entity-specific triggers
 
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     basic::{Double, OSString},
     conditions::entity::{
@@ -17,8 +18,8 @@ use crate::types::{
 pub struct AccelerationConditionBuilder {
     entity_ref: Option<String>,
     value: Option<f64>,
-    rule: Rule,
-    direction: Option<DirectionalDimension>,
+    rule: Value<Rule>,
+    direction: Option<Value<DirectionalDimension>>,
 }
 
 impl Default for AccelerationConditionBuilder {
@@ -26,7 +27,7 @@ impl Default for AccelerationConditionBuilder {
         Self {
             entity_ref: None,
             value: None,
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
             direction: None,
         }
     }
@@ -47,27 +48,33 @@ impl AccelerationConditionBuilder {
     /// Set acceleration threshold
     pub fn acceleration_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::GreaterThan;
+        self.rule = Value::Literal(Rule::GreaterThan);
         self
     }
 
     /// Set acceleration threshold (below)
     pub fn acceleration_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::LessThan;
+        self.rule = Value::Literal(Rule::LessThan);
         self
     }
 
     /// Set exact acceleration value
     pub fn acceleration_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::EqualTo;
+        self.rule = Value::Literal(Rule::EqualTo);
         self
     }
 
     /// Set direction for acceleration measurement
     pub fn with_direction(mut self, direction: DirectionalDimension) -> Self {
-        self.direction = Some(direction);
+        self.direction = Some(Value::Literal(direction));
+        self
+    }
+
+    /// Set `direction` to a parameter reference (`direction="$name"`) -- the attribute's `xsd:union` admits a `parameter` member alongside the enumeration, so `$name` is schema-valid here; `name` omits the `$`.
+    pub fn with_direction_param(mut self, name: &str) -> Self {
+        self.direction = Some(Value::Parameter(name.to_string()));
         self
     }
 
@@ -92,7 +99,7 @@ impl AccelerationConditionBuilder {
 
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
-                triggering_entities_rule: TriggeringEntitiesRule::Any,
+                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                 entity_refs: vec![EntityRef {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
                 }],
@@ -102,7 +109,7 @@ impl AccelerationConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("AccelerationCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
@@ -115,7 +122,7 @@ impl AccelerationConditionBuilder {
 pub struct EnhancedSpeedConditionBuilder {
     entity_ref: Option<String>,
     value: Option<f64>,
-    rule: Rule,
+    rule: Value<Rule>,
 }
 
 impl Default for EnhancedSpeedConditionBuilder {
@@ -123,7 +130,7 @@ impl Default for EnhancedSpeedConditionBuilder {
         Self {
             entity_ref: None,
             value: None,
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
         }
     }
 }
@@ -143,21 +150,21 @@ impl EnhancedSpeedConditionBuilder {
     /// Set speed threshold (above)
     pub fn speed_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::GreaterThan;
+        self.rule = Value::Literal(Rule::GreaterThan);
         self
     }
 
     /// Set speed threshold (below)
     pub fn speed_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::LessThan;
+        self.rule = Value::Literal(Rule::LessThan);
         self
     }
 
     /// Set exact speed value
     pub fn speed_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::EqualTo;
+        self.rule = Value::Literal(Rule::EqualTo);
         self
     }
 
@@ -180,7 +187,7 @@ impl EnhancedSpeedConditionBuilder {
 
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
-                triggering_entities_rule: TriggeringEntitiesRule::Any,
+                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                 entity_refs: vec![EntityRef {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
                 }],
@@ -190,7 +197,7 @@ impl EnhancedSpeedConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
@@ -203,7 +210,7 @@ impl EnhancedSpeedConditionBuilder {
 pub struct TraveledDistanceConditionBuilder {
     entity_ref: Option<String>,
     value: Option<f64>,
-    rule: Rule,
+    rule: Value<Rule>,
 }
 
 impl Default for TraveledDistanceConditionBuilder {
@@ -211,7 +218,7 @@ impl Default for TraveledDistanceConditionBuilder {
         Self {
             entity_ref: None,
             value: None,
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
         }
     }
 }
@@ -231,21 +238,21 @@ impl TraveledDistanceConditionBuilder {
     /// Set distance threshold (above)
     pub fn distance_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::GreaterThan;
+        self.rule = Value::Literal(Rule::GreaterThan);
         self
     }
 
     /// Set distance threshold (below)
     pub fn distance_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::LessThan;
+        self.rule = Value::Literal(Rule::LessThan);
         self
     }
 
     /// Set exact distance value
     pub fn distance_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::EqualTo;
+        self.rule = Value::Literal(Rule::EqualTo);
         self
     }
 
@@ -266,7 +273,7 @@ impl TraveledDistanceConditionBuilder {
 
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
-                triggering_entities_rule: TriggeringEntitiesRule::Any,
+                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                 entity_refs: vec![EntityRef {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
                 }],
@@ -276,7 +283,7 @@ impl TraveledDistanceConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("TraveledDistanceCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
@@ -337,7 +344,7 @@ impl ReachPositionConditionBuilder {
 
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
-                triggering_entities_rule: TriggeringEntitiesRule::Any,
+                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                 entity_refs: vec![EntityRef {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
                 }],
@@ -347,7 +354,7 @@ impl ReachPositionConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("ReachPositionCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
@@ -397,7 +404,7 @@ impl EndOfRoadConditionBuilder {
 
         let by_entity_condition = ByEntityCondition {
             triggering_entities: TriggeringEntities {
-                triggering_entities_rule: TriggeringEntitiesRule::Any,
+                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                 entity_refs: vec![EntityRef {
                     entity_ref: OSString::literal(self.entity_ref.unwrap()),
                 }],
@@ -407,7 +414,7 @@ impl EndOfRoadConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("EndOfRoadCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(by_entity_condition),
@@ -430,7 +437,7 @@ mod tests {
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::Acceleration(acc_condition) = by_entity.entity_condition {
                 assert_eq!(*acc_condition.value.as_literal().unwrap(), 2.0);
-                assert_eq!(acc_condition.rule, Rule::GreaterThan);
+                assert_eq!(acc_condition.rule, Value::Literal(Rule::GreaterThan));
             } else {
                 panic!("Expected Acceleration condition");
             }
@@ -450,7 +457,7 @@ mod tests {
         if let Some(by_entity) = condition.by_entity_condition {
             if let EntityCondition::Speed(speed_condition) = by_entity.entity_condition {
                 assert_eq!(*speed_condition.value.as_literal().unwrap(), 30.0);
-                assert_eq!(speed_condition.rule, Rule::LessThan);
+                assert_eq!(speed_condition.rule, Value::Literal(Rule::LessThan));
             } else {
                 panic!("Expected Speed condition");
             }

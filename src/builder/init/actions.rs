@@ -2,6 +2,7 @@
 
 use super::private::{GlobalActionBuilder, PrivateActionBuilder};
 use crate::builder::BuilderResult;
+use crate::types::basic::Value;
 use crate::types::{
     environment::Environment,
     positions::Position,
@@ -108,8 +109,12 @@ impl InitActionBuilder {
                     speed_action: Some(crate::types::actions::movement::SpeedAction {
                         speed_action_dynamics:
                             crate::types::actions::movement::TransitionDynamics {
-                                dynamics_dimension: crate::types::enums::DynamicsDimension::Time,
-                                dynamics_shape: crate::types::enums::DynamicsShape::Step,
+                                dynamics_dimension: Value::Literal(
+                                    crate::types::enums::DynamicsDimension::Time,
+                                ),
+                                dynamics_shape: Value::Literal(
+                                    crate::types::enums::DynamicsShape::Step,
+                                ),
                                 following_mode: None,
                                 value: crate::types::basic::Double::literal(1.0),
                             },
@@ -135,8 +140,12 @@ impl InitActionBuilder {
                     speed_action: Some(crate::types::actions::movement::SpeedAction {
                         speed_action_dynamics:
                             crate::types::actions::movement::TransitionDynamics {
-                                dynamics_dimension: crate::types::enums::DynamicsDimension::Time,
-                                dynamics_shape: crate::types::enums::DynamicsShape::Step,
+                                dynamics_dimension: Value::Literal(
+                                    crate::types::enums::DynamicsDimension::Time,
+                                ),
+                                dynamics_shape: Value::Literal(
+                                    crate::types::enums::DynamicsShape::Step,
+                                ),
                                 following_mode: None,
                                 value: crate::types::basic::Double::literal(1.0),
                             },

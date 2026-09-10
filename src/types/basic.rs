@@ -185,6 +185,15 @@ where
     }
 }
 
+/// Forwards `T`'s default, so a container whose enum-typed field became `Value<E>` keeps
+/// exactly the default it had before: `Value::Literal(E::default())`. This states nothing
+/// that `E::default()` did not already state -- it is not a new invented value.
+impl<T: Default> Default for Value<T> {
+    fn default() -> Self {
+        Value::Literal(T::default())
+    }
+}
+
 impl<T> Serialize for Value<T>
 where
     T: Serialize + fmt::Display,
@@ -195,7 +204,14 @@ where
     {
         match self {
             Value::Literal(value) => value.to_string().serialize(serializer),
-            Value::Parameter(name) => format!("${{{}}}", name).serialize(serializer),
+            // The schema's `parameter` production is `[$][A-Za-z_][A-Za-z0-9_]*` --
+            // unbraced (`Schema/OpenSCENARIO.xsd:4-8`). The braced spelling is the separate
+            // `expression` production, and while every *scalar* union lists both members,
+            // all 37 *enumeration* unions list `parameter` alone. Emitting `${name}` for a
+            // parameter reference therefore produces schema-invalid XML on any enum-typed
+            // attribute, while `$name` is valid on every union in the schema. Deserialize
+            // stays permissive and accepts either spelling.
+            Value::Parameter(name) => format!("${}", name).serialize(serializer),
             Value::Expression(expr) => format!("${{{}}}", expr).serialize(serializer),
         }
     }
@@ -209,7 +225,9 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Literal(value) => write!(f, "{}", value),
-            Value::Parameter(name) => write!(f, "${{{}}}", name),
+            // Same reasoning as `Serialize` above: `$name` is the schema's `parameter`
+            // production and is valid on every union; `${...}` is `expression`.
+            Value::Parameter(name) => write!(f, "${}", name),
             Value::Expression(expr) => write!(f, "${{{}}}", expr),
         }
     }
@@ -224,6 +242,58 @@ pub type UnsignedShort = Value<u16>;
 pub type Boolean = Value<bool>;
 
 pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
+
+// Enumeration type aliases.
+//
+// All 37 enumeration `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose second
+// member is `<xsd:restriction base="parameter"/>`, so every enum-typed attribute may carry a
+// parameter reference in place of a literal. These aliases name that union type the same way
+// `OSString`/`Double` name the scalar ones.
+//
+// The struct fields themselves spell `Value<E>` rather than the alias, so that the parameter
+// mechanism is visible at the point of declaration and `Option<Value<E>>` reads unambiguously;
+// the aliases exist for user-facing signatures.
+
+pub type AngleTypeValue = Value<crate::types::enums::AngleType>;
+pub type AutomaticGearTypeValue = Value<crate::types::enums::AutomaticGearType>;
+#[allow(deprecated)]
+pub type CloudStateValue = Value<crate::types::enums::CloudState>;
+pub type ColorTypeValue = Value<crate::types::enums::ColorType>;
+pub type ConditionEdgeValue = Value<crate::types::enums::ConditionEdge>;
+pub type ControllerTypeValue = Value<crate::types::enums::ControllerType>;
+pub type CoordinateSystemValue = Value<crate::types::enums::CoordinateSystem>;
+pub type DirectionalDimensionValue = Value<crate::types::enums::DirectionalDimension>;
+pub type DynamicsDimensionValue = Value<crate::types::enums::DynamicsDimension>;
+pub type DynamicsShapeValue = Value<crate::types::enums::DynamicsShape>;
+pub type FollowingModeValue = Value<crate::types::enums::FollowingMode>;
+pub type FractionalCloudCoverValue = Value<crate::types::enums::FractionalCloudCover>;
+#[allow(deprecated)]
+pub type LateralDisplacementValue = Value<crate::types::enums::LateralDisplacement>;
+pub type LightModeValue = Value<crate::types::enums::LightMode>;
+#[allow(deprecated)]
+pub type LongitudinalDisplacementValue = Value<crate::types::enums::LongitudinalDisplacement>;
+pub type MiscObjectCategoryValue = Value<crate::types::enums::MiscObjectCategory>;
+pub type ObjectTypeValue = Value<crate::types::enums::ObjectType>;
+pub type ParameterTypeValue = Value<crate::types::enums::ParameterType>;
+pub type PedestrianCategoryValue = Value<crate::types::enums::PedestrianCategory>;
+pub type PedestrianGestureTypeValue = Value<crate::types::enums::PedestrianGestureType>;
+pub type PedestrianMotionTypeValue = Value<crate::types::enums::PedestrianMotionType>;
+pub type PrecipitationTypeValue = Value<crate::types::enums::PrecipitationType>;
+pub type PriorityValue = Value<crate::types::enums::Priority>;
+pub type ReferenceContextValue = Value<crate::types::enums::ReferenceContext>;
+pub type RelativeDistanceTypeValue = Value<crate::types::enums::RelativeDistanceType>;
+pub type RoleValue = Value<crate::types::enums::Role>;
+pub type RouteStrategyValue = Value<crate::types::enums::RouteStrategy>;
+pub type RoutingAlgorithmValue = Value<crate::types::enums::RoutingAlgorithm>;
+pub type RuleValue = Value<crate::types::enums::Rule>;
+pub type SpeedTargetValueTypeValue = Value<crate::types::enums::SpeedTargetValueType>;
+pub type StoryboardElementStateValue = Value<crate::types::enums::StoryboardElementState>;
+pub type StoryboardElementTypeValue = Value<crate::types::enums::StoryboardElementType>;
+pub type TriggeringEntitiesRuleValue = Value<crate::types::enums::TriggeringEntitiesRule>;
+pub type VehicleCategoryValue = Value<crate::types::enums::VehicleCategory>;
+pub type VehicleComponentTypeValue = Value<crate::types::enums::VehicleComponentType>;
+pub type VehicleLightTypeValue = Value<crate::types::enums::VehicleLightType>;
+pub type WetnessValue = Value<crate::types::enums::Wetness>;
 
 /// Parse a parameter reference from a string
 ///
@@ -354,7 +424,7 @@ mod tests {
         );
 
         assert_eq!(param.name.as_literal().unwrap(), "MaxSpeed");
-        assert_eq!(param.parameter_type, ParameterType::Double);
+        assert_eq!(param.parameter_type, Value::Literal(ParameterType::Double));
         assert_eq!(param.value.as_literal().unwrap(), "60.0");
         assert!(!param.has_constraints());
     }
@@ -378,9 +448,12 @@ mod tests {
         assert_eq!(constraint_group.value_constraints.len(), 2);
         assert_eq!(
             constraint_group.value_constraints[0].rule,
-            Rule::GreaterThan
+            Value::Literal(Rule::GreaterThan)
         );
-        assert_eq!(constraint_group.value_constraints[1].rule, Rule::LessThan);
+        assert_eq!(
+            constraint_group.value_constraints[1].rule,
+            Value::Literal(Rule::LessThan)
+        );
     }
 
     #[test]
@@ -405,14 +478,14 @@ mod tests {
     #[test]
     fn test_value_constraint_helpers() {
         let eq_constraint = ValueConstraint::equal_to("test".to_string());
-        assert_eq!(eq_constraint.rule, Rule::EqualTo);
+        assert_eq!(eq_constraint.rule, Value::Literal(Rule::EqualTo));
         assert_eq!(eq_constraint.value.as_literal().unwrap(), "test");
 
         let gt_constraint = ValueConstraint::greater_than("10".to_string());
-        assert_eq!(gt_constraint.rule, Rule::GreaterThan);
+        assert_eq!(gt_constraint.rule, Value::Literal(Rule::GreaterThan));
 
         let lt_constraint = ValueConstraint::less_than("50".to_string());
-        assert_eq!(lt_constraint.rule, Rule::LessThan);
+        assert_eq!(lt_constraint.rule, Value::Literal(Rule::LessThan));
     }
 
     #[test]
@@ -450,11 +523,11 @@ mod tests {
         assert_eq!(declarations.parameter_declarations.len(), 2);
         assert_eq!(
             declarations.parameter_declarations[0].parameter_type,
-            ParameterType::Double
+            Value::Literal(ParameterType::Double)
         );
         assert_eq!(
             declarations.parameter_declarations[1].parameter_type,
-            ParameterType::String
+            Value::Literal(ParameterType::String)
         );
     }
 
@@ -596,7 +669,7 @@ mod tests {
         assert_eq!(param.constraint_groups[0].value_constraints.len(), 1);
         assert_eq!(
             param.constraint_groups[0].value_constraints[0].rule,
-            Rule::EqualTo
+            Value::Literal(Rule::EqualTo)
         );
         assert_eq!(
             param.constraint_groups[0].value_constraints[0]
@@ -610,7 +683,7 @@ mod tests {
         assert_eq!(param.constraint_groups[1].value_constraints.len(), 1);
         assert_eq!(
             param.constraint_groups[1].value_constraints[0].rule,
-            Rule::EqualTo
+            Value::Literal(Rule::EqualTo)
         );
         assert_eq!(
             param.constraint_groups[1].value_constraints[0]
@@ -648,7 +721,7 @@ mod tests {
             param.name.as_literal().unwrap(),
             "SideVehicle_InitPosition_RelativeLaneId"
         );
-        assert_eq!(param.parameter_type, ParameterType::Int);
+        assert_eq!(param.parameter_type, Value::Literal(ParameterType::Int));
         assert_eq!(param.value.as_literal().unwrap(), "1");
         assert_eq!(param.constraint_groups.len(), 2);
     }
@@ -660,8 +733,11 @@ mod tests {
         let literal_value = Value::<f64>::literal(42.5);
         assert_eq!(format!("{}", literal_value), "42.5");
 
+        // `$speed`, not `${speed}`: the schema's `parameter` production is unbraced
+        // (`Schema/OpenSCENARIO.xsd:4-8`), and it is the only spelling the 37 enumeration
+        // unions accept. The braced form belongs to `expression`, tested just below.
         let parameter_value = Value::<String>::parameter("speed".to_string());
-        assert_eq!(format!("{}", parameter_value), "${speed}");
+        assert_eq!(format!("{}", parameter_value), "$speed");
 
         let expression_value = Value::<String>::expression("speed * 2".to_string());
         assert_eq!(format!("{}", expression_value), "${speed * 2}");
@@ -678,7 +754,7 @@ mod tests {
         assert_eq!(format!("{}", double_value), "3.14");
 
         let os_string_param = OSString::parameter("vehicle_name".to_string());
-        assert_eq!(format!("{}", os_string_param), "${vehicle_name}");
+        assert_eq!(format!("{}", os_string_param), "$vehicle_name");
 
         let boolean_expr = Boolean::expression("speed > 30".to_string());
         assert_eq!(format!("{}", boolean_expr), "${speed > 30}");
@@ -702,7 +778,7 @@ pub struct ParameterDeclaration {
     #[serde(rename = "@name")]
     pub name: OSString,
     #[serde(rename = "@parameterType")]
-    pub parameter_type: ParameterType,
+    pub parameter_type: Value<ParameterType>,
     #[serde(rename = "@value")]
     pub value: OSString,
     #[serde(
@@ -717,7 +793,7 @@ impl Default for ParameterDeclaration {
     fn default() -> Self {
         Self {
             name: OSString::literal("DefaultParameter".to_string()),
-            parameter_type: ParameterType::String,
+            parameter_type: Value::Literal(ParameterType::String),
             value: OSString::literal("".to_string()),
             constraint_groups: Vec::new(),
         }
@@ -735,7 +811,7 @@ pub struct ValueConstraintGroup {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ValueConstraint {
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
     #[serde(rename = "@value")]
     pub value: OSString,
 }
@@ -752,7 +828,7 @@ pub struct Range {
 impl Default for ValueConstraint {
     fn default() -> Self {
         Self {
-            rule: Rule::EqualTo,
+            rule: Value::Literal(Rule::EqualTo),
             value: OSString::literal("0".to_string()),
         }
     }
@@ -773,7 +849,7 @@ impl ParameterDeclaration {
     pub fn new(name: String, parameter_type: ParameterType, value: String) -> Self {
         Self {
             name: OSString::literal(name),
-            parameter_type,
+            parameter_type: Value::Literal(parameter_type),
             value: OSString::literal(value),
             constraint_groups: Vec::new(),
         }
@@ -788,7 +864,7 @@ impl ParameterDeclaration {
     ) -> Self {
         Self {
             name: OSString::literal(name),
-            parameter_type,
+            parameter_type: Value::Literal(parameter_type),
             value: OSString::literal(value),
             constraint_groups: constraints,
         }
@@ -881,7 +957,7 @@ impl ValueConstraint {
     /// Create a new value constraint
     pub fn new(rule: Rule, value: String) -> Self {
         Self {
-            rule,
+            rule: Value::Literal(rule),
             value: OSString::literal(value),
         }
     }

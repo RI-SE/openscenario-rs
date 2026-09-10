@@ -6,6 +6,7 @@ use crate::builder::{
     },
     BuilderError, BuilderResult,
 };
+use crate::types::basic::Value;
 use crate::types::{
     basic::OSString,
     enums::Priority,
@@ -211,7 +212,7 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
         let event = Event {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -351,7 +352,7 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
                     .unwrap_or_else(|| "TeleportEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.parent.start_trigger.or_else(|| {
                 Some(Trigger {
                     condition_groups: vec![ConditionGroup {
@@ -592,7 +593,7 @@ impl DetachedSpeedActionBuilder {
         let event = Event {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -660,7 +661,7 @@ impl DetachedSpeedActionBuilder {
         let event = Event {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -728,7 +729,7 @@ impl DetachedSpeedActionBuilder {
         Ok(Event {
             name: OSString::literal(self.event_name.unwrap_or_else(|| "SpeedEvent".to_string())),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -818,7 +819,7 @@ impl DetachedTeleportActionBuilder {
                     .unwrap_or_else(|| "TeleportEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -874,7 +875,7 @@ impl DetachedTeleportActionBuilder {
                     .unwrap_or_else(|| "TeleportEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -930,7 +931,7 @@ impl DetachedTeleportActionBuilder {
                     .unwrap_or_else(|| "TeleportEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger instead of empty trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -1080,7 +1081,7 @@ impl DetachedFollowTrajectoryActionBuilder {
                     .unwrap_or_else(|| "FollowTrajectoryEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -1138,7 +1139,7 @@ impl DetachedFollowTrajectoryActionBuilder {
                     .unwrap_or_else(|| "FollowTrajectoryEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -1196,7 +1197,7 @@ impl DetachedFollowTrajectoryActionBuilder {
                     .unwrap_or_else(|| "FollowTrajectoryEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(|| {
                 // Provide default immediate trigger
                 crate::builder::conditions::TriggerBuilder::new()
@@ -1270,7 +1271,7 @@ impl DetachedLongitudinalDistanceActionBuilder {
                     .unwrap_or_else(|| "LongitudinalDistanceEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
                 global_action: None,
@@ -1327,7 +1328,7 @@ impl DetachedSpeedProfileActionBuilder {
                     .unwrap_or_else(|| "SpeedProfileEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
                 global_action: None,
@@ -1390,7 +1391,7 @@ impl DetachedAssignRouteActionBuilder {
                     .unwrap_or_else(|| "AssignRouteEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
                 global_action: None,
@@ -1457,7 +1458,7 @@ impl DetachedSynchronizeActionBuilder {
                     .unwrap_or_else(|| "SynchronizeEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
                 global_action: None,
@@ -1524,7 +1525,7 @@ impl DetachedVisibilityActionBuilder {
                     .unwrap_or_else(|| "VisibilityEvent".to_string()),
             ),
             maximum_execution_count: None,
-            priority: Priority::Override,
+            priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
             actions: vec![StoryAction {
                 global_action: None,

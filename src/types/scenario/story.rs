@@ -7,7 +7,7 @@
 //! - Maneuver definitions with event sequences and timing
 //! - Actor selection and entity assignment to maneuvers
 //!
-use crate::types::basic::{OSString, UnsignedInt};
+use crate::types::basic::{OSString, UnsignedInt, Value};
 use crate::types::enums::Priority;
 use serde::{Deserialize, Serialize};
 
@@ -226,7 +226,7 @@ pub struct Event {
 
     /// Priority of this event
     #[serde(rename = "@priority")]
-    pub priority: Priority,
+    pub priority: Value<Priority>,
 
     /// The actions to execute when this event triggers
     #[serde(rename = "Action")]
@@ -351,7 +351,7 @@ impl Event {
         Self {
             name: OSString::literal(name.into()),
             maximum_execution_count: None,
-            priority,
+            priority: Value::Literal(priority),
             actions: Vec::new(),
             start_trigger: None,
         }
@@ -438,14 +438,14 @@ mod tests {
                 Event {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
-                    priority: Priority::Override,
+                    priority: Value::Literal(Priority::Override),
                     actions: vec![StoryAction::default()],
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
-                    priority: Priority::Overwrite,
+                    priority: Value::Literal(Priority::Overwrite),
                     actions: vec![StoryAction::default()],
                     start_trigger: None,
                 },
@@ -463,7 +463,7 @@ mod tests {
         let event = Event {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
-            priority: Priority::Parallel,
+            priority: Value::Literal(Priority::Parallel),
             actions: vec![StoryAction::default()],
             start_trigger: None,
         };
@@ -478,7 +478,7 @@ mod tests {
                 .unwrap(),
             &5
         );
-        assert_eq!(event.priority, Priority::Parallel);
+        assert_eq!(event.priority, Value::Literal(Priority::Parallel));
     }
 
     #[test]
@@ -532,6 +532,6 @@ mod tests {
             "Event with @priority should parse: {:?}",
             result.err()
         );
-        assert_eq!(result.unwrap().priority, Priority::Override);
+        assert_eq!(result.unwrap().priority, Value::Literal(Priority::Override));
     }
 }

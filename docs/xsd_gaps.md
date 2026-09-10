@@ -4,9 +4,10 @@ This document tracks the relationship between `openscenario-rs`'s Rust types and
 `Schema/OpenSCENARIO.xsd`. It records what the test suite does and does not prove,
 the audit methods that find gaps, and the history of what has been fixed.
 
-**Current state (pass 4, 2026-08):** the corpus round-trips with nothing dropped,
-nothing invented, and every output schema-valid. One known conformance gap
-remains open and is summarised below: **parameterized enumeration attributes**.
+**Current state (pass 5, 2026-09):** the corpus round-trips with nothing dropped,
+nothing invented, and every output schema-valid. The parameterized-enumeration gap that
+pass 4 identified is **closed** — see *Fixed in pass 5* below. No structural conformance
+gap is currently open.
 
 ## Repository layout
 
@@ -120,9 +121,11 @@ and `tr` are shadowed by a `trash-restore` alias in some setups, so prefix with
    values right. As of pass 4 all 37 match exactly, in both directions.
 6. **Simple-type *structure*, not just variants** – added in pass 4, after a variant-level
    sweep came back perfectly clean while a real gap sat one level up. Every one of those
-   37 enumerations is an `xsd:union` with a `parameter` member, and none of the Rust enums
-   can hold one. When checking a `simpleType`, read what it is (union? restriction? what
-   base?) before comparing the values inside it.
+   37 enumerations is an `xsd:union` with a `parameter` member, which no bare Rust enum can
+   hold; pass 5 closed that by wrapping all 90 such fields in `Value<E>`. When checking a
+   `simpleType`, read what it is (union? restriction? what base?) *and which members it
+   lists* before comparing the values inside it — the enumeration unions admit `parameter`
+   but not `expression`, and reading only "it is a union" was enough to get the sigil wrong.
 7. **Output validation**: `cargo run -p openscenario-roundtrip-harness --bin validate`. The only check that
    consults the schema. Catches invented fields, mis-ordered `xsd:sequence` children and
    empty choice groups, none of which the other two gates can see. When testing that this
@@ -131,32 +134,80 @@ and `tr` are shadowed by a `trash-restore` alias in some setups, so prefix with
 
 ## Open gaps
 
-**Parameterized enumeration attributes** (the largest known conformance gap). Every one of
-the schema's 37 enumeration `simpleType`s is an `xsd:union` whose second member is
-`<xsd:restriction base="parameter"/>`, so `<Vehicle vehicleCategory="${cat}">` is
-schema-valid. The crate models each of the **75 XSD attributes** declared with such a type
-as a bare Rust enum, which cannot hold a parameter reference — verified empirically:
-parsing a `<Vehicle>` whose `vehicleCategory` is `${cat}` fails today. No corpus file
-parameterizes such an attribute, so `report`, `lossy` and `validate` are all green
-regardless — this is the coverage caveat above, made concrete. `Value<T>` is the crate's
-existing mechanism for exactly this problem (it already carries `${expr}`/`$param` for
-scalars) and was never extended to enums; that extension, across all 75 attributes, is the
-fix, and it is a large public-API change. Worth restating because the same blind spot will
-produce the next gap too: a diff of enum variants against their XSD enumerations comes back
-perfectly clean, since the gap sits one level up in the union wrapper, not in the variant
-list. Detailed remediation tracking for this and the crate's other open structural notes
-lives in the maintainers' internal tracker, not in this repository.
+None currently known. The parameterized-enumeration gap that stood here through pass 4 was
+closed in pass 5; the entry moved to *Fixed in pass 5* below.
 
 ## Known deviations (deliberate)
 
 - Five types carry Rust names that differ from their XSD type name, listed in method 3
   above. Their **wire** names are correct; only the Rust identifiers differ.
-- `Value<T>` wraps every parameterizable scalar so `${expr}` and `$param` references
-  survive round-trips. This has no XSD counterpart – it is how the crate represents the
-  schema's `parameter` union member.
+- `Value<T>` wraps every parameterizable attribute — scalar **and** enumeration since
+  pass 5 — so `$param` (and, on the scalar unions, `${expr}`) references survive
+  round-trips. This has no XSD counterpart – it is how the crate represents the schema's
+  `parameter` union member.
+- **Parameter references are emitted unbraced.** The schema defines `parameter` as
+  `[$][A-Za-z_][A-Za-z0-9_]*` and `expression` as `[$][{]…[\}]` (two separate
+  `simpleType`s, lines 4–13). Every scalar union lists both members, but all 37
+  enumeration unions list `parameter` alone, so `vehicleCategory="${cat}"` is
+  schema-*invalid* while `vehicleCategory="$cat"` is valid. `Value::Parameter` therefore
+  serializes as `$name`, which validates on every union in the schema;
+  `Value::Expression` keeps the braced form. Deserialization accepts either spelling.
 - Deprecated-but-schema-valid attributes are modelled rather than dropped
   (`@alongRoute`, `@velocity`, `Pedestrian.@model`, `cartesianDistance`,
   `RelativeSpeedToMaster` and friends), since real files still emit them.
+
+## Fixed in pass 5 (2026-09)
+
+**Parameterized enumeration attributes — closed.** This was pass 4's one open gap and the
+largest known conformance defect: every one of the schema's 37 enumeration `simpleType`s is
+an `xsd:union` whose second member is `<xsd:restriction base="parameter"/>`, so
+`<Vehicle vehicleCategory="$cat">` is schema-valid, and the crate — modelling each of the
+**75 XSD attributes** so declared as a bare Rust enum — rejected all of them outright. In
+Rust terms that was **90 fields across 25 files** (54 bare, 36 `Option<>`; the count exceeds
+75 because the catalog twins duplicate several). The pass-4 ledger counted 89 — the 90th,
+`VehicleRoleDistributionEntry::role` in `src/types/actions/traffic.rs`, was written
+fully-qualified as `crate::types::enums::Role` and had escaped every previous sweep, which is
+its own small lesson about grepping for type names. All 90 now hold `Value<E>` /
+`Option<Value<E>>`, migrated in one change so that no half-migrated state exists and the
+catalog twins moved in lockstep with their scenario counterparts.
+
+The fix reuses what was already written rather than adding a parallel wrapper: `Value<T>`'s
+serde impls work for any `T: FromStr + Display`, and pass 5's predecessor folded all 37
+enums into the `osc_enum!` macro so each has a verified `FromStr`/`Display` generated from
+the same variant→wire-name table as its `#[serde(rename)]`. Extending `Value<T>` also lights
+up `Resolve<T>` and `CatalogParameterSubstitution::resolve_value` for enums for free.
+
+`Value<E>` is not a stringly-typed escape hatch: deserialization falls through to
+`s.parse::<T>()` for anything without a `$` sigil, so `vehicleCategory="spaceship"` is still
+a hard parse error, pinned by a test.
+
+**The `parameter` sigil was wrong on output, and only the enums exposed it.** Reading the
+XSD to write the fixture surfaced a second defect the issue had not anticipated:
+`Value::Parameter` serialized as `${name}`, but `${…}` matches the schema's `expression`
+production, not `parameter`. The scalar unions list both members, which is why the braced
+form had validated for four passes; the enumeration unions list `parameter` alone, so the
+braced form would have produced schema-invalid XML on every attribute this pass migrated —
+with a *green* round trip, because `Value<T>` serializes and deserializes through the same
+string. `Value::Parameter` now emits `$name`, which is valid on every union in the schema;
+`Value::Expression` is unchanged. `src/builder/validation.rs`'s undeclared-parameter rule,
+which scanned only for `${`, was widened to both spellings.
+
+**Why no gate caught any of this, and what now does.** Zero corpus files parameterize an
+enum attribute, so `report`, `lossy` and `validate` were all green on code that rejected
+schema-valid input — the coverage caveat above, made concrete for a second time. A
+variant-level audit could not see it either: all 37 enums match their XSD enumerations
+exactly, and the gap sat one level up in the union wrapper. The corpus is fetched and
+gitignored, so it cannot be extended. The fixtures therefore live in `tests/data/`:
+`parameterized_enums.xosc` (a required bare attribute, an optional one, a condition `@rule`,
+a `@coordinateSystem`) and `parameterized_enums_catalog.xosc`, both confirmed schema-valid
+with `xmllint --schema` and both failing to parse on the pre-change tree.
+`conformance/tests/parameterized_enums.rs` drives them through the same round-trip and
+schema-validation questions the corpus binaries ask, so the gates cover this class going
+forward; `tests/parameterized_enum_test.rs` pins parse, resolve, and the escape-hatch guard.
+
+All four corpus binaries were byte-identical before and after the migration (172/172 on
+`report`, `lossy` and `validate`; 13/13 on `builder`), which is the evidence that routing
+every literal enum value through `Value::Literal` and `Display` is lossless.
 
 ## Fixed in pass 4 (2026-08)
 

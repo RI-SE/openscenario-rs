@@ -199,7 +199,7 @@ pub struct EntityRef {
     /// Entity name
     pub name: String,
     /// Entity type
-    pub object_type: ObjectType,
+    pub object_type: Value<ObjectType>,
 }
 
 /// Reference to a catalog entry  

@@ -191,7 +191,19 @@ fn value_wraps_vehicle_category_literal_and_parameter() {
     );
 
     // Parameter reference on the same field.
-    let param_xml = r#"{"@category":"${cat}"}"#;
+    //
+    // OSR-06 changed the spelling this asserts, and the schema is the reason.
+    // `Schema/OpenSCENARIO.xsd:4-13` defines two productions:
+    //
+    //     parameter   [$][A-Za-z_][A-Za-z0-9_]*
+    //     expression  [$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]
+    //
+    // The scalar unions (`Double`, `Int`, `Boolean`, ...) list `expression parameter ...`,
+    // so both spellings validate there -- which is why the braced form went unchallenged
+    // for so long. All 37 *enumeration* unions list `parameter` alone. Emitting `${cat}`
+    // on `@vehicleCategory` therefore produces schema-invalid XML, so `Value::Parameter`
+    // now serializes as `$cat`, which every union in the schema accepts.
+    let param_xml = r#"{"@category":"$cat"}"#;
     let parsed: Wrapper = serde_json::from_str(param_xml).unwrap();
     assert_eq!(parsed.category, Value::Parameter("cat".to_string()));
     let reserialized = serde_json::to_string(&parsed).unwrap();
@@ -199,4 +211,10 @@ fn value_wraps_vehicle_category_literal_and_parameter() {
         reserialized, param_xml,
         "parameter round-trip not byte-identical"
     );
+
+    // Deserialization stays permissive about the two spellings: a document written with
+    // the braced form still parses, and normalizes to the schema-valid one on output.
+    let braced: Wrapper = serde_json::from_str(r#"{"@category":"${cat}"}"#).unwrap();
+    assert_eq!(braced.category, Value::Parameter("cat".to_string()));
+    assert_eq!(serde_json::to_string(&braced).unwrap(), param_xml);
 }

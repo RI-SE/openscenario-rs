@@ -53,6 +53,9 @@ mod builder_tests {
         } else {
             panic!("Parameter name should be literal");
         }
-        assert_eq!(speed_param.parameter_type, ParameterType::Double);
+        assert_eq!(
+            speed_param.parameter_type,
+            Value::Literal(ParameterType::Double)
+        );
     }
 }
