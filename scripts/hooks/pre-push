@@ -92,7 +92,7 @@ if ! pkg-config --exists libxml-2.0 2>/dev/null; then
 fi
 
 # --- Stages ------------------------------------------------------------------
-TOTAL_STAGES=9
+TOTAL_STAGES=10
 stage_num=0
 
 stage() {
@@ -118,8 +118,40 @@ fmt_check() {
   return "$status"
 }
 
+# `docs/xsd_gaps.md` was lost once already: it was never committed, 19
+# relative links across the repo pointed at it, and nothing caught the dead
+# links before a release shipped with them (see docs/xsd_gaps.md's own
+# history). This stage is bash + grep/sed only, no new dependency, and is
+# what makes that failure mode loud instead of silent.
+#
+# Walk every tracked *.md file, pull out `[text](target)` link targets,
+# skip absolute URLs/mailto/bare in-page anchors, strip a trailing `#anchor`,
+# resolve what is left relative to the *linking file's* directory, and fail
+# listing anything that does not exist on disk.
+check_md_links() {
+  local status=0
+  local file link target
+  while IFS= read -r -d '' file; do
+    while IFS= read -r link; do
+      [[ -z "$link" ]] && continue
+      case "$link" in
+        http://*|https://*|mailto:*|\#*) continue ;;
+      esac
+      target="${link%%#*}"
+      [[ -z "$target" ]] && continue
+      if [[ ! -e "$(dirname -- "$file")/$target" ]]; then
+        echo "  ${file}: broken link -> ${link}" >&2
+        status=1
+      fi
+    done < <(grep -oE '\]\([^)[:space:]]+([[:space:]]+"[^"]*")?\)' "$file" |
+              sed -E 's/^\]\(([^) ]+).*\)$/\1/')
+  done < <(git ls-files -z -- '*.md')
+  return "$status"
+}
+
 echo "${bold}pre-push: running the full gate${remote_name:+ before pushing to $remote_name}${reset}"
 
+stage "Check markdown links"                  -- check_md_links
 STAGE_CMD_DISPLAY="cargo fmt --all --check" \
   stage "Check formatting"                    -- fmt_check
 unset STAGE_CMD_DISPLAY
