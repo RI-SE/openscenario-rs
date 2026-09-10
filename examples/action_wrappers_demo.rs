@@ -6,8 +6,17 @@
 use openscenario_rs::types::actions::movement::{SpeedActionTarget, TransitionDynamics};
 use openscenario_rs::types::actions::{wrappers::*, *};
 use openscenario_rs::types::basic::*;
+use openscenario_rs::types::entities::{EntityDistribution, EntityDistributionEntry};
 use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
 use openscenario_rs::types::positions::*;
+
+fn sample_traffic_definition() -> TrafficDefinition {
+    TrafficDefinition::new(
+        "DemoTrafficDefinition",
+        VehicleCategoryDistribution::mixed_traffic(),
+        ControllerDistribution::single_controller("DemoController".to_string(), 1.0),
+    )
+}
 
 fn main() {
     println!("=== OpenSCENARIO Action Wrapper Types Demo ===\n");
@@ -62,7 +71,12 @@ fn demonstrate_global_actions() {
     // Create a TrafficAction wrapped in GlobalAction
     let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("highway_traffic".to_string())),
-        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
+            10.0,
+            10.0,
+            Position::default(),
+            sample_traffic_definition(),
+        )),
     };
     let global_action = GlobalAction::TrafficAction(traffic_action);
     let action = Action::GlobalAction(global_action);
@@ -81,7 +95,10 @@ fn demonstrate_global_actions() {
 
     // Create an InfrastructureAction wrapped in GlobalAction
     let infra_action = InfrastructureAction {
-        traffic_signal_action: TrafficSignalAction::default(),
+        traffic_signal_action: TrafficSignalAction::state_action(
+            "DemoSignal".to_string(),
+            "green".to_string(),
+        ),
     };
     let global_action = GlobalAction::InfrastructureAction(infra_action);
     let core_action = Action::GlobalAction(global_action);
@@ -189,7 +206,12 @@ fn demonstrate_traffic_actions() {
     // Create TrafficSourceAction
     let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("city_traffic".to_string())),
-        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
+            10.0,
+            10.0,
+            Position::default(),
+            sample_traffic_definition(),
+        )),
     };
     println!(
         "   - Created TrafficSourceAction with name: {:?}",
@@ -199,14 +221,23 @@ fn demonstrate_traffic_actions() {
     // Create TrafficSinkAction
     let traffic_action = TrafficAction {
         traffic_name: None,
-        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
+        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::new(
+            10.0,
+            50.0,
+            Position::default(),
+        )),
     };
     println!("   - Created TrafficSinkAction with no name");
 
     // Create TrafficSwarmAction
     let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("swarm_traffic".to_string())),
-        action: TrafficActionChoice::TrafficSwarmAction(TrafficSwarmAction::default()),
+        action: TrafficActionChoice::TrafficSwarmAction(TrafficSwarmAction::new(
+            "SwarmCenter",
+            100.0,
+            50.0,
+            20,
+        )),
     };
     println!(
         "   - Created TrafficSwarmAction with name: {:?}",
@@ -214,9 +245,24 @@ fn demonstrate_traffic_actions() {
     );
 
     // Create TrafficAreaAction
+    use openscenario_rs::types::entities::{ScenarioObjectTemplate, Vehicle};
+    let entity_distribution = EntityDistribution {
+        entries: vec![EntityDistributionEntry::new(
+            ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+            1.0,
+        )],
+    };
     let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("area_traffic".to_string())),
-        action: TrafficActionChoice::TrafficAreaAction(TrafficAreaAction::default()),
+        action: TrafficActionChoice::TrafficAreaAction(TrafficAreaAction::new(
+            5,
+            true,
+            TrafficDistribution::new(vec![TrafficDistributionEntry::new(
+                1.0,
+                entity_distribution,
+            )]),
+            TrafficArea::rectangle(0.0, 0.0, 50.0, 50.0),
+        )),
     };
     println!(
         "   - Created TrafficAreaAction with name: {:?}",

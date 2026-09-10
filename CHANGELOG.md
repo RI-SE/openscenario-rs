@@ -216,6 +216,42 @@ Breaking, unless noted.
   `tests/xsd_validation_test.rs`, `tests/advanced_positions_test.rs` and
   `tests/actions_serialization_test.rs`. This closes out all fabricating `Default` impls in
   `types/actions/movement.rs`, `types/positions/route.rs` and `types/routing/mod.rs`.
+- **`Default` impls that invent scenario data (OSR-04, agent B: `types/actions/traffic.rs`).**
+  All 18 fabricating impls removed, leaving only the benign `TrafficStopAction` (an empty
+  XSD complexType, so `Default` states nothing). Removed: `TrafficSourceAction`,
+  `TrafficSinkAction`, `TrafficSwarmAction` (each fabricated a whole child `Position` and/or
+  `TrafficDefinition`), `TrafficSignalAction` (a choice — silently picked the
+  `TrafficSignalStateAction` branch), `TrafficSignalStateAction` (invented
+  `"DefaultSignal"`/`"green"`), `TrafficSignalControllerAction` (invented
+  `"DefaultController"`/`"Phase1"`), `TrafficSignalController` (invented
+  `"DefaultController"`), `Phase` (invented `"DefaultPhase"`/`30.0`), `TrafficSignalState`
+  (invented `"signal_1"`/`"green"`), `TrafficSignalGroupState` (invented `"green"`),
+  `TrafficDefinition` (invented `"DefaultTrafficDefinition"` and fabricated whole-child
+  `VehicleCategoryDistribution`/`ControllerDistribution` defaults),
+  `VehicleCategoryDistribution` (fabricated a 70/20/10 car/truck/van split as if it were
+  schema-declared), `ControllerDistribution` (fabricated a whole child `Controller` named
+  `"DefaultTrafficController"`), `CentralSwarmObject` (invented `"SwarmCenter"`),
+  `TrafficArea`/`Polygon` (fabricated a whole-child rectangle), `RoadRange`/`RoadCursor`
+  (invented `"DefaultRoad"`), `Lane` (invented id `0`), `TrafficDistribution`/
+  `TrafficDistributionEntry` (fabricated a whole-child `EntityDistribution`),
+  `DirectionOfTravelDistribution` (invented `1.0`/`0.0`), `TrafficAreaAction` (fabricated
+  whole-child distribution and area). None of the underlying XSD attributes carry a
+  `default="…"` — all are `use="required"` (checked against `Schema/OpenSCENARIO.xsd`
+  `:1063-1066`, `:1333-1335`, `:1714-1723`, `:1926-1954`, `:2214-2334`). Each gained an
+  explicit constructor: most already had one (`::new`/`::rectangle`/`::single_controller`
+  etc.); new ones added for `RoadCursor::new`, `Lane::new`, `RoadRange::new`,
+  `TrafficDistribution::new`, `TrafficDistributionEntry::new`,
+  `DirectionOfTravelDistribution::new`, and `TrafficDefinition::new`. The three
+  `TrafficDefinition::with_vehicles`/`with_controllers`/`with_both` convenience
+  constructors (unused outside this file except `with_both`) collapsed into one `::new`
+  that also stopped inventing the `"DefaultTrafficDefinition"` name, since it depended on
+  the now-removed whole-child defaults. `InfrastructureAction`
+  (`types/actions/wrappers.rs`) lost its `#[derive(Default)]`, which required
+  `TrafficSignalAction: Default` and so silently inherited the same choice-branch
+  fabrication; it gained an explicit `InfrastructureAction::new`. Call sites fixed in
+  `src/types/actions/wrappers.rs`, `tests/actions_serialization_test.rs` and
+  `examples/action_wrappers_demo.rs`. This closes out all fabricating `Default` impls in
+  `types/actions/traffic.rs`.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

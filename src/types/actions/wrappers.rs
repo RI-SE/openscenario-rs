@@ -90,11 +90,23 @@ pub enum TrafficActionChoice {
 }
 
 // InfrastructureAction wrapper type
+//
+// (OSR-04, agent B) `#[derive(Default)]` removed: it required
+// `TrafficSignalAction: Default`, which fabricated a choice — the removed
+// impl silently picked the `TrafficSignalStateAction` branch. Construct the
+// field explicitly instead.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-#[derive(Default)]
 pub struct InfrastructureAction {
     pub traffic_signal_action: TrafficSignalAction,
+}
+
+impl InfrastructureAction {
+    pub fn new(traffic_signal_action: TrafficSignalAction) -> Self {
+        Self {
+            traffic_signal_action,
+        }
+    }
 }
 
 // AddEntityAction type
@@ -517,7 +529,10 @@ mod tests {
 
     #[test]
     fn test_infrastructure_action_xml_roundtrip() {
-        let action = InfrastructureAction::default();
+        let action = InfrastructureAction::new(TrafficSignalAction::state_action(
+            "TestSignal".to_string(),
+            "green".to_string(),
+        ));
         let xml = quick_xml::se::to_string(&action).unwrap();
         let deserialized: InfrastructureAction = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(action, deserialized);

@@ -288,9 +288,24 @@ also removed, each gaining an explicit `::new`. Call sites were fixed in
 `examples/action_wrappers_demo.rs`, and `tests/xsd_validation_test.rs`,
 `tests/advanced_positions_test.rs`, `tests/actions_serialization_test.rs`.
 
-The remaining ~76 fabricating impls outside `movement.rs`/`route.rs`/`routing/mod.rs` are
-tracked as separate passes (OSR-04 agents B–F); do not assume a type without a doc comment
-saying otherwise is clean.
+OSR-04 agent B (`src/types/actions/traffic.rs`) removed all 18 fabricating impls in that file,
+leaving only the benign `TrafficStopAction` (an empty XSD complexType). Removed:
+`TrafficSourceAction`, `TrafficSinkAction`, `TrafficSwarmAction` (each fabricated a whole-child
+`Position`/`TrafficDefinition`), `TrafficSignalAction` (a choice — silently picked the
+`TrafficSignalStateAction` branch), `TrafficSignalStateAction`, `TrafficSignalControllerAction`,
+`TrafficSignalController`, `Phase`, `TrafficSignalState`, `TrafficSignalGroupState` (each
+invented a name/id/state string), `TrafficDefinition`, `VehicleCategoryDistribution`,
+`ControllerDistribution` (each fabricated a whole-child distribution or nested `Controller`),
+`CentralSwarmObject`, `TrafficArea`/`Polygon` (a whole-child rectangle), `RoadRange`/
+`RoadCursor`, `Lane`, `TrafficDistribution`/`TrafficDistributionEntry`,
+`DirectionOfTravelDistribution`, `TrafficAreaAction`. Each gained an explicit constructor
+(`::new` or a named-branch constructor for the choice); `InfrastructureAction`
+(`src/types/actions/wrappers.rs`) lost its `#[derive(Default)]`, which had transitively
+required the removed `TrafficSignalAction: Default`, and gained `InfrastructureAction::new`.
+
+The remaining ~58 fabricating impls outside `movement.rs`/`route.rs`/`routing/mod.rs`/
+`traffic.rs` are tracked as separate passes (OSR-04 agents C–F); do not assume a type without a
+doc comment saying otherwise is clean.
 
 ## A trap: unknown fields are silent
 

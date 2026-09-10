@@ -74,12 +74,25 @@ fn test_entity_action_types() {
     assert!(serialized.contains("old_entity"));
 }
 
+fn sample_traffic_definition() -> TrafficDefinition {
+    TrafficDefinition::new(
+        "TestTrafficDefinition",
+        VehicleCategoryDistribution::mixed_traffic(),
+        ControllerDistribution::single_controller("TestController".to_string(), 1.0),
+    )
+}
+
 #[test]
 fn test_traffic_action_variants() {
     // Test TrafficSourceAction
     let traffic_action = TrafficAction {
         traffic_name: Some(OSString::literal("source_traffic".to_string())),
-        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
+            10.0,
+            10.0,
+            Position::default(),
+            sample_traffic_definition(),
+        )),
     };
 
     let serialized = serde_json::to_string(&traffic_action).unwrap();
@@ -89,7 +102,11 @@ fn test_traffic_action_variants() {
     // Test TrafficSinkAction
     let traffic_action = TrafficAction {
         traffic_name: None,
-        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
+        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::new(
+            10.0,
+            50.0,
+            Position::default(),
+        )),
     };
 
     let serialized = serde_json::to_string(&traffic_action).unwrap();
@@ -100,7 +117,10 @@ fn test_traffic_action_variants() {
 #[test]
 fn test_infrastructure_action() {
     let infra_action = InfrastructureAction {
-        traffic_signal_action: TrafficSignalAction::default(),
+        traffic_signal_action: TrafficSignalAction::state_action(
+            "TestSignal".to_string(),
+            "green".to_string(),
+        ),
     };
 
     let serialized = serde_json::to_string(&infra_action).unwrap();
@@ -381,7 +401,9 @@ fn test_random_route_action() {
 fn test_type_aliases() {
     // Test that type aliases work correctly
     let _entity_action: EntityAction = EntityAction::default();
-    let _infra_action: InfrastructureAction = InfrastructureAction::default();
+    let _infra_action: InfrastructureAction = InfrastructureAction::new(
+        TrafficSignalAction::state_action("TestSignal".to_string(), "green".to_string()),
+    );
     let _user_action: UserDefinedAction = UserDefinedAction::default();
     let _var_action: VariableAction = VariableAction::default();
     let _param_action: ParameterAction = ParameterAction::default();
@@ -400,7 +422,10 @@ fn test_default_implementations() {
     let _private_action = PrivateAction::default();
     let _entity_action = EntityAction::default();
     let _traffic_action = TrafficAction::default();
-    let _infra_action = InfrastructureAction::default();
+    let _infra_action = InfrastructureAction::new(TrafficSignalAction::state_action(
+        "TestSignal".to_string(),
+        "green".to_string(),
+    ));
     let _add_entity = AddEntityAction::default();
     let _delete_entity = DeleteEntityAction::default();
     let _user_action = UserDefinedAction::default();
