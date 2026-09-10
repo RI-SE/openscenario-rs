@@ -166,6 +166,35 @@ Breaking, unless noted.
   structs that default to all-`None` or empty keep their `Default`. This is a first,
   verified-small tier; roughly 110 further fabricating impls remain and are tracked
   separately (see `docs/type_system_guide.md`'s "Default policy" section).
+- **`Default` impls that invent scenario data (OSR-04, agent A: `types/actions/movement.rs`,
+  `types/positions/route.rs`, `types/routing/mod.rs`).** 21 further fabricating impls
+  removed, including the `Route`/`Waypoint`/`RouteRef` carve-out OSR-03 could not complete:
+  `RouteRef::default()` silently picked the `Direct` branch of a schema choice, `Route`
+  invented the name `"DefaultRoute"`, and `Waypoint` invented `RouteStrategy::Shortest`. None
+  of `Route`'s, `Waypoint`'s or `RouteRef`'s XSD attributes carry a `default="…"` — all are
+  `use="required"`. `AssignRouteAction` and `RouteRefElement` now use explicit constructors
+  instead of `#[derive(Default)]`; `RoutePosition`'s derive is removed for the same reason
+  (it holds a `RouteRefElement`). Also removed: `PositionOfCurrentEntity`,
+  `PositionInRoadCoordinates`, `PositionInLaneCoordinates` (each invented a coordinate or
+  `"DefaultEntity"`), and 15 impls in `movement.rs` — `FollowTrajectoryAction` (fabricated a
+  whole child `Trajectory`), `RelativeTargetSpeed`, `Timing`, `TimeReference` (a `None`/
+  `Timing` choice; `Default` silently picked `None` — replaced by explicit
+  `TimeReference::none()`/`::timing()`), `AbsoluteTargetLane`, `LaneOffsetAction`,
+  `LaneOffsetTarget` (another silently-picked choice branch), `RelativeTargetLaneOffset`,
+  `AbsoluteTargetLaneOffset`, `LaneOffsetActionDynamics`, `LateralDistanceAction`,
+  `SynchronizeAction`, `FinalSpeed`, `AbsoluteSpeed`, `RelativeSpeedToMaster`. Each gained an
+  explicit `::new` (or, for choices, named variant constructors); most already had one.
+  A further ~13 fabricating impls in `movement.rs` (`TransitionDynamics`,
+  `SpeedActionTarget`, `AbsoluteTargetSpeed`, `Trajectory`, `TrajectoryFollowingMode`,
+  `TrajectoryRef`, `LaneChangeTarget`, `RelativeTargetLane`, `LateralAction`,
+  `LongitudinalAction`, `LongitudinalDistanceAction`, `SpeedProfileAction`,
+  `SpeedProfileEntry`) could not be removed within this agent's scope: their `Default` is
+  required by call sites in `src/types/scenario/init.rs`,
+  `src/types/actions/wrappers.rs`, and shared `tests/*.rs` files outside OSR-04 agent A's
+  file list. Each is marked with an `(OSR-04)` comment at its definition. `TeleportAction`
+  and `AcquirePositionAction` keep their derived `Default`: both wrap a single `Position`,
+  whose own `Default` (out of this agent's scope) is an all-`None` choice with no branch
+  selected, so it states nothing rather than fabricating a position.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

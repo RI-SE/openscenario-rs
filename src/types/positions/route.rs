@@ -25,10 +25,14 @@ pub struct PositionOfCurrentEntity {
     pub entity_ref: OSString,
 }
 
-impl Default for PositionOfCurrentEntity {
-    fn default() -> Self {
+impl PositionOfCurrentEntity {
+    /// Create a new `PositionOfCurrentEntity`.
+    ///
+    /// XSD `PositionOfCurrentEntity`: `@entityRef` is `use="required"` with
+    /// no `default="…"`.
+    pub fn new(entity_ref: impl Into<String>) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            entity_ref: OSString::literal(entity_ref.into()),
         }
     }
 }
@@ -45,12 +49,13 @@ pub struct PositionInRoadCoordinates {
     pub t: Double,
 }
 
-impl Default for PositionInRoadCoordinates {
-    fn default() -> Self {
-        Self {
-            path_s: Double::literal(0.0),
-            t: Double::literal(0.0),
-        }
+impl PositionInRoadCoordinates {
+    /// Create a new `PositionInRoadCoordinates`.
+    ///
+    /// XSD `PositionInRoadCoordinates`: `@pathS` and `@t` are both
+    /// `use="required"` with no `default="…"`.
+    pub fn new(path_s: Double, t: Double) -> Self {
+        Self { path_s, t }
     }
 }
 
@@ -74,13 +79,24 @@ pub struct PositionInLaneCoordinates {
     pub path_s: Double,
 }
 
-impl Default for PositionInLaneCoordinates {
-    fn default() -> Self {
+impl PositionInLaneCoordinates {
+    /// Create a new `PositionInLaneCoordinates`.
+    ///
+    /// XSD `PositionInLaneCoordinates`: `@laneId` and `@pathS` are
+    /// `use="required"` with no `default="…"`; `@laneOffset` is optional
+    /// (no schema default) and defaults to `None` here.
+    pub fn new(lane_id: impl Into<String>, path_s: Double) -> Self {
         Self {
-            lane_id: OSString::literal("-1".to_string()),
+            lane_id: OSString::literal(lane_id.into()),
             lane_offset: None,
-            path_s: Double::literal(0.0),
+            path_s,
         }
+    }
+
+    /// Set the optional `@laneOffset`.
+    pub fn with_lane_offset(mut self, lane_offset: Double) -> Self {
+        self.lane_offset = Some(lane_offset);
+        self
     }
 }
 
@@ -147,7 +163,11 @@ impl InRoutePosition {
 /// already modeled as `crate::types::routing::RouteRef`. As an *element* the
 /// choice has to sit behind a named wrapper, so this struct only re-hosts the
 /// existing enum via `flatten` (the same shape `AssignRouteAction` uses).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// (OSR-04) No `Default`: it required `routing::RouteRef: Default`, which
+// silently picked the `Direct` branch of a choice — see
+// `types/routing/mod.rs`. Construct via `RouteRefElement { route_ref: ... }`
+// or `RoutePosition::new`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "RouteRef")]
 pub struct RouteRefElement {
     #[serde(flatten)]
@@ -158,7 +178,9 @@ pub struct RouteRefElement {
 ///
 /// XSD `RoutePosition` (:1968-1974) is an `xsd:all` of `RouteRef` (required),
 /// `Orientation` (optional) and `InRoutePosition` (required).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// (OSR-04) No `Default`: `route_ref: RouteRefElement` no longer implements
+// it (see above). Construct via `RoutePosition::new`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "RoutePosition")]
 pub struct RoutePosition {
     #[serde(rename = "RouteRef")]

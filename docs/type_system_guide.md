@@ -255,11 +255,26 @@ call sites across `GeographicPosition`, `EntityRef`, `Story`/`Act`/`ManeuverGrou
 `Event`, and `CatalogTimeOfDay` — replacing each with an explicit `::new`/constructor that
 requires the caller to say what they mean instead of inheriting an invented value. `Route`,
 `Waypoint` and `RouteRef` were scoped for the same pass but left in place: removing
-`RouteRef::default()` breaks `#[derive(Default)]` on `AssignRouteAction`
+`RouteRef::default()` broke `#[derive(Default)]` on `AssignRouteAction`
 (`src/types/actions/movement.rs`) and `RouteRefElement` (`src/types/positions/route.rs`),
-both outside OSR-03's file scope. The remaining ~110 fabricating impls, including those two,
-are tracked as a separate pass; do not assume a type without a doc comment saying otherwise is
-clean.
+both outside OSR-03's file scope.
+
+OSR-04 (agent A, `src/types/actions/movement.rs`, `src/types/positions/route.rs`,
+`src/types/routing/mod.rs`) resolved that carve-out and removed 21 further fabricating impls
+in those three files (`Route`, `Waypoint`, `RouteRef`; `PositionOfCurrentEntity`,
+`PositionInRoadCoordinates`, `PositionInLaneCoordinates`; and 15 in `movement.rs` including
+`FollowTrajectoryAction`, `SynchronizeAction`, `FinalSpeed`/`AbsoluteSpeed`/
+`RelativeSpeedToMaster`, and the `LaneOffset*` family), giving each an explicit constructor.
+A further ~13 fabricating impls in `movement.rs` (`TransitionDynamics`, `SpeedActionTarget`,
+`AbsoluteTargetSpeed`, `Trajectory`, `TrajectoryFollowingMode`, `TrajectoryRef`,
+`LaneChangeTarget`, `RelativeTargetLane`, `LateralAction`, `LongitudinalAction`,
+`LongitudinalDistanceAction`, `SpeedProfileAction`, `SpeedProfileEntry`) could not be removed
+within OSR-04 agent A's scope: their `Default`/`#[derive(Default)]` is required by call sites
+in `src/types/scenario/init.rs`, `src/types/actions/wrappers.rs`, and shared top-level
+`tests/*.rs` files that no OSR-04 agent owns. Each is marked with an `(OSR-04)` comment at its
+definition explaining the blocker; see the OSR-04 agent A report for the full list. The
+remaining ~76 fabricating impls outside these three files are tracked as separate passes
+(OSR-04 agents B–F); do not assume a type without a doc comment saying otherwise is clean.
 
 ## A trap: unknown fields are silent
 

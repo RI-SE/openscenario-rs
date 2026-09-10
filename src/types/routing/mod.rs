@@ -132,42 +132,17 @@ pub enum RouteRef {
     Catalog(CatalogReference),
 }
 
-// NOTE (OSR-03): These three `Default` impls fabricate content (a `Route`
-// named "DefaultRoute", a `Waypoint` with an invented `Position::default()`
-// and `RouteStrategy::Shortest`, and a `RouteRef` that silently picks the
-// `Direct` branch of what is a choice). OSR-03 was scoped to delete them —
-// see the issue file — but doing so requires `#[derive(Default)]` on
-// `AssignRouteAction` (`src/types/actions/movement.rs:271`, field
-// `route: RouteRef`) and `RouteRefElement`
-// (`src/types/positions/route.rs:150`, field `route_ref: RouteRef`) to be
-// hand-rolled instead, and both files are outside this issue's "Files you
-// may touch" list (owned by OSR-04). Left in place; reported to the
-// dispatcher rather than edited unilaterally. See report for OSR-03.
-impl Default for Route {
-    fn default() -> Self {
-        Self {
-            parameter_declarations: None,
-            waypoints: Vec::new(),
-            closed: Boolean::literal(false),
-            name: OSString::literal("DefaultRoute".to_string()),
-        }
-    }
-}
-
-impl Default for Waypoint {
-    fn default() -> Self {
-        Self {
-            position: Position::default(),
-            route_strategy: Value::Literal(RouteStrategy::Shortest),
-        }
-    }
-}
-
-impl Default for RouteRef {
-    fn default() -> Self {
-        RouteRef::Direct(Route::default())
-    }
-}
+// (OSR-04, resolves OSR-03's NOTE) `Route`, `Waypoint` and `RouteRef` no
+// longer implement `Default`: it fabricated a `Route` named "DefaultRoute",
+// a `Waypoint` with an invented `Position::default()` and
+// `RouteStrategy::Shortest`, and — worst — a `RouteRef` that silently picked
+// the `Direct` branch of what is a choice (XSD `RouteRef`, a `choice` of
+// `Route` | `CatalogReference`, no default). None of the three has a
+// schema-declared default: `Route`'s `@closed`/`@name` and `Waypoint`'s
+// `@routeStrategy` are all `use="required"` with no `default="…"`.
+// `AssignRouteAction` (`types/actions/movement.rs`) and `RouteRefElement`
+// (`types/positions/route.rs`) now use explicit constructors instead of
+// `#[derive(Default)]`.
 
 // Implementation methods for Route
 impl Route {
