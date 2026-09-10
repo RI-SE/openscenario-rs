@@ -381,10 +381,13 @@ fabricating impl was replaced with `#[derive(Default)]`, matching the sibling `P
 outside this issue's file list: `ControllerCatalogLocation` (`src/types/controllers/mod.rs`),
 an apparently-unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
 
-**The Default policy stated above is now enforced.** OSR-03 and every OSR-04 agent (A, A′, B,
-C, D, E) removed every fabricating `Default` impl found in `src/types/`; the remaining
-fabricating impls live only in `builder/conditions/*`, tracked as OSR-04 agent F. Do not assume
-a type without a doc comment is clean until agent F closes that file too.
+**The Default policy stated above is not yet enforced.** OSR-03 and OSR-04 agents A, A′, B, C, D
+and E removed every fabricating `Default` impl in the files each was assigned, but that left a
+coverage gap: ten fabricating impls in files no agent owned — `types/entities/vehicle.rs`,
+`types/scenario/{monitors,variables,story}.rs`, `types/positions/{relative,mod}.rs`, and three
+more in `src/builder/**` outside `builder/conditions/*` — plus the impls in
+`builder/conditions/*` itself. Both are now assigned: the former to OSR-04 agent G, the latter to
+OSR-04 agent F. Do not assume a type without a doc comment is clean until both close.
 
 ## A trap: unknown fields are silent
 
