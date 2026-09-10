@@ -979,7 +979,7 @@ impl Default for RelativeClearanceCondition {
     fn default() -> Self {
         Self {
             relative_lane_ranges: vec![RelativeLaneRange::default()],
-            entity_refs: vec![EntityRef::default()],
+            entity_refs: Vec::new(),
             opposite_lanes: Boolean::literal(false),
             distance_forward: Some(Double::literal(50.0)),
             distance_backward: Some(Double::literal(10.0)),

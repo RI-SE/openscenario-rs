@@ -36,7 +36,7 @@ pub struct EntitySelection {
 ///
 /// XSD `SelectedEntities` (`:2013-2018`): a choice, each branch
 /// `maxOccurs="unbounded"`, of `EntityRef` or `ByType`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct SelectedEntities {
     /// List of entity references
     #[serde(rename = "EntityRef", default, skip_serializing_if = "Vec::is_empty")]
@@ -148,15 +148,6 @@ impl Default for EntitySelection {
         Self {
             name: OSString::literal("DefaultSelection".to_string()),
             members: SelectedEntities::default(),
-        }
-    }
-}
-
-impl Default for SelectedEntities {
-    fn default() -> Self {
-        Self {
-            entity_refs: vec![EntityRef::default()],
-            by_type: Vec::new(),
         }
     }
 }

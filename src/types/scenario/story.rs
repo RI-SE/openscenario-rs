@@ -289,20 +289,22 @@ impl Default for StoryPrivateAction {
     }
 }
 
-impl Default for ScenarioStory {
-    fn default() -> Self {
+impl ScenarioStory {
+    /// Create a new, empty story with the given name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: OSString::literal("DefaultStory".to_string()),
+            name: OSString::literal(name.into()),
             parameter_declarations: None,
             acts: Vec::new(),
         }
     }
 }
 
-impl Default for Act {
-    fn default() -> Self {
+impl Act {
+    /// Create a new, empty act with the given name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: OSString::literal("DefaultAct".to_string()),
+            name: OSString::literal(name.into()),
             maneuver_groups: Vec::new(),
             start_trigger: None,
             stop_trigger: None,
@@ -310,11 +312,18 @@ impl Default for Act {
     }
 }
 
-impl Default for ManeuverGroup {
-    fn default() -> Self {
+impl ManeuverGroup {
+    /// Create a new maneuver group with the given name and maximum execution
+    /// count, and no actors, catalog references, or maneuvers.
+    ///
+    /// `@maximumExecutionCount` is `use="required"` in the XSD
+    /// (`Schema/OpenSCENARIO.xsd`: `<xsd:attribute name="maximumExecutionCount"
+    /// type="UnsignedInt" use="required"/>`) with no `default="…"`, so there is
+    /// no schema-backed value to assume here — the caller must supply one.
+    pub fn new(name: impl Into<String>, maximum_execution_count: u32) -> Self {
         Self {
-            name: OSString::literal("DefaultManeuverGroup".to_string()),
-            maximum_execution_count: UnsignedInt::literal(1),
+            name: OSString::literal(name.into()),
+            maximum_execution_count: UnsignedInt::literal(maximum_execution_count),
             actors: Actors::default(),
             catalog_reference: Vec::new(),
             maneuvers: Vec::new(),
@@ -322,32 +331,38 @@ impl Default for ManeuverGroup {
     }
 }
 
-impl Default for Maneuver {
-    fn default() -> Self {
+impl Maneuver {
+    /// Create a new, empty maneuver with the given name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: OSString::literal("DefaultManeuver".to_string()),
+            name: OSString::literal(name.into()),
             parameter_declarations: None,
             events: Vec::new(),
         }
     }
 }
 
-impl Default for Event {
-    fn default() -> Self {
+impl Event {
+    /// Create a new event with the given name, priority, and no actions.
+    ///
+    /// `@priority` is `use="required"` in the XSD with no `default="…"`, so it
+    /// must be supplied explicitly.
+    pub fn new(name: impl Into<String>, priority: Priority) -> Self {
         Self {
-            name: OSString::literal("DefaultEvent".to_string()),
+            name: OSString::literal(name.into()),
             maximum_execution_count: None,
-            priority: Priority::Overwrite,
-            actions: vec![StoryAction::default()],
+            priority,
+            actions: Vec::new(),
             start_trigger: None,
         }
     }
 }
 
-impl Default for EntityRef {
-    fn default() -> Self {
+impl EntityRef {
+    /// Create a new entity reference
+    pub fn new(entity_ref: impl Into<String>) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            entity_ref: OSString::literal(entity_ref.into()),
         }
     }
 }
@@ -362,19 +377,19 @@ mod tests {
         let story = ScenarioStory {
             name: Value::literal("TestStory".to_string()),
             parameter_declarations: None,
-            acts: vec![Act::default()],
+            acts: vec![Act::new("Act1")],
         };
 
         assert_eq!(story.name.as_literal().unwrap(), "TestStory");
         assert_eq!(story.acts.len(), 1);
-        assert_eq!(story.acts[0].name.as_literal().unwrap(), "DefaultAct");
+        assert_eq!(story.acts[0].name.as_literal().unwrap(), "Act1");
     }
 
     #[test]
     fn test_act_with_triggers() {
         let act = Act {
             name: Value::literal("TestAct".to_string()),
-            maneuver_groups: vec![ManeuverGroup::default()],
+            maneuver_groups: vec![ManeuverGroup::new("Group1", 1)],
             start_trigger: None, // Will add proper trigger tests when Trigger is implemented
             stop_trigger: None,
         };
@@ -402,7 +417,7 @@ mod tests {
             maximum_execution_count: Value::literal(3),
             actors,
             catalog_reference: Vec::new(),
-            maneuvers: vec![Maneuver::default()],
+            maneuvers: vec![Maneuver::new("Maneuver1")],
         };
 
         assert_eq!(maneuver_group.name.as_literal().unwrap(), "TestGroup");
@@ -485,9 +500,9 @@ mod tests {
 
     #[test]
     fn test_story_serialization() {
-        let story = ScenarioStory::default();
+        let story = ScenarioStory::new("TestStory");
         let serialized = quick_xml::se::to_string(&story).expect("Serialization should succeed");
-        assert!(serialized.contains("DefaultStory"));
+        assert!(serialized.contains("TestStory"));
     }
 
     #[test]

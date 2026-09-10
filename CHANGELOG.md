@@ -77,9 +77,18 @@ Breaking, unless noted.
 - **`Condition` and `ConditionWrapper`**, neither of which the schema defines.
 - **Non-schema extension fields** on `ActivateControllerAction` and `SpeedCondition`, and a
   broader sweep of fields and types with no schema counterpart.
-- **`Default` impls that invent scenario data.** A default that fabricates a position, a
-  speed, or an entity reference produces a document that parses but describes nothing, so
-  those impls were removed. Container and choice structs that default to all-`None` remain.
+- **`Default` impls that invent scenario data (OSR-03, first tier).** `Default` was
+  implemented on types whose defaults invented scenario content the schema does not define —
+  a `GeographicPosition` at latitude 0, an `EntityRef` pointing at `"DefaultEntity"`, an
+  `Event` containing a fabricated `Priority::Overwrite` action, a `CatalogTimeOfDay`
+  timestamped `2021-01-01T12:00:00`. A document built from these parses cleanly and describes
+  something nobody wrote. Replaced by explicit constructors: `EntityRef::new`, `Event::new`,
+  `Act::new`, `ManeuverGroup::new`, `Maneuver::new`, `Story::new`; `GeographicPosition::new`
+  and `CatalogTimeOfDay::new` already existed. This affects construction only — parsing was
+  never impacted, since no required field carried `#[serde(default)]`. Container and choice
+  structs that default to all-`None` or empty keep their `Default`. This is a first,
+  verified-small tier; roughly 110 further fabricating impls remain and are tracked
+  separately (see `docs/type_system_guide.md`'s "Default policy" section).
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

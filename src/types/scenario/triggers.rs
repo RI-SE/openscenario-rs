@@ -134,15 +134,7 @@ impl Default for TriggeringEntities {
     fn default() -> Self {
         Self {
             triggering_entities_rule: TriggeringEntitiesRule::Any,
-            entity_refs: vec![EntityRef::default()],
-        }
-    }
-}
-
-impl Default for EntityRef {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            entity_refs: Vec::new(),
         }
     }
 }

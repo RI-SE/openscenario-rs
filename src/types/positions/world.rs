@@ -187,21 +187,6 @@ impl GeographicPosition {
     }
 }
 
-impl Default for GeographicPosition {
-    fn default() -> Self {
-        Self {
-            latitude: Some(Double::literal(0.0)),
-            longitude: Some(Double::literal(0.0)),
-            height: None,
-            latitude_deg: None,
-            longitude_deg: None,
-            altitude: None,
-            vertical_road_selection: None,
-            orientation: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,10 +238,14 @@ mod tests {
     #[test]
     fn test_geographic_position_deg_fields() {
         let pos = GeographicPosition {
+            latitude: None,
+            longitude: None,
+            height: None,
             latitude_deg: Some(Double::literal(48.137)),
             longitude_deg: Some(Double::literal(11.576)),
             altitude: Some(Double::literal(500.0)),
-            ..GeographicPosition::default()
+            vertical_road_selection: None,
+            orientation: None,
         };
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(xml.contains("latitudeDeg=\"48.137\""), "serialized: {xml}");

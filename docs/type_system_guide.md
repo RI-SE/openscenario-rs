@@ -217,6 +217,19 @@ whose `Default` invents a world position at the origin produces a document that 
 cleanly and describes something nobody wrote, which is worse than a compile error. If a type
 needs every field to say anything at all, it should require every field.
 
+**The policy is stated and not yet fully enforced.** A sweep found roughly 124 hand-written
+`Default` impls across the crate that fabricate content (a name, a coordinate, a whole nested
+action) rather than stating nothing. OSR-03 removed a first, verified-small tier — twelve
+call sites across `GeographicPosition`, `EntityRef`, `Story`/`Act`/`ManeuverGroup`/`Maneuver`,
+`Event`, and `CatalogTimeOfDay` — replacing each with an explicit `::new`/constructor that
+requires the caller to say what they mean instead of inheriting an invented value. `Route`,
+`Waypoint` and `RouteRef` were scoped for the same pass but left in place: removing
+`RouteRef::default()` breaks `#[derive(Default)]` on `AssignRouteAction`
+(`src/types/actions/movement.rs`) and `RouteRefElement` (`src/types/positions/route.rs`),
+both outside OSR-03's file scope. The remaining ~110 fabricating impls, including those two,
+are tracked as a separate pass; do not assume a type without a doc comment saying otherwise is
+clean.
+
 ## A trap: unknown fields are silent
 
 Nothing in the crate uses `#[serde(deny_unknown_fields)]`. serde ignores unrecognized XML

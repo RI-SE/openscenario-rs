@@ -59,8 +59,11 @@ fn test_geographic_position_with_height() {
 }
 
 #[test]
-fn test_geographic_position_default() {
-    let position = GeographicPosition::default();
+fn test_geographic_position_new_zero_coords() {
+    // Not testing a semantic "default" position — GeographicPosition has no Default impl
+    // (a lat/lon of 0,0 is real scenario content, not an absence). This exercises the
+    // ::new constructor with zero values, e.g. to confirm serde round-trips them correctly.
+    let position = GeographicPosition::new(0.0, 0.0);
     assert_eq!(position.latitude, Some(Double::literal(0.0)));
     assert_eq!(position.longitude, Some(Double::literal(0.0)));
     assert_eq!(position.height, None);

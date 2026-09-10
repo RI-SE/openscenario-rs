@@ -58,15 +58,6 @@ pub struct CatalogTimeOfDay {
     pub date_time: OSString,
 }
 
-impl Default for CatalogTimeOfDay {
-    fn default() -> Self {
-        Self {
-            animation: Value::Literal(false),
-            date_time: Value::Literal("2021-01-01T12:00:00".to_string()),
-        }
-    }
-}
-
 /// Weather conditions with parameterizable atmospheric properties
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename = "Weather")]
