@@ -1,16 +1,22 @@
 //! Tests for advanced positions: TrajectoryPosition, GeographicPosition, RelativeObjectPosition
 
 use openscenario_rs::types::{
+    actions::movement::Trajectory,
     basic::{Double, OSString},
+    geometry::shapes::Shape,
     positions::{
         relative::RelativeObjectPosition, trajectory::TrajectoryPosition,
         world::GeographicPosition, Position, TrajectoryRef,
     },
 };
 
+fn test_trajectory_ref() -> TrajectoryRef {
+    TrajectoryRef::with_trajectory(Trajectory::new("TestTrajectory", false, Shape::default()))
+}
+
 #[test]
 fn test_trajectory_position_new() {
-    let position = TrajectoryPosition::new(100.0, TrajectoryRef::default());
+    let position = TrajectoryPosition::new(100.0, test_trajectory_ref());
     assert_eq!(position.s, Double::literal(100.0));
     assert_eq!(position.t, None);
     assert_eq!(position.orientation, None);
@@ -18,7 +24,7 @@ fn test_trajectory_position_new() {
 
 #[test]
 fn test_trajectory_position_with_offset() {
-    let position = TrajectoryPosition::with_offset(150.0, 5.0, TrajectoryRef::default());
+    let position = TrajectoryPosition::with_offset(150.0, 5.0, test_trajectory_ref());
     assert_eq!(position.s, Double::literal(150.0));
     assert_eq!(position.t, Some(Double::literal(5.0)));
     assert_eq!(position.orientation, None);
@@ -26,7 +32,7 @@ fn test_trajectory_position_with_offset() {
 
 #[test]
 fn test_trajectory_position_at_distance() {
-    let position = TrajectoryPosition::at_distance(200.0, -2.5, TrajectoryRef::default());
+    let position = TrajectoryPosition::at_distance(200.0, -2.5, test_trajectory_ref());
     assert_eq!(position.s, Double::literal(200.0));
     assert_eq!(position.t, Some(Double::literal(-2.5)));
     assert_eq!(position.orientation, None);
@@ -34,7 +40,7 @@ fn test_trajectory_position_at_distance() {
 
 #[test]
 fn test_trajectory_position_default() {
-    let position = TrajectoryPosition::new(0.0, TrajectoryRef::default());
+    let position = TrajectoryPosition::new(0.0, test_trajectory_ref());
     assert_eq!(position.s, Double::literal(0.0));
     assert_eq!(position.t, None);
     assert_eq!(position.orientation, None);
@@ -153,7 +159,7 @@ fn test_relative_object_position_default() {
 
 #[test]
 fn test_position_constructors() {
-    let trajectory_pos = TrajectoryPosition::new(75.0, TrajectoryRef::default());
+    let trajectory_pos = TrajectoryPosition::new(75.0, test_trajectory_ref());
     let _geographic_pos = GeographicPosition::new(48.8566, 2.3522); // Paris
     let _relative_pos = RelativeObjectPosition::behind("vehicle1", 25.0);
 
@@ -178,7 +184,7 @@ fn test_position_constructors() {
 
 #[test]
 fn test_advanced_positions_serialization() {
-    let trajectory_pos = TrajectoryPosition::with_offset(100.0, 2.5, TrajectoryRef::default());
+    let trajectory_pos = TrajectoryPosition::with_offset(100.0, 2.5, test_trajectory_ref());
     let geographic_pos = GeographicPosition::with_height(52.5200, 13.4050, 35.0); // Berlin
     let relative_pos = RelativeObjectPosition::left_of("ego", 4.2);
 
@@ -202,7 +208,7 @@ fn test_advanced_positions_serialization() {
 #[test]
 fn test_advanced_positions_completeness() {
     // Test that all advanced position types are accessible
-    let _trajectory = TrajectoryPosition::new(0.0, TrajectoryRef::default());
+    let _trajectory = TrajectoryPosition::new(0.0, test_trajectory_ref());
     let _geographic = GeographicPosition::new(0.0, 0.0);
     let _relative_object = RelativeObjectPosition::new("entity", 0.0, 0.0);
 
@@ -215,7 +221,7 @@ fn test_advanced_positions_completeness() {
 #[test]
 fn test_complex_positioning_scenarios() {
     // Complex trajectory positioning
-    let complex_trajectory = TrajectoryPosition::with_offset(500.0, -1.8, TrajectoryRef::default());
+    let complex_trajectory = TrajectoryPosition::with_offset(500.0, -1.8, test_trajectory_ref());
 
     // GPS coordinates with height
     let complex_geographic = GeographicPosition::at_coordinates(

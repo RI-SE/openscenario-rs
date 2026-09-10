@@ -3,8 +3,10 @@
 //! This example shows how to use the new action wrapper types that match
 //! the OpenSCENARIO XSD schema structure.
 
+use openscenario_rs::types::actions::movement::{SpeedActionTarget, TransitionDynamics};
 use openscenario_rs::types::actions::{wrappers::*, *};
 use openscenario_rs::types::basic::*;
+use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
 use openscenario_rs::types::positions::*;
 
 fn main() {
@@ -37,7 +39,10 @@ fn demonstrate_private_actions() {
     println!("   - Created TeleportAction wrapped in PrivateAction");
 
     // Create a LongitudinalAction wrapped in PrivateAction
-    let longitudinal_action = LongitudinalAction::default();
+    let longitudinal_action = LongitudinalAction::speed(SpeedAction::new(
+        TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+        SpeedActionTarget::absolute(10.0),
+    ));
     let private_action = PrivateAction::LongitudinalAction(longitudinal_action);
     let core_action = Action::PrivateAction(private_action);
 

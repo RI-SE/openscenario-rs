@@ -9,11 +9,12 @@
 use crate::types::actions::appearance::{AppearanceAction, VisibilityAction};
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{
-    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction,
-    TeleportAction,
+    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedActionTarget, SpeedProfileAction,
+    SynchronizeAction, TeleportAction, TransitionDynamics,
 };
 use crate::types::actions::trailer::TrailerAction;
 use crate::types::basic::OSString;
+use crate::types::enums::{DynamicsDimension, DynamicsShape};
 use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
 
@@ -359,7 +360,10 @@ impl LongitudinalAction {
 impl Default for LongitudinalAction {
     fn default() -> Self {
         Self {
-            speed_action: Some(SpeedAction::default()),
+            speed_action: Some(SpeedAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                SpeedActionTarget::absolute(10.0),
+            )),
             longitudinal_distance_action: None,
             speed_profile_action: None,
         }
@@ -402,7 +406,9 @@ impl Private {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::actions::movement::SpeedProfileEntry;
     use crate::types::basic::Value;
+    use crate::types::enums::FollowingMode;
     use crate::types::environment::{RoadCondition, TimeOfDay, Weather};
 
     #[test]
@@ -443,7 +449,14 @@ mod tests {
         let private = Private::new("TestEntity")
             .add_action(PrivateAction {
                 longitudinal_action: Some(LongitudinalAction {
-                    speed_action: Some(SpeedAction::default()),
+                    speed_action: Some(SpeedAction::new(
+                        TransitionDynamics::new(
+                            DynamicsDimension::Time,
+                            DynamicsShape::Linear,
+                            1.0,
+                        ),
+                        SpeedActionTarget::absolute(10.0),
+                    )),
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
@@ -579,7 +592,10 @@ mod tests {
     fn test_longitudinal_action_validation() {
         // Test valid action with SpeedAction
         let valid_speed = LongitudinalAction {
-            speed_action: Some(SpeedAction::default()),
+            speed_action: Some(SpeedAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                SpeedActionTarget::absolute(10.0),
+            )),
             longitudinal_distance_action: None,
             speed_profile_action: None,
         };
@@ -588,7 +604,9 @@ mod tests {
         // Test valid action with LongitudinalDistanceAction
         let valid_distance = LongitudinalAction {
             speed_action: None,
-            longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+            longitudinal_distance_action: Some(
+                LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+            ),
             speed_profile_action: None,
         };
         assert!(valid_distance.validate().is_ok());
@@ -597,7 +615,10 @@ mod tests {
         let valid_profile = LongitudinalAction {
             speed_action: None,
             longitudinal_distance_action: None,
-            speed_profile_action: Some(SpeedProfileAction::default()),
+            speed_profile_action: Some(SpeedProfileAction::new(
+                FollowingMode::Follow,
+                vec![SpeedProfileEntry::new(10.0)],
+            )),
         };
         assert!(valid_profile.validate().is_ok());
 
@@ -611,8 +632,13 @@ mod tests {
 
         // Test invalid action with multiple actions
         let invalid_multiple = LongitudinalAction {
-            speed_action: Some(SpeedAction::default()),
-            longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+            speed_action: Some(SpeedAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                SpeedActionTarget::absolute(10.0),
+            )),
+            longitudinal_distance_action: Some(
+                LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+            ),
             speed_profile_action: None,
         };
         assert!(invalid_multiple.validate().is_err());
@@ -642,7 +668,12 @@ mod tests {
         // Test invalid action with multiple actions
         let invalid_multiple = PrivateAction {
             longitudinal_action: Some(LongitudinalAction::default()),
-            lateral_action: Some(crate::types::actions::movement::LateralAction::default()),
+            lateral_action: Some(crate::types::actions::movement::LateralAction::lane_change(
+                crate::types::actions::movement::LaneChangeAction::new(
+                    TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                    crate::types::actions::movement::LaneChangeTarget::relative("Ego", -1),
+                ),
+            )),
             teleport_action: None,
             routing_action: None,
             synchronize_action: None,

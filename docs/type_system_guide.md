@@ -265,16 +265,32 @@ in those three files (`Route`, `Waypoint`, `RouteRef`; `PositionOfCurrentEntity`
 `PositionInRoadCoordinates`, `PositionInLaneCoordinates`; and 15 in `movement.rs` including
 `FollowTrajectoryAction`, `SynchronizeAction`, `FinalSpeed`/`AbsoluteSpeed`/
 `RelativeSpeedToMaster`, and the `LaneOffset*` family), giving each an explicit constructor.
-A further ~13 fabricating impls in `movement.rs` (`TransitionDynamics`, `SpeedActionTarget`,
+A further 13 fabricating impls in `movement.rs` (`TransitionDynamics`, `SpeedActionTarget`,
 `AbsoluteTargetSpeed`, `Trajectory`, `TrajectoryFollowingMode`, `TrajectoryRef`,
 `LaneChangeTarget`, `RelativeTargetLane`, `LateralAction`, `LongitudinalAction`,
 `LongitudinalDistanceAction`, `SpeedProfileAction`, `SpeedProfileEntry`) could not be removed
-within OSR-04 agent A's scope: their `Default`/`#[derive(Default)]` is required by call sites
-in `src/types/scenario/init.rs`, `src/types/actions/wrappers.rs`, and shared top-level
-`tests/*.rs` files that no OSR-04 agent owns. Each is marked with an `(OSR-04)` comment at its
-definition explaining the blocker; see the OSR-04 agent A report for the full list. The
-remaining ~76 fabricating impls outside these three files are tracked as separate passes
-(OSR-04 agents B–F); do not assume a type without a doc comment saying otherwise is clean.
+within OSR-04 agent A's file-disjoint scope: their `Default`/`#[derive(Default)]` was required
+by call sites in `src/types/scenario/init.rs`, `src/types/actions/wrappers.rs`, and shared
+top-level `tests/*.rs` files that no OSR-04 agent owned under the original partition.
+
+OSR-04 agent A′, working under the revised removal-target partition (agents own *types*, not
+files, and may edit whatever the compiler points them at to fix call sites), removed all 13.
+Each now has an explicit constructor instead: `TransitionDynamics::new`,
+`SpeedActionTarget::absolute`/`::relative`, `AbsoluteTargetSpeed::new`, `Trajectory::new`,
+`TrajectoryFollowingMode::new`, `TrajectoryRef::with_trajectory`/`::with_catalog_reference`/
+`::from_catalog`, `LaneChangeTarget::relative`/`::absolute`, `RelativeTargetLane::new`,
+`LateralAction::lane_change`/`::lane_offset`/`::lateral_distance`,
+`LongitudinalAction::speed`/`::longitudinal_distance`/`::speed_profile`,
+`LongitudinalDistanceAction::new`, `SpeedProfileAction::new`, and `SpeedProfileEntry::new`. The
+`#[derive(Default)]` on `SpeedAction` and `LaneChangeAction` — which depended on these — was
+also removed, each gaining an explicit `::new`. Call sites were fixed in
+`src/types/scenario/init.rs`, `src/types/positions/mod.rs`, `src/types/positions/trajectory.rs`,
+`examples/action_wrappers_demo.rs`, and `tests/xsd_validation_test.rs`,
+`tests/advanced_positions_test.rs`, `tests/actions_serialization_test.rs`.
+
+The remaining ~76 fabricating impls outside `movement.rs`/`route.rs`/`routing/mod.rs` are
+tracked as separate passes (OSR-04 agents B–F); do not assume a type without a doc comment
+saying otherwise is clean.
 
 ## A trap: unknown fields are silent
 

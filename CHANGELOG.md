@@ -184,17 +184,38 @@ Breaking, unless noted.
   `AbsoluteTargetLaneOffset`, `LaneOffsetActionDynamics`, `LateralDistanceAction`,
   `SynchronizeAction`, `FinalSpeed`, `AbsoluteSpeed`, `RelativeSpeedToMaster`. Each gained an
   explicit `::new` (or, for choices, named variant constructors); most already had one.
-  A further ~13 fabricating impls in `movement.rs` (`TransitionDynamics`,
+  A further 13 fabricating impls in `movement.rs` (`TransitionDynamics`,
   `SpeedActionTarget`, `AbsoluteTargetSpeed`, `Trajectory`, `TrajectoryFollowingMode`,
   `TrajectoryRef`, `LaneChangeTarget`, `RelativeTargetLane`, `LateralAction`,
   `LongitudinalAction`, `LongitudinalDistanceAction`, `SpeedProfileAction`,
-  `SpeedProfileEntry`) could not be removed within this agent's scope: their `Default` is
-  required by call sites in `src/types/scenario/init.rs`,
-  `src/types/actions/wrappers.rs`, and shared `tests/*.rs` files outside OSR-04 agent A's
-  file list. Each is marked with an `(OSR-04)` comment at its definition. `TeleportAction`
-  and `AcquirePositionAction` keep their derived `Default`: both wrap a single `Position`,
-  whose own `Default` (out of this agent's scope) is an all-`None` choice with no branch
-  selected, so it states nothing rather than fabricating a position.
+  `SpeedProfileEntry`) could not be removed within agent A's file-disjoint scope: their
+  `Default` was required by call sites in `src/types/scenario/init.rs`,
+  `src/types/actions/wrappers.rs`, and shared `tests/*.rs` files outside agent A's file list.
+  `TeleportAction` and `AcquirePositionAction` keep their derived `Default`: both wrap a
+  single `Position`, whose own `Default` (out of this issue's scope) is an all-`None` choice
+  with no branch selected, so it states nothing rather than fabricating a position.
+- **`Default` impls that invent scenario data (OSR-04, agent A′: the 13 impls agent A could
+  not finish).** Working under the revised removal-target partition (agents own *types*, not
+  files, and may fix call sites wherever the compiler points), agent A′ removed all 13:
+  `TransitionDynamics` (invented `DynamicsDimension::Time`/`DynamicsShape::Linear`/`1.0`),
+  `SpeedActionTarget` (silently picked the absolute branch of a schema choice),
+  `AbsoluteTargetSpeed` (invented `10.0`), `Trajectory` (invented `"DefaultTrajectory"`),
+  `TrajectoryFollowingMode` (invented `FollowingMode::Follow`), `TrajectoryRef` (silently
+  picked the direct-`Trajectory` branch, fabricating a whole child trajectory),
+  `LaneChangeTarget` (silently picked the relative-lane branch), `RelativeTargetLane`
+  (invented `"DefaultEntity"`/`1`), `LateralAction` (silently picked the lane-change branch),
+  `LongitudinalAction` (silently picked the speed branch), `LongitudinalDistanceAction`
+  (invented `"DefaultEntity"`/`10.0`/`true`/`false`), `SpeedProfileAction` (fabricated a whole
+  child `SpeedProfileEntry`), `SpeedProfileEntry` (invented `0.0`/`10.0`). None of the
+  underlying XSD attributes carry a `default="…"` — all are `use="required"`. Each gained an
+  explicit constructor (`::new`, or named branch constructors for the choice types); the
+  `#[derive(Default)]` on `SpeedAction` and `LaneChangeAction`, which depended on these, was
+  also removed in favour of explicit `::new`. Call sites fixed in
+  `src/types/scenario/init.rs`, `src/types/positions/mod.rs`,
+  `src/types/positions/trajectory.rs`, `examples/action_wrappers_demo.rs`,
+  `tests/xsd_validation_test.rs`, `tests/advanced_positions_test.rs` and
+  `tests/actions_serialization_test.rs`. This closes out all fabricating `Default` impls in
+  `types/actions/movement.rs`, `types/positions/route.rs` and `types/routing/mod.rs`.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

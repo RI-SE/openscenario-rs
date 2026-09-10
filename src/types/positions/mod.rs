@@ -185,7 +185,14 @@ mod tests {
 
     #[test]
     fn test_position_trajectory_constructor() {
-        let tp = TrajectoryPosition::new(10.0, TrajectoryRef::default());
+        let tp = TrajectoryPosition::new(
+            10.0,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                crate::types::geometry::shapes::Shape::default(),
+            )),
+        );
         let pos = Position::trajectory(tp.clone());
         assert!(pos.trajectory_position.is_some());
         assert!(pos.world_position.is_none());

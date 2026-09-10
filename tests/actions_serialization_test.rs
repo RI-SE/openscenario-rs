@@ -3,8 +3,10 @@
 //! This test verifies that the new Action wrapper types correctly implement
 //! the OpenSCENARIO XSD schema structure for actions.
 
+use openscenario_rs::types::actions::movement::{SpeedActionTarget, TransitionDynamics};
 use openscenario_rs::types::actions::{wrappers::*, *};
 use openscenario_rs::types::basic::*;
+use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
 use openscenario_rs::types::positions::*;
 use serde_json;
 
@@ -108,12 +110,20 @@ fn test_infrastructure_action() {
 #[test]
 fn test_private_action_variants() {
     // Test LongitudinalAction
-    let private_action = PrivateAction::LongitudinalAction(LongitudinalAction::default());
+    let private_action =
+        PrivateAction::LongitudinalAction(LongitudinalAction::speed(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        )));
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LongitudinalAction"));
 
     // Test LateralAction
-    let private_action = PrivateAction::LateralAction(LateralAction::default());
+    let private_action =
+        PrivateAction::LateralAction(LateralAction::lane_change(LaneChangeAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            LaneChangeTarget::relative("Ego", -1),
+        )));
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LateralAction"));
 
@@ -212,7 +222,10 @@ fn test_new_action_wrapper_types() {
 
     // Test PrivateAction wrapper (wrapper struct is now just the enum variant)
     let private_action = Action::PrivateAction(PrivateAction::LongitudinalAction(
-        LongitudinalAction::default(),
+        LongitudinalAction::speed(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        )),
     ));
 
     let serialized = serde_json::to_string(&private_action).unwrap();

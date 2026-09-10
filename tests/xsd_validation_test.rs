@@ -10,20 +10,26 @@
 
 use openscenario_rs::types::actions::movement::{
     FollowTrajectoryAction, LongitudinalDistanceAction, NoneElement, SpeedAction,
-    SpeedProfileAction, TimeReference, Timing, Trajectory, TrajectoryFollowingMode, TrajectoryRef,
+    SpeedActionTarget, SpeedProfileAction, SpeedProfileEntry, TimeReference, Timing, Trajectory,
+    TrajectoryFollowingMode, TrajectoryRef, TransitionDynamics,
 };
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;
 use openscenario_rs::types::controllers::{Controller, ObjectController};
-use openscenario_rs::types::enums::{ControllerType, FollowingMode, ReferenceContext};
+use openscenario_rs::types::enums::{
+    ControllerType, DynamicsDimension, DynamicsShape, FollowingMode, ReferenceContext,
+};
 use openscenario_rs::types::scenario::init::{LongitudinalAction, PrivateAction};
 
 #[test]
 fn test_longitudinal_action_all_types() {
     // Test SpeedAction
     let speed_action = LongitudinalAction {
-        speed_action: Some(SpeedAction::default()),
+        speed_action: Some(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        )),
         longitudinal_distance_action: None,
         speed_profile_action: None,
     };
@@ -33,7 +39,9 @@ fn test_longitudinal_action_all_types() {
     // Test LongitudinalDistanceAction
     let distance_action = LongitudinalAction {
         speed_action: None,
-        longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+        longitudinal_distance_action: Some(
+            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+        ),
         speed_profile_action: None,
     };
     assert!(distance_action.validate().is_ok());
@@ -46,7 +54,10 @@ fn test_longitudinal_action_all_types() {
     let profile_action = LongitudinalAction {
         speed_action: None,
         longitudinal_distance_action: None,
-        speed_profile_action: Some(SpeedProfileAction::default()),
+        speed_profile_action: Some(SpeedProfileAction::new(
+            FollowingMode::Follow,
+            vec![SpeedProfileEntry::new(10.0)],
+        )),
     };
     assert!(profile_action.validate().is_ok());
     assert_eq!(profile_action.get_action_type(), Some("SpeedProfileAction"));
@@ -56,7 +67,11 @@ fn test_longitudinal_action_all_types() {
 fn test_follow_trajectory_action_complete() {
     // Test with direct trajectory
     let trajectory_action = FollowTrajectoryAction {
-        trajectory: Some(Trajectory::default()),
+        trajectory: Some(Trajectory::new(
+            "TestTrajectory",
+            false,
+            openscenario_rs::types::geometry::shapes::Shape::default(),
+        )),
         catalog_reference: None,
         time_reference: TimeReference {
             none: None,
@@ -87,7 +102,7 @@ fn test_follow_trajectory_action_complete() {
             }),
         },
         trajectory_ref: None,
-        trajectory_following_mode: TrajectoryFollowingMode::default(),
+        trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
         initial_distance_offset: None,
     };
     assert!(time_ref_action.validate().is_ok());
@@ -104,8 +119,12 @@ fn test_follow_trajectory_action_complete() {
                 offset: Double::literal(0.0),
             }),
         },
-        trajectory_ref: Some(TrajectoryRef::default()),
-        trajectory_following_mode: TrajectoryFollowingMode::default(),
+        trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
+            "TestTrajectory",
+            false,
+            openscenario_rs::types::geometry::shapes::Shape::default(),
+        ))),
+        trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
         initial_distance_offset: None,
     };
     assert!(traj_ref_action.validate().is_ok());
@@ -327,7 +346,16 @@ fn test_private_action_choice_group() {
     // Test invalid PrivateAction with multiple actions
     let invalid_private = PrivateAction {
         longitudinal_action: Some(LongitudinalAction::default()),
-        lateral_action: Some(openscenario_rs::types::actions::movement::LateralAction::default()),
+        lateral_action: Some(
+            openscenario_rs::types::actions::movement::LateralAction::lane_change(
+                openscenario_rs::types::actions::movement::LaneChangeAction::new(
+                    TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                    openscenario_rs::types::actions::movement::LaneChangeTarget::relative(
+                        "Ego", -1,
+                    ),
+                ),
+            ),
+        ),
         teleport_action: None,
         routing_action: None,
         synchronize_action: None,
@@ -344,7 +372,9 @@ fn test_xsd_compliance_serialization() {
     // Test that the new structures serialize correctly to XML
     let longitudinal_action = LongitudinalAction {
         speed_action: None,
-        longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+        longitudinal_distance_action: Some(
+            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+        ),
         speed_profile_action: None,
     };
 
@@ -374,8 +404,13 @@ fn test_validation_error_messages() {
     assert!(error.contains("found none"));
 
     let multiple_longitudinal = LongitudinalAction {
-        speed_action: Some(SpeedAction::default()),
-        longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+        speed_action: Some(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        )),
+        longitudinal_distance_action: Some(
+            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+        ),
         speed_profile_action: None,
     };
 

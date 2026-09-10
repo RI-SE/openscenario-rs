@@ -150,7 +150,14 @@ mod tests {
 
     #[test]
     fn test_trajectory_position_new() {
-        let pos = TrajectoryPosition::new(50.0, TrajectoryRef::default());
+        let pos = TrajectoryPosition::new(
+            50.0,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::default(),
+            )),
+        );
         assert_eq!(pos.s.as_literal().unwrap(), &50.0);
         assert!(pos.t.is_none());
         assert!(pos.orientation.is_none());
@@ -158,14 +165,29 @@ mod tests {
 
     #[test]
     fn test_trajectory_position_with_offset() {
-        let pos = TrajectoryPosition::with_offset(100.0, -1.5, TrajectoryRef::default());
+        let pos = TrajectoryPosition::with_offset(
+            100.0,
+            -1.5,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::default(),
+            )),
+        );
         assert_eq!(pos.s.as_literal().unwrap(), &100.0);
         assert_eq!(pos.t.unwrap().as_literal().unwrap(), &-1.5);
     }
 
     #[test]
     fn test_trajectory_position_xml_roundtrip() {
-        let pos = TrajectoryPosition::new(25.0, TrajectoryRef::default());
+        let pos = TrajectoryPosition::new(
+            25.0,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::default(),
+            )),
+        );
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(xml.contains("s=\"25\""));
         let deserialized: TrajectoryPosition = quick_xml::de::from_str(&xml).unwrap();
