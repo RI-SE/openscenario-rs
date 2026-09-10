@@ -422,7 +422,7 @@ impl Default for DistributionRange {
     fn default() -> Self {
         Self {
             step_width: Value::Literal("1.0".to_string()),
-            range: crate::types::basic::Range::default(),
+            range: crate::types::basic::Range::new(0.0, 100.0),
         }
     }
 }

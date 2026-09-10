@@ -494,7 +494,7 @@ mod tests {
         assert_eq!(range.lower_limit.as_literal().unwrap(), &0.0);
         assert_eq!(range.upper_limit.as_literal().unwrap(), &100.0);
 
-        let default_range = Range::default();
+        let default_range = Range::new(0.0, 100.0);
         assert_eq!(default_range.lower_limit.as_literal().unwrap(), &0.0);
         assert_eq!(default_range.upper_limit.as_literal().unwrap(), &100.0);
     }
@@ -541,8 +541,9 @@ mod tests {
         let param_dir = Directory::from_parameter("CatalogPath".to_string());
         assert_eq!(param_dir.path.as_parameter().unwrap(), "CatalogPath");
 
-        // Test default
-        let default_dir = Directory::default();
+        // Test construction via ::new (no `Directory::default()`: `@path` is
+        // `use="required"` with no schema default — Schema/OpenSCENARIO.xsd:1067-1069)
+        let default_dir = Directory::new(String::new());
         assert_eq!(default_dir.path.as_literal().unwrap(), "");
     }
 
@@ -789,17 +790,6 @@ pub struct ParameterDeclaration {
     pub constraint_groups: Vec<ValueConstraintGroup>,
 }
 
-impl Default for ParameterDeclaration {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultParameter".to_string()),
-            parameter_type: Value::Literal(ParameterType::String),
-            value: OSString::literal("".to_string()),
-            constraint_groups: Vec::new(),
-        }
-    }
-}
-
 /// Parameter constraints container
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ValueConstraintGroup {
@@ -823,24 +813,6 @@ pub struct Range {
     pub lower_limit: Double,
     #[serde(rename = "@upperLimit")]
     pub upper_limit: Double,
-}
-
-impl Default for ValueConstraint {
-    fn default() -> Self {
-        Self {
-            rule: Value::Literal(Rule::EqualTo),
-            value: OSString::literal("0".to_string()),
-        }
-    }
-}
-
-impl Default for Range {
-    fn default() -> Self {
-        Self {
-            lower_limit: Double::literal(0.0),
-            upper_limit: Double::literal(100.0),
-        }
-    }
 }
 
 // Helper methods for ParameterDeclaration
@@ -928,12 +900,6 @@ impl Directory {
             // Parameters and expressions are assumed valid at this stage
             true
         }
-    }
-}
-
-impl Default for Directory {
-    fn default() -> Self {
-        Self::new(String::new())
     }
 }
 

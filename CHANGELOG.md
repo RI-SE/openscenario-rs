@@ -353,6 +353,90 @@ Breaking, unless noted.
   `tests/init_action_choices_test.rs`, and within the four owned files' own test modules.
   This closes out all fabricating `Default` impls in `types/actions/wrappers.rs`,
   `types/actions/appearance.rs`, `types/actions/control.rs` and `types/actions/trailer.rs`.
+- **`Default` impls that invent scenario data (OSR-04, agent E:
+  `types/entities/selection.rs`, `types/geometry/shapes.rs`, `types/scenario/triggers.rs`,
+  `types/basic.rs`, `types/positions/road.rs`, `types/scenario/init.rs`).** 25 fabricating
+  impls removed, 0 genuinely benign found (every attribute checked against
+  `Schema/OpenSCENARIO.xsd` carries neither a schema default nor an optional/`Vec`
+  representation that would make invented content unnecessary), plus 6 manual impls that
+  fabricated content converted to the crate's existing all-`None`/`Vec::new()` derived-default
+  pattern for container/choice types (kept, not counted as removed).
+  In `entities/selection.rs`: `EntitySelection` (invented `"DefaultSelection"` for
+  `@name`, XSD:1180-1185 — gained no new constructor, `::new` already existed),
+  `EntityDistributionEntry` (invented `weight: 1.0` and a whole-child
+  `ScenarioObjectTemplate`, XSD:1162-1167 — `::new` already existed),
+  `ScenarioObjectTemplate` (fabricated a whole-child `Vehicle::default()`, XSD:2007-2012 —
+  the `new_vehicle`/`new_pedestrian`/`new_misc_object`/`with_external_reference`
+  constructors already existed), `ExternalObjectReference` (invented `"DefaultObject"` for
+  `@name` — `::new` already existed), `ByObjectType`/`ByType` (each silently picked the
+  `Vehicle` branch of their respective `ObjectType` attribute — `::new`/`::vehicle` already
+  existed). `EntityDistribution`'s fabricating impl (invented a whole-child
+  `EntityDistributionEntry`, XSD:1157-1161) was replaced with `#[derive(Default)]`: its
+  field is `Vec<EntityDistributionEntry>` with no `minOccurs="0"` in the schema, so an empty
+  `Vec` is not schema-valid content on its own, but — consistent with `ConditionGroup` below —
+  it states nothing invented, and keeping it (rather than deleting outright) avoids a
+  clippy `new_without_default` warning against the type's pre-existing bare `::new()`.
+  In `geometry/shapes.rs`: `Center`/`Dimensions` (each invented coordinates — `0.0`/`0.0`/`0.0`
+  and a "default car" `2.0`/`4.5`/`1.5` — for `xsd:all` groups of `use="required"` attributes,
+  XSD:886-890/1058-1062; `Center` gained `::new`, `Dimensions::new` already existed) and the
+  `#[derive(Default)]` on `BoundingBox` that depended on them (removed; `BoundingBox` gained
+  `::new(center, dimensions)`, XSD:809-814, no schema default on either child). `Vertex`
+  (fabricated a whole-child `Position::default()` for a required field, no benign
+  replacement — gained `::new(position)`/`::with_time`). `Shape`'s and `Polyline`'s
+  fabricating impls (the former invented `polyline: Some(Polyline::default())` instead of
+  the schema-neutral all-`None` choice state; the latter invented `vec![Vertex::default()]`
+  instead of the schema-neutral empty `Vec`, despite `Vertex` having `minOccurs="2"`,
+  XSD:1733-1737) were both replaced with `#[derive(Default)]`, matching the pattern already
+  used for `Position` elsewhere in the crate.
+  In `scenario/triggers.rs`: `Condition`/`ConditionType` — flagged explicitly by OSR-04 agent
+  C as inherited fabrication — invented a whole-child `ByValueCondition` (via
+  `ByValueCondition::simulation_time(...)`, the branch C's fix named but did not remove) and,
+  for `ConditionType`, additionally picked the `ByValue` branch of the `Condition` choice
+  group, XSD:953-961; both removed with no replacement (`Condition::new` already existed;
+  `ConditionType`'s variants are constructed directly). `TriggeringEntities` (invented
+  `TriggeringEntitiesRule::Any` for a `use="required"` attribute, XSD:2400-2405 — `::new`/
+  `::any`/`::all` already existed). `Trigger`'s and `ConditionGroup`'s fabricating impls
+  (the former invented a whole-child `ConditionGroup::default()`; the latter a whole-child
+  `Condition::default()`) were both replaced with `#[derive(Default)]`: `Trigger`'s
+  `ConditionGroup` is `minOccurs="0"` (XSD:2395-2399, genuinely benign empty `Vec`);
+  `ConditionGroup`'s `Condition` has no `minOccurs="0"` (XSD:962-966), so the empty `Vec` is
+  not schema-valid alone, but states nothing invented, unlike the impl it replaced.
+  In `types/basic.rs`: `ParameterDeclaration` (invented `"DefaultParameter"`/
+  `ParameterType::String`/`""`, XSD:1634-1641), `ValueConstraint` (invented
+  `Rule::EqualTo`/`"0"`, XSD:2442-2445), `Range` (invented `lowerLimit: 0.0`/
+  `upperLimit: 100.0`, XSD:1815-1818), `Directory` (invented an empty `@path`, XSD:1067-1069)
+  — all four `use="required"` attributes with no schema default; all four already had
+  `::new`-style constructors. `Value<T>`'s serde impls were not touched (F15).
+  In `positions/road.rs`: `RelativeRoadPosition`/`RelativeLanePosition` (each invented
+  `"DefaultEntity"` plus zeroed deltas for `use="required"` attributes — `::new` already
+  existed for both).
+  In `scenario/init.rs` (previously unassigned — moved here by the 2026-09-10 grouping
+  revision): `Private` (invented `"DefaultEntity"` for `@entityRef`, XSD:1771-1776 — `::new`
+  already existed). `LongitudinalAction`'s fabricating impl (invented a whole-child
+  `SpeedAction`) was replaced with `#[derive(Default)]`, matching the crate's existing
+  treatment of the sibling `PrivateAction`/`GlobalAction` choice groups in the same file —
+  `LongitudinalAction` is a bare `xsd:choice` (XSD:1431-1437) modelled as parallel `Option`s,
+  and all-`None` states nothing about which branch was chosen.
+  Two collateral `#[derive(Default)]` removals in files outside this issue's list, both
+  reported per the "say so explicitly" rule: `ControllerCatalogLocation`
+  (`src/types/controllers/mod.rs`) required `Directory: Default` and had no constructor or
+  call site of its own — it appears to be an unused duplicate of
+  `catalogs::locations::ControllerCatalogLocation`, which already has no `Default`. Several
+  call sites elsewhere that referenced the removed `Center`/`BoundingBox`/`Range`/`Directory`
+  defaults (entity constructors in `types/entities/{vehicle,pedestrian,misc_object}.rs`,
+  builder finish/`with_dimensions` methods in `src/builder/entities/{vehicle,pedestrian}.rs`,
+  test fixtures, and three example files) were rewritten to state an explicit value rather
+  than softened with `unwrap_or_default()`.
+  None of the underlying XSD attributes carries a `default="…"` — all are `use="required"` or
+  optional with no schema default (checked individually against `Schema/OpenSCENARIO.xsd`;
+  running total across OSR-03 and every OSR-04 agent so far: still no genuine schema default
+  found in any file touched by this series). `cargo test --features builder,validation`: 742
+  lib tests (same count as baseline — no coverage lost), and the conformance harness
+  (`report`/`lossy`/`validate`/`builder`) is unchanged from baseline (172/172/172/13, 0
+  dropped/invented). `grep -rn 'literal("Default' src/ | wc -l` went from 16 to 9.
+  This closes out all fabricating `Default` impls in `types/entities/selection.rs`,
+  `types/geometry/shapes.rs`, `types/scenario/triggers.rs`, `types/basic.rs`,
+  `types/positions/road.rs` and `types/scenario/init.rs`.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

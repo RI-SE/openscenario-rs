@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("----------------------------------");
 
     let bbox = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::vehicle_default(),
     };
 

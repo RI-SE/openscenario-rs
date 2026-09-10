@@ -205,8 +205,9 @@ fn test_entity_distribution_entry() {
     assert!(entry.scenario_object_template.vehicle.is_some());
     assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
 
-    // Test default
-    let default_entry = EntityDistributionEntry::default();
+    // Test construction via ::new
+    let default_entry =
+        EntityDistributionEntry::new(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 1.0);
     assert!(default_entry.scenario_object_template.vehicle.is_some());
     assert_eq!(default_entry.weight.as_literal().unwrap(), &1.0);
 }
@@ -254,9 +255,9 @@ fn test_external_object_reference() {
     let ext_ref = ExternalObjectReference::new("Sedan");
     assert_eq!(ext_ref.name.as_literal().unwrap(), "Sedan");
 
-    // Test default
-    let default_ref = ExternalObjectReference::default();
-    assert_eq!(default_ref.name.as_literal().unwrap(), "DefaultObject");
+    // Test construction via ::new
+    let default_ref = ExternalObjectReference::new("Sedan");
+    assert_eq!(default_ref.name.as_literal().unwrap(), "Sedan");
 }
 
 #[test]
@@ -313,8 +314,8 @@ fn test_by_type() {
         Value::Literal(ObjectType::MiscellaneousObject)
     );
 
-    // Test default
-    let default_selector = ByType::default();
+    // Test construction via ::new
+    let default_selector = ByType::new(ObjectType::Vehicle);
     assert_eq!(
         default_selector.type_spec,
         Value::Literal(ObjectType::Vehicle)
@@ -387,17 +388,20 @@ fn test_parameter_support_in_entity_selection() {
 
 #[test]
 fn test_all_defaults() {
-    // Test that all types have working defaults
-    let _entity_selection = EntitySelection::default();
+    // OSR-04 (agent E): these types no longer fabricate content via `Default` — each
+    // requires an explicit, stated value instead. `SelectedEntities` is the one
+    // container/choice type here that keeps a benign all-empty `Default`.
+    let _entity_selection = EntitySelection::new("Selection1", SelectedEntities::new());
     let _selected_entities = SelectedEntities::default();
-    let _entity_distribution = EntityDistribution::default();
-    let _entity_distribution_entry = EntityDistributionEntry::default();
-    let _scenario_object_template = ScenarioObjectTemplate::default();
-    let _external_object_reference = ExternalObjectReference::default();
-    let _by_object_type = ByObjectType::default();
-    let _by_type = ByType::default();
+    let _entity_distribution = EntityDistribution::new();
+    let _entity_distribution_entry =
+        EntityDistributionEntry::new(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 1.0);
+    let _scenario_object_template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let _external_object_reference = ExternalObjectReference::new("Sedan");
+    let _by_object_type = ByObjectType::vehicle();
+    let _by_type = ByType::new(ObjectType::Vehicle);
 
-    // All defaults should be created without panicking
+    // All values should be created without panicking
     assert!(true);
 }
 

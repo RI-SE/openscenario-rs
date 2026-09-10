@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Three-dimensional bounding box for entity spatial extents
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+///
+/// XSD `BoundingBox` (`:809-814`): `xsd:all` of required `Center` and `Dimensions`,
+/// neither optional — no schema default exists for either.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoundingBox {
     /// Center position of the bounding box
     #[serde(rename = "Center")]
@@ -46,6 +49,17 @@ pub struct Dimensions {
 }
 
 impl Center {
+    /// Create a new center point from explicit x/y/z coordinates.
+    ///
+    /// XSD `Center` (`:886-890`): all three attributes `use="required"`, no default.
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Self {
+            x: crate::types::basic::Value::literal(x),
+            y: crate::types::basic::Value::literal(y),
+            z: crate::types::basic::Value::literal(z),
+        }
+    }
+
     /// Calculate 3D Euclidean distance to another center point
     pub fn distance_to(&self, other: &Center) -> Result<f64> {
         let params = HashMap::new();
@@ -86,27 +100,16 @@ impl Center {
     }
 }
 
-impl Default for Center {
-    fn default() -> Self {
-        Self {
-            x: crate::types::basic::Value::literal(0.0),
-            y: crate::types::basic::Value::literal(0.0),
-            z: crate::types::basic::Value::literal(0.0),
-        }
-    }
-}
-
-impl Default for Dimensions {
-    fn default() -> Self {
-        Self {
-            width: crate::types::basic::Value::literal(2.0), // Default car width
-            length: crate::types::basic::Value::literal(4.5), // Default car length
-            height: crate::types::basic::Value::literal(1.5), // Default car height
-        }
-    }
-}
-
 impl BoundingBox {
+    /// Create a new bounding box from an explicit center and dimensions.
+    ///
+    /// Both `Center` and `Dimensions` are `xsd:all` of required attributes
+    /// (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`); there is no schema-declared
+    /// default for either, so callers must state a concrete value.
+    pub fn new(center: Center, dimensions: Dimensions) -> Self {
+        Self { center, dimensions }
+    }
+
     /// Calculate the volume of the bounding box
     pub fn volume(&self) -> Result<f64> {
         let params = HashMap::new();
@@ -356,7 +359,12 @@ impl Dimensions {
 }
 
 /// Shape definition for trajectories and paths
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+///
+/// XSD `Shape` is a choice of `Polyline` | `Clothoid` | `ClothoidSpline` | `Nurbs`. The
+/// derived `Default` — all four branches `None` — states nothing about which branch was
+/// chosen and is kept per the container/choice policy; it is not schema-valid content on
+/// its own and exists only as a construction convenience.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Shape {
     #[serde(rename = "Polyline", default, skip_serializing_if = "Option::is_none")]
     pub polyline: Option<Polyline>,
@@ -436,7 +444,11 @@ pub struct Knot {
 }
 
 /// Polyline shape with time-positioned vertices
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+///
+/// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so an empty vertex list is not
+/// schema-valid on its own, but `Vec::new()` states nothing invented and is kept as the
+/// bare construction default; callers building a real polyline must supply vertices.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Polyline {
     #[serde(rename = "Vertex", default)]
     pub vertices: Vec<Vertex>,
@@ -452,30 +464,23 @@ pub struct Vertex {
     pub position: Position,
 }
 
-impl Default for Shape {
-    fn default() -> Self {
-        Self {
-            polyline: Some(Polyline::default()),
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
-        }
-    }
-}
-
-impl Default for Polyline {
-    fn default() -> Self {
-        Self {
-            vertices: vec![Vertex::default()],
-        }
-    }
-}
-
-impl Default for Vertex {
-    fn default() -> Self {
+impl Vertex {
+    /// Create a new vertex from a position, with no `@time`.
+    ///
+    /// XSD `Vertex` (`:1730-1732` area): `Position` is a required child; `@time` is
+    /// `minOccurs="0"`/optional and has no schema default.
+    pub fn new(position: Position) -> Self {
         Self {
             time: None,
-            position: Position::default(),
+            position,
+        }
+    }
+
+    /// Create a new vertex with an explicit `@time`.
+    pub fn with_time(time: f64, position: Position) -> Self {
+        Self {
+            time: Some(crate::types::basic::Value::literal(time)),
+            position,
         }
     }
 }
@@ -485,16 +490,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bounding_box_default() {
-        let bbox = BoundingBox::default();
+    fn test_bounding_box_new() {
+        let bbox = BoundingBox::new(Center::new(0.0, 0.0, 0.0), Dimensions::car());
 
-        // Center should be at origin
         assert_eq!(bbox.center.x.as_literal().unwrap(), &0.0);
         assert_eq!(bbox.center.y.as_literal().unwrap(), &0.0);
         assert_eq!(bbox.center.z.as_literal().unwrap(), &0.0);
 
-        // Default dimensions should be car-like
-        assert_eq!(bbox.dimensions.width.as_literal().unwrap(), &2.0);
+        assert_eq!(bbox.dimensions.width.as_literal().unwrap(), &1.8);
         assert_eq!(bbox.dimensions.length.as_literal().unwrap(), &4.5);
         assert_eq!(bbox.dimensions.height.as_literal().unwrap(), &1.5);
     }
@@ -712,7 +715,7 @@ mod tests {
     #[test]
     fn test_bounding_box_volume() {
         let bbox = BoundingBox {
-            center: Center::default(),
+            center: Center::new(0.0, 0.0, 0.0),
             dimensions: Dimensions {
                 width: crate::types::basic::Value::literal(2.0),
                 length: crate::types::basic::Value::literal(4.0),
@@ -754,7 +757,7 @@ mod tests {
         use std::collections::HashMap;
 
         let bbox = BoundingBox {
-            center: Center::default(),
+            center: Center::new(0.0, 0.0, 0.0),
             dimensions: Dimensions {
                 width: crate::types::basic::Value::literal(2.0),
                 length: crate::types::basic::Value::literal(4.0),
@@ -779,7 +782,7 @@ mod tests {
         use std::collections::HashMap;
 
         let bbox1 = BoundingBox {
-            center: Center::default(),
+            center: Center::new(0.0, 0.0, 0.0),
             dimensions: Dimensions {
                 width: crate::types::basic::Value::literal(2.0),
                 length: crate::types::basic::Value::literal(2.0),
@@ -871,7 +874,7 @@ mod tests {
         use std::collections::HashMap;
 
         let bbox = BoundingBox {
-            center: Center::default(),
+            center: Center::new(0.0, 0.0, 0.0),
             dimensions: Dimensions {
                 width: crate::types::basic::Value::parameter("vehicle_width".to_string()),
                 length: crate::types::basic::Value::parameter("vehicle_length".to_string()),
@@ -956,7 +959,7 @@ mod tests {
     #[test]
     fn test_bounding_box_volume_no_params() {
         let bbox = BoundingBox {
-            center: Center::default(),
+            center: Center::new(0.0, 0.0, 0.0),
             dimensions: Dimensions::new(2.0, 4.0, 1.5),
         };
 
@@ -967,7 +970,7 @@ mod tests {
     #[test]
     fn test_bounding_box_contains_point_no_params() {
         let bbox = BoundingBox {
-            center: Center::default(),
+            center: Center::new(0.0, 0.0, 0.0),
             dimensions: Dimensions::new(2.0, 4.0, 1.5),
         };
 

@@ -168,9 +168,13 @@ pub struct ControllerProperties {
 /// Catalog location for controller definitions.
 ///
 /// Specifies where controller catalog files can be found.
+///
+/// OSR-04 (agent E): `#[derive(Default)]` removed — `Directory`'s `Default` fabricated an
+/// empty `@path` (`Schema/OpenSCENARIO.xsd:1067-1069` declares `@path` `use="required"`
+/// with no schema default). This type has no constructor or call site of its own; it
+/// appears to be an unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[derive(Default)]
 pub struct ControllerCatalogLocation {
     /// Directory containing controller catalog files
     #[serde(rename = "Directory")]

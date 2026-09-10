@@ -124,10 +124,20 @@ impl<'parent> PedestrianBuilder<'parent> {
 
     /// Set custom dimensions
     pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        let existing_bbox = self.pedestrian_data.bounding_box.unwrap_or_default();
+        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
+        // `xsd:all` of required attributes with no schema default
+        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
+        // via `with_center`/an animal preset, keep it; otherwise the origin is the
+        // explicit fallback, not an invented one.
+        let existing_center = self
+            .pedestrian_data
+            .bounding_box
+            .as_ref()
+            .map(|bbox| bbox.center.clone())
+            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
-            center: existing_bbox.center,
+            center: existing_center,
             dimensions: Dimensions {
                 width: Double::literal(width),
                 length: Double::literal(length),
@@ -179,7 +189,17 @@ impl<'parent> PedestrianBuilder<'parent> {
             role: self.pedestrian_data.role,
             model: None,
             model3d: self.pedestrian_data.model3d,
-            bounding_box: self.pedestrian_data.bounding_box.unwrap_or_default(),
+            bounding_box: self
+                .pedestrian_data
+                .bounding_box
+                .unwrap_or_else(|| BoundingBox {
+                    center: Center::new(0.0, 0.0, 0.0),
+                    dimensions: Dimensions {
+                        width: Double::literal(0.6),
+                        length: Double::literal(0.6),
+                        height: Double::literal(1.8),
+                    },
+                }),
             properties: self.pedestrian_data.properties,
             parameter_declarations: None,
         };
@@ -277,10 +297,20 @@ impl DetachedPedestrianBuilder {
 
     /// Set custom dimensions
     pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        let existing_bbox = self.pedestrian_data.bounding_box.unwrap_or_default();
+        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
+        // `xsd:all` of required attributes with no schema default
+        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
+        // via `with_center`/an animal preset, keep it; otherwise the origin is the
+        // explicit fallback, not an invented one.
+        let existing_center = self
+            .pedestrian_data
+            .bounding_box
+            .as_ref()
+            .map(|bbox| bbox.center.clone())
+            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
-            center: existing_bbox.center,
+            center: existing_center,
             dimensions: Dimensions {
                 width: Double::literal(width),
                 length: Double::literal(length),
@@ -334,7 +364,17 @@ impl DetachedPedestrianBuilder {
             role: self.pedestrian_data.role,
             model: None,
             model3d: self.pedestrian_data.model3d,
-            bounding_box: self.pedestrian_data.bounding_box.unwrap_or_default(),
+            bounding_box: self
+                .pedestrian_data
+                .bounding_box
+                .unwrap_or_else(|| BoundingBox {
+                    center: Center::new(0.0, 0.0, 0.0),
+                    dimensions: Dimensions {
+                        width: Double::literal(0.6),
+                        length: Double::literal(0.6),
+                        height: Double::literal(1.8),
+                    },
+                }),
             properties: self.pedestrian_data.properties,
             parameter_declarations: None,
         };

@@ -355,10 +355,36 @@ is now `#[derive(Default)]`, all-`None`, and the values live in the pre-existing
 transitively required the removed `wrappers::GlobalAction: Default`; the field it wraps is
 already `Option<StoryGlobalAction>`, so no default was needed.
 
-**The remaining fabricating impls are tracked as OSR-04 agents E and F** (`entities/selection.rs`,
-`positions/road.rs`, `geometry/shapes.rs`, `scenario/triggers.rs`, `basic.rs`,
-`scenario/init.rs`, and `builder/conditions/*`); do not assume a type without a doc comment
-saying otherwise is clean.
+OSR-04 agent E (`entities/selection.rs`, `positions/road.rs`, `geometry/shapes.rs`,
+`scenario/triggers.rs`, `basic.rs`, `scenario/init.rs`) removed all 25 fabricating impls in
+those six files. `entities/selection.rs`: `EntitySelection`, `EntityDistributionEntry`,
+`ScenarioObjectTemplate`, `ExternalObjectReference`, `ByObjectType`, `ByType` removed with no
+replacement (each already had, or gained, an explicit `::new`-style constructor);
+`EntityDistribution`'s fabricating impl (a whole-child `EntityDistributionEntry`) was replaced
+with `#[derive(Default)]` — its `Vec` field has no `minOccurs="0"` so the empty result is not
+schema-valid content alone, but it states nothing invented. `geometry/shapes.rs`: `Center`/
+`Dimensions` removed (`Center` gained `::new`); the `#[derive(Default)]` on `BoundingBox` that
+depended on them was removed too, replaced with `BoundingBox::new(center, dimensions)`.
+`Vertex` (fabricated a whole-child `Position`) removed, gained `::new`/`::with_time`. `Shape`'s
+and `Polyline`'s fabricating impls were replaced with `#[derive(Default)]` (all-`None`/empty
+`Vec`, matching `Position`'s existing treatment elsewhere). `scenario/triggers.rs`:
+`Condition`/`ConditionType` — the whole-child fabrication OSR-04 agent C flagged but could not
+remove — deleted with no replacement. `TriggeringEntities` removed (already had `::new`/
+`::any`/`::all`). `Trigger`'s and `ConditionGroup`'s fabricating impls (each invented a
+whole-child) were replaced with `#[derive(Default)]`, consistent with the container/choice
+policy. `basic.rs`: `ParameterDeclaration`, `ValueConstraint`, `Range`, `Directory` removed
+(all four already had `::new`-style constructors); `Value<T>`'s serde impls untouched (F15).
+`positions/road.rs`: `RelativeRoadPosition`/`RelativeLanePosition` removed (both already had
+`::new`). `scenario/init.rs`: `Private` removed (already had `::new`); `LongitudinalAction`'s
+fabricating impl was replaced with `#[derive(Default)]`, matching the sibling `PrivateAction`/
+`GlobalAction` choice groups in the same file. One collateral `#[derive(Default)]` removal
+outside this issue's file list: `ControllerCatalogLocation` (`src/types/controllers/mod.rs`),
+an apparently-unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
+
+**The Default policy stated above is now enforced.** OSR-03 and every OSR-04 agent (A, A′, B,
+C, D, E) removed every fabricating `Default` impl found in `src/types/`; the remaining
+fabricating impls live only in `builder/conditions/*`, tracked as OSR-04 agent F. Do not assume
+a type without a doc comment is clean until agent F closes that file too.
 
 ## A trap: unknown fields are silent
 

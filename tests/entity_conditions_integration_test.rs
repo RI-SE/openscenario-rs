@@ -12,12 +12,12 @@ use openscenario_rs::types::{
     },
     enums::{RelativeDistanceType, Rule},
     positions::{Position, WorldPosition},
-    scenario::triggers::TriggeringEntities,
+    scenario::triggers::{EntityRef, TriggeringEntities},
 };
 
 #[test]
 fn test_by_entity_condition_speed() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let speed_condition =
         ByEntityCondition::speed(triggering_entities, 25.0, Rule::GreaterThan, "ego_vehicle");
 
@@ -32,7 +32,7 @@ fn test_by_entity_condition_speed() {
 
 #[test]
 fn test_by_entity_condition_reach_position() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let position = Position {
         world_position: Some(WorldPosition::new(100.0, 200.0)),
         ..Default::default()
@@ -50,7 +50,7 @@ fn test_by_entity_condition_reach_position() {
 
 #[test]
 fn test_by_entity_condition_distance() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let position = Position::default();
     let distance_condition =
         ByEntityCondition::distance(triggering_entities, position, 40.0, true, Rule::LessThan);
@@ -67,7 +67,7 @@ fn test_by_entity_condition_distance() {
 
 #[test]
 fn test_by_entity_condition_relative_distance() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let relative_condition = ByEntityCondition::relative_distance(
         triggering_entities,
         "target_vehicle",
@@ -97,7 +97,7 @@ fn test_by_entity_condition_relative_distance() {
 
 #[test]
 fn test_by_entity_condition_speed_construction() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let condition =
         ByEntityCondition::speed(triggering_entities, 10.0, Rule::GreaterThan, "ego_vehicle");
 
@@ -163,9 +163,9 @@ fn test_spatial_condition_builders() {
 #[test]
 fn test_condition_equality() {
     // Test that identical conditions are equal
-    let triggering_entities1 = TriggeringEntities::default();
-    let triggering_entities2 = TriggeringEntities::default();
-    let triggering_entities3 = TriggeringEntities::default();
+    let triggering_entities1 = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities2 = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities3 = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let condition1 =
         ByEntityCondition::speed(triggering_entities1, 25.0, Rule::EqualTo, "vehicle1");
     let condition2 =
@@ -179,7 +179,7 @@ fn test_condition_equality() {
 
 #[test]
 fn test_condition_cloning() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let original = ByEntityCondition::relative_distance(
         triggering_entities,
         "test_vehicle",

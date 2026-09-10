@@ -256,30 +256,6 @@ impl Orientation {
     }
 }
 
-impl Default for RelativeRoadPosition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            ds: Double::literal(0.0),
-            dt: Double::literal(0.0),
-            orientation: None,
-        }
-    }
-}
-
-impl Default for RelativeLanePosition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            d_lane: Int::literal(0),
-            ds: Some(Double::literal(0.0)),
-            offset: Some(Double::literal(0.0)),
-            ds_lane: None,
-            orientation: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,14 +400,14 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_position_defaults() {
-        let rel_road = RelativeRoadPosition::default();
-        assert_eq!(rel_road.entity_ref.as_literal().unwrap(), "DefaultEntity");
+    fn test_relative_position_construction() {
+        let rel_road = RelativeRoadPosition::new("Ego".to_string(), 0.0, 0.0);
+        assert_eq!(rel_road.entity_ref.as_literal().unwrap(), "Ego");
         assert_eq!(rel_road.ds.as_literal().unwrap(), &0.0);
         assert_eq!(rel_road.dt.as_literal().unwrap(), &0.0);
 
-        let rel_lane = RelativeLanePosition::default();
-        assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "DefaultEntity");
+        let rel_lane = RelativeLanePosition::new("Ego".to_string(), 0, 0.0, 0.0);
+        assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "Ego");
         assert_eq!(rel_lane.d_lane, Int::literal(0));
         assert_eq!(rel_lane.ds.unwrap().as_literal().unwrap(), &0.0);
         assert_eq!(rel_lane.offset.unwrap().as_literal().unwrap(), &0.0);

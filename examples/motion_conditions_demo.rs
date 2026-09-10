@@ -7,7 +7,7 @@ use openscenario_rs::types::conditions::entity::{
     AccelerationCondition, ByEntityCondition, EntityCondition, StandStillCondition,
 };
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
-use openscenario_rs::types::scenario::triggers::TriggeringEntities;
+use openscenario_rs::types::scenario::triggers::{EntityRef, TriggeringEntities};
 
 fn main() {
     println!("=== Motion Conditions Demo ===\n");
@@ -58,7 +58,7 @@ fn main() {
     // 4. Using conditions in ByEntityCondition enum
     println!("\n4. ByEntityCondition Integration:");
 
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let conditions = vec![
         ByEntityCondition::acceleration(triggering_entities.clone(), 4.0, Rule::GreaterThan),
         ByEntityCondition::standstill(triggering_entities.clone(), 3.0),

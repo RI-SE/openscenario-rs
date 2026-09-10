@@ -9,12 +9,11 @@
 use crate::types::actions::appearance::{AppearanceAction, VisibilityAction};
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{
-    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedActionTarget, SpeedProfileAction,
-    SynchronizeAction, TeleportAction, TransitionDynamics,
+    LongitudinalDistanceAction, RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction,
+    TeleportAction,
 };
 use crate::types::actions::trailer::TrailerAction;
 use crate::types::basic::OSString;
-use crate::types::enums::{DynamicsDimension, DynamicsShape};
 use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
 
@@ -300,8 +299,14 @@ impl PrivateAction {
 }
 
 /// Longitudinal movement actions (speed control, etc.)
-/// XSD requires exactly one child element (choice group)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// XSD `LongitudinalAction` (`:1431-1437`): a bare `xsd:choice` of `SpeedAction` |
+/// `LongitudinalDistanceAction` | `SpeedProfileAction`, no `minOccurs="0"` wrapper — but
+/// modelled here as parallel `Option`s per the crate's choice-group convention (see
+/// `PrivateAction` above). The derived `Default` — all three branches `None` — states
+/// nothing about which branch was chosen and is kept per the container/choice policy,
+/// consistent with `PrivateAction`'s and `GlobalAction`'s derived defaults in this file.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct LongitudinalAction {
     /// Exactly one of these fields should be present (XML choice group)
     #[serde(
@@ -357,34 +362,12 @@ impl LongitudinalAction {
     }
 }
 
-impl Default for LongitudinalAction {
-    fn default() -> Self {
-        Self {
-            speed_action: Some(SpeedAction::new(
-                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-                SpeedActionTarget::absolute(10.0),
-            )),
-            longitudinal_distance_action: None,
-            speed_profile_action: None,
-        }
-    }
-}
-
 /// Types of longitudinal actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum LongitudinalActionType {
     SpeedAction(SpeedAction),
     // SpeedProfileAction, SynchronizeAction, etc. can be added later
-}
-
-impl Default for Private {
-    fn default() -> Self {
-        Self {
-            entity_ref: crate::types::basic::Value::literal("DefaultEntity".to_string()),
-            private_actions: Vec::new(),
-        }
-    }
 }
 
 impl Private {
@@ -406,9 +389,11 @@ impl Private {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::actions::movement::SpeedProfileEntry;
+    use crate::types::actions::movement::{
+        SpeedActionTarget, SpeedProfileEntry, TransitionDynamics,
+    };
     use crate::types::basic::Value;
-    use crate::types::enums::FollowingMode;
+    use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode};
     use crate::types::environment::{RoadCondition, TimeOfDay, Weather};
 
     #[test]

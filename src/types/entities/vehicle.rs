@@ -178,7 +178,10 @@ impl Vehicle {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: Performance {
                 max_speed: Double::literal(200.0),
                 max_acceleration: Double::literal(10.0),
@@ -204,7 +207,7 @@ impl Vehicle {
             model3d: None,
             parameter_declarations: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions::truck_default(),
             },
             performance: Performance {
@@ -232,7 +235,7 @@ impl Vehicle {
             model3d: None,
             parameter_declarations: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions::motorcycle(),
             },
             performance: Performance {
@@ -289,7 +292,10 @@ impl Default for Vehicle {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: Performance {
                 max_speed: Double::literal(200.0),
                 max_acceleration: Double::literal(10.0),
@@ -336,7 +342,10 @@ mod tests {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: Performance {
                 max_speed: Double::literal(200.0),
                 max_acceleration: Double::literal(10.0),

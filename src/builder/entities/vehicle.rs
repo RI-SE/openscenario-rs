@@ -139,10 +139,20 @@ impl<'parent> VehicleBuilder<'parent> {
 
     /// Set custom dimensions
     pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        let existing_bbox = self.vehicle_data.bounding_box.unwrap_or_default();
+        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
+        // `xsd:all` of required attributes with no schema default
+        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
+        // via a category preset, keep it; otherwise the origin is the explicit
+        // fallback, not an invented one.
+        let existing_center = self
+            .vehicle_data
+            .bounding_box
+            .as_ref()
+            .map(|bbox| bbox.center.clone())
+            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
 
         self.vehicle_data.bounding_box = Some(BoundingBox {
-            center: existing_bbox.center,
+            center: existing_center,
             dimensions: Dimensions {
                 width: Double::literal(width),
                 length: Double::literal(length),
@@ -189,7 +199,17 @@ impl<'parent> VehicleBuilder<'parent> {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: self.vehicle_data.bounding_box.unwrap_or_default(),
+            bounding_box: self
+                .vehicle_data
+                .bounding_box
+                .unwrap_or_else(|| BoundingBox {
+                    center: Center::new(0.0, 0.0, 0.0),
+                    dimensions: Dimensions {
+                        width: Double::literal(2.0),
+                        length: Double::literal(4.5),
+                        height: Double::literal(1.5),
+                    },
+                }),
             performance: self
                 .vehicle_data
                 .performance
@@ -325,10 +345,20 @@ impl DetachedVehicleBuilder {
 
     /// Set custom dimensions
     pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        let existing_bbox = self.vehicle_data.bounding_box.unwrap_or_default();
+        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
+        // `xsd:all` of required attributes with no schema default
+        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
+        // via a category preset, keep it; otherwise the origin is the explicit
+        // fallback, not an invented one.
+        let existing_center = self
+            .vehicle_data
+            .bounding_box
+            .as_ref()
+            .map(|bbox| bbox.center.clone())
+            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
 
         self.vehicle_data.bounding_box = Some(BoundingBox {
-            center: existing_bbox.center,
+            center: existing_center,
             dimensions: Dimensions {
                 width: Double::literal(width),
                 length: Double::literal(length),
@@ -372,7 +402,17 @@ impl DetachedVehicleBuilder {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: self.vehicle_data.bounding_box.unwrap_or_default(),
+            bounding_box: self
+                .vehicle_data
+                .bounding_box
+                .unwrap_or_else(|| BoundingBox {
+                    center: Center::new(0.0, 0.0, 0.0),
+                    dimensions: Dimensions {
+                        width: Double::literal(2.0),
+                        length: Double::literal(4.5),
+                        height: Double::literal(1.5),
+                    },
+                }),
             performance: self
                 .vehicle_data
                 .performance

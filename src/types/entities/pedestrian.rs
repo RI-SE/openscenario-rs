@@ -59,7 +59,7 @@ impl Pedestrian {
             model: None,
             model3d: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions {
                     width: Double::literal(0.6),
                     length: Double::literal(0.6),
@@ -80,7 +80,7 @@ impl Pedestrian {
             model: None,
             model3d: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions {
                     width: Double::literal(0.8),
                     length: Double::literal(1.0),
@@ -101,7 +101,7 @@ impl Pedestrian {
             model: None,
             model3d: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions {
                     width: Double::literal(0.5),
                     length: Double::literal(0.5),
@@ -158,7 +158,10 @@ mod tests {
             role: Some(Value::Literal(Role::Civil)),
             model: None,
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };

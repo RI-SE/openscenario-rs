@@ -733,7 +733,10 @@ mod tests {
             role: None,
             mass: None,
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: CatalogPerformance {
                 max_speed: Value::Literal(250.0),
                 max_acceleration: Value::Literal(15.0),
@@ -776,7 +779,10 @@ mod tests {
             role: None,
             mass: None,
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: CatalogPerformance {
                 max_speed: Value::Parameter("MaxSpeedParam".to_string()),
                 max_acceleration: Value::Literal(10.0),
@@ -922,7 +928,10 @@ mod tests {
             mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal(crate::types::enums::Role::None)),
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -938,7 +947,10 @@ mod tests {
             mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal(crate::types::enums::Role::Civil)),
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -982,7 +994,10 @@ mod tests {
             mass: Value::Parameter("ConeMass".to_string()),
             misc_object_category: Value::Literal(MiscObjectCategory::Obstacle),
             model3d: Some(Value::Literal("cone.obj".to_string())),
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };

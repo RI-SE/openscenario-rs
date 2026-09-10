@@ -8,9 +8,8 @@
 //! - Event priority and execution order management
 //!
 use crate::types::basic::{Double, OSString, Value};
-use crate::types::conditions::value::SimulationTimeCondition;
 use crate::types::conditions::{ByEntityCondition, ByValueCondition};
-use crate::types::enums::{ConditionEdge, Rule, TriggeringEntitiesRule};
+use crate::types::enums::{ConditionEdge, TriggeringEntitiesRule};
 use serde::{Deserialize, Serialize};
 
 /// Trigger definition containing condition groups
@@ -18,7 +17,11 @@ use serde::{Deserialize, Serialize};
 /// A Trigger represents a logical OR of condition groups - the trigger fires
 /// when any of its condition groups evaluates to true.
 /// Empty triggers (no condition groups) are allowed for optional triggers.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// XSD `Trigger` (`:2395-2399`): `ConditionGroup` has `minOccurs="0"`, so an empty
+/// `Vec` is schema-valid, not fabricated — the derived `Default` states nothing and is
+/// kept.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Trigger {
     /// Condition groups that make up this trigger (OR logic between groups)
     #[serde(rename = "ConditionGroup", default)]
@@ -29,7 +32,14 @@ pub struct Trigger {
 ///
 /// A ConditionGroup represents a logical AND of conditions - the group
 /// evaluates to true when all of its conditions are true.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// XSD `ConditionGroup` (`:962-966`): `Condition` has `maxOccurs="unbounded"` and no
+/// `minOccurs="0"`, so a schema-valid group needs at least one condition. The derived
+/// `Default`'s `Vec::new()` is not schema-valid content on its own, but it states nothing
+/// invented (no fabricated `Condition`), unlike the previous hand-written impl which
+/// filled the gap with `Condition::default()`. Kept per the container/choice policy as a
+/// construction convenience only.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ConditionGroup {
     /// Conditions within this group (AND logic between conditions)
     #[serde(rename = "Condition")]
@@ -94,59 +104,6 @@ pub struct EntityRef {
     /// Name of the referenced entity
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
-}
-
-// Default implementations
-impl Default for Trigger {
-    fn default() -> Self {
-        Self {
-            condition_groups: vec![ConditionGroup::default()],
-        }
-    }
-}
-
-impl Default for ConditionGroup {
-    fn default() -> Self {
-        Self {
-            conditions: vec![Condition::default()],
-        }
-    }
-}
-
-impl Default for Condition {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultCondition".to_string()),
-            condition_edge: Value::Literal(ConditionEdge::Rising),
-            delay: Double::literal(0.0),
-            // NOTE (OSR-04 agent C): `ByValueCondition::default()` is gone — it silently
-            // picked the `SimulationTimeCondition` branch of an `xsd:choice`. This call site
-            // is now explicit about which branch it fabricates, but `Condition::default()`
-            // itself (owned by OSR-04 agent E, `scenario/triggers.rs`) still invents a whole
-            // child element. That is unchanged behavior, not something agent C introduced.
-            by_value_condition: Some(ByValueCondition::simulation_time(
-                SimulationTimeCondition::new(10.0, Rule::GreaterThan),
-            )),
-            by_entity_condition: None,
-        }
-    }
-}
-
-impl Default for ConditionType {
-    fn default() -> Self {
-        ConditionType::ByValue(ByValueCondition::simulation_time(
-            SimulationTimeCondition::new(10.0, Rule::GreaterThan),
-        ))
-    }
-}
-
-impl Default for TriggeringEntities {
-    fn default() -> Self {
-        Self {
-            triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-            entity_refs: Vec::new(),
-        }
-    }
 }
 
 // Implementation methods
@@ -255,11 +212,21 @@ impl EntityRef {
 mod tests {
     use super::*;
     use crate::types::basic::Value;
-    use crate::types::enums::ConditionEdge;
+    use crate::types::conditions::value::SimulationTimeCondition;
+    use crate::types::enums::{ConditionEdge, Rule};
+
+    /// A stand-in `ConditionType` for tests that don't care which branch is used.
+    /// `ConditionType::default()` was removed (OSR-04, agent E) — it silently picked
+    /// the `ByValue`/`SimulationTimeCondition` branch of an `xsd:choice`.
+    fn test_condition_type() -> ConditionType {
+        ConditionType::ByValue(ByValueCondition::simulation_time(
+            SimulationTimeCondition::new(10.0, Rule::GreaterThan),
+        ))
+    }
 
     #[test]
     fn test_trigger_creation() {
-        let condition = Condition::new("TestCondition", ConditionType::default());
+        let condition = Condition::new("TestCondition", test_condition_type());
         let group = ConditionGroup::new(condition);
         let trigger = Trigger::new(group);
 
@@ -279,8 +246,8 @@ mod tests {
     fn test_condition_group_and_logic() {
         let mut group = ConditionGroup::empty();
 
-        group.add_condition(Condition::new("Condition1", ConditionType::default()));
-        group.add_condition(Condition::new("Condition2", ConditionType::default()));
+        group.add_condition(Condition::new("Condition1", test_condition_type()));
+        group.add_condition(Condition::new("Condition2", test_condition_type()));
 
         assert_eq!(group.conditions.len(), 2);
         assert_eq!(group.conditions[0].name.as_literal().unwrap(), "Condition1");
@@ -289,10 +256,13 @@ mod tests {
 
     #[test]
     fn test_trigger_or_logic() {
-        let mut trigger = Trigger::default();
+        // `Trigger::default()` is now the benign empty-groups container (OSR-04, agent
+        // E); build the first group explicitly rather than relying on it to fabricate one.
+        let first_condition = Condition::new("FirstCondition", test_condition_type());
+        let mut trigger = Trigger::new(ConditionGroup::new(first_condition));
 
         // Add second condition group (OR logic)
-        let condition = Condition::new("SecondCondition", ConditionType::default());
+        let condition = Condition::new("SecondCondition", test_condition_type());
         let group = ConditionGroup::new(condition);
         trigger.add_condition_group(group);
 
@@ -308,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_condition_with_edge_and_delay() {
-        let condition = Condition::new("TimedCondition", ConditionType::default())
+        let condition = Condition::new("TimedCondition", test_condition_type())
             .with_edge(ConditionEdge::Falling)
             .with_delay(Value::literal(2.5));
 
@@ -354,25 +324,25 @@ mod tests {
 
     #[test]
     fn test_trigger_serialization() {
-        let trigger = Trigger::default();
+        let condition = Condition::new("NamedCondition", test_condition_type());
+        let trigger = Trigger::new(ConditionGroup::new(condition));
         let serialized = quick_xml::se::to_string(&trigger).expect("Serialization should succeed");
-        assert!(serialized.contains("DefaultCondition"));
+        assert!(serialized.contains("NamedCondition"));
     }
 
     #[test]
     fn test_complex_trigger_scenario() {
         // Create a complex trigger: (Condition1 AND Condition2) OR (Condition3)
         let mut group1 = ConditionGroup::new(
-            Condition::new("SpeedCondition", ConditionType::default())
+            Condition::new("SpeedCondition", test_condition_type())
                 .with_edge(ConditionEdge::Rising),
         );
         group1.add_condition(
-            Condition::new("TimeCondition", ConditionType::default())
-                .with_delay(Value::literal(1.0)),
+            Condition::new("TimeCondition", test_condition_type()).with_delay(Value::literal(1.0)),
         );
 
         let group2 = ConditionGroup::new(
-            Condition::new("CollisionCondition", ConditionType::default())
+            Condition::new("CollisionCondition", test_condition_type())
                 .with_edge(ConditionEdge::RisingOrFalling),
         );
 

@@ -48,7 +48,15 @@ pub struct SelectedEntities {
 }
 
 /// Entity distribution system for probabilistic entity spawning
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+///
+/// XSD `EntityDistribution`: `EntityDistributionEntry` has `maxOccurs="unbounded"` with no
+/// `minOccurs="0"`, so a schema-valid distribution needs at least one entry. The derived
+/// `Default`'s `Vec::new()` is not schema-valid content on its own, but — like
+/// `ConditionGroup` (`scenario/triggers.rs`) — it states nothing invented, unlike the
+/// previous hand-written impl which filled the gap with a fabricated entry. Kept per the
+/// container/choice policy as a construction convenience, and because `EntityDistribution`
+/// has a `pub fn new()` that clippy's `new_without_default` otherwise flags.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct EntityDistribution {
     /// List of distribution entries
     #[serde(rename = "EntityDistributionEntry")]
@@ -140,70 +148,6 @@ pub struct ByType {
     /// Type specification for selection
     #[serde(rename = "@objectType")]
     pub type_spec: Value<ObjectType>,
-}
-
-// Default implementations
-impl Default for EntitySelection {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultSelection".to_string()),
-            members: SelectedEntities::default(),
-        }
-    }
-}
-
-impl Default for EntityDistribution {
-    fn default() -> Self {
-        Self {
-            entries: vec![EntityDistributionEntry::default()],
-        }
-    }
-}
-
-impl Default for EntityDistributionEntry {
-    fn default() -> Self {
-        Self {
-            weight: Double::literal(1.0),
-            scenario_object_template: ScenarioObjectTemplate::default(),
-        }
-    }
-}
-
-impl Default for ScenarioObjectTemplate {
-    fn default() -> Self {
-        Self {
-            vehicle: Some(Vehicle::default()),
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
-            entity_catalog_reference: None,
-            object_controller: Vec::new(),
-        }
-    }
-}
-
-impl Default for ExternalObjectReference {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultObject".to_string()),
-        }
-    }
-}
-
-impl Default for ByObjectType {
-    fn default() -> Self {
-        Self {
-            object_type: Value::Literal(ObjectType::Vehicle),
-        }
-    }
-}
-
-impl Default for ByType {
-    fn default() -> Self {
-        Self {
-            type_spec: Value::Literal(ObjectType::Vehicle),
-        }
-    }
 }
 
 // Implementation methods

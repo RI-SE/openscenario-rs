@@ -855,7 +855,10 @@ mod tests {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: crate::types::entities::vehicle::Performance {
                 max_speed: Value::literal(200.0),
                 max_acceleration: Value::literal(10.0),
@@ -937,7 +940,10 @@ mod tests {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: crate::types::entities::vehicle::Performance {
                 max_speed: Value::literal(200.0),
                 max_acceleration: Value::literal(10.0),
@@ -1008,7 +1014,10 @@ mod tests {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: crate::types::entities::vehicle::Performance {
                 max_speed: Value::literal(200.0),
                 max_acceleration: Value::literal(10.0),
@@ -1030,7 +1039,10 @@ mod tests {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: crate::types::entities::vehicle::Performance {
                 max_speed: Value::literal(200.0),
                 max_acceleration: Value::literal(10.0),
@@ -1141,7 +1153,10 @@ mod tests {
             mass: None,
             model3d: None,
             parameter_declarations: None,
-            bounding_box: crate::types::geometry::BoundingBox::default(),
+            bounding_box: crate::types::geometry::BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: crate::types::entities::vehicle::Performance {
                 max_speed: crate::types::basic::Value::literal(200.0),
                 max_acceleration: crate::types::basic::Value::literal(10.0),

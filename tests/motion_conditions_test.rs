@@ -8,7 +8,7 @@ use openscenario_rs::types::conditions::entity::{
     AccelerationCondition, ByEntityCondition, EntityCondition, StandStillCondition,
 };
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
-use openscenario_rs::types::scenario::triggers::TriggeringEntities;
+use openscenario_rs::types::scenario::triggers::{EntityRef, TriggeringEntities};
 
 #[test]
 fn test_acceleration_condition_creation() {
@@ -75,7 +75,7 @@ fn test_standstill_condition_with_duration() {
 
 #[test]
 fn test_by_entity_condition_acceleration_variants() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let simple =
         ByEntityCondition::acceleration(triggering_entities.clone(), 3.0, Rule::GreaterThan);
     match simple.entity_condition {
@@ -108,7 +108,7 @@ fn test_by_entity_condition_acceleration_variants() {
 
 #[test]
 fn test_by_entity_condition_standstill_variant() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let condition = ByEntityCondition::standstill(triggering_entities, 4.0);
     match condition.entity_condition {
         EntityCondition::StandStill(standstill) => {
@@ -150,7 +150,7 @@ fn test_serialization_deserialization() {
 #[test]
 fn test_motion_conditions_in_enum() {
     // Test that both new condition types work within the ByEntityCondition enum
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let conditions = vec![
         ByEntityCondition::acceleration(triggering_entities.clone(), 5.0, Rule::GreaterThan),
         ByEntityCondition::standstill(triggering_entities.clone(), 2.0),

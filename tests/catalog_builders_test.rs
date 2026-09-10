@@ -141,7 +141,10 @@ mod catalog_builder_tests {
             mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal(openscenario_rs::types::enums::Role::Civil)),
             model3d: Some("./models/ped.glb".to_string()),
-            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::new(
+                openscenario_rs::types::geometry::Center::new(0.0, 0.0, 0.0),
+                openscenario_rs::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -166,7 +169,10 @@ mod catalog_builder_tests {
             mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal(openscenario_rs::types::enums::Role::Civil)),
             model3d: Some("./models/ped.glb".to_string()),
-            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::new(
+                openscenario_rs::types::geometry::Center::new(0.0, 0.0, 0.0),
+                openscenario_rs::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -198,7 +204,10 @@ mod catalog_builder_tests {
             mass: Value::Literal("80.0".to_string()), // Parameterized mass
             role: Some(Value::Literal(openscenario_rs::types::enums::Role::Police)),
             model3d: None,
-            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::new(
+                openscenario_rs::types::geometry::Center::new(0.0, 0.0, 0.0),
+                openscenario_rs::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };

@@ -17,7 +17,7 @@ fn test_enhanced_bounding_box_operations() {
     let params = HashMap::new();
 
     let bbox = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions {
             width: openscenario_rs::types::basic::Value::literal(2.0),
             length: openscenario_rs::types::basic::Value::literal(4.0),
@@ -47,7 +47,7 @@ fn test_bounding_box_intersection() {
     let params = HashMap::new();
 
     let bbox1 = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::car(),
     };
 

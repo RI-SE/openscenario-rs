@@ -213,20 +213,14 @@ fn test_parameter_support() {
 
 #[test]
 fn test_default_implementations() {
-    let rel_road_default = RelativeRoadPosition::default();
-    assert_eq!(
-        rel_road_default.entity_ref.as_literal().unwrap(),
-        "DefaultEntity"
-    );
+    let rel_road_default = RelativeRoadPosition::new("Ego".to_string(), 0.0, 0.0);
+    assert_eq!(rel_road_default.entity_ref.as_literal().unwrap(), "Ego");
     assert_eq!(rel_road_default.ds.as_literal().unwrap(), &0.0);
     assert_eq!(rel_road_default.dt.as_literal().unwrap(), &0.0);
     assert!(rel_road_default.orientation.is_none());
 
-    let rel_lane_default = RelativeLanePosition::default();
-    assert_eq!(
-        rel_lane_default.entity_ref.as_literal().unwrap(),
-        "DefaultEntity"
-    );
+    let rel_lane_default = RelativeLanePosition::new("Ego".to_string(), 0, 0.0, 0.0);
+    assert_eq!(rel_lane_default.entity_ref.as_literal().unwrap(), "Ego");
     assert_eq!(rel_lane_default.d_lane.as_literal().unwrap(), &0);
     assert_eq!(
         rel_lane_default.ds.as_ref().unwrap().as_literal().unwrap(),

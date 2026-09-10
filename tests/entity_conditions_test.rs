@@ -5,13 +5,13 @@ use openscenario_rs::types::{
     basic::Double,
     conditions::{ByEntityCondition, EntityCondition, SpeedCondition},
     enums::Rule,
-    scenario::triggers::TriggeringEntities,
+    scenario::triggers::{EntityRef, TriggeringEntities},
 };
 
 #[test]
 fn test_by_entity_condition_basic() {
     // Test that we can create a basic ByEntityCondition
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let condition =
         ByEntityCondition::speed(triggering_entities, 10.0, Rule::GreaterThan, "ego_vehicle");
 

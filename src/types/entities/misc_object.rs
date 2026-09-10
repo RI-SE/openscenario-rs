@@ -55,7 +55,10 @@ impl MiscObject {
             name: crate::types::basic::Value::literal(name),
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
         }
     }

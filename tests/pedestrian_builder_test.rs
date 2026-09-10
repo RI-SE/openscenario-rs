@@ -174,7 +174,10 @@ mod pedestrian_builder_tests {
             role: Some(Value::Literal(Role::Civil)),
             model: None,
             model3d: Some("./model.glb".to_string()),
-            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::new(
+                openscenario_rs::types::geometry::Center::new(0.0, 0.0, 0.0),
+                openscenario_rs::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
