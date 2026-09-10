@@ -92,7 +92,12 @@ pub struct AssignControllerAction {
 }
 
 /// Activate controller action for controller activation control
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// (OSR-04, agent D) `Default` is a `#[derive]`: every attribute is optional
+/// with no schema default (XSD:713-721), so all-`None` states nothing —
+/// benign. Use `all_domains`/`movement_only` for the previously-fabricated
+/// `true`/`false` values.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ActivateControllerAction {
     /// Deprecated reference to a controller by name — XSD `@controllerRef`
     #[serde(rename = "@controllerRef", skip_serializing_if = "Option::is_none")]
@@ -248,55 +253,18 @@ impl Default for AssignControllerAction {
     }
 }
 
-impl Default for ActivateControllerAction {
-    fn default() -> Self {
-        Self {
-            controller_ref: None,
-            object_controller_ref: None,
-            longitudinal: Some(Boolean::literal(true)),
-            lateral: Some(Boolean::literal(true)),
-            lighting: Some(Boolean::literal(false)),
-            animation: Some(Boolean::literal(false)),
-        }
-    }
-}
-
-impl Default for ManualGear {
-    fn default() -> Self {
-        Self {
-            number: Int::literal(1),
-        }
-    }
-}
-
-impl Default for AutomaticGear {
-    fn default() -> Self {
-        Self {
-            gear: Value::Literal(AutomaticGearType::Drive),
-        }
-    }
-}
-
-impl Default for Brake {
-    fn default() -> Self {
-        Self {
-            value: Double::literal(0.0),
-            max_rate: None,
-        }
-    }
-}
-
-impl Default for BrakeInput {
-    fn default() -> Self {
-        Self::BrakePercent(Brake::default())
-    }
-}
-
-impl Default for Gear {
-    fn default() -> Self {
-        Self::AutomaticGear(AutomaticGear::default())
-    }
-}
+// (OSR-04, agent D) `ActivateControllerAction`'s hand-written `Default`
+// fabricated `longitudinal`/`lateral`/`lighting`/`animation` values — none of
+// its attributes is `use="required"` (XSD:713-721) or carries a
+// `default="…"`, so the correct default is all-`None`, which `derive(Default)`
+// already gives it (see the struct definition above). The explicit values
+// live in `all_domains`/`movement_only` below instead.
+//
+// `ManualGear::default()` (`@number` required, XSD:1471-1473),
+// `AutomaticGear::default()` (`@gear` required, XSD:792-794), `Brake::default()`
+// (`@value` required, XSD:815-818) and the `BrakeInput`/`Gear` choice
+// defaults (XSD groups :819-824, :1258-1263) all fabricated a value or
+// silently picked a branch. Removed; use the named constructors below.
 
 impl AssignControllerAction {
     /// Create assignment with direct controller
@@ -533,8 +501,8 @@ mod tests {
     }
 
     #[test]
-    fn test_activate_controller_default_serialization() {
-        let action = ActivateControllerAction::default();
+    fn test_activate_controller_all_domains_serialization() {
+        let action = ActivateControllerAction::all_domains(true, true, false, false);
         let xml = quick_xml::se::to_string(&action).expect("Serialization should succeed");
 
         // Should contain explicit boolean values, not empty strings
@@ -587,9 +555,12 @@ mod tests {
         assert!(assign.controller.is_none());
         assert!(assign.catalog_reference.is_none());
 
+        // `ActivateControllerAction::default()` is all-`None` (benign, derived) —
+        // the previously-fabricated `true`/`true` values now require
+        // `all_domains`/`movement_only`.
         let activate = ActivateControllerAction::default();
-        assert_eq!(activate.longitudinal.unwrap().as_literal(), Some(&true));
-        assert_eq!(activate.lateral.unwrap().as_literal(), Some(&true));
+        assert!(activate.longitudinal.is_none());
+        assert!(activate.lateral.is_none());
 
         let controller_action = ControllerAction::default();
         assert!(controller_action.assign_controller_action.is_none());
@@ -608,9 +579,6 @@ mod tests {
 
         let full_brake = Brake::full();
         assert_eq!(full_brake.value.as_literal().unwrap(), &1.0);
-
-        let default_brake = Brake::default();
-        assert_eq!(default_brake.value.as_literal().unwrap(), &0.0);
     }
 
     #[test]
@@ -624,10 +592,6 @@ mod tests {
         assert!(!force_brake.is_percent());
         assert!(force_brake.is_force());
         assert_eq!(force_brake.value().as_literal(), Some(&500.0));
-
-        let default_brake_input = BrakeInput::default();
-        assert!(default_brake_input.is_percent());
-        assert_eq!(default_brake_input.value().as_literal(), Some(&0.0));
     }
 
     #[test]
@@ -686,12 +650,12 @@ mod tests {
     }
 
     #[test]
-    fn test_gear_group_default() {
-        let default_gear = Gear::default();
-        if let Gear::AutomaticGear(gear) = default_gear {
+    fn test_gear_group_automatic_drive_constructor() {
+        let gear = Gear::automatic_drive();
+        if let Gear::AutomaticGear(gear) = gear {
             assert_eq!(gear.gear, Value::Literal(AutomaticGearType::Drive));
         } else {
-            panic!("Expected AutomaticGear variant as default");
+            panic!("Expected AutomaticGear variant");
         }
     }
 

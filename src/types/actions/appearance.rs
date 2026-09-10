@@ -201,7 +201,12 @@ pub struct ColorCmyk {
 }
 
 /// Animation action for entity movement and component animation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// (OSR-04, agent D) `Default` is a `#[derive]`, not hand-written: every
+/// field is `None` (or resolves to all-`None` via `AnimationType`'s own
+/// derived `Default`), so it states nothing — benign per the crate's
+/// `Default` policy.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AnimationAction {
     /// Whether the animation repeats
     #[serde(rename = "@loop", default, skip_serializing_if = "Option::is_none")]
@@ -345,36 +350,40 @@ pub struct AnimationState {
     pub state: Double,
 }
 
-impl Default for VisibilityAction {
-    fn default() -> Self {
+// (OSR-04, agent D) `VisibilityAction`, `LightStateAction`, `LightState` and
+// `AnimationState` no longer implement `Default`: all fabricated a value for
+// an XSD `use="required"` attribute (`VisibilityAction` :2550-2557, `LightState`
+// :1402-1409, `LightStateAction` :1411-1417, `AnimationState` :754-756) — none
+// declares a `default="…"`. Construct them explicitly.
+impl VisibilityAction {
+    /// XSD `VisibilityAction` (:2550-2557): all three attributes required.
+    pub fn new(graphics: bool, sensors: bool, traffic: bool) -> Self {
         Self {
-            graphics: Boolean::literal(true),
-            sensors: Boolean::literal(true),
-            traffic: Boolean::literal(true),
+            graphics: Boolean::literal(graphics),
+            sensors: Boolean::literal(sensors),
+            traffic: Boolean::literal(traffic),
             sensor_reference_set: None,
         }
     }
 }
 
-impl Default for LightStateAction {
-    fn default() -> Self {
+impl LightStateAction {
+    /// XSD `LightStateAction` (:1411-1417): `LightType` and `LightState`
+    /// children are both required.
+    pub fn new(light_type: LightType, light_state: LightState) -> Self {
         Self {
             transition_time: None,
-            light_type: LightType {
-                vehicle_light: Some(VehicleLight {
-                    vehicle_light_type: Value::Literal(VehicleLightType::LowBeam),
-                }),
-                user_defined_light: None,
-            },
-            light_state: LightState::default(),
+            light_type,
+            light_state,
         }
     }
 }
 
-impl Default for LightState {
-    fn default() -> Self {
+impl LightState {
+    /// XSD `LightState` (:1402-1409): `@mode` is the only required attribute.
+    pub fn new(mode: LightMode) -> Self {
         Self {
-            mode: Value::Literal(LightMode::On),
+            mode: Value::Literal(mode),
             luminous_intensity: None,
             flashing_on_duration: None,
             flashing_off_duration: None,
@@ -383,29 +392,20 @@ impl Default for LightState {
     }
 }
 
-impl Default for AnimationAction {
-    fn default() -> Self {
+impl AnimationState {
+    /// XSD `AnimationState` (:754-756): required `@state`.
+    pub fn new(state: f64) -> Self {
         Self {
-            r#loop: None,
-            animation_duration: None,
-            animation_type: AnimationType::default(),
-            animation_state: None,
+            state: Double::literal(state),
         }
     }
 }
 
-impl Default for AnimationState {
-    fn default() -> Self {
+impl SensorReference {
+    /// XSD `SensorReference` (:2019-2021): required `@name`.
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            state: Double::literal(0.0),
-        }
-    }
-}
-
-impl Default for SensorReference {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultSensor".to_string()),
+            name: OSString::literal(name.into()),
         }
     }
 }
@@ -415,8 +415,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_visibility_action_default_all_true() {
-        let va = VisibilityAction::default();
+    fn test_visibility_action_new_constructor() {
+        let va = VisibilityAction::new(true, true, true);
         assert_eq!(va.graphics.as_literal(), Some(&true));
         assert_eq!(va.sensors.as_literal(), Some(&true));
         assert_eq!(va.traffic.as_literal(), Some(&true));
@@ -583,7 +583,7 @@ mod tests {
 
     #[test]
     fn test_visibility_action_xml_roundtrip() {
-        let va = VisibilityAction::default();
+        let va = VisibilityAction::new(true, true, true);
         let xml = quick_xml::se::to_string(&va).unwrap();
         let deserialized: VisibilityAction = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(va, deserialized);

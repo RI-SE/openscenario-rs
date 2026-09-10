@@ -296,6 +296,63 @@ Breaking, unless noted.
   E's own `Default` impls in `triggers.rs` were left in place. This closes out all
   fabricating `Default` impls in `types/conditions/entity.rs`, `types/conditions/value.rs`
   and `types/conditions/spatial.rs`.
+- **`Default` impls that invent scenario data (OSR-04, agent D:
+  `types/actions/{wrappers,appearance,control,trailer}.rs`).** All fabricating impls removed:
+  19 in `wrappers.rs`, 5 in `appearance.rs`, 6 in `control.rs`, 1 in `trailer.rs` — 31 total,
+  plus `StoryGlobalAction`'s dependent `#[derive(Default)]` in `types/scenario/story.rs`.
+  Benign container/choice defaults (all-`None`/empty, or already-derived) were left alone: 2
+  in `wrappers.rs` (`DeleteEntityAction`, `RandomRouteAction`), 3 in `appearance.rs`
+  (`SensorReferenceSet`, `LightType`, `AppearanceAction`; `AnimationType`,
+  `ComponentAnimation`, `PedestrianAnimation` were already `#[derive(Default)]`), 2 in
+  `control.rs` (`ControllerAction`, `OverrideControllerValueAction`), 2 in `trailer.rs`
+  (`TrailerAction`, `DisconnectTrailerAction`).
+  In `wrappers.rs`: `Action`/`GlobalAction`/`PrivateAction` (each a bare `xsd:choice` enum,
+  XSD:705-712/1282-1293/1777-1786 — `Default` silently picked one branch; the enum variants
+  are themselves the constructors, so no replacement method was needed), `EntityAction`
+  (invented `"defaultEntity"` and picked the delete branch — gained `::add`/`::delete`),
+  `TrafficAction` (picked the stop branch — gained `::new(action)`/`::with_name`),
+  `NamedAction` (F13, known-broken for serialization — `Default` removed, no replacement),
+  `SetMonitorAction`, `VariableAction`, `VariableSetAction`, `VariableAddValueRule`,
+  `VariableMultiplyByValueRule`, `ParameterAction`, `ParameterSetAction`,
+  `ParameterAddValueRule`, `ParameterMultiplyByValueRule` (each invented a name/ref/value for
+  an XSD `use="required"` attribute — gained `::new`), `VariableModifyAction`/
+  `ParameterModifyAction` (fabricated a whole-child `Rule` — gained `::new(rule)`, plus
+  `VariableModifyRule::add_value`/`::multiply_by_value` and `ModifyRule::add_value`/
+  `::multiply_by_value` for the nested choice), `UserDefinedAction` (fabricated a whole-child
+  `CustomCommandAction` — gained `::new`), `CustomCommandAction` (invented `"default"` for
+  `@type` — gained `::new`).
+  In `appearance.rs`: `VisibilityAction` (invented `graphics`/`sensors`/`traffic` all `true`
+  for three XSD `use="required"` attributes, XSD:2550-2557 — gained `::new`),
+  `LightStateAction` (fabricated a whole-child `LightType`/`LightState`, XSD:1411-1417 —
+  gained `::new`), `LightState` (invented `LightMode::On` for `@mode`, XSD:1402-1409 — gained
+  `::new`), `AnimationState` (invented `0.0` for `@state`, XSD:754-756 — gained `::new`),
+  `SensorReference` (invented `"DefaultSensor"`, XSD:2019-2021 — gained `::new`).
+  In `control.rs`: `ActivateControllerAction` (invented `longitudinal`/`lateral: true`,
+  `lighting`/`animation: false` — none of its attributes is `use="required"` or carries a
+  `default="…"`, XSD:713-721, so the correct default is all-`None`; the hand-written impl was
+  replaced with `#[derive(Default)]`, and the fabricated values now live in the pre-existing
+  `all_domains`/`movement_only` constructors), `ManualGear` (invented `1` for `@number`,
+  XSD:1471-1473), `AutomaticGear` (silently picked `AutomaticGearType::Drive`, XSD:792-794),
+  `Brake` (invented `0.0` for `@value`, XSD:815-818), `BrakeInput`/`Gear` (each a schema
+  `xsd:group` choice — silently picked one branch, XSD:819-824/1258-1263) — all five already
+  had explicit constructors from an earlier pass (`ManualGear::new`, `AutomaticGear::park`
+  etc., `Brake::new`, `BrakeInput::percent`/`::force`, `Gear::manual`/`::automatic`), so only
+  the fabricating `Default` impls needed removing.
+  In `trailer.rs`: `ConnectTrailerAction` (invented `"DefaultTrailer"` for `@trailerRef`,
+  XSD:967-969 — gained `::new`).
+  `StoryGlobalAction` (`types/scenario/story.rs`) lost its `#[derive(Default)]`: it required
+  `wrappers::GlobalAction: Default`, which fabricated a choice branch; the field it wraps is
+  `Option<StoryGlobalAction>`, so no default is needed.
+  None of the underlying XSD attributes carries a `default="…"` — all are `use="required"` or
+  simply optional with no schema default (checked individually against
+  `Schema/OpenSCENARIO.xsd`; running total across OSR-03 and every OSR-04 agent so far: no
+  genuine schema default found in any file touched by this series).
+  Call sites fixed in `tests/actions_serialization_test.rs` (two tests exercising the
+  fabricated defaults rewritten to exercise the new constructors instead — same test count as
+  before, 742 lib tests, so no coverage was lost),
+  `tests/init_action_choices_test.rs`, and within the four owned files' own test modules.
+  This closes out all fabricating `Default` impls in `types/actions/wrappers.rs`,
+  `types/actions/appearance.rs`, `types/actions/control.rs` and `types/actions/trailer.rs`.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

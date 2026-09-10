@@ -177,9 +177,13 @@ fn global_action_choice_cardinality_is_validated() {
 
     let multiple = GlobalAction {
         set_monitor_action: Some(
-            openscenario_rs::types::actions::wrappers::SetMonitorAction::default(),
+            openscenario_rs::types::actions::wrappers::SetMonitorAction::new("monitor1", true),
         ),
-        traffic_action: Some(openscenario_rs::types::actions::wrappers::TrafficAction::default()),
+        traffic_action: Some(
+            openscenario_rs::types::actions::wrappers::TrafficAction::new(
+                TrafficActionChoice::TrafficStopAction(Default::default()),
+            ),
+        ),
         ..Default::default()
     };
     assert!(multiple.validate().is_err());

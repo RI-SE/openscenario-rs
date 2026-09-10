@@ -59,7 +59,12 @@ pub struct StoryAction {
 /// `wrappers::GlobalAction`. As a named child element the choice has to sit
 /// behind a wrapper struct, the same shape `RoutePosition.RouteRefElement`
 /// uses.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// (OSR-04, agent D) `#[derive(Default)]` removed: it required
+// `wrappers::GlobalAction: Default`, which fabricated a choice branch
+// (`GlobalAction::TrafficAction`) for what XSD:1282-1293 declares a
+// `xsd:choice` with no default. `global_action` above is `Option<..>`, so
+// no `Default` is needed here.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "GlobalAction")]
 pub struct StoryGlobalAction {
     #[serde(flatten)]

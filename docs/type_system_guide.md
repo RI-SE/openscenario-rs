@@ -330,9 +330,35 @@ were removed. Two call sites outside agent C's files needed fixing: `Condition::
 explicitly instead — the same fabricated `SimulationTimeCondition` content as before, now named
 rather than defaulted. Agent E's own `Default` impls in that file were left untouched.
 
-The remaining ~32 fabricating impls outside `movement.rs`/`route.rs`/`routing/mod.rs`/
-`traffic.rs`/`conditions/{entity,value,spatial}.rs` are tracked as separate passes (OSR-04
-agents D–F); do not assume a type without a doc comment saying otherwise is clean.
+OSR-04 agent D (`src/types/actions/{wrappers,appearance,control,trailer}.rs`) removed all 31
+fabricating impls across those four files. In `wrappers.rs` (19): `Action`, `GlobalAction`,
+`PrivateAction` (each a bare `xsd:choice` enum — `Default` silently picked one branch; the enum
+variants are themselves the constructors, no replacement method needed), `EntityAction`
+(gained `::add`/`::delete`), `TrafficAction` (gained `::new`/`::with_name`), `NamedAction`
+(F13, known-broken for serialization — removed, no replacement), `SetMonitorAction`,
+`VariableAction`, `VariableSetAction`, `VariableAddValueRule`, `VariableMultiplyByValueRule`,
+`ParameterAction`, `ParameterSetAction`, `ParameterAddValueRule`,
+`ParameterMultiplyByValueRule` (each invented a name/ref/value — gained `::new`),
+`VariableModifyAction`/`ParameterModifyAction` (fabricated a whole-child `Rule` — gained
+`::new`, plus `VariableModifyRule::add_value`/`::multiply_by_value` and
+`ModifyRule::add_value`/`::multiply_by_value` for the nested choice), `UserDefinedAction`
+(fabricated a whole-child `CustomCommandAction`), `CustomCommandAction` (invented `"default"`
+for `@type`). In `appearance.rs` (5): `VisibilityAction`, `LightStateAction`, `LightState`,
+`AnimationState`, `SensorReference` — each gained `::new`. In `control.rs` (6):
+`ActivateControllerAction` (none of its attributes is `use="required"` or has a
+`default="…"`, so the fabricated `true`/`false` values were wrong even for a `Default` — it
+is now `#[derive(Default)]`, all-`None`, and the values live in the pre-existing
+`all_domains`/`movement_only` constructors), `ManualGear`, `AutomaticGear`, `Brake`,
+`BrakeInput`, `Gear` — all five already had explicit constructors from an earlier pass. In
+`trailer.rs` (1): `ConnectTrailerAction` (invented `"DefaultTrailer"` — gained `::new`).
+`StoryGlobalAction` (`src/types/scenario/story.rs`) lost its `#[derive(Default)]`, which had
+transitively required the removed `wrappers::GlobalAction: Default`; the field it wraps is
+already `Option<StoryGlobalAction>`, so no default was needed.
+
+**The remaining fabricating impls are tracked as OSR-04 agents E and F** (`entities/selection.rs`,
+`positions/road.rs`, `geometry/shapes.rs`, `scenario/triggers.rs`, `basic.rs`,
+`scenario/init.rs`, and `builder/conditions/*`); do not assume a type without a doc comment
+saying otherwise is clean.
 
 ## A trap: unknown fields are silent
 

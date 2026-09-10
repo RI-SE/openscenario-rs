@@ -148,7 +148,7 @@ fn test_private_action_variants() {
     assert!(serialized.contains("LateralAction"));
 
     // Test VisibilityAction
-    let private_action = PrivateAction::VisibilityAction(VisibilityAction::default());
+    let private_action = PrivateAction::VisibilityAction(VisibilityAction::new(true, true, true));
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("VisibilityAction"));
 
@@ -220,7 +220,7 @@ fn test_action_wrapper() {
 #[test]
 fn test_user_defined_action() {
     let user_action = UserDefinedAction {
-        custom_command_action: CustomCommandAction::default(),
+        custom_command_action: CustomCommandAction::new("default", ""),
     };
 
     let core_action = Action::UserDefinedAction(user_action);
@@ -399,52 +399,80 @@ fn test_random_route_action() {
 
 #[test]
 fn test_type_aliases() {
-    // Test that type aliases work correctly
-    let _entity_action: EntityAction = EntityAction::default();
+    // (OSR-04, agent D) These types' `Default` impls fabricated content
+    // (a name, an enum branch) for XSD `use="required"` attributes/choices
+    // and were removed; exercise the named constructors instead.
+    let _entity_action: EntityAction = EntityAction::delete("defaultEntity");
     let _infra_action: InfrastructureAction = InfrastructureAction::new(
         TrafficSignalAction::state_action("TestSignal".to_string(), "green".to_string()),
     );
-    let _user_action: UserDefinedAction = UserDefinedAction::default();
-    let _var_action: VariableAction = VariableAction::default();
-    let _param_action: ParameterAction = ParameterAction::default();
-    let _monitor_action: SetMonitorAction = SetMonitorAction::default();
-    let _traffic_action: TrafficAction = TrafficAction::default();
+    let _user_action: UserDefinedAction =
+        UserDefinedAction::new(CustomCommandAction::new("default", ""));
+    let _var_action: VariableAction = VariableAction::new(
+        "defaultVariable",
+        VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
+    );
+    let _param_action: ParameterAction = ParameterAction::new(
+        "defaultParameter",
+        ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("0")),
+    );
+    let _monitor_action: SetMonitorAction = SetMonitorAction::new("defaultMonitor", true);
+    let _traffic_action: TrafficAction = TrafficAction::new(
+        TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+    );
 
     // All should compile without issues
     assert!(true);
 }
 
 #[test]
-fn test_default_implementations() {
-    // Test all Default implementations work
-    let _core_action = Action::default();
-    let _global_action = GlobalAction::default();
-    let _private_action = PrivateAction::default();
-    let _entity_action = EntityAction::default();
-    let _traffic_action = TrafficAction::default();
+fn test_constructors_and_benign_defaults() {
+    // Choice/container structs that default to all-`None` keep their
+    // `Default` (benign per the crate's `Default` policy).
+    let _global_action = GlobalAction::TrafficAction(TrafficAction::new(
+        TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+    ));
+    let _private_action = PrivateAction::TeleportAction(TeleportAction::default());
+    let _entity_action = EntityAction::delete("defaultEntity");
+    let _traffic_action = TrafficAction::new(TrafficActionChoice::TrafficStopAction(
+        TrafficStopAction::default(),
+    ));
     let _infra_action = InfrastructureAction::new(TrafficSignalAction::state_action(
         "TestSignal".to_string(),
         "green".to_string(),
     ));
     let _add_entity = AddEntityAction::default();
     let _delete_entity = DeleteEntityAction::default();
-    let _user_action = UserDefinedAction::default();
-    let _action_wrapper = NamedAction::default();
+    let _user_action = UserDefinedAction::new(CustomCommandAction::new("default", ""));
 
-    // Test new Default implementations
-    let _action = Action::default();
-    let _private_action_wrapper = PrivateAction::default();
-    let _monitor_action = SetMonitorAction::default();
-    let _var_action = VariableAction::default();
-    let _var_set = VariableSetAction::default();
-    let _var_modify = VariableModifyAction::default();
-    let _var_add_rule = VariableAddValueRule::default();
-    let _var_multiply_rule = VariableMultiplyByValueRule::default();
-    let _param_action = ParameterAction::default();
-    let _param_set = ParameterSetAction::default();
-    let _param_modify = ParameterModifyAction::default();
-    let _param_add_rule = ParameterAddValueRule::default();
-    let _param_multiply_rule = ParameterMultiplyByValueRule::default();
+    // (OSR-04, agent D) `NamedAction` (F13) cannot round-trip its flattened
+    // `Action` choice through quick-xml's serializer; it is not exercised
+    // for serialization anywhere in the crate, so no constructor is added.
+    let _action_wrapper = NamedAction {
+        name: OSString::literal("defaultTraffic".to_string()),
+        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
+    };
+
+    // Named per-branch / `::new` constructors for the previously-fabricating types.
+    let _action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default()));
+    let _private_action_wrapper = PrivateAction::TeleportAction(TeleportAction::default());
+    let _monitor_action = SetMonitorAction::new("defaultMonitor", true);
+    let _var_action = VariableAction::new(
+        "defaultVariable",
+        VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
+    );
+    let _var_set = VariableSetAction::new("0");
+    let _var_modify = VariableModifyAction::new(VariableModifyRule::add_value(0.0));
+    let _var_add_rule = VariableAddValueRule::new(0.0);
+    let _var_multiply_rule = VariableMultiplyByValueRule::new(1.0);
+    let _param_action = ParameterAction::new(
+        "defaultParameter",
+        ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("0")),
+    );
+    let _param_set = ParameterSetAction::new("0");
+    let _param_modify = ParameterModifyAction::new(ModifyRule::add_value(0.0));
+    let _param_add_rule = ParameterAddValueRule::new(0.0);
+    let _param_multiply_rule = ParameterMultiplyByValueRule::new(1.0);
     let _random_route = RandomRouteAction::default();
 
     // All should compile and not panic

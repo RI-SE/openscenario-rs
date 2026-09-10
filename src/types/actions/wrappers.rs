@@ -129,10 +129,11 @@ pub struct UserDefinedAction {
     pub custom_command_action: CustomCommandAction,
 }
 
-impl Default for UserDefinedAction {
-    fn default() -> Self {
+impl UserDefinedAction {
+    /// XSD `UserDefinedAction` (:2416-2420): the required `CustomCommandAction` child.
+    pub fn new(custom_command_action: CustomCommandAction) -> Self {
         Self {
-            custom_command_action: CustomCommandAction::default(),
+            custom_command_action,
         }
     }
 }
@@ -148,11 +149,13 @@ pub struct CustomCommandAction {
     pub content: String,
 }
 
-impl Default for CustomCommandAction {
-    fn default() -> Self {
+impl CustomCommandAction {
+    /// XSD `CustomCommandAction` (:1009-1015): required `@type` attribute plus
+    /// the string content.
+    pub fn new(command_type: impl Into<String>, content: impl Into<String>) -> Self {
         Self {
-            command_type: OSString::literal("default".to_string()),
-            content: String::new(),
+            command_type: OSString::literal(command_type.into()),
+            content: content.into(),
         }
     }
 }
@@ -325,145 +328,181 @@ pub struct NamedAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RandomRouteAction {}
 
-// Default implementations
-impl Default for Action {
-    fn default() -> Self {
-        Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default()))
-    }
-}
+// (OSR-04, agent D) `Action`, `GlobalAction` and `PrivateAction` no longer
+// implement `Default`: each is an externally-tagged `xsd:choice` (XSD:705-712,
+// 1282-1293, 1777-1786) and a `Default` silently picked one branch
+// (`PrivateAction::TeleportAction`, `TrafficAction`). None of the three has a
+// schema-declared default. Construct the chosen variant directly, e.g.
+// `Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(..)))`
+// — the enum variants are the constructors.
 
-impl Default for GlobalAction {
-    fn default() -> Self {
-        GlobalAction::TrafficAction(TrafficAction::default())
-    }
-}
-
-impl Default for PrivateAction {
-    fn default() -> Self {
-        PrivateAction::TeleportAction(TeleportAction::default())
-    }
-}
-
-impl Default for EntityAction {
-    fn default() -> Self {
+impl EntityAction {
+    /// `<AddEntityAction>` branch of the `EntityAction` choice (XSD:1128-1132).
+    pub fn add(entity_ref: impl Into<String>, position: Position) -> Self {
         EntityAction {
-            entity_ref: OSString::literal("defaultEntity".to_string()),
+            entity_ref: OSString::literal(entity_ref.into()),
+            action: EntityActionChoice::AddEntityAction(AddEntityAction { position }),
+        }
+    }
+
+    /// `<DeleteEntityAction>` branch of the `EntityAction` choice (XSD:1128-1132).
+    pub fn delete(entity_ref: impl Into<String>) -> Self {
+        EntityAction {
+            entity_ref: OSString::literal(entity_ref.into()),
             action: EntityActionChoice::DeleteEntityAction(DeleteEntityAction::default()),
         }
     }
 }
 
-impl Default for TrafficAction {
-    fn default() -> Self {
+impl TrafficAction {
+    /// XSD `TrafficAction` (:2204-2213): optional `@trafficName` plus the
+    /// required action choice.
+    pub fn new(action: TrafficActionChoice) -> Self {
         TrafficAction {
             traffic_name: None,
-            action: TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+            action,
         }
+    }
+
+    /// Attach the optional `@trafficName`.
+    pub fn with_name(mut self, traffic_name: impl Into<String>) -> Self {
+        self.traffic_name = Some(OSString::literal(traffic_name.into()));
+        self
     }
 }
 
-impl Default for NamedAction {
-    fn default() -> Self {
-        NamedAction {
-            name: OSString::literal("defaultTraffic".to_string()),
-            action: Action::default(),
-        }
-    }
-}
-
-impl Default for SetMonitorAction {
-    fn default() -> Self {
+impl SetMonitorAction {
+    /// XSD `SetMonitorAction` (:2027-2030): both attributes are required.
+    pub fn new(monitor_ref: impl Into<String>, value: bool) -> Self {
         SetMonitorAction {
-            monitor_ref: OSString::literal("defaultMonitor".to_string()),
-            value: Boolean::literal(true),
+            monitor_ref: OSString::literal(monitor_ref.into()),
+            value: Boolean::literal(value),
         }
     }
 }
 
-impl Default for VariableAction {
-    fn default() -> Self {
+impl VariableAction {
+    /// XSD `VariableAction` (deprecated group): required `@variableRef` plus
+    /// the required action choice.
+    pub fn new(variable_ref: impl Into<String>, action: VariableActionChoice) -> Self {
         VariableAction {
-            variable_ref: OSString::literal("defaultVariable".to_string()),
-            action: VariableActionChoice::VariableSetAction(VariableSetAction::default()),
+            variable_ref: OSString::literal(variable_ref.into()),
+            action,
         }
     }
 }
 
-impl Default for VariableSetAction {
-    fn default() -> Self {
+impl VariableSetAction {
+    /// XSD `VariableSetAction` (:2495-2497): required `@value`.
+    pub fn new(value: impl Into<String>) -> Self {
         VariableSetAction {
-            value: OSString::literal("0".to_string()),
+            value: OSString::literal(value.into()),
         }
     }
 }
 
-impl Default for VariableModifyAction {
-    fn default() -> Self {
-        VariableModifyAction {
-            rule: VariableModifyRule {
-                rule: VariableModifyRuleChoice::VariableAddValueRule(
-                    VariableAddValueRule::default(),
-                ),
-            },
+impl VariableModifyRule {
+    /// `<AddValue>` branch of `VariableModifyRule` (XSD:2486-2491).
+    pub fn add_value(value: f64) -> Self {
+        VariableModifyRule {
+            rule: VariableModifyRuleChoice::VariableAddValueRule(VariableAddValueRule::new(value)),
+        }
+    }
+
+    /// `<MultiplyByValue>` branch of `VariableModifyRule` (XSD:2486-2491).
+    pub fn multiply_by_value(value: f64) -> Self {
+        VariableModifyRule {
+            rule: VariableModifyRuleChoice::VariableMultiplyByValueRule(
+                VariableMultiplyByValueRule::new(value),
+            ),
         }
     }
 }
 
-impl Default for VariableAddValueRule {
-    fn default() -> Self {
+impl VariableModifyAction {
+    /// XSD `VariableModifyAction` (:2481-2485): required `<Rule>` child.
+    pub fn new(rule: VariableModifyRule) -> Self {
+        VariableModifyAction { rule }
+    }
+}
+
+impl VariableAddValueRule {
+    /// XSD `VariableAddValueRule` (:2463-2465): required `@value`.
+    pub fn new(value: f64) -> Self {
         VariableAddValueRule {
-            value: Double::literal(0.0),
+            value: Double::literal(value),
         }
     }
 }
 
-impl Default for VariableMultiplyByValueRule {
-    fn default() -> Self {
+impl VariableMultiplyByValueRule {
+    /// XSD `VariableMultiplyByValueRule` (:2492-2494): required `@value`.
+    pub fn new(value: f64) -> Self {
         VariableMultiplyByValueRule {
-            value: Double::literal(1.0),
+            value: Double::literal(value),
         }
     }
 }
 
-impl Default for ParameterAction {
-    fn default() -> Self {
+impl ParameterAction {
+    /// XSD `ParameterAction` (deprecated group): required `@parameterRef`
+    /// plus the required action choice.
+    pub fn new(parameter_ref: impl Into<String>, action: ParameterActionChoice) -> Self {
         ParameterAction {
-            parameter_ref: OSString::literal("defaultParameter".to_string()),
-            action: ParameterActionChoice::ParameterSetAction(ParameterSetAction::default()),
+            parameter_ref: OSString::literal(parameter_ref.into()),
+            action,
         }
     }
 }
 
-impl Default for ParameterSetAction {
-    fn default() -> Self {
+impl ParameterSetAction {
+    /// XSD `ParameterSetAction` (:1657-1660): required `@value`.
+    pub fn new(value: impl Into<String>) -> Self {
         ParameterSetAction {
-            value: OSString::literal("0".to_string()),
+            value: OSString::literal(value.into()),
         }
     }
 }
 
-impl Default for ParameterModifyAction {
-    fn default() -> Self {
-        ParameterModifyAction {
-            rule: ModifyRule {
-                rule: ModifyRuleChoice::ParameterAddValueRule(ParameterAddValueRule::default()),
-            },
+impl ModifyRule {
+    /// `<AddValue>` branch of `ModifyRule` (XSD:1490-1496).
+    pub fn add_value(value: f64) -> Self {
+        ModifyRule {
+            rule: ModifyRuleChoice::ParameterAddValueRule(ParameterAddValueRule::new(value)),
+        }
+    }
+
+    /// `<MultiplyByValue>` branch of `ModifyRule` (XSD:1490-1496).
+    pub fn multiply_by_value(value: f64) -> Self {
+        ModifyRule {
+            rule: ModifyRuleChoice::ParameterMultiplyByValueRule(
+                ParameterMultiplyByValueRule::new(value),
+            ),
         }
     }
 }
 
-impl Default for ParameterAddValueRule {
-    fn default() -> Self {
+impl ParameterModifyAction {
+    /// XSD `ParameterModifyAction` (:1647-1652): required `<Rule>` child.
+    pub fn new(rule: ModifyRule) -> Self {
+        ParameterModifyAction { rule }
+    }
+}
+
+impl ParameterAddValueRule {
+    /// XSD `ParameterAddValueRule` (:1616-1619): required `@value`.
+    pub fn new(value: f64) -> Self {
         ParameterAddValueRule {
-            value: Double::literal(0.0),
+            value: Double::literal(value),
         }
     }
 }
 
-impl Default for ParameterMultiplyByValueRule {
-    fn default() -> Self {
+impl ParameterMultiplyByValueRule {
+    /// XSD `ParameterMultiplyByValueRule` (:1653-1656): required `@value`.
+    pub fn new(value: f64) -> Self {
         ParameterMultiplyByValueRule {
-            value: Double::literal(1.0),
+            value: Double::literal(value),
         }
     }
 }
@@ -473,8 +512,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_action_default_is_private_teleport() {
-        let action = Action::default();
+    fn test_action_variant_construction() {
+        let action = Action::PrivateAction(PrivateAction::TeleportAction(Default::default()));
         assert!(matches!(
             action,
             Action::PrivateAction(PrivateAction::TeleportAction(_))
@@ -482,14 +521,8 @@ mod tests {
     }
 
     #[test]
-    fn test_global_action_default_is_traffic() {
-        let action = GlobalAction::default();
-        assert!(matches!(action, GlobalAction::TrafficAction(_)));
-    }
-
-    #[test]
-    fn test_entity_action_default() {
-        let ea = EntityAction::default();
+    fn test_entity_action_delete_constructor() {
+        let ea = EntityAction::delete("defaultEntity");
         assert_eq!(ea.entity_ref.as_literal().unwrap(), "defaultEntity");
         assert!(matches!(
             ea.action,
@@ -498,8 +531,26 @@ mod tests {
     }
 
     #[test]
-    fn test_variable_action_default() {
-        let va = VariableAction::default();
+    fn test_entity_action_add_constructor() {
+        let ea = EntityAction::add("newEntity", Position::default());
+        assert_eq!(ea.entity_ref.as_literal().unwrap(), "newEntity");
+        assert!(matches!(ea.action, EntityActionChoice::AddEntityAction(_)));
+    }
+
+    #[test]
+    fn test_global_action_traffic_variant_construction() {
+        let action = GlobalAction::TrafficAction(TrafficAction::new(
+            TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+        ));
+        assert!(matches!(action, GlobalAction::TrafficAction(_)));
+    }
+
+    #[test]
+    fn test_variable_action_new_constructor() {
+        let va = VariableAction::new(
+            "defaultVariable",
+            VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
+        );
         assert_eq!(va.variable_ref.as_literal().unwrap(), "defaultVariable");
         assert!(matches!(
             va.action,
@@ -508,15 +559,9 @@ mod tests {
     }
 
     #[test]
-    fn test_variable_multiply_default_value_is_one() {
-        let rule = VariableMultiplyByValueRule::default();
+    fn test_variable_multiply_new_value() {
+        let rule = VariableMultiplyByValueRule::new(1.0);
         assert_eq!(rule.value.as_literal().unwrap(), &1.0);
-    }
-
-    #[test]
-    fn test_named_action_default() {
-        let na = NamedAction::default();
-        assert_eq!(na.name.as_literal().unwrap(), "defaultTraffic");
     }
 
     #[test]
@@ -539,8 +584,8 @@ mod tests {
     }
 
     #[test]
-    fn test_set_monitor_action_default() {
-        let sma = SetMonitorAction::default();
+    fn test_set_monitor_action_new_constructor() {
+        let sma = SetMonitorAction::new("defaultMonitor", true);
         assert_eq!(sma.value.as_literal().unwrap(), &true);
         assert_eq!(
             sma.monitor_ref.as_literal().unwrap(),
