@@ -17,6 +17,26 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 ### Added
 
+- **`FromStr`/`Display` on all 37 `src/types/enums.rs` enumerations (OSR-05).** Nine enums
+  (`TriggeringEntitiesRule`, `Priority`, `StoryboardElementState`, `StoryboardElementType`,
+  `ParameterType`, `CoordinateSystem`, `ReferenceContext`, `SpeedTargetValueType`,
+  `DynamicsShape`) previously had neither, which blocked wrapping them in `Value<T>`
+  (`src/types/basic.rs`) — `Value<T>` serializes through `Display`, not the derived
+  `Serialize`, so any variant with a `Display` string that disagreed with its
+  `#[serde(rename)]` would have silently produced schema-invalid XML. A new
+  table-driven test, `tests/enum_wire_names_test.rs`, derives each enum's expected wire
+  name by round-tripping every variant through `serde_json` (never by transcribing the
+  `#[serde(rename)]` attribute by hand) and asserts `Display`/`FromStr` agree with it, for
+  all 37 enums / 221 variants. Run against the unmodified tree before any code changed,
+  covering the 28 enums that already had both impls (181 variants), it found **zero
+  mismatches**. The renames, `Display` match, and `FromStr` match were previously three
+  independent hand-written transcriptions of the same table; a new `osc_enum!` macro
+  (`src/types/enums.rs`) now generates all three plus an `ALL: &[Self]` slice per enum
+  from one table, making that drift structurally impossible going forward.
+  `src/types/enums.rs` shrank from 1929 to 963 lines. No field changed type and no impl
+  was removed — this issue only adds impls and refactors existing ones into the macro; the
+  conformance harness (`report`/`lossy`/`validate`) is byte-identical to baseline. Wrapping
+  any field in `Value<Enum>` remains out of scope (tracked separately).
 - **`validation` cargo feature and `XsdValidator`.** `src/validation.rs` exposes libxml-backed
   schema validation: `XsdValidator::{from_schema_file, from_schema_str, validate_str,
   validate_file, validate_document}`, the `ValidationError` diagnostic, `convert_errors`, and
