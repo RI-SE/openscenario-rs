@@ -494,6 +494,59 @@ Breaking, unless noted.
   `TraveledDistanceConditionBuilder`, `SpeedConditionBuilder`, `ParameterConditionBuilder`,
   `VariableConditionBuilder`, `RelativeDistanceConditionBuilder`), which remain OSR-04 agent
   F's assigned scope and were not touched here.
+- **`Default` impls that invent scenario data (OSR-04, agent F: `src/builder/conditions/
+  {entity,value,spatial}.rs`, the issue's last assigned target set).** All seven removed, 0
+  benign found in scope. `AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`
+  (`entity.rs`), `SpeedConditionBuilder`, `ParameterConditionBuilder`,
+  `VariableConditionBuilder` (`value.rs`) each fabricated a `Rule` (`GreaterThan`/`EqualTo`,
+  no XSD default on the attribute) as their builder's implicit starting rule; their `rule`
+  field became `Option<Value<Rule>>`, set by every existing `*_above`/`*_below`/`*_equals`
+  setter, with `build()` erroring `"Rule is required"` if none was ever called (unreachable
+  through the crate's own call sites and tests, all of which call one of those setters, but
+  a real safety net rather than an invented one). `TraveledDistanceConditionBuilder`'s `rule`
+  field was deleted outright rather than made optional: `TraveledDistanceCondition`
+  (`Schema/OpenSCENARIO.xsd`) has only a `@value` attribute, so the field was never read by
+  `build()` — its fabricated `Rule::GreaterThan` default was dead code, not a real default.
+  `RelativeDistanceConditionBuilder` (`spatial.rs`) fabricated three values at once — `rule:
+  LessThan`, `freespace: true`, `relative_distance_type: Cartesian` — all three now
+  `Option<…>`, each required at `build()`; `Schema/OpenSCENARIO.xsd:1843-1851`
+  (`RelativeDistanceCondition`) marks `freespace`, `relativeDistanceType` and `rule` all
+  `use="required"` with no `default="…"` on any of them, so none had a schema-sanctioned value
+  to fall back to. A `cartesian()` setter was added alongside the pre-existing
+  `longitudinal()`/`lateral()` so every enum branch is reachable without a fabricated starting
+  value. All seven structs now derive `Default` (every remaining field is `Option`, so the
+  derived impl states nothing) rather than hand-writing one — `new()` stays
+  `clippy::new_without_default`-clean with no `#[allow]` needed. `grep -rn 'literal("Default'
+  src/ | wc -l`: unchanged at 1 (the one survivor, `types/conditions/spatial.rs:345`, is
+  agent C's file and was left alone). `cargo build --features builder,validation --all-targets`:
+  clean, no fallout beyond the files just described. `cargo test --features builder,validation`:
+  742 lib tests (unchanged). `cargo clippy --features builder,validation --all-targets`: 178
+  warnings (unchanged from baseline; no `new_without_default` introduced). Conformance harness
+  (`report`/`lossy`/`validate`/`builder`) unchanged from baseline: 172/172/172/13,
+  0 dropped/invented.
+
+  **Correction to agent G's entry above.** "Every fabricating `Default` impl in `src/` is now
+  gone except the seven in `src/builder/conditions/*`" was wrong the moment it was written —
+  those seven were never the *only* gap, they were only the only gap *inside OSR-03/OSR-04's
+  own file assignments*. A full manual review of `grep -rn "^impl Default for" src/` (44 impls
+  remain after this entry's seven are removed, down from 51) finds **29 that still fabricate
+  content**, all outside every OSR-03/OSR-04 agent's assigned scope: `src/catalog/`,
+  `src/types/catalogs/{references,files,environments,controllers,trajectories,routes}.rs`,
+  `src/types/distributions/{mod,deterministic,stochastic}.rs`, one straggler in
+  `src/types/positions/trajectory.rs` (`Trajectory::default()`'s `Polyline` shape defaults to
+  zero vertices — schema-invalid on its own terms, the F16 trap, since `Polyline` requires
+  `minOccurs="2"`), and one in `src/types/conditions/entity.rs:613`
+  (`SpeedCondition::default()` — a miss in OSR-04 agent C's otherwise-complete pass over that
+  file, inventing `value: 10.0, rule: GreaterThan`). Representative: `CatalogFile::default()`
+  → `"DefaultCatalog"`; `Axles`/`Axle::default()` → fixed `Self::car()`/`Self::rear_car()`
+  geometry nobody specified; `Stochastic::default()` → `numberOfTestRuns: 1`
+  (`Schema/OpenSCENARIO.xsd:2085`, `use="required"`, no schema default);
+  `ParameterValueDistribution::default()` fabricates an entire nested `Deterministic`
+  distribution tree. The other 15 of the 44 are legitimately benign (all-`None`/empty, or
+  delegate to a `new()` that invents nothing, or aren't XSD-backed scenario content at all).
+  See `docs/type_system_guide.md`'s `Default`-policy section for the full breakdown — it no
+  longer claims full enforcement, and says so plainly rather than rounding up. This is scoped
+  as a new OSR, not folded into this one.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

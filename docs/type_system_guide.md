@@ -406,15 +406,56 @@ for_single_vehicle, for_multiple_vehicles}` and `InitActionBuilderForStoryboard`
 `builder/scenario.rs`) were left in place — both simply delegate to their own `::new()` and
 invent nothing.
 
-**The Default policy stated above is enforced everywhere except `src/builder/conditions/*`.**
-`grep -rn "^impl Default for" src/` plus manual review confirms every fabricating impl outside
-that one directory is gone. The seven `Default` impls remaining there
+OSR-04 agent F closed the last item in this issue's own scope: the seven builder `Default`
+impls in `src/builder/conditions/{entity,value,spatial}.rs`
 (`AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`,
-`TraveledDistanceConditionBuilder` in `entity.rs`; `SpeedConditionBuilder`,
-`ParameterConditionBuilder`, `VariableConditionBuilder` in `value.rs`;
-`RelativeDistanceConditionBuilder` in `spatial.rs`) are OSR-04 agent F's assigned scope and have
-not been touched. Do not assume those seven are clean; do not claim full enforcement until agent
-F closes that file set.
+`TraveledDistanceConditionBuilder`; `SpeedConditionBuilder`, `ParameterConditionBuilder`,
+`VariableConditionBuilder`; `RelativeDistanceConditionBuilder`) each fabricated a `Rule` (or, for
+`RelativeDistanceConditionBuilder`, also a `freespace` bool and a `RelativeDistanceType`) that
+the XSD marks `use="required"` with no `default="…"` — confirmed by reading
+`Schema/OpenSCENARIO.xsd:1843-1851` for the latter. All seven `rule`/`freespace`/
+`relative_distance_type` fields became `Option<…>`, set together with the value in every
+existing setter (`*_above`/`*_below`/`*_equals`, `closer_than`/`farther_than`,
+`longitudinal`/`lateral`), with `build()` erroring if a setter was never called.
+`TraveledDistanceConditionBuilder`'s `rule` field was dropped outright — `TraveledDistanceCondition`
+(`Schema/OpenSCENARIO.xsd`) carries only `@value`; the field was never read by `build()`, so its
+fabricated default was dead code, not just an unused constructor argument. All seven structs now
+derive `Default` (every field `Option`, so the derived impl states nothing) instead of hand-writing
+one — that keeps `new()` `clippy::new_without_default`-clean without an `#[allow]`. `src/builder/
+conditions/*` has zero fabricating `Default` impls as of this change.
+
+**The Default policy stated above is *not* fully enforced.** `grep -rn "^impl Default for" src/`
+finds 44 hand-written impls (down from 51 before this issue's seven were removed — OSR-03/OSR-04
+never claimed to cover every file in `src/`). Manual review of all 44 sorts them:
+
+- **15 are legitimately benign** — either every field is `None`/empty (`AssignControllerAction`,
+  `ObjectController`, `TrafficStopAction` — a unit struct), or the impl delegates to a `new()`
+  that itself invents nothing (`CatalogEntityBuilder`, `ScenarioBuilder<Empty>`,
+  `ParameterSubstitutionEngine`, `CatalogLoader`, `CatalogManager` ×2, `CatalogResolver`,
+  `CatalogLocations`, `ChoiceGroupRegistry`, `ScenarioValidator`, `ValidationResult`), or the type
+  isn't XSD-backed scenario content at all but internal parser/validator tooling
+  (`ValidationConfig`).
+- **29 fabricate content the policy forbids**, entirely outside `src/builder/conditions/*` and
+  outside every OSR-03/OSR-04 agent's assigned file set — they live in `src/catalog/`,
+  `src/types/catalogs/{references,files,environments,controllers,trajectories,routes}.rs`,
+  `src/types/distributions/{mod,deterministic,stochastic}.rs`, plus two strays:
+  `src/types/positions/trajectory.rs` (`Trajectory::default()` — its `Polyline` shape defaults to
+  zero vertices, the F16 trap: `Schema/OpenSCENARIO.xsd`'s `Polyline` requires
+  `minOccurs="2"`) and `src/types/conditions/entity.rs:613` (`SpeedCondition::default()` invents
+  `value: 10.0, rule: GreaterThan` — missed by OSR-04 agent C's otherwise-complete pass over that
+  file). Representative fabrications: `CatalogFile::default()` → `"DefaultCatalog"`;
+  `ParameterAssignment::default()` (two separate types, `catalogs/references.rs` and
+  `distributions/deterministic.rs`) → `"defaultParam"`/`"parameter"` and a literal `"0.0"`/
+  `"defaultValue"`; `Axles`/`Axle::default()` → `Self::car()`/`Self::rear_car()`, fixed geometry
+  nobody specified; `Stochastic::default()` → `numberOfTestRuns: 1` where
+  `Schema/OpenSCENARIO.xsd:2085` marks the attribute `use="required"` with no schema default;
+  `ParameterValueDistribution::default()` fabricates a whole nested `Deterministic` distribution
+  tree. None of this is new — it predates OSR-04 and was simply never in scope for any agent in
+  this series — but it means the policy is enforced across `src/types/{actions,conditions,
+  entities,positions,scenario}/`, `src/types/basic.rs`, and now all of `src/builder/`, while
+  `src/catalog/`, `src/types/catalogs/`, `src/types/distributions/`, one straggler in
+  `src/types/positions/trajectory.rs`, and one in `src/types/conditions/entity.rs` remain
+  unaddressed. That is a new OSR, not a rounding error.
 
 ## A trap: unknown fields are silent
 

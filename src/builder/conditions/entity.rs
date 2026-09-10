@@ -14,23 +14,12 @@ use crate::types::{
 };
 
 /// Builder for acceleration conditions
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AccelerationConditionBuilder {
     entity_ref: Option<String>,
     value: Option<f64>,
-    rule: Value<Rule>,
+    rule: Option<Value<Rule>>,
     direction: Option<Value<DirectionalDimension>>,
-}
-
-impl Default for AccelerationConditionBuilder {
-    fn default() -> Self {
-        Self {
-            entity_ref: None,
-            value: None,
-            rule: Value::Literal(Rule::GreaterThan),
-            direction: None,
-        }
-    }
 }
 
 impl AccelerationConditionBuilder {
@@ -48,21 +37,21 @@ impl AccelerationConditionBuilder {
     /// Set acceleration threshold
     pub fn acceleration_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::GreaterThan);
+        self.rule = Some(Value::Literal(Rule::GreaterThan));
         self
     }
 
     /// Set acceleration threshold (below)
     pub fn acceleration_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::LessThan);
+        self.rule = Some(Value::Literal(Rule::LessThan));
         self
     }
 
     /// Set exact acceleration value
     pub fn acceleration_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::EqualTo);
+        self.rule = Some(Value::Literal(Rule::EqualTo));
         self
     }
 
@@ -90,10 +79,13 @@ impl AccelerationConditionBuilder {
                 "Acceleration value is required",
             ));
         }
+        let rule = self
+            .rule
+            .ok_or_else(|| BuilderError::validation_error("Rule is required"))?;
 
         let acceleration_condition = AccelerationCondition {
             value: Double::literal(self.value.unwrap()),
-            rule: self.rule,
+            rule,
             direction: self.direction,
         };
 
@@ -118,21 +110,11 @@ impl AccelerationConditionBuilder {
 }
 
 /// Builder for enhanced speed conditions
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EnhancedSpeedConditionBuilder {
     entity_ref: Option<String>,
     value: Option<f64>,
-    rule: Value<Rule>,
-}
-
-impl Default for EnhancedSpeedConditionBuilder {
-    fn default() -> Self {
-        Self {
-            entity_ref: None,
-            value: None,
-            rule: Value::Literal(Rule::GreaterThan),
-        }
-    }
+    rule: Option<Value<Rule>>,
 }
 
 impl EnhancedSpeedConditionBuilder {
@@ -150,21 +132,21 @@ impl EnhancedSpeedConditionBuilder {
     /// Set speed threshold (above)
     pub fn speed_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::GreaterThan);
+        self.rule = Some(Value::Literal(Rule::GreaterThan));
         self
     }
 
     /// Set speed threshold (below)
     pub fn speed_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::LessThan);
+        self.rule = Some(Value::Literal(Rule::LessThan));
         self
     }
 
     /// Set exact speed value
     pub fn speed_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::EqualTo);
+        self.rule = Some(Value::Literal(Rule::EqualTo));
         self
     }
 
@@ -178,10 +160,13 @@ impl EnhancedSpeedConditionBuilder {
         if self.value.is_none() {
             return Err(BuilderError::validation_error("Speed value is required"));
         }
+        let rule = self
+            .rule
+            .ok_or_else(|| BuilderError::validation_error("Rule is required"))?;
 
         let speed_condition = SpeedCondition {
             value: Double::literal(self.value.unwrap()),
-            rule: self.rule,
+            rule,
             direction: None,
         };
 
@@ -206,21 +191,16 @@ impl EnhancedSpeedConditionBuilder {
 }
 
 /// Builder for traveled distance conditions
-#[derive(Debug)]
+///
+/// Note: `TraveledDistanceCondition` (`Schema/OpenSCENARIO.xsd`, `TraveledDistanceCondition`
+/// complex type) carries only a `@value` attribute -- there is no `rule` to set. The
+/// `distance_above`/`distance_below`/`distance_equals` names are kept for API symmetry with the
+/// other value-threshold builders, but they all mean the same thing: "trigger once this much
+/// distance has been traveled".
+#[derive(Debug, Default)]
 pub struct TraveledDistanceConditionBuilder {
     entity_ref: Option<String>,
     value: Option<f64>,
-    rule: Value<Rule>,
-}
-
-impl Default for TraveledDistanceConditionBuilder {
-    fn default() -> Self {
-        Self {
-            entity_ref: None,
-            value: None,
-            rule: Value::Literal(Rule::GreaterThan),
-        }
-    }
 }
 
 impl TraveledDistanceConditionBuilder {
@@ -238,21 +218,18 @@ impl TraveledDistanceConditionBuilder {
     /// Set distance threshold (above)
     pub fn distance_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::GreaterThan);
         self
     }
 
     /// Set distance threshold (below)
     pub fn distance_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::LessThan);
         self
     }
 
     /// Set exact distance value
     pub fn distance_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Value::Literal(Rule::EqualTo);
         self
     }
 

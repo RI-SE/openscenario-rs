@@ -136,37 +136,24 @@ impl DistanceConditionBuilder {
 }
 
 /// Builder for relative distance conditions
-#[derive(Debug)]
+///
+/// `RelativeDistanceCondition` (`Schema/OpenSCENARIO.xsd:1843-1851`) declares `freespace`,
+/// `relativeDistanceType` and `rule` all `use="required"` with no `default="…"` -- none of the
+/// three has a schema-sanctioned default, so every one must be set explicitly before `build()`.
+#[derive(Debug, Default)]
 pub struct RelativeDistanceConditionBuilder {
     entity_ref: Option<String>,
     target_entity: Option<String>,
     distance: Option<f64>,
-    rule: Value<Rule>,
-    freespace: bool,
-    relative_distance_type: Value<RelativeDistanceType>,
-}
-
-impl Default for RelativeDistanceConditionBuilder {
-    fn default() -> Self {
-        Self {
-            entity_ref: None,
-            target_entity: None,
-            distance: None,
-            rule: Value::Literal(Rule::LessThan),
-            freespace: true,
-            relative_distance_type: Value::Literal(RelativeDistanceType::Cartesian),
-        }
-    }
+    rule: Option<Value<Rule>>,
+    freespace: Option<bool>,
+    relative_distance_type: Option<Value<RelativeDistanceType>>,
 }
 
 impl RelativeDistanceConditionBuilder {
     /// Create new relative distance condition builder
     pub fn new() -> Self {
-        Self {
-            rule: Value::Literal(Rule::LessThan),
-            relative_distance_type: Value::Literal(RelativeDistanceType::Cartesian),
-            ..Default::default()
-        }
+        Self::default()
     }
 
     /// Set entity to monitor
@@ -184,32 +171,38 @@ impl RelativeDistanceConditionBuilder {
     /// Set distance threshold (closer than)
     pub fn closer_than(mut self, distance: f64) -> Self {
         self.distance = Some(distance);
-        self.rule = Value::Literal(Rule::LessThan);
+        self.rule = Some(Value::Literal(Rule::LessThan));
         self
     }
 
     /// Set distance threshold (farther than)
     pub fn farther_than(mut self, distance: f64) -> Self {
         self.distance = Some(distance);
-        self.rule = Value::Literal(Rule::GreaterThan);
+        self.rule = Some(Value::Literal(Rule::GreaterThan));
         self
     }
 
     /// Use freespace distance calculation
     pub fn use_freespace(mut self, freespace: bool) -> Self {
-        self.freespace = freespace;
+        self.freespace = Some(freespace);
         self
     }
 
     /// Set distance type to longitudinal
     pub fn longitudinal(mut self) -> Self {
-        self.relative_distance_type = Value::Literal(RelativeDistanceType::Longitudinal);
+        self.relative_distance_type = Some(Value::Literal(RelativeDistanceType::Longitudinal));
         self
     }
 
     /// Set distance type to lateral
     pub fn lateral(mut self) -> Self {
-        self.relative_distance_type = Value::Literal(RelativeDistanceType::Lateral);
+        self.relative_distance_type = Some(Value::Literal(RelativeDistanceType::Lateral));
+        self
+    }
+
+    /// Set distance type to cartesian
+    pub fn cartesian(mut self) -> Self {
+        self.relative_distance_type = Some(Value::Literal(RelativeDistanceType::Cartesian));
         self
     }
 
@@ -228,6 +221,17 @@ impl RelativeDistanceConditionBuilder {
                 "Distance threshold is required",
             ));
         }
+        let rule = self
+            .rule
+            .ok_or_else(|| BuilderError::validation_error("Rule is required"))?;
+        let freespace = self.freespace.ok_or_else(|| {
+            BuilderError::validation_error("Freespace flag is required (call use_freespace)")
+        })?;
+        let relative_distance_type = self.relative_distance_type.ok_or_else(|| {
+            BuilderError::validation_error(
+                "Relative distance type is required (call longitudinal/lateral/cartesian)",
+            )
+        })?;
 
         // Create a relative distance condition using entity condition structure
         Ok(Condition {
@@ -246,9 +250,9 @@ impl RelativeDistanceConditionBuilder {
                     crate::types::conditions::entity::RelativeDistanceCondition {
                         entity_ref: OSString::literal(self.target_entity.unwrap()),
                         value: Double::literal(self.distance.unwrap()),
-                        freespace: Value::Literal(self.freespace),
-                        rule: self.rule,
-                        relative_distance_type: self.relative_distance_type,
+                        freespace: Value::Literal(freespace),
+                        rule,
+                        relative_distance_type,
                         coordinate_system: None,
                         routing_algorithm: None,
                     },
