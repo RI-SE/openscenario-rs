@@ -147,8 +147,8 @@ impl ScenarioBuilder<Empty> {
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
 
         self.data.file_header = Some(FileHeader {
-            rev_major: UnsignedShort::literal(1),
-            rev_minor: UnsignedShort::literal(3),
+            rev_major: UnsignedShort::literal(crate::types::DEFAULT_REV_MAJOR),
+            rev_minor: UnsignedShort::literal(crate::types::DEFAULT_REV_MINOR),
             date: OSString::literal(now),
             description: OSString::literal(description.to_string()),
             author: OSString::literal(author.to_string()),

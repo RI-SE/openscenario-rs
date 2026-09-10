@@ -54,7 +54,7 @@ pub use scenario::init::{
 };
 pub use scenario::storyboard::{
     CatalogDefinition, FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition,
-    Storyboard,
+    Storyboard, DEFAULT_REV_MAJOR, DEFAULT_REV_MINOR,
 };
 
 // Re-export distribution types

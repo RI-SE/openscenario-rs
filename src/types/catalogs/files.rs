@@ -73,8 +73,8 @@ impl CatalogFile {
     pub fn new(name: String, author: String, description: String) -> Self {
         Self {
             file_header: FileHeader {
-                rev_major: Value::Literal(1),
-                rev_minor: Value::Literal(3),
+                rev_major: Value::Literal(crate::types::DEFAULT_REV_MAJOR),
+                rev_minor: Value::Literal(crate::types::DEFAULT_REV_MINOR),
                 date: Value::Literal("2024-01-01T00:00:00".to_string()),
                 description: Value::Literal(description),
                 author: Value::Literal(author),
