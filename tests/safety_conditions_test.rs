@@ -43,7 +43,7 @@ fn test_collision_condition_any_collision() {
 
 #[test]
 fn test_collision_condition_default() {
-    let condition = CollisionCondition::default();
+    let condition = CollisionCondition::empty();
     assert_eq!(condition.target, None);
     assert_eq!(condition.by_type, None);
 }

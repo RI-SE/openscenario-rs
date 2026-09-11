@@ -66,7 +66,7 @@ impl PositionBuilder for LanePositionBuilder {
             orientation: None,
         };
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.lane_position = Some(lane_position);
         Ok(position)
     }

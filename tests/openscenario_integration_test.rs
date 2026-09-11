@@ -237,7 +237,7 @@ fn can_create_and_serialize_actions() {
 
     // Test creating a TeleportAction
     let _teleport_action = TeleportAction {
-        position: Position::default(),
+        position: Position::world_origin(),
     };
 
     // If we get here without compile errors, the actions are working

@@ -35,7 +35,7 @@ fn test_by_entity_condition_reach_position() {
     let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let position = Position {
         world_position: Some(WorldPosition::new(100.0, 200.0)),
-        ..Default::default()
+        ..Position::empty()
     };
     let reach_condition = ByEntityCondition::reach_position(triggering_entities, position, 3.0);
 
@@ -51,7 +51,7 @@ fn test_by_entity_condition_reach_position() {
 #[test]
 fn test_by_entity_condition_distance() {
     let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
-    let position = Position::default();
+    let position = Position::world_origin();
     let distance_condition =
         ByEntityCondition::distance(triggering_entities, position, 40.0, true, Rule::LessThan);
 
@@ -117,11 +117,11 @@ fn test_spatial_condition_builders() {
     assert_eq!(reach_pos.tolerance, Double::literal(2.0));
 
     // Test DistanceCondition builders
-    let distance_less = DistanceCondition::less_than(Position::default(), 50.0, true);
+    let distance_less = DistanceCondition::less_than(Position::world_origin(), 50.0, true);
     assert_eq!(distance_less.rule, Value::Literal(Rule::LessThan));
     assert_eq!(distance_less.value, Double::literal(50.0));
 
-    let distance_greater = DistanceCondition::greater_than(Position::default(), 30.0, false);
+    let distance_greater = DistanceCondition::greater_than(Position::world_origin(), 30.0, false);
     assert_eq!(distance_greater.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(distance_greater.value, Double::literal(30.0));
 

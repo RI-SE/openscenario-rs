@@ -122,7 +122,7 @@ impl ReachPositionCondition {
             p: Some(Double::literal(0.0)),
             r: Some(Double::literal(0.0)),
         };
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = Some(world_pos);
         position.relative_world_position = None;
         position.road_position = None;
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_distance_condition_builder() {
-        let position = Position::default();
+        let position = Position::world_origin();
         let condition = DistanceCondition::less_than(position, 50.0, true)
             .with_coordinate_system(CoordinateSystem::Entity)
             .with_distance_type(RelativeDistanceType::Cartesian);
@@ -334,10 +334,10 @@ mod tests {
 
     #[test]
     fn test_spatial_condition_constructors() {
-        let reach_pos = ReachPositionCondition::new(Position::default(), 1.0);
+        let reach_pos = ReachPositionCondition::new(Position::world_origin(), 1.0);
         assert_eq!(reach_pos.tolerance, Double::literal(1.0));
 
-        let distance = DistanceCondition::new(Position::default(), 10.0, true, Rule::LessThan);
+        let distance = DistanceCondition::new(Position::world_origin(), 10.0, true, Rule::LessThan);
         assert_eq!(distance.value, Double::literal(10.0));
         assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
 

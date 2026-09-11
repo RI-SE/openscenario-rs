@@ -29,7 +29,7 @@ pub use trajectory::{Trajectory, TrajectoryPosition};
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Position {
     #[serde(rename = "WorldPosition", skip_serializing_if = "Option::is_none")]
     pub world_position: Option<WorldPosition>,
@@ -102,7 +102,24 @@ impl RelativeWorldPosition {
 
 // Convenience constructors for Position
 impl Position {
-    /// Create an empty Position with all fields set to None
+    /// A `WorldPosition` at the origin — an explicit, schema-valid placeholder.
+    ///
+    /// For call sites that need *a* position but do not care which: tests, doc examples,
+    /// and fixtures asserting something other than the position itself. It is named for
+    /// what it is. It replaced `Position::world_origin()`, which produced an all-`None` choice
+    /// — schema-invalid (XSD `Position`, `Schema/OpenSCENARIO.xsd:1738-1751`, is a bare
+    /// `xsd:choice`) while reading like a neutral value. Never reach for this in code that
+    /// describes a real scenario: a position at (0, 0, 0) is content, and inventing it is
+    /// category 1 of the `Default` policy.
+    pub fn world_origin() -> Self {
+        Self::world(WorldPosition::new(0.0, 0.0))
+    }
+
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own**, for the reason given on
+    /// [`Position::world_origin`]. It is the base for building a position one branch at a
+    /// time; anything that serializes needs a branch filled in first.
     pub fn empty() -> Self {
         Self {
             world_position: None,
@@ -171,13 +188,21 @@ mod tests {
     use super::*;
     use crate::types::basic::Value;
 
+    /// Replaces `test_position_default_is_all_none`, whose subject — the derived
+    /// `Default` — OSR-10 removed. `world_origin` is the honest replacement, and its
+    /// contract is the opposite one: it *does* select a branch, which is the whole point.
     #[test]
-    fn test_position_default_is_all_none() {
-        let pos = Position::default();
-        assert!(pos.world_position.is_none());
+    fn test_position_world_origin_selects_the_world_branch() {
+        let pos = Position::world_origin();
+        let world = pos
+            .world_position
+            .as_ref()
+            .expect("world_origin must select the WorldPosition branch");
+        assert_eq!(world.x, Value::Literal(0.0));
+        assert_eq!(world.y, Value::Literal(0.0));
         assert!(pos.lane_position.is_none());
         assert!(pos.road_position.is_none());
-        assert_eq!(pos, Position::empty());
+        assert_ne!(pos, Position::empty());
     }
 
     #[test]
@@ -199,7 +224,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                crate::types::geometry::shapes::Shape::default(),
+                crate::types::geometry::shapes::Shape::empty(),
             )),
         );
         let pos = Position::trajectory(tp.clone());

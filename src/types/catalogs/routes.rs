@@ -285,8 +285,8 @@ mod tests {
     fn test_route_waypoints() {
         let mut route = CatalogRoute::new("WaypointRoute".to_string());
 
-        let pos1 = Position::default();
-        let pos2 = Position::default();
+        let pos1 = Position::world_origin();
+        let pos2 = Position::world_origin();
 
         route.add_position_waypoint(pos1, RouteStrategy::Shortest);
 
@@ -306,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_waypoint_creation() {
-        let pos = Position::default();
+        let pos = Position::world_origin();
 
         let waypoint1 = RouteWaypoint::new(pos.clone(), RouteStrategy::Fastest);
         let waypoint2 = RouteWaypoint::with_strategy(pos, RouteStrategy::Shortest);
@@ -390,11 +390,11 @@ mod tests {
         let mut route = CatalogRoute::new("ResolvedRoute".to_string());
         route.closed = Value::Parameter("isClosed".to_string());
         route.add_waypoint(RouteWaypoint::with_strategy(
-            Position::default(),
+            Position::world_origin(),
             RouteStrategy::Shortest,
         ));
         route.add_waypoint(RouteWaypoint::with_strategy(
-            Position::default(),
+            Position::world_origin(),
             RouteStrategy::Fastest,
         ));
 
@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn test_constructors_do_not_fabricate_name_or_strategy() {
         let route = CatalogRoute::new("ExplicitRoute".to_string());
-        let waypoint = RouteWaypoint::new(Position::default(), RouteStrategy::Fastest);
+        let waypoint = RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest);
 
         assert_eq!(route.name, "ExplicitRoute");
         assert_eq!(

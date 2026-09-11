@@ -91,7 +91,7 @@ impl PositionBuilder for WorldPositionBuilder {
             r: self.r.map(Double::literal),
         };
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = Some(world_position);
         Ok(position)
     }

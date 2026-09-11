@@ -10,8 +10,8 @@
 //! use openscenario_rs::types::positions::Position;
 //!
 //! // Create synchronize action
-//! let master_position = Position::default();
-//! let entity_position = Position::default();
+//! let master_position = Position::world_origin();
+//! let entity_position = Position::world_origin();
 //!
 //! let sync_action = SynchronizeActionBuilder::new()
 //!     .for_entity("ego_vehicle")
@@ -115,8 +115,8 @@ mod tests {
 
     #[test]
     fn test_synchronize_basic() {
-        let master_pos = Position::default();
-        let entity_pos = Position::default();
+        let master_pos = Position::world_origin();
+        let entity_pos = Position::world_origin();
 
         let builder = SynchronizeActionBuilder::new()
             .for_entity("ego")

@@ -58,7 +58,7 @@ fn demonstrate_private_actions() {
     println!("   - Created LongitudinalAction wrapped in PrivateAction");
 
     // Create a ControllerAction wrapped in PrivateAction
-    let controller_action = ControllerAction::default();
+    let controller_action = ControllerAction::empty();
     let private_action = PrivateAction::ControllerAction(controller_action);
     let core_action = Action::PrivateAction(private_action);
 
@@ -74,7 +74,7 @@ fn demonstrate_global_actions() {
         action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
             10.0,
             10.0,
-            Position::default(),
+            Position::world_origin(),
             sample_traffic_definition(),
         )),
     };
@@ -177,7 +177,7 @@ fn demonstrate_entity_actions() {
 
     // Create AddEntityAction
     let add_entity = AddEntityAction {
-        position: Position::default(),
+        position: Position::world_origin(),
     };
     let entity_action = EntityAction {
         entity_ref: Value::Literal("new_vehicle".to_string()),
@@ -209,7 +209,7 @@ fn demonstrate_traffic_actions() {
         action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
             10.0,
             10.0,
-            Position::default(),
+            Position::world_origin(),
             sample_traffic_definition(),
         )),
     };
@@ -224,7 +224,7 @@ fn demonstrate_traffic_actions() {
         action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::new(
             10.0,
             50.0,
-            Position::default(),
+            Position::world_origin(),
         )),
     };
     println!("   - Created TrafficSinkAction with no name");

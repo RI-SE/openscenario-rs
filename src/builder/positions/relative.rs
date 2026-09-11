@@ -62,7 +62,7 @@ impl PositionBuilder for RelativePositionBuilder {
     fn finish(self) -> BuilderResult<Position> {
         self.validate()?;
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
 
         match self.position_type {
             RelativePositionType::World => {

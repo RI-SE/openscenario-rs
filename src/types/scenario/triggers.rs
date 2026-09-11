@@ -39,7 +39,7 @@ pub struct Trigger {
 /// invented (no fabricated `Condition`), unlike the previous hand-written impl which
 /// filled the gap with `Condition::default()`. Kept per the container/choice policy as a
 /// construction convenience only.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ConditionGroup {
     /// Conditions within this group (AND logic between conditions)
     #[serde(rename = "Condition")]

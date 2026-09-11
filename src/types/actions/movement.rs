@@ -294,7 +294,7 @@ pub struct AssignRouteAction {
 ///
 /// XSD `RoutingAction` (:1981-1988) is a choice of `AssignRouteAction` |
 /// `FollowTrajectoryAction` | `AcquirePositionAction` | `RandomRouteAction`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoutingAction {
     /// Assign route action
     #[serde(rename = "AssignRouteAction", skip_serializing_if = "Option::is_none")]
@@ -1840,8 +1840,8 @@ mod tests {
     fn test_synchronize_action_creation() {
         let action = SynchronizeAction {
             master_entity_ref: OSString::literal("SyncTarget".to_string()),
-            target_position_master: Position::default(),
-            target_position: Position::default(),
+            target_position_master: Position::world_origin(),
+            target_position: Position::world_origin(),
             final_speed: Some(FinalSpeed {
                 speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
                     value: Double::literal(15.0),
@@ -1870,7 +1870,7 @@ mod tests {
     #[test]
     fn test_acquire_position_action_creation() {
         let action = AcquirePositionAction {
-            position: Position::default(),
+            position: Position::world_origin(),
         };
 
         // Just ensure it compiles and has the expected structure
@@ -1970,8 +1970,11 @@ mod tests {
         );
         assert_eq!(lane_offset.continuous.as_literal(), Some(&false));
 
-        let sync_action =
-            SynchronizeAction::new("SyncTarget", Position::default(), Position::default());
+        let sync_action = SynchronizeAction::new(
+            "SyncTarget",
+            Position::world_origin(),
+            Position::world_origin(),
+        );
         assert_eq!(
             sync_action.master_entity_ref.as_literal(),
             Some(&"SyncTarget".to_string())
@@ -1988,7 +1991,7 @@ mod tests {
     fn test_follow_trajectory_action_validation() {
         // Test valid action with direct trajectory
         let valid_trajectory = FollowTrajectoryAction {
-            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::default())),
+            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::empty())),
             catalog_reference: None,
             time_reference: TimeReference::none(),
             trajectory_ref: None,
@@ -2019,7 +2022,7 @@ mod tests {
             trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::default(),
+                Shape::empty(),
             ))),
             trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
@@ -2039,7 +2042,7 @@ mod tests {
 
         // Test invalid action with multiple trajectory sources
         let invalid_multiple = FollowTrajectoryAction {
-            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::default())),
+            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::empty())),
             catalog_reference: Some(CatalogReference::new(
                 "catalog".to_string(),
                 "entry".to_string(),

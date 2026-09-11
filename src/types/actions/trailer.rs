@@ -9,7 +9,7 @@ use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};
 
 /// Main trailer action wrapper containing all trailer action types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrailerAction {
     /// Connect trailer action
     #[serde(

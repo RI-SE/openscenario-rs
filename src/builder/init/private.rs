@@ -197,46 +197,46 @@ impl PrivateActionBuilder {
                             _ => None,
                         },
                     }),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::LateralAction(lateral_action) => {
                 PrivateAction {
                     lateral_action: Some(lateral_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::RoutingAction(routing_action) => {
                 PrivateAction {
                     routing_action: Some(routing_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::VisibilityAction(visibility_action) => {
                 PrivateAction {
                     visibility_action: Some(visibility_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::SynchronizeAction(sync_action) => {
                 PrivateAction {
                     synchronize_action: Some(sync_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::TeleportAction(teleport_action) => {
                 PrivateAction {
                     teleport_action: Some(teleport_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::ControllerAction(controller_action) => {
                 PrivateAction {
                     controller_action: Some(controller_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
-            _ => PrivateAction::default(),
+            _ => PrivateAction::empty(),
         }
     }
 
@@ -312,7 +312,7 @@ impl GlobalActionBuilder {
     pub fn finish(self) -> InitActionBuilder {
         let global_action = GlobalAction {
             environment_action: self.environment_action,
-            ..Default::default()
+            ..GlobalAction::empty()
         };
         self.parent.add_global(global_action)
     }
@@ -321,7 +321,7 @@ impl GlobalActionBuilder {
     pub fn build(self) -> BuilderResult<GlobalAction> {
         Ok(GlobalAction {
             environment_action: self.environment_action,
-            ..Default::default()
+            ..GlobalAction::empty()
         })
     }
 }

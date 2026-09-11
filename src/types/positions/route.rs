@@ -104,7 +104,7 @@ impl PositionInLaneCoordinates {
 ///
 /// XSD `InRoutePosition` (:1323-1329) is a choice; modeled as parallel
 /// `Option` fields following the dominant pattern in this crate.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "InRoutePosition")]
 pub struct InRoutePosition {
     #[serde(rename = "FromCurrentEntity", skip_serializing_if = "Option::is_none")]
@@ -122,13 +122,32 @@ pub struct InRoutePosition {
 }
 
 impl InRoutePosition {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `InRoutePosition (`:1327-1333`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            from_current_entity: None,
+            from_road_coordinates: None,
+            from_lane_coordinates: None,
+        }
+    }
+}
+
+impl InRoutePosition {
     /// Create an `InRoutePosition` from the current entity.
     pub fn from_current_entity(entity_ref: impl Into<String>) -> Self {
         Self {
             from_current_entity: Some(PositionOfCurrentEntity {
                 entity_ref: OSString::literal(entity_ref.into()),
             }),
-            ..Default::default()
+            ..Self::empty()
         }
     }
 
@@ -136,7 +155,7 @@ impl InRoutePosition {
     pub fn from_road_coordinates(path_s: Double, t: Double) -> Self {
         Self {
             from_road_coordinates: Some(PositionInRoadCoordinates { path_s, t }),
-            ..Default::default()
+            ..Self::empty()
         }
     }
 
@@ -152,7 +171,7 @@ impl InRoutePosition {
                 lane_offset,
                 path_s,
             }),
-            ..Default::default()
+            ..Self::empty()
         }
     }
 }

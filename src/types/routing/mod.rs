@@ -303,7 +303,7 @@ impl Waypoint {
     pub fn world_position(x: f64, y: f64, z: f64, strategy: RouteStrategy) -> Self {
         use crate::types::positions::WorldPosition;
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = Some(WorldPosition {
             x: Double::literal(x),
             y: Double::literal(y),
@@ -328,7 +328,7 @@ impl Waypoint {
     ) -> Self {
         use crate::types::positions::{LanePosition, Orientation};
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = None;
         position.relative_world_position = None;
         position.road_position = None;
@@ -358,7 +358,7 @@ impl Waypoint {
     ) -> Self {
         use crate::types::positions::RelativeWorldPosition;
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = None;
         position.relative_world_position = Some(RelativeWorldPosition {
             entity_ref: OSString::literal(entity_ref.into()),
@@ -399,8 +399,8 @@ mod tests {
     #[test]
     fn test_route_creation_and_building() {
         let route = Route::new("TestRoute", false)
-            .add_position(Position::default(), RouteStrategy::Shortest)
-            .add_position(Position::default(), RouteStrategy::Fastest);
+            .add_position(Position::world_origin(), RouteStrategy::Shortest)
+            .add_position(Position::world_origin(), RouteStrategy::Fastest);
 
         assert_eq!(
             route

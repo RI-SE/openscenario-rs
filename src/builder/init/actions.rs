@@ -33,7 +33,7 @@ impl InitActionBuilder {
                 environment: Some(Environment::new(name)),
                 catalog_reference: None,
             }),
-            ..Default::default()
+            ..GlobalAction::empty()
         };
         self.global_actions.push(global_action);
         self
@@ -74,7 +74,7 @@ impl InitActionBuilder {
             // Add to existing private action
             let teleport_action = crate::types::scenario::init::PrivateAction {
                 teleport_action: Some(crate::types::actions::movement::TeleportAction { position }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             self.private_actions[index]
                 .private_actions
@@ -83,7 +83,7 @@ impl InitActionBuilder {
             // Create new private action
             let teleport_action = crate::types::scenario::init::PrivateAction {
                 teleport_action: Some(crate::types::actions::movement::TeleportAction { position }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             let private = Private::new(entity_ref).add_action(teleport_action);
             self.private_actions.push(private);
@@ -126,7 +126,7 @@ impl InitActionBuilder {
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             self.private_actions[index]
                 .private_actions
@@ -157,7 +157,7 @@ impl InitActionBuilder {
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             let private = Private::new(entity_ref).add_action(speed_action);
             self.private_actions.push(private);

@@ -37,7 +37,7 @@ pub struct VisibilityAction {
 }
 
 /// Set of sensor references for selective visibility control
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SensorReferenceSet {
     /// Individual sensor references
     #[serde(rename = "SensorReference")]
@@ -53,7 +53,7 @@ pub struct SensorReference {
 }
 
 /// Appearance actions for visual changes and animations
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppearanceAction {
     /// Light state action for lighting control
     #[serde(rename = "LightStateAction", skip_serializing_if = "Option::is_none")]
@@ -62,6 +62,24 @@ pub struct AppearanceAction {
     /// Animation action for entity animations
     #[serde(rename = "AnimationAction", skip_serializing_if = "Option::is_none")]
     pub animation_action: Option<AnimationAction>,
+}
+
+impl AppearanceAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `AppearanceAction (`:754-760`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            light_state_action: None,
+            animation_action: None,
+        }
+    }
 }
 
 /// Light state control action for vehicle lighting systems
@@ -85,7 +103,7 @@ pub struct LightStateAction {
 }
 
 /// Choice of the light being addressed: a standard vehicle light or a user-defined one
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LightType {
     /// Standard vehicle light
     #[serde(rename = "VehicleLight", skip_serializing_if = "Option::is_none")]
@@ -508,14 +526,16 @@ mod tests {
 
     #[test]
     fn test_appearance_action_default_is_empty() {
-        let aa = AppearanceAction::default();
+        let aa = AppearanceAction::empty();
         assert!(aa.light_state_action.is_none());
         assert!(aa.animation_action.is_none());
     }
 
     #[test]
     fn test_sensor_reference_set_default_empty_vec() {
-        let srs = SensorReferenceSet::default();
+        let srs = SensorReferenceSet {
+            sensor_references: Vec::new(),
+        };
         assert!(srs.sensor_references.is_empty());
     }
 

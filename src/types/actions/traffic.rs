@@ -290,7 +290,7 @@ pub struct TrafficDefinition {
 }
 
 /// Vehicle role distribution for traffic composition
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleRoleDistribution {
     #[serde(rename = "VehicleRoleDistributionEntry", default)]
     pub entries: Vec<VehicleRoleDistributionEntry>,
@@ -1059,8 +1059,12 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_creation() {
-        let source =
-            TrafficSourceAction::new(5.0, 15.0, Position::default(), sample_traffic_definition());
+        let source = TrafficSourceAction::new(
+            5.0,
+            15.0,
+            Position::world_origin(),
+            sample_traffic_definition(),
+        );
 
         assert_eq!(source.radius.as_literal(), Some(&5.0));
         assert_eq!(source.rate.as_literal(), Some(&15.0));
@@ -1073,7 +1077,7 @@ mod tests {
             5.0,
             20.0,
             60.0,
-            Position::default(),
+            Position::world_origin(),
             sample_traffic_definition(),
         );
 
@@ -1086,7 +1090,7 @@ mod tests {
 
     #[test]
     fn test_traffic_sink_action_creation() {
-        let sink = TrafficSinkAction::new(10.0, 30.0, Position::default());
+        let sink = TrafficSinkAction::new(10.0, 30.0, Position::world_origin());
 
         assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
         assert_eq!(sink.radius.as_literal(), Some(&30.0));
@@ -1098,7 +1102,7 @@ mod tests {
         let sink = TrafficSinkAction::with_traffic_definition(
             12.0,
             40.0,
-            Position::default(),
+            Position::world_origin(),
             sample_traffic_definition(),
         );
 
@@ -1274,7 +1278,7 @@ mod tests {
             5.0,
             10.0,
             50.0,
-            Position::default(),
+            Position::world_origin(),
             sample_traffic_definition(),
         );
         assert_eq!(source.rate.as_literal(), Some(&10.0));
@@ -1283,7 +1287,7 @@ mod tests {
             Some(&50.0)
         );
 
-        let sink = TrafficSinkAction::new(10.0, 50.0, Position::default());
+        let sink = TrafficSinkAction::new(10.0, 50.0, Position::world_origin());
         assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
         assert_eq!(sink.radius.as_literal(), Some(&50.0));
 

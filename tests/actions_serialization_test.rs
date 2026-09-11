@@ -53,7 +53,7 @@ fn test_global_action_variants() {
 fn test_entity_action_types() {
     // Test AddEntityAction
     let add_action = AddEntityAction {
-        position: Position::default(),
+        position: Position::world_origin(),
     };
     let entity_action = EntityAction {
         entity_ref: OSString::literal("new_entity".to_string()),
@@ -92,7 +92,7 @@ fn test_traffic_action_variants() {
         action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
             10.0,
             10.0,
-            Position::default(),
+            Position::world_origin(),
             sample_traffic_definition(),
         )),
     };
@@ -107,7 +107,7 @@ fn test_traffic_action_variants() {
         action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::new(
             10.0,
             50.0,
-            Position::default(),
+            Position::world_origin(),
         )),
     };
 
@@ -155,7 +155,7 @@ fn test_private_action_variants() {
     assert!(serialized.contains("VisibilityAction"));
 
     // Test ControllerAction
-    let private_action = PrivateAction::ControllerAction(ControllerAction::default());
+    let private_action = PrivateAction::ControllerAction(ControllerAction::empty());
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("ControllerAction"));
 }

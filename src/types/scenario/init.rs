@@ -50,7 +50,7 @@ pub struct Actions {
 ///
 /// Modelled as parallel `Option` fields (crate convention for choice groups);
 /// exactly one must be `Some` — see [`GlobalAction::validate`].
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GlobalAction {
     #[serde(
         rename = "EnvironmentAction",
@@ -95,6 +95,29 @@ pub struct GlobalAction {
         skip_serializing_if = "Option::is_none"
     )]
     pub variable_action: Option<crate::types::actions::wrappers::VariableAction>,
+}
+
+impl GlobalAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `GlobalAction (`:1257-1266`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            environment_action: None,
+            entity_action: None,
+            infrastructure_action: None,
+            set_monitor_action: None,
+            parameter_action: None,
+            traffic_action: None,
+            variable_action: None,
+        }
+    }
 }
 
 impl GlobalAction {
@@ -145,7 +168,7 @@ impl GlobalAction {
 }
 
 /// Environment setup action: XSD choice of an inline Environment or a CatalogReference
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EnvironmentAction {
     #[serde(
         rename = "Environment",
@@ -177,7 +200,7 @@ pub struct Private {
 /// Private actions that can be applied to individual entities
 /// XSD requires exactly one child element (choice group)
 /// The PrivateAction element in XML contains one of these action types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivateAction {
     /// Exactly one of these fields should be present (XML choice group)
     #[serde(
@@ -240,6 +263,32 @@ pub struct PrivateAction {
         default
     )]
     pub trailer_action: Option<TrailerAction>,
+}
+
+impl PrivateAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `PrivateAction (`:1777-1791`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            longitudinal_action: None,
+            lateral_action: None,
+            teleport_action: None,
+            routing_action: None,
+            synchronize_action: None,
+            activate_controller_action: None,
+            visibility_action: None,
+            controller_action: None,
+            appearance_action: None,
+            trailer_action: None,
+        }
+    }
 }
 
 impl PrivateAction {
@@ -306,7 +355,7 @@ impl PrivateAction {
 /// `PrivateAction` above). The derived `Default` — all three branches `None` — states
 /// nothing about which branch was chosen and is kept per the container/choice policy,
 /// consistent with `PrivateAction`'s and `GlobalAction`'s derived defaults in this file.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
     /// Exactly one of these fields should be present (XML choice group)
     #[serde(
@@ -327,6 +376,25 @@ pub struct LongitudinalAction {
         default
     )]
     pub speed_profile_action: Option<SpeedProfileAction>,
+}
+
+impl LongitudinalAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `LongitudinalAction (`:1411-1417`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            speed_action: None,
+            longitudinal_distance_action: None,
+            speed_profile_action: None,
+        }
+    }
 }
 
 impl LongitudinalAction {
@@ -411,7 +479,7 @@ mod tests {
                         }),
                         catalog_reference: None,
                     }),
-                    ..Default::default()
+                    ..GlobalAction::empty()
                 }],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
@@ -452,7 +520,7 @@ mod tests {
                 activate_controller_action: None,
                 visibility_action: None,
                 controller_action: None,
-                ..Default::default()
+                ..PrivateAction::empty()
             })
             .add_action(PrivateAction {
                 longitudinal_action: None,
@@ -467,7 +535,7 @@ mod tests {
                 activate_controller_action: None,
                 visibility_action: None,
                 controller_action: None,
-                ..Default::default()
+                ..PrivateAction::empty()
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
@@ -563,7 +631,7 @@ mod tests {
                         }),
                         catalog_reference: None,
                     }),
-                    ..Default::default()
+                    ..GlobalAction::empty()
                 }],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
@@ -637,7 +705,7 @@ mod tests {
     fn test_private_action_validation() {
         // Test valid action with LongitudinalAction
         let valid_longitudinal = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction::default()),
+            longitudinal_action: Some(LongitudinalAction::empty()),
             lateral_action: None,
             teleport_action: None,
             routing_action: None,
@@ -645,18 +713,18 @@ mod tests {
             activate_controller_action: None,
             visibility_action: None,
             controller_action: None,
-            ..Default::default()
+            ..PrivateAction::empty()
         };
         assert!(valid_longitudinal.validate().is_ok());
 
         // Test invalid action with no actions
-        let invalid_none = PrivateAction::default();
+        let invalid_none = PrivateAction::empty();
         // Default has no actions (all None), so validation should fail
         assert!(invalid_none.validate().is_err());
 
         // Test invalid action with multiple actions
         let invalid_multiple = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction::default()),
+            longitudinal_action: Some(LongitudinalAction::empty()),
             lateral_action: Some(crate::types::actions::movement::LateralAction::lane_change(
                 crate::types::actions::movement::LaneChangeAction::new(
                     TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
@@ -669,7 +737,7 @@ mod tests {
             activate_controller_action: None,
             visibility_action: None,
             controller_action: None,
-            ..Default::default()
+            ..PrivateAction::empty()
         };
         assert!(invalid_multiple.validate().is_err());
     }

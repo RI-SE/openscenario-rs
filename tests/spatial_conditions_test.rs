@@ -18,7 +18,7 @@ use openscenario_rs::types::{
 #[test]
 fn test_reach_position_condition_basic() {
     let world_pos = WorldPosition::with_full_orientation(100.0, 200.0, 0.0, 1.57, 0.0, 0.0);
-    let mut position = Position::default();
+    let mut position = Position::world_origin();
     position.world_position = Some(world_pos);
     position.relative_world_position = None;
     position.road_position = None;
@@ -51,7 +51,7 @@ fn test_reach_position_condition_builder() {
 
 #[test]
 fn test_distance_condition_basic() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = DistanceCondition::new(position, 25.0, true, Rule::LessThan);
 
     assert_eq!(condition.value, Double::literal(25.0));
@@ -64,7 +64,7 @@ fn test_distance_condition_basic() {
 
 #[test]
 fn test_distance_condition_builder() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = DistanceCondition::less_than(position, 30.0, false)
         .with_coordinate_system(CoordinateSystem::Road)
         .with_distance_type(RelativeDistanceType::Longitudinal)
@@ -89,7 +89,7 @@ fn test_distance_condition_builder() {
 
 #[test]
 fn test_distance_condition_convenience_methods() {
-    let position = Position::default();
+    let position = Position::world_origin();
 
     let less_than = DistanceCondition::less_than(position.clone(), 15.0, true);
     assert_eq!(less_than.rule, Value::Literal(Rule::LessThan));
@@ -212,11 +212,14 @@ fn test_relative_distance_condition_with_options() {
 
 #[test]
 fn test_spatial_condition_constructors() {
-    let reach_pos = ReachPositionCondition::new(Position::default(), 1.0);
+    let reach_pos = ReachPositionCondition::new(Position::world_origin(), 1.0);
     assert_eq!(reach_pos.tolerance, Double::literal(1.0));
-    assert!(reach_pos.position.world_position.is_none());
+    // Was `is_none()`, which asserted a property of the removed `Position::default()`
+    // rather than of the constructor. The contract is that the position is stored as given
+    // — `Position::world_origin()` (OSR-10) selects the WorldPosition branch.
+    assert!(reach_pos.position.world_position.is_some());
 
-    let distance = DistanceCondition::new(Position::default(), 10.0, true, Rule::LessThan);
+    let distance = DistanceCondition::new(Position::world_origin(), 10.0, true, Rule::LessThan);
     assert_eq!(distance.value, Double::literal(10.0));
     assert_eq!(distance.freespace, Boolean::literal(true));
     assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
@@ -259,7 +262,7 @@ fn test_xml_serialization_reach_position() {
 
 #[test]
 fn test_xml_serialization_distance_condition() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = DistanceCondition::greater_than(position, 50.0, true)
         .with_coordinate_system(CoordinateSystem::Entity)
         .with_distance_type(RelativeDistanceType::Longitudinal);
@@ -327,7 +330,7 @@ fn test_xml_round_trip_reach_position() {
 
 #[test]
 fn test_xml_round_trip_distance_condition() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let original = DistanceCondition::less_than(position, 35.0, false)
         .with_coordinate_system(CoordinateSystem::Trajectory)
         .with_distance_type(RelativeDistanceType::Cartesian);
@@ -387,7 +390,7 @@ fn test_real_world_scenario_examples() {
     assert_eq!(waypoint_condition.tolerance, Double::literal(2.0));
 
     // Example 2: Trigger when ego vehicle is less than 50m from intersection center
-    let intersection_pos = Position::default(); // Would be set to intersection coordinates
+    let intersection_pos = Position::world_origin(); // Would be set to intersection coordinates
     let intersection_condition = DistanceCondition::less_than(intersection_pos, 50.0, true)
         .with_coordinate_system(CoordinateSystem::Road)
         .with_distance_type(RelativeDistanceType::Cartesian);

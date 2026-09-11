@@ -11,7 +11,7 @@ use openscenario_rs::types::{
 };
 
 fn test_trajectory_ref() -> TrajectoryRef {
-    TrajectoryRef::with_trajectory(Trajectory::new("TestTrajectory", false, Shape::default()))
+    TrajectoryRef::with_trajectory(Trajectory::new("TestTrajectory", false, Shape::empty()))
 }
 
 #[test]

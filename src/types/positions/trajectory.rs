@@ -158,7 +158,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::default(),
+                Shape::empty(),
             )),
         );
         assert_eq!(pos.s.as_literal().unwrap(), &50.0);
@@ -174,7 +174,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::default(),
+                Shape::empty(),
             )),
         );
         assert_eq!(pos.s.as_literal().unwrap(), &100.0);
@@ -188,7 +188,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::default(),
+                Shape::empty(),
             )),
         );
         let xml = quick_xml::se::to_string(&pos).unwrap();

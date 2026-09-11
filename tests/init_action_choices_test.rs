@@ -9,6 +9,8 @@
 //! minimal schema-valid snippet, assert the right field is populated, re-serialize
 //! and assert the branch element survives.
 
+use openscenario_rs::types::actions::appearance::AppearanceAction;
+use openscenario_rs::types::actions::trailer::{DisconnectTrailerAction, TrailerAction};
 use openscenario_rs::types::actions::wrappers::{
     EntityActionChoice, ParameterActionChoice, TrafficActionChoice, VariableActionChoice,
 };
@@ -171,7 +173,7 @@ fn global_action_variable_action_round_trip() {
 fn global_action_choice_cardinality_is_validated() {
     // An all-`None` GlobalAction is what an unmodelled branch used to produce:
     // it serializes to `<GlobalAction/>`, which violates the XSD choice.
-    let empty = GlobalAction::default();
+    let empty = GlobalAction::empty();
     assert!(empty.validate().is_err());
     assert_eq!(empty.get_action_type(), None);
 
@@ -184,7 +186,7 @@ fn global_action_choice_cardinality_is_validated() {
                 TrafficActionChoice::TrafficStopAction(Default::default()),
             ),
         ),
-        ..Default::default()
+        ..GlobalAction::empty()
     };
     assert!(multiple.validate().is_err());
 }
@@ -260,9 +262,12 @@ fn private_action_trailer_action_disconnect_round_trip() {
 #[test]
 fn private_action_choice_cardinality_covers_new_branches() {
     let multiple = PrivateAction {
-        appearance_action: Some(Default::default()),
-        trailer_action: Some(Default::default()),
-        ..Default::default()
+        appearance_action: Some(AppearanceAction::empty()),
+        trailer_action: Some(TrailerAction {
+            connect_trailer_action: None,
+            disconnect_trailer_action: Some(DisconnectTrailerAction {}),
+        }),
+        ..PrivateAction::empty()
     };
     assert!(
         multiple.validate().is_err(),

@@ -18,14 +18,14 @@ fn test_spatial_conditions_exist() {
 
     // Test ReachPositionCondition
     let reach_pos = ReachPositionCondition {
-        position: Position::default(),
+        position: Position::world_origin(),
         tolerance: Double::literal(2.0),
     };
     assert_eq!(reach_pos.tolerance, Double::literal(2.0));
 
     // Test DistanceCondition
     let distance = DistanceCondition {
-        position: Position::default(),
+        position: Position::world_origin(),
         value: Double::literal(50.0),
         freespace: Boolean::literal(true),
         rule: Value::Literal(Rule::LessThan),
@@ -64,10 +64,10 @@ fn test_spatial_condition_builders() {
     };
 
     // Test builder methods
-    let reach_pos = ReachPositionCondition::new(Position::default(), 3.0);
+    let reach_pos = ReachPositionCondition::new(Position::world_origin(), 3.0);
     assert_eq!(reach_pos.tolerance, Double::literal(3.0));
 
-    let distance = DistanceCondition::new(Position::default(), 25.0, true, Rule::GreaterThan);
+    let distance = DistanceCondition::new(Position::world_origin(), 25.0, true, Rule::GreaterThan);
     assert_eq!(distance.value, Double::literal(25.0));
     assert_eq!(distance.freespace, Boolean::literal(true));
     assert_eq!(distance.rule, Value::Literal(Rule::GreaterThan));

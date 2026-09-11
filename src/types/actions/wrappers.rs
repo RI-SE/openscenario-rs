@@ -173,7 +173,7 @@ impl CustomCommandAction {
 
 /// XSD `EnvironmentAction` (:1195-1200): choice of `Environment` |
 /// `CatalogReference` (to a `CatalogEnvironment` catalog entry).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EnvironmentAction {
     #[serde(
         rename = "Environment",
@@ -545,7 +545,7 @@ mod tests {
 
     #[test]
     fn test_entity_action_add_constructor() {
-        let ea = EntityAction::add("newEntity", Position::default());
+        let ea = EntityAction::add("newEntity", Position::world_origin());
         assert_eq!(ea.entity_ref.as_literal().unwrap(), "newEntity");
         assert!(matches!(ea.action, EntityActionChoice::AddEntityAction(_)));
     }

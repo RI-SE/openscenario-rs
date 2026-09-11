@@ -366,17 +366,19 @@ impl CatalogPolyline {
 }
 
 impl CatalogClothoid {
-    /// Creates a new clothoid with the specified parameters
-    pub fn new(curvature: Double, curvature_dot: Double, length: Double) -> Self {
-        Self {
-            curvature,
-            curvature_dot: Some(curvature_dot),
-            curvature_prime: None,
-            length,
-            start_time: None,
-            stop_time: None,
-            start_position: Position::default(),
-        }
+    /// Creates a new clothoid with the specified parameters.
+    ///
+    /// `start_position` is required: XSD `Clothoid` (`Schema/OpenSCENARIO.xsd:894-897`)
+    /// declares its `Position` child with no `minOccurs="0"`. This constructor previously
+    /// filled it with `Position::default()`, inventing a start point nobody wrote — OSR-10
+    /// made it a parameter instead.
+    pub fn new(
+        curvature: Double,
+        curvature_dot: Double,
+        length: Double,
+        start_position: Position,
+    ) -> Self {
+        Self::with_start_position(curvature, curvature_dot, length, start_position)
     }
 
     /// Creates a clothoid with a start position
@@ -545,14 +547,14 @@ mod tests {
 
     #[test]
     fn test_catalog_polyline() {
-        let pos1 = Position::default();
-        let pos2 = Position::default();
+        let pos1 = Position::world_origin();
+        let pos2 = Position::world_origin();
 
         let mut polyline = CatalogPolyline::from_positions(vec![pos1, pos2]);
 
         assert_eq!(polyline.vertices.len(), 2);
 
-        let pos3 = Position::default();
+        let pos3 = Position::world_origin();
         polyline.add_vertex(pos3, Some(Value::Literal(10.0)));
 
         assert_eq!(polyline.vertices.len(), 3);
@@ -565,6 +567,7 @@ mod tests {
             Value::Literal(0.1),
             Value::Parameter("curvature_rate".to_string()),
             Value::Literal(50.0),
+            Position::world_origin(),
         );
 
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.1);
@@ -576,8 +579,8 @@ mod tests {
     fn test_catalog_nurbs() {
         let mut nurbs = CatalogNurbs::new(Value::Literal(3));
 
-        let pos1 = Position::default();
-        let pos2 = Position::default();
+        let pos1 = Position::world_origin();
+        let pos2 = Position::world_origin();
 
         nurbs.add_control_point(pos1, Some(Value::Literal(1.0)));
         nurbs.add_control_point(pos2, None);
@@ -607,6 +610,7 @@ mod tests {
             Value::Literal(0.0),
             Value::Literal(0.01),
             Value::Parameter("length".to_string()),
+            Position::world_origin(),
         ));
 
         let trajectory = CatalogTrajectory::with_parameters(
@@ -643,11 +647,11 @@ mod tests {
             vertices: vec![
                 CatalogVertex {
                     time: Some(Value::Literal(0.0)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 },
                 CatalogVertex {
                     time: Some(Value::Literal(5.0)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 },
             ],
         });
@@ -679,8 +683,8 @@ mod tests {
         use crate::types::catalogs::entities::CatalogEntity;
 
         let mut nurbs = CatalogNurbs::new(Value::Literal(3));
-        nurbs.add_control_point(Position::default(), Some(Value::Literal(1.0)));
-        nurbs.add_control_point(Position::default(), None);
+        nurbs.add_control_point(Position::world_origin(), Some(Value::Literal(1.0)));
+        nurbs.add_control_point(Position::world_origin(), None);
         nurbs.add_knot(Value::Literal(0.0));
         nurbs.add_knot(Value::Literal(1.0));
 
@@ -707,6 +711,7 @@ mod tests {
                 Value::Literal(0.1),
                 Value::Literal(0.01),
                 Value::Parameter("segmentLength".to_string()),
+                Position::world_origin(),
             )),
         );
 
@@ -733,6 +738,7 @@ mod tests {
             Value::Literal(0.0),
             Value::Literal(0.0),
             Value::Literal(1.0),
+            Position::world_origin(),
         );
         let nurbs = CatalogNurbs::new(Value::Literal(2));
 

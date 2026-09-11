@@ -36,7 +36,7 @@ pub struct EntitySelection {
 ///
 /// XSD `SelectedEntities` (`:2013-2018`): a choice, each branch
 /// `maxOccurs="unbounded"`, of `EntityRef` or `ByType`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SelectedEntities {
     /// List of entity references
     #[serde(rename = "EntityRef", default, skip_serializing_if = "Vec::is_empty")]
@@ -56,7 +56,7 @@ pub struct SelectedEntities {
 /// previous hand-written impl which filled the gap with a fabricated entry. Kept per the
 /// container/choice policy as a construction convenience, and because `EntityDistribution`
 /// has a `pub fn new()` that clippy's `new_without_default` otherwise flags.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityDistribution {
     /// List of distribution entries
     #[serde(rename = "EntityDistributionEntry")]

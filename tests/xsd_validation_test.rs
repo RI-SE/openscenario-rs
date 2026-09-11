@@ -70,7 +70,7 @@ fn test_follow_trajectory_action_complete() {
         trajectory: Some(Trajectory::new(
             "TestTrajectory",
             false,
-            openscenario_rs::types::geometry::shapes::Shape::default(),
+            openscenario_rs::types::geometry::shapes::Shape::empty(),
         )),
         catalog_reference: None,
         time_reference: TimeReference {
@@ -122,7 +122,7 @@ fn test_follow_trajectory_action_complete() {
         trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
             "TestTrajectory",
             false,
-            openscenario_rs::types::geometry::shapes::Shape::default(),
+            openscenario_rs::types::geometry::shapes::Shape::empty(),
         ))),
         trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
         initial_distance_offset: None,
@@ -331,7 +331,7 @@ fn test_object_controller_deserialization() {
 fn test_private_action_choice_group() {
     // Test valid PrivateAction with exactly one action
     let valid_private = PrivateAction {
-        longitudinal_action: Some(LongitudinalAction::default()),
+        longitudinal_action: Some(LongitudinalAction::empty()),
         lateral_action: None,
         teleport_action: None,
         routing_action: None,
@@ -339,13 +339,13 @@ fn test_private_action_choice_group() {
         activate_controller_action: None,
         visibility_action: None,
         controller_action: None,
-        ..Default::default()
+        ..PrivateAction::empty()
     };
     assert!(valid_private.validate().is_ok());
 
     // Test invalid PrivateAction with multiple actions
     let invalid_private = PrivateAction {
-        longitudinal_action: Some(LongitudinalAction::default()),
+        longitudinal_action: Some(LongitudinalAction::empty()),
         lateral_action: Some(
             openscenario_rs::types::actions::movement::LateralAction::lane_change(
                 openscenario_rs::types::actions::movement::LaneChangeAction::new(
@@ -362,7 +362,7 @@ fn test_private_action_choice_group() {
         activate_controller_action: None,
         visibility_action: None,
         controller_action: None,
-        ..Default::default()
+        ..PrivateAction::empty()
     };
     assert!(invalid_private.validate().is_err());
 }

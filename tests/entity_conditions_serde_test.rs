@@ -178,7 +178,7 @@ fn test_time_to_collision_target_entity_xml_round_trip() {
 
 #[test]
 fn test_time_to_collision_target_position_xml_round_trip() {
-    let original = TimeToCollisionTarget::position(Position::default());
+    let original = TimeToCollisionTarget::position(Position::world_origin());
     let deserialized: TimeToCollisionTarget = round_trip(&original);
     assert_eq!(original, deserialized);
 }
@@ -210,7 +210,7 @@ fn test_time_to_collision_condition_entity_target_xml_round_trip() {
 #[test]
 fn test_time_to_collision_condition_position_target_xml_round_trip() {
     let original = TimeToCollisionCondition::with_position_target(
-        Position::default(),
+        Position::world_origin(),
         2.5,
         Rule::LessThan,
         false,

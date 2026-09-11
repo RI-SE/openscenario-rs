@@ -292,18 +292,53 @@ schema or do not make it.
 
 ### Detecting violations
 
-Three detectors, none of which subsumes the others. Run all three:
+**Run the test, not the greps:**
 
-| # | detector | finds |
-|---|---|---|
-| 1 | `grep -rn "^impl Default for" src/` | hand-written impls |
-| 2 | `grep -rn 'literal("Default' src/` | fabricated name strings (`"DefaultVehicle"`, …) |
-| 3 | `#[derive(Default)]` on a struct with a required (non-`Option`, non-`Vec`) field | derives that fabricate a field silently — **invisible to 1 and 2** |
+```
+cargo test --features builder,validation --test default_schema_validity_test
+```
+
+`tests/default_schema_validity_test.rs` constructs `T::default()` for every XSD-backed type in
+the crate that implements `Default`, serializes it, and validates the result against
+`Schema/OpenSCENARIO.xsd`. That is the policy itself, executed — not a proxy for it. A type
+whose default cannot be written as valid OpenSCENARIO fails the test by name, with libxml's
+message and the offending XML in the output.
+
+How it validates a bare type: the schema declares exactly one global element, `OpenSCENARIO`,
+so the test splices a global `<xsd:element name="Probe_T" type="T"/>` into an in-memory copy of
+the bundled schema for each registered type and serializes `T::default()` under that root tag.
+The content model checked is the shipped one.
+
+Its registry of types is **hand-maintained**, and that is stated in the file. What keeps it from
+becoming a fourth proxy is the companion test `every_default_in_src_is_classified`: it scans
+`src/` for every `#[derive(..., Default, ...)]` and `impl Default for`, and fails unless each
+type found is either probed by the registry, declared under `src/builder/` (builder scaffolding
+is never serialized), or listed in `NOT_XSD_BACKED` with a reason. The registry size is asserted
+against a constant, the way `tests/enum_wire_names_test.rs` guards the 37 enum tables, so a
+removal is as loud as an addition. Adding a `Default` anywhere in `src/` fails the suite until
+it has been classified.
+
+#### The three greps it replaced
+
+They are kept below only as history and as cheap pre-checks while editing; **none of them is
+evidence**, and a sweep that ran all three still missed instances the test finds in one pass.
+
+| # | detector | finds | blind to |
+|---|---|---|---|
+| 1 | `grep -rn "^impl Default for" src/` | hand-written impls | derives; says nothing about validity |
+| 2 | `grep -rn 'literal("Default' src/` | fabricated name strings (`"DefaultVehicle"`, …) | every non-name fabrication |
+| 3 | `#[derive(Default)]` on a struct with a required (non-`Option`, non-`Vec`) field | derives that fabricate a field silently | structs whose fields are all `Option` but whose XSD particle is a choice requiring a branch |
 
 Detector 3 is not a grep; it needs the struct body. It was added late, after ten agents had run
 only the two textual ones, and it immediately found a class neither could see — including one
-instance the campaign itself had just introduced. The lesson generalizes: before calling any sweep
-complete, ask what shape the detector cannot represent.
+instance the campaign itself had just introduced. Then `ObjectController` and `Position` showed
+that detector 3 has a blind spot of its own: every field `Option`, so the sweep passes over
+them, while the XSD particle is a bare `xsd:choice` that requires a branch. Both were found by
+reading, not by tooling.
+
+**The lesson, at its third recurrence:** a detector finds only the shape it encodes. Before
+calling a sweep complete, the question is not "did we search everywhere" but "what shape can our
+search not represent" — and the answer here was to stop encoding shapes and run the rule.
 
 ### Enforcement history
 
@@ -638,6 +673,42 @@ required-child is not the test; *schema-invalid empty* is. Every one of those ch
 non-`Option` Rust field and is therefore always emitted, and every child of `CatalogLocations`
 (`:867-878`), `RoadNetwork` (`:1933-1940`), `Entities` (`:1122-1127`) and `InitActions`
 (`:1316-1322`) carries `minOccurs="0"`. The empty spine is a document the schema accepts.
+
+**OSR-10 replaced the greps with the test above, ran it, and cleared what it found.** The first
+run flagged **23 of 54** `Default`-implementing XSD-backed types as producing schema-invalid XML.
+None was a false positive. Fifteen were bare `xsd:choice` particles serializing to an empty
+element — `AppearanceAction`, `LightType`, `ControllerAction`, `RoutingAction`, `TrailerAction`,
+`EnvironmentAction` (both copies), `CollisionCondition`, `SelectedEntities`, `Shape`,
+`InRoutePosition`, `GlobalAction`, `PrivateAction`, `LongitudinalAction`, and `Position`. Eight were
+required-child sequences serializing to an empty container — `SensorReferenceSet`,
+`VehicleRoleDistribution`, `ValueConstraintGroup`, `EntityDistribution`, `ClothoidSpline`,
+`Polyline`, `UsedArea`, `ConditionGroup`. Three of those — `ConditionGroup`, `Polyline`,
+`EntityDistribution` — are F16's original instances, and three more carried a code comment
+conceding they were not schema-valid while keeping the `Default` anyway. All 23 lost it.
+
+Choice structs that need an all-`None` base for their own per-branch constructors gained a
+`pub fn empty()` instead, documented as not schema-valid on its own. That is not a rename of the
+problem: `Default` is reachable implicitly — through `..Default::default()` and, worse, through
+`#[derive(Default)]` on any enclosing struct — whereas `empty()` must be typed out, is greppable,
+and cannot propagate. Types whose schema requires children got explicit constructors
+(`SelectedEntities::new`, `EntityDistribution::new`) or none at all.
+
+**`Position` was removed, and the call-site count was not the deciding factor.** Its 90 call sites
+were the largest single removal in the campaign, but 79 of them are tests, doc examples or
+fixtures, and of the 11 in production code 10 were `let mut p = Position::default(); p.branch =
+Some(…)` — now `Position::empty()`, which says the same thing honestly. The real cost of keeping
+it was never the direct calls: `Position: Default` is the mechanism by which any struct holding a
+required `Position` could derive `Default` and inherit the invalidity silently, which is exactly
+how `TeleportAction` and `AcquirePositionAction` acquired theirs. Two constructors replace it:
+`Position::empty()` for building a position one branch at a time, and `Position::world_origin()`
+— a `WorldPosition` at (0, 0), schema-**valid**, for the many tests that need *a* position and do
+not care which. `world_origin` is a placeholder that admits it, and its doc comment says not to
+reach for it in code describing a real scenario, where inventing a position is category 1. The
+eleventh production site, `CatalogClothoid::new`, was doing exactly that — XSD `Clothoid`
+(`:894-897`) requires its `Position` child — and now takes the start position as a parameter.
+
+**The 31 XSD-backed `Default` impls that survive are not surviving on an argument.** Each one is
+constructed, serialized and validated on every `cargo test --features builder,validation` run.
 `tests/default_schema_validity_test.rs` proves it by serializing a fully defaulted spine and
 handing it to libxml2 (0 errors), and proves the contrast in the same file by showing the
 defaulted `Position` choice being rejected. That test is the first thing in the crate to
@@ -706,8 +777,11 @@ pub trait Resolve<T> {
 3. If it is a choice, pick the idiom that matches how the choice appears, and name flattened
    variants for their **elements**.
 4. Before writing `#[derive(Default)]` or `impl Default`, run the three-category check in
-   [The `Default` policy](#the-default-policy) — including detector 3, which no grep performs:
-   a derive on a struct with a required non-`Option`, non-`Vec` field fabricates that field.
+   [The `Default` policy](#the-default-policy). Then run the check that actually decides it:
+   `cargo test --features builder,validation --test default_schema_validity_test`. If the new
+   type implements `Default` and has an XSD `complexType`, add it to that file's registry — the
+   suite will fail until it is classified there or in `NOT_XSD_BACKED`, and the failure message
+   says which.
 5. Add a round-trip test. If the type is a flattened choice, add it to
    `tests/choice_flatten_roundtrip_test.rs`.
 6. Run the conformance gates. Their locations and what each one catches are in

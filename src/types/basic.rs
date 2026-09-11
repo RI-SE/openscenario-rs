@@ -791,7 +791,7 @@ pub struct ParameterDeclaration {
 }
 
 /// Parameter constraints container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ValueConstraintGroup {
     #[serde(rename = "ValueConstraint")]
     pub value_constraints: Vec<ValueConstraint>,

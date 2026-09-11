@@ -99,7 +99,7 @@ fn test_time_to_collision_condition_entity_target() {
 
 #[test]
 fn test_time_to_collision_condition_position_target() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = TimeToCollisionCondition::with_position_target(
         position.clone(),
         3.5,
@@ -156,7 +156,7 @@ fn test_time_to_collision_condition_entity_greater_than() {
 
 #[test]
 fn test_time_to_collision_condition_position_less_than() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = TimeToCollisionCondition::position_less_than(position.clone(), 1.5, true);
 
     assert_eq!(condition.value, Double::literal(1.5));
@@ -167,7 +167,7 @@ fn test_time_to_collision_condition_position_less_than() {
 
 #[test]
 fn test_time_to_collision_condition_position_greater_than() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = TimeToCollisionCondition::position_greater_than(position.clone(), 6.0, false);
 
     assert_eq!(condition.value, Double::literal(6.0));
@@ -217,7 +217,7 @@ fn test_time_to_collision_target_entity() {
 
 #[test]
 fn test_time_to_collision_target_position() {
-    let position = Position::default();
+    let position = Position::world_origin();
     let target = TimeToCollisionTarget::position(position.clone());
 
     assert!(target.entity_ref.is_none());
@@ -279,7 +279,7 @@ fn test_by_entity_condition_time_to_collision_entity() {
 #[test]
 fn test_by_entity_condition_time_to_collision_position() {
     let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
-    let position = Position::default();
+    let position = Position::world_origin();
     let condition = ByEntityCondition::time_to_collision_position(
         triggering_entities,
         position.clone(),

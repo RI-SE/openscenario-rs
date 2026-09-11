@@ -92,7 +92,7 @@ pub struct StandStillCondition {
 }
 
 /// Condition for detecting collisions
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CollisionCondition {
     /// Specific target entity (optional) — XSD child `<EntityRef entityRef="..."/>`
     #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
@@ -102,6 +102,24 @@ pub struct CollisionCondition {
     /// (element name `ByType`, of XSD type `ByObjectType`)
     #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
     pub by_type: Option<CollisionTarget>,
+}
+
+impl CollisionCondition {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `CollisionCondition (`:924-930`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            target: None,
+            by_type: None,
+        }
+    }
 }
 
 /// Target specification for collision detection — wraps XSD `<ByType type="..."/>`
@@ -1497,7 +1515,7 @@ mod tests {
 
     #[test]
     fn test_collision_condition_default() {
-        let condition = CollisionCondition::default();
+        let condition = CollisionCondition::empty();
         assert_eq!(condition.target, None);
         assert_eq!(condition.by_type, None);
     }

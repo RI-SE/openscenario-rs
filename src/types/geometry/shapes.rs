@@ -364,7 +364,7 @@ impl Dimensions {
 /// derived `Default` — all four branches `None` — states nothing about which branch was
 /// chosen and is kept per the container/choice policy; it is not schema-valid content on
 /// its own and exists only as a construction convenience.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Shape {
     #[serde(rename = "Polyline", default, skip_serializing_if = "Option::is_none")]
     pub polyline: Option<Polyline>,
@@ -380,8 +380,28 @@ pub struct Shape {
     pub nurbs: Option<Nurbs>,
 }
 
+impl Shape {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `Shape (`Schema/OpenSCENARIO.xsd:2032-2039`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            polyline: None,
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: None,
+        }
+    }
+}
+
 /// A sequence of clothoid segments forming a spline
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClothoidSpline {
     #[serde(rename = "ClothoidSplineSegment", default)]
     pub segments: Vec<ClothoidSplineSegment>,
@@ -448,7 +468,7 @@ pub struct Knot {
 /// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so an empty vertex list is not
 /// schema-valid on its own, but `Vec::new()` states nothing invented and is kept as the
 /// bare construction default; callers building a real polyline must supply vertices.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Polyline {
     #[serde(rename = "Vertex", default)]
     pub vertices: Vec<Vertex>,
@@ -542,11 +562,11 @@ mod tests {
             vertices: vec![
                 Vertex {
                     time: Some(crate::types::basic::Value::literal(0.0)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 },
                 Vertex {
                     time: Some(crate::types::basic::Value::literal(0.04)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 },
             ],
         };
@@ -580,7 +600,7 @@ mod tests {
             polyline: Some(Polyline {
                 vertices: vec![Vertex {
                     time: Some(crate::types::basic::Value::literal(1.0)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 }],
             }),
             clothoid: None,
@@ -602,7 +622,7 @@ mod tests {
             polyline: Some(Polyline {
                 vertices: vec![Vertex {
                     time: None,
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 }],
             }),
             clothoid: None,

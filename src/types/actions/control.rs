@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// XSD `ControllerAction` (:978-984): a 3-way choice of `AssignControllerAction`
 /// | `OverrideControllerValueAction` | `ActivateControllerAction`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerAction {
     /// Assign controller action
     #[serde(
@@ -38,6 +38,25 @@ pub struct ControllerAction {
         skip_serializing_if = "Option::is_none"
     )]
     pub activate_controller_action: Option<ActivateControllerAction>,
+}
+
+impl ControllerAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `ControllerAction (`:1013-1019`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            assign_controller_action: None,
+            override_controller_value_action: None,
+            activate_controller_action: None,
+        }
+    }
 }
 
 /// XSD `OverrideControllerValueAction` (:1565-1574): `xsd:all` of six optional
@@ -562,7 +581,7 @@ mod tests {
         assert!(activate.longitudinal.is_none());
         assert!(activate.lateral.is_none());
 
-        let controller_action = ControllerAction::default();
+        let controller_action = ControllerAction::empty();
         assert!(controller_action.assign_controller_action.is_none());
         assert!(controller_action.override_controller_value_action.is_none());
         assert!(controller_action.activate_controller_action.is_none());
