@@ -317,13 +317,30 @@ pub fn is_expression(s: &str) -> bool {
     s.contains(|c| "+-*/%()".contains(c))
 }
 
-// Check if a parameter name is valid
-//
-// Valid parameter names contain only alphanumeric characters and underscores
+/// Check if a string is a valid parameter name, i.e. the part after the `$` sigil.
+///
+/// This is the XSD `parameter` production verbatim, `Schema/OpenSCENARIO.xsd:6`:
+///
+/// ```text
+/// <xsd:pattern value="[$][A-Za-z_][A-Za-z0-9_]*"/>
+/// ```
+///
+/// (OSR-11) The check used to be `char::is_alphanumeric`, which is **Unicode**
+/// alphanumeric, so the crate accepted `$café` where the schema does not. The pattern
+/// is ASCII-only: first character `[A-Za-z_]`, the rest `[A-Za-z0-9_]`. Note this
+/// governs the *parameter* production only — the `expression` production
+/// (`Schema/OpenSCENARIO.xsd:11`) has its own, different character class and is not
+/// affected.
 pub fn is_valid_parameter_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
-        && !name.chars().next().unwrap().is_ascii_digit() // Can't start with digit
+    let mut chars = name.chars();
+    match chars.next() {
+        // `[A-Za-z_]`
+        Some(first) if first.is_ascii_alphabetic() || first == '_' => {}
+        // Empty, a leading digit, or any non-ASCII character.
+        _ => return false,
+    }
+    // `[A-Za-z0-9_]*`
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 /// Resolve a mathematical expression by parsing and evaluating it
@@ -375,12 +392,57 @@ mod tests {
 
     #[test]
     fn test_parameter_name_validation() {
+        // XSD `parameter`, Schema/OpenSCENARIO.xsd:6 — `[$][A-Za-z_][A-Za-z0-9_]*`
+        // (this function validates the part after the `$`).
         assert!(is_valid_parameter_name("speed"));
         assert!(is_valid_parameter_name("vehicle_speed"));
         assert!(is_valid_parameter_name("speed123"));
+        assert!(is_valid_parameter_name("_leading_underscore")); // `_` is in `[A-Za-z_]`
+        assert!(is_valid_parameter_name("A")); // single ASCII letter
         assert!(!is_valid_parameter_name("123speed")); // Can't start with digit
         assert!(!is_valid_parameter_name("")); // Can't be empty
         assert!(!is_valid_parameter_name("speed-limit")); // No hyphens
+
+        // (OSR-11) Non-ASCII is rejected: the XSD character classes are `[A-Za-z_]` and
+        // `[A-Za-z0-9_]`, not Unicode alphanumeric. `char::is_alphanumeric` accepted all
+        // of these.
+        assert!(!is_valid_parameter_name("café")); // non-ASCII in the tail
+        assert!(!is_valid_parameter_name("évitement")); // non-ASCII leading letter
+        assert!(!is_valid_parameter_name("速度")); // non-Latin script
+        assert!(!is_valid_parameter_name("spe\u{0435}d")); // Cyrillic 'е' homoglyph
+        assert!(!is_valid_parameter_name("param\u{00B2}")); // superscript two: Unicode alphanumeric
+        assert!(!is_valid_parameter_name("\u{FF41}bc")); // fullwidth 'a'
+    }
+
+    /// (OSR-11) Tightening the `parameter` production to ASCII must not tighten the
+    /// `expression` production, which has its own character class
+    /// (`Schema/OpenSCENARIO.xsd:11`) and is deliberately left alone.
+    #[test]
+    fn ascii_parameter_rule_leaves_the_expression_production_alone() {
+        // A `${…}` body that is not a plain parameter name is an expression, before and after.
+        let expr: Value<f64> = quick_xml::de::from_str(r#"<v>${speed + 10}</v>"#).unwrap();
+        assert!(matches!(expr, Value::Expression(ref e) if e == "speed + 10"));
+
+        // A plain ASCII name inside `${…}` is still recognised as a parameter.
+        let param: Value<f64> = quick_xml::de::from_str(r#"<v>${speed}</v>"#).unwrap();
+        assert!(matches!(param, Value::Parameter(ref p) if p == "speed"));
+
+        // A non-ASCII `${…}` body is no longer a *parameter*, but it is still carried through
+        // as an expression rather than being dropped or rejected — the expression production
+        // is not what this change tightened, and the text survives a round-trip.
+        let unicode: Value<f64> = quick_xml::de::from_str(r#"<v>${café}</v>"#).unwrap();
+        assert!(matches!(unicode, Value::Expression(ref e) if e == "café"));
+        assert_eq!(unicode.to_string(), "${café}");
+
+        // The bare-sigil `$café` spelling matches neither XSD production, so it is not a
+        // parameter reference; it falls through to a literal parse, which fails for f64.
+        assert!(quick_xml::de::from_str::<Value<f64>>(r#"<v>$café</v>"#).is_err());
+
+        // `$speed` (the F15 spelling) still deserializes as a parameter and re-serializes
+        // with the bare sigil.
+        let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$speed</v>"#).unwrap();
+        assert!(matches!(bare, Value::Parameter(ref p) if p == "speed"));
+        assert_eq!(bare.to_string(), "$speed");
     }
 
     #[test]
