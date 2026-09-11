@@ -202,11 +202,14 @@ pub struct ColorCmyk {
 
 /// Animation action for entity movement and component animation
 ///
-/// (OSR-04, agent D) `Default` is a `#[derive]`, not hand-written: every
-/// field is `None` (or resolves to all-`None` via `AnimationType`'s own
-/// derived `Default`), so it states nothing — benign per the crate's
-/// `Default` policy.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+/// (OSR-09) No `Default`. The derive OSR-04 agent D added here was justified as
+/// "every field is `None`, so it states nothing" — the reasoning F16 falsified.
+/// XSD `AnimationAction` (`Schema/OpenSCENARIO.xsd:740-747`) declares `AnimationType`
+/// with no `minOccurs="0"`, so the element is required; and `AnimationType` is itself
+/// a bare `xsd:choice` (`:757-764`) that must select a branch. The derived default
+/// therefore emitted `<AnimationType/>`, which validates against nothing — category 3,
+/// schema-invalid empty.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnimationAction {
     /// Whether the animation repeats
     #[serde(rename = "@loop", default, skip_serializing_if = "Option::is_none")]
@@ -230,7 +233,11 @@ pub struct AnimationAction {
 }
 
 /// Choice of animation being addressed
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// (OSR-09) No `Default`: XSD `AnimationType` (`Schema/OpenSCENARIO.xsd:757-764`) is a
+/// bare `xsd:choice` with no `minOccurs="0"`, so an all-`None` value cannot serialize to
+/// valid XML. Use the per-branch constructors below.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnimationType {
     /// Animation of a vehicle or user-defined component
     #[serde(rename = "ComponentAnimation", skip_serializing_if = "Option::is_none")]
@@ -256,7 +263,10 @@ pub struct AnimationType {
 }
 
 /// Choice of component being animated
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// (OSR-09) No `Default`: XSD `ComponentAnimation` (`Schema/OpenSCENARIO.xsd:947-952`) is a
+/// bare `xsd:choice` with no `minOccurs="0"` — same category 3 as its parent `AnimationType`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComponentAnimation {
     /// Standard vehicle component
     #[serde(rename = "VehicleComponent", skip_serializing_if = "Option::is_none")]
@@ -355,6 +365,79 @@ pub struct AnimationState {
 // an XSD `use="required"` attribute (`VisibilityAction` :2550-2557, `LightState`
 // :1402-1409, `LightStateAction` :1411-1417, `AnimationState` :754-756) — none
 // declares a `default="…"`. Construct them explicitly.
+impl AnimationAction {
+    /// Create an animation action for the given animation (XSD-required child).
+    pub fn new(animation_type: AnimationType) -> Self {
+        Self {
+            r#loop: None,
+            animation_duration: None,
+            animation_type,
+            animation_state: None,
+        }
+    }
+}
+
+impl AnimationType {
+    fn empty() -> Self {
+        Self {
+            component_animation: None,
+            pedestrian_animation: None,
+            animation_file: None,
+            user_defined_animation: None,
+        }
+    }
+
+    /// `ComponentAnimation` branch of the choice.
+    pub fn component(component_animation: ComponentAnimation) -> Self {
+        Self {
+            component_animation: Some(component_animation),
+            ..Self::empty()
+        }
+    }
+
+    /// `PedestrianAnimation` branch of the choice.
+    pub fn pedestrian(pedestrian_animation: PedestrianAnimation) -> Self {
+        Self {
+            pedestrian_animation: Some(pedestrian_animation),
+            ..Self::empty()
+        }
+    }
+
+    /// `AnimationFile` branch of the choice.
+    pub fn file(animation_file: AnimationFile) -> Self {
+        Self {
+            animation_file: Some(animation_file),
+            ..Self::empty()
+        }
+    }
+
+    /// `UserDefinedAnimation` branch of the choice.
+    pub fn user_defined(user_defined_animation: UserDefinedAnimation) -> Self {
+        Self {
+            user_defined_animation: Some(user_defined_animation),
+            ..Self::empty()
+        }
+    }
+}
+
+impl ComponentAnimation {
+    /// `VehicleComponent` branch of the choice.
+    pub fn vehicle(vehicle_component: VehicleComponent) -> Self {
+        Self {
+            vehicle_component: Some(vehicle_component),
+            user_defined_component: None,
+        }
+    }
+
+    /// `UserDefinedComponent` branch of the choice.
+    pub fn user_defined(user_defined_component: UserDefinedComponent) -> Self {
+        Self {
+            vehicle_component: None,
+            user_defined_component: Some(user_defined_component),
+        }
+    }
+}
+
 impl VisibilityAction {
     /// XSD `VisibilityAction` (:2550-2557): all three attributes required.
     pub fn new(graphics: bool, sensors: bool, traffic: bool) -> Self {

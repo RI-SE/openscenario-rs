@@ -13,7 +13,9 @@ use serde_json;
 #[test]
 fn test_core_action_serialization() {
     // Test PrivateAction serialization
-    let private_action = PrivateAction::TeleportAction(TeleportAction::default());
+    let private_action = PrivateAction::TeleportAction(TeleportAction::new(Position::world(
+        WorldPosition::new(1.0, 2.0),
+    )));
     let core_action = Action::PrivateAction(private_action);
 
     let serialized = serde_json::to_string(&core_action).unwrap();
@@ -209,7 +211,9 @@ fn test_override_actions() {
 fn test_action_wrapper() {
     let action_wrapper = NamedAction {
         name: OSString::literal("test_action".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
+        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
+            Position::world(WorldPosition::new(1.0, 2.0)),
+        ))),
     };
 
     let serialized = serde_json::to_string(&action_wrapper).unwrap();
@@ -233,7 +237,9 @@ fn test_new_action_wrapper_types() {
     // Test main NamedAction wrapper
     let action = NamedAction {
         name: OSString::literal("testAction".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
+        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
+            Position::world(WorldPosition::new(1.0, 2.0)),
+        ))),
     };
 
     let serialized = serde_json::to_string(&action).unwrap();
@@ -427,12 +433,17 @@ fn test_type_aliases() {
 
 #[test]
 fn test_constructors_and_benign_defaults() {
-    // Choice/container structs that default to all-`None` keep their
-    // `Default` (benign per the crate's `Default` policy).
+    // Choice/container structs that default to all-`None` keep their `Default` only when
+    // the schema permits the empty form (category 2 in `docs/type_system_guide.md`).
+    // `TeleportAction`/`AddEntityAction` do not qualify — XSD `Position` (`:1738-1751`) is a
+    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3, OSR-09). These
+    // now name a branch.
     let _global_action = GlobalAction::TrafficAction(TrafficAction::new(
         TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
     ));
-    let _private_action = PrivateAction::TeleportAction(TeleportAction::default());
+    let _private_action = PrivateAction::TeleportAction(TeleportAction::new(Position::world(
+        WorldPosition::new(1.0, 2.0),
+    )));
     let _entity_action = EntityAction::delete("defaultEntity");
     let _traffic_action = TrafficAction::new(TrafficActionChoice::TrafficStopAction(
         TrafficStopAction::default(),
@@ -441,7 +452,7 @@ fn test_constructors_and_benign_defaults() {
         "TestSignal".to_string(),
         "green".to_string(),
     ));
-    let _add_entity = AddEntityAction::default();
+    let _add_entity = AddEntityAction::new(Position::world(WorldPosition::new(3.0, 4.0)));
     let _delete_entity = DeleteEntityAction::default();
     let _user_action = UserDefinedAction::new(CustomCommandAction::new("default", ""));
 
@@ -450,12 +461,18 @@ fn test_constructors_and_benign_defaults() {
     // for serialization anywhere in the crate, so no constructor is added.
     let _action_wrapper = NamedAction {
         name: OSString::literal("defaultTraffic".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
+        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
+            Position::world(WorldPosition::new(1.0, 2.0)),
+        ))),
     };
 
     // Named per-branch / `::new` constructors for the previously-fabricating types.
-    let _action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default()));
-    let _private_action_wrapper = PrivateAction::TeleportAction(TeleportAction::default());
+    let _action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
+        Position::world(WorldPosition::new(1.0, 2.0)),
+    )));
+    let _private_action_wrapper = PrivateAction::TeleportAction(TeleportAction::new(
+        Position::world(WorldPosition::new(1.0, 2.0)),
+    ));
     let _monitor_action = SetMonitorAction::new("defaultMonitor", true);
     let _var_action = VariableAction::new(
         "defaultVariable",

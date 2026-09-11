@@ -612,6 +612,43 @@ one, named above, unfixed, because `types/scenario/story.rs` was never on this o
 issue's file list. The lesson this issue exists to teach held once more: state the count you
 verified, not the count you assume, and do not write "and N others."
 
+**OSR-09 closed that out, and settled the category-3 cases the earlier passes had deferred.**
+`Actors` (`types/scenario/story.rs`) lost its derive — XSD `Actors` (`:723-728`) marks
+`@selectTriggeringEntities` `use="required"` with no schema default, so the derive invented
+`false`; it gained `Actors::new`/`::triggering`/`::named`, and `ManeuverGroup::new` now takes the
+actors rather than defaulting them. `AnimationAction` and `AnimationType`
+(`types/actions/appearance.rs`) lost theirs — XSD `AnimationAction` (`:740-747`) requires the
+`AnimationType` child and `AnimationType` (`:757-764`) is a bare `xsd:choice`, so the derive OSR-04
+agent D added in good faith emitted `<AnimationType/>`, which validates against nothing;
+`ComponentAnimation` (`:947-952`) is the same choice one level down and was fixed with it.
+`TeleportAction` and `AcquirePositionAction` (`types/actions/movement.rs`), kept by OSR-04 agent A
+on the "`Position` states nothing" reasoning, lost theirs too: XSD `Position` (`:1738-1751`) is a
+bare `xsd:choice`. Re-running the derive sweep found a tenth struct F17's table had missed,
+`AddEntityAction` (`types/actions/wrappers.rs`), with the same required `Position`; and a manual
+read of the surviving hand-written impls found an eleventh case **no detector can see** —
+`ObjectController` (`types/controllers/mod.rs`), whose fields are all `Option` (so the derive sweep
+is blind to it) and whose XSD choice (`:1522-1528`) still requires a branch. Each gained, or
+already had, per-branch constructors.
+
+**The four structural containers keep their `Default`, under category 2, and there is now a test
+that says why.** `ScenarioDefinition` (both copies — `types/scenario/mod.rs` and
+`types/scenario/storyboard.rs`; F14 duplicates, deliberately not consolidated here),
+`Storyboard` and `Init` each hold XSD-required children, which is what put them on the sweep. But
+required-child is not the test; *schema-invalid empty* is. Every one of those children is a
+non-`Option` Rust field and is therefore always emitted, and every child of `CatalogLocations`
+(`:867-878`), `RoadNetwork` (`:1933-1940`), `Entities` (`:1122-1127`) and `InitActions`
+(`:1316-1322`) carries `minOccurs="0"`. The empty spine is a document the schema accepts.
+`tests/default_schema_validity_test.rs` proves it by serializing a fully defaulted spine and
+handing it to libxml2 (0 errors), and proves the contrast in the same file by showing the
+defaulted `Position` choice being rejected. That test is the first thing in the crate to
+construct a `Default` value and validate it — the blind spot F16 identified, since the round-trip
+harness only ever sees documents that came from a file.
+
+The temptation was to remove them because removal was the right answer everywhere else. It is not
+the right answer here: an empty `Storyboard` is a legal OpenSCENARIO document, and requiring four
+arguments to build a type the schema is happy to see empty would trade a real defect for
+ceremony. `ScenarioDefinition::new` already exists for callers who have the children.
+
 ## A trap: unknown fields are silent
 
 Nothing in the crate uses `#[serde(deny_unknown_fields)]`. serde ignores unrecognized XML

@@ -246,7 +246,14 @@ pub struct Event {
 ///
 /// Actors define which entities will participate in a ManeuverGroup
 /// and can optionally select from triggering entities.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// (OSR-09) No `Default`. XSD `Actors` (`Schema/OpenSCENARIO.xsd:723-728`) marks
+/// `@selectTriggeringEntities` `use="required"` with no schema `default="…"`, so the
+/// derived impl invented `false` — category 1, a fabricated required attribute. The
+/// `EntityRef` child *is* `minOccurs="0"`, so only the bool half was wrong; the
+/// constructors below keep the empty-`Vec` form available while forcing the caller to
+/// state the flag.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Actors {
     /// Whether to select entities that triggered the maneuver group
     #[serde(rename = "@selectTriggeringEntities")]
@@ -255,6 +262,26 @@ pub struct Actors {
     /// Direct entity references for actors
     #[serde(rename = "EntityRef", default)]
     pub entity_refs: Vec<EntityRef>,
+}
+
+impl Actors {
+    /// Create an actor set, stating `@selectTriggeringEntities` explicitly.
+    pub fn new(select_triggering_entities: bool, entity_refs: Vec<EntityRef>) -> Self {
+        Self {
+            select_triggering_entities,
+            entity_refs,
+        }
+    }
+
+    /// Actors drawn from the triggering entities (`selectTriggeringEntities="true"`).
+    pub fn triggering() -> Self {
+        Self::new(true, Vec::new())
+    }
+
+    /// Actors named explicitly (`selectTriggeringEntities="false"`).
+    pub fn named(entity_refs: Vec<EntityRef>) -> Self {
+        Self::new(false, entity_refs)
+    }
 }
 
 /// Reference to an entity for actor assignment
@@ -351,18 +378,23 @@ impl Act {
 }
 
 impl ManeuverGroup {
-    /// Create a new maneuver group with the given name and maximum execution
-    /// count, and no actors, catalog references, or maneuvers.
+    /// Create a new maneuver group with the given name, maximum execution count and
+    /// actors, and no catalog references or maneuvers.
     ///
     /// `@maximumExecutionCount` is `use="required"` in the XSD
     /// (`Schema/OpenSCENARIO.xsd`: `<xsd:attribute name="maximumExecutionCount"
     /// type="UnsignedInt" use="required"/>`) with no `default="…"`, so there is
     /// no schema-backed value to assume here — the caller must supply one.
-    pub fn new(name: impl Into<String>, maximum_execution_count: u32) -> Self {
+    ///
+    /// (OSR-09) `actors` likewise became a parameter: it used to be `Actors::default()`,
+    /// which fabricated `selectTriggeringEntities="false"` — an attribute the XSD marks
+    /// `use="required"` with no schema default. `Actors` is required here too
+    /// (`Schema/OpenSCENARIO.xsd` `ManeuverGroup`), so there is nothing to elide.
+    pub fn new(name: impl Into<String>, maximum_execution_count: u32, actors: Actors) -> Self {
         Self {
             name: OSString::literal(name.into()),
             maximum_execution_count: UnsignedInt::literal(maximum_execution_count),
-            actors: Actors::default(),
+            actors,
             catalog_reference: Vec::new(),
             maneuvers: Vec::new(),
         }
@@ -427,7 +459,7 @@ mod tests {
     fn test_act_with_triggers() {
         let act = Act {
             name: Value::literal("TestAct".to_string()),
-            maneuver_groups: vec![ManeuverGroup::new("Group1", 1)],
+            maneuver_groups: vec![ManeuverGroup::new("Group1", 1, Actors::named(Vec::new()))],
             start_trigger: None, // Will add proper trigger tests when Trigger is implemented
             stop_trigger: None,
         };

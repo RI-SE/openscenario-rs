@@ -457,7 +457,11 @@ mod tests {
             .add_action(PrivateAction {
                 longitudinal_action: None,
                 lateral_action: None,
-                teleport_action: Some(TeleportAction::default()),
+                teleport_action: Some(TeleportAction::new(
+                    crate::types::positions::Position::world(
+                        crate::types::positions::WorldPosition::new(1.0, 2.0),
+                    ),
+                )),
                 routing_action: None,
                 synchronize_action: None,
                 activate_controller_action: None,

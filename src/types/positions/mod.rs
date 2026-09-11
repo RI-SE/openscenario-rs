@@ -117,6 +117,14 @@ impl Position {
             relative_object_position: None,
         }
     }
+    /// Create a Position with WorldPosition (the `WorldPosition` branch of the
+    /// XSD `Position` choice, `Schema/OpenSCENARIO.xsd:1738-1751`).
+    pub fn world(world_position: WorldPosition) -> Self {
+        Self {
+            world_position: Some(world_position),
+            ..Self::empty()
+        }
+    }
     /// Create a Position with RelativeRoadPosition
     pub fn relative_road(relative_road_position: RelativeRoadPosition) -> Self {
         Self {

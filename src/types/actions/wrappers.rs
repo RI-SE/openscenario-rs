@@ -110,11 +110,22 @@ impl InfrastructureAction {
 }
 
 // AddEntityAction type
+//
+// (OSR-09) `#[derive(Default)]` removed. F17's sweep table listed nine structs; re-running
+// the same method here found a tenth, this one. XSD `AddEntityAction`
+// (`Schema/OpenSCENARIO.xsd:729-732`) requires the `Position` child, and XSD `Position`
+// (`:1738-1751`) is a bare `xsd:choice` — category 3, schema-invalid empty.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
-#[derive(Default)]
 pub struct AddEntityAction {
     pub position: Position,
+}
+
+impl AddEntityAction {
+    /// Add an entity at the given position (XSD `AddEntityAction`, `:729-732`).
+    pub fn new(position: Position) -> Self {
+        Self { position }
+    }
 }
 
 // DeleteEntityAction type (empty per XSD)
@@ -513,7 +524,9 @@ mod tests {
 
     #[test]
     fn test_action_variant_construction() {
-        let action = Action::PrivateAction(PrivateAction::TeleportAction(Default::default()));
+        let action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
+            Position::world(crate::types::positions::WorldPosition::new(1.0, 2.0)),
+        )));
         assert!(matches!(
             action,
             Action::PrivateAction(PrivateAction::TeleportAction(_))

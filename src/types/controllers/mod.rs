@@ -143,15 +143,16 @@ impl<'de> Deserialize<'de> for ObjectController {
     }
 }
 
-impl Default for ObjectController {
-    fn default() -> Self {
-        Self {
-            name: None,
-            controller: None,
-            catalog_reference: None,
-        }
-    }
-}
+// (OSR-09) `Default` removed. XSD `ObjectController`
+// (`Schema/OpenSCENARIO.xsd:1522-1528`) is a bare `xsd:choice` of `CatalogReference |
+// Controller`, neither carrying `minOccurs="0"`, so exactly one must be present. The
+// all-`None` default emitted `<ObjectController />`, which libxml2 rejects with
+// *"Missing child element(s). Expected is one of ( CatalogReference, Controller )"* —
+// category 3, schema-invalid empty. Use `with_controller` / `with_catalog_reference`
+// (or their `with_named_*` forms) below.
+//
+// This one was found by neither of the campaign's two greps nor by the derive sweep:
+// every field is `Option`, so detector 3 cannot see it either. See the report.
 
 /// Collection of controller-specific properties.
 ///
@@ -336,12 +337,19 @@ mod tests {
 
     #[test]
     fn test_controller_defaults() {
-        let object_controller = ObjectController::default();
+        // (OSR-09) `ObjectController` no longer has a `Default`: its XSD choice
+        // (`:1522-1528`) requires a branch, so the all-`None` form was schema-invalid.
+        // A controller built via a branch constructor leaves the *other* branch `None`,
+        // which is what this test is actually about.
+        let object_controller =
+            ObjectController::with_catalog_reference(ControllerCatalogReference::new(
+                "ControllerCatalog".to_string(),
+                "TestController".to_string(),
+            ));
         let properties = ControllerProperties::default();
 
-        // All defaults should be valid
         assert!(object_controller.controller.is_none());
-        assert!(object_controller.catalog_reference.is_none());
+        assert!(object_controller.catalog_reference.is_some());
         assert!(properties.properties.is_empty());
     }
 

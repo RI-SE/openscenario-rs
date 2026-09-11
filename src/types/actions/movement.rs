@@ -97,18 +97,25 @@ pub struct SpeedAction {
     pub speed_action_target: SpeedActionTarget,
 }
 
-// (OSR-04) `#[derive(Default)]` kept: unlike the other impls in this file,
-// this one is benign, not fabricating — `Position`'s own `Default`
-// (`src/types/positions/mod.rs`, out of this issue's scope) is itself an
-// all-`None` choice with no branch selected, so `TeleportAction::default()`
-// states nothing rather than inventing a world position. It also has
-// external call sites (`src/types/actions/wrappers.rs`,
-// `src/types/scenario/init.rs`, several `tests/*.rs`) outside this issue's
-// scope, so it would be blocked even if it were fabricating. See report.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// (OSR-09) `#[derive(Default)]` removed. OSR-04 agent A kept it, reasoning that
+// `Position::default()` is an all-`None` choice and so "states nothing". F16
+// falsified that reasoning: XSD `Position` (`Schema/OpenSCENARIO.xsd:1738-1751`) is a
+// bare `xsd:choice` with no `minOccurs="0"`, so a branch must be selected. Verified by
+// serializing `TeleportAction::default()` inside a document and validating it —
+// libxml2 rejects it with *"Element 'Position': Missing child element(s)"*. That is
+// category 3, schema-invalid empty: it invents nothing, and is still unusable.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TeleportAction {
     #[serde(rename = "Position")]
     pub position: Position,
+}
+
+impl TeleportAction {
+    /// Teleport to the given position (XSD `TeleportAction`, `:2148-2152`: the
+    /// `Position` child is required and its choice must select a branch).
+    pub fn new(position: Position) -> Self {
+        Self { position }
+    }
 }
 
 // Remove duplicate import
@@ -686,13 +693,20 @@ pub struct RelativeSpeedToMaster {
 }
 
 /// Acquire position action for moving to a specific position
-// (OSR-04) `#[derive(Default)]` kept, same reasoning as `TeleportAction`
-// above: `Position::default()` is an all-`None` choice with no branch
-// selected, so this states nothing rather than fabricating a position.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// (OSR-09) `#[derive(Default)]` removed, same reasoning as `TeleportAction` above:
+// XSD `AcquirePositionAction` (`:692-696`) requires the `Position` child, and `Position`
+// is a bare `xsd:choice`, so an all-`None` value is schema-invalid empty (category 3).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AcquirePositionAction {
     #[serde(rename = "Position")]
     pub position: Position,
+}
+
+impl AcquirePositionAction {
+    /// Acquire the given position (XSD `AcquirePositionAction`, `:692-696`).
+    pub fn new(position: Position) -> Self {
+        Self { position }
+    }
 }
 
 // Default implementations
@@ -1963,7 +1977,9 @@ mod tests {
             Some(&"SyncTarget".to_string())
         );
 
-        let acquire_action = AcquirePositionAction::default();
+        let acquire_action = AcquirePositionAction::new(Position::world(
+            crate::types::positions::WorldPosition::new(3.0, 4.0),
+        ));
         // Just verify it compiles and creates successfully
         let _ = acquire_action.position;
     }

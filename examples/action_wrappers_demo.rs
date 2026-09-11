@@ -41,7 +41,7 @@ fn demonstrate_private_actions() {
     println!("1. Private Actions:");
 
     // Create a TeleportAction wrapped in PrivateAction
-    let teleport_action = TeleportAction::default();
+    let teleport_action = TeleportAction::new(Position::world(WorldPosition::new(100.0, 50.0)));
     let private_action = PrivateAction::TeleportAction(teleport_action);
     let core_action = Action::PrivateAction(private_action);
 
