@@ -329,7 +329,7 @@ mod tests {
                 max_deceleration: Double::literal(10.0),
                 max_deceleration_rate: None,
             },
-            axles: Axles::default(),
+            axles: Axles::car(),
             properties: None,
             trailer_hitch: None,
             trailer_coupler: None,

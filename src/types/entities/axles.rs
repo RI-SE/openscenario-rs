@@ -254,17 +254,12 @@ impl Axle {
     }
 }
 
-impl Default for Axles {
-    fn default() -> Self {
-        Self::car()
-    }
-}
-
-impl Default for Axle {
-    fn default() -> Self {
-        Self::rear_car()
-    }
-}
+// No Default for Axles or Axle: every Axle attribute (`maxSteering`, `wheelDiameter`,
+// `trackWidth`, `positionX`, `positionZ`) is `use="required"` with no schema default, and
+// `Axles.RearAxle` is required too. The previous impls picked `Self::car()` / `Self::rear_car()`
+// — fixed vehicle geometry nobody asked for. The named constructors (`car()`, `truck()`,
+// `trailer()`, `motorcycle()`, `front_car()`, `rear_car()`, …) remain as explicit, named presets;
+// only the silent `Default`/`::default()` path is removed.
 
 #[cfg(test)]
 mod tests {

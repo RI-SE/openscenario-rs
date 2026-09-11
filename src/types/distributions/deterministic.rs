@@ -187,10 +187,16 @@ impl DeterministicSingleParameterDistribution {
 }
 
 /// Multi-parameter deterministic distribution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeterministicMultiParameterDistribution {
     #[serde(rename = "ValueSetDistribution")]
     pub distribution_type: ValueSetDistribution,
+}
+
+impl DeterministicMultiParameterDistribution {
+    pub fn new(distribution_type: ValueSetDistribution) -> Self {
+        Self { distribution_type }
+    }
 }
 
 /// Discrete value set distribution
@@ -377,77 +383,86 @@ impl ValidateDistribution for ParameterValueSet {
     }
 }
 
-// Default implementations for distribution group support
+// No Default impls here: every type in this file is either an XSD choice group
+// (`DeterministicParameterDistribution`, `DeterministicSingleParameterDistributionType`) whose
+// variants each carry required scenario content, or a container whose child element has
+// minOccurs="1" in the schema (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
+// `ParameterValueSet.ParameterAssignment` all lack `minOccurs="0"`/have no `minOccurs="0"` —
+// verified against `Schema/OpenSCENARIO.xsd`), so an empty `Vec` would not be schema-valid either
+// (F16). There is no default that states nothing; callers must supply the required content via
+// `::new()`.
 
-impl Default for DeterministicParameterDistribution {
-    fn default() -> Self {
-        Self::Single(DeterministicSingleParameterDistribution::default())
-    }
-}
-
-impl Default for DeterministicSingleParameterDistribution {
-    fn default() -> Self {
+impl DeterministicSingleParameterDistribution {
+    /// Construct a single-parameter distribution. Exactly one of `distribution_set`,
+    /// `distribution_range`, `user_defined_distribution` should be `Some` (xsd:choice) — see
+    /// [`Self::validate`].
+    pub fn new(
+        parameter_name: OSString,
+        distribution_set: Option<DistributionSet>,
+        distribution_range: Option<DistributionRange>,
+        user_defined_distribution: Option<crate::types::distributions::UserDefinedDistribution>,
+    ) -> Self {
         Self {
-            parameter_name: Value::Literal("parameter".to_string()),
-            distribution_set: Some(DistributionSet::default()),
-            distribution_range: None,
-            user_defined_distribution: None,
+            parameter_name,
+            distribution_set,
+            distribution_range,
+            user_defined_distribution,
         }
     }
 }
 
-impl Default for DeterministicSingleParameterDistributionType {
-    fn default() -> Self {
-        Self::DistributionSet(DistributionSet::default())
+impl DistributionSet {
+    /// Construct a distribution set. The schema requires at least one `Element`
+    /// (`maxOccurs="unbounded"`, no `minOccurs="0"`), so this takes the first element plus any
+    /// further ones rather than allowing an empty set.
+    pub fn new(first: DistributionSetElement, rest: Vec<DistributionSetElement>) -> Self {
+        let mut elements = vec![first];
+        elements.extend(rest);
+        Self { elements }
     }
 }
 
-impl Default for DistributionSet {
-    fn default() -> Self {
+impl DistributionSetElement {
+    pub fn new(value: OSString) -> Self {
+        Self { value }
+    }
+}
+
+impl DistributionRange {
+    pub fn new(step_width: OSString, range: crate::types::basic::Range) -> Self {
+        Self { step_width, range }
+    }
+}
+
+impl ValueSetDistribution {
+    /// The schema requires at least one `ParameterValueSet` (`maxOccurs="unbounded"`, no
+    /// `minOccurs="0"`).
+    pub fn new(first: ParameterValueSet, rest: Vec<ParameterValueSet>) -> Self {
+        let mut parameter_value_sets = vec![first];
+        parameter_value_sets.extend(rest);
         Self {
-            elements: vec![DistributionSetElement::default()],
+            parameter_value_sets,
         }
     }
 }
 
-impl Default for DistributionSetElement {
-    fn default() -> Self {
+impl ParameterValueSet {
+    /// The schema requires at least one `ParameterAssignment` (`maxOccurs="unbounded"`, no
+    /// `minOccurs="0"`).
+    pub fn new(first: ParameterAssignment, rest: Vec<ParameterAssignment>) -> Self {
+        let mut parameter_assignments = vec![first];
+        parameter_assignments.extend(rest);
         Self {
-            value: Value::Literal("0.0".to_string()),
+            parameter_assignments,
         }
     }
 }
 
-impl Default for DistributionRange {
-    fn default() -> Self {
+impl ParameterAssignment {
+    pub fn new(parameter_ref: String, value: OSString) -> Self {
         Self {
-            step_width: Value::Literal("1.0".to_string()),
-            range: crate::types::basic::Range::new(0.0, 100.0),
-        }
-    }
-}
-
-impl Default for ValueSetDistribution {
-    fn default() -> Self {
-        Self {
-            parameter_value_sets: vec![ParameterValueSet::default()],
-        }
-    }
-}
-
-impl Default for ParameterValueSet {
-    fn default() -> Self {
-        Self {
-            parameter_assignments: vec![ParameterAssignment::default()],
-        }
-    }
-}
-
-impl Default for ParameterAssignment {
-    fn default() -> Self {
-        Self {
-            parameter_ref: "parameter".to_string(),
-            value: Value::Literal("0.0".to_string()),
+            parameter_ref,
+            value,
         }
     }
 }

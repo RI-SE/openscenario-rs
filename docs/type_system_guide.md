@@ -425,37 +425,63 @@ one — that keeps `new()` `clippy::new_without_default`-clean without an `#[all
 conditions/*` has zero fabricating `Default` impls as of this change.
 
 **The Default policy stated above is *not* fully enforced.** `grep -rn "^impl Default for" src/`
-finds 44 hand-written impls (down from 51 before this issue's seven were removed — OSR-03/OSR-04
-never claimed to cover every file in `src/`). Manual review of all 44 sorts them:
+found 44 hand-written impls before OSR-08 (down from 51 before this issue's seven were removed —
+OSR-03/OSR-04 never claimed to cover every file in `src/`). Manual review of all 44 sorted them
+into 15 legitimately benign and 29 that fabricate content the policy forbids.
 
-- **15 are legitimately benign** — either every field is `None`/empty (`AssignControllerAction`,
-  `ObjectController`, `TrafficStopAction` — a unit struct), or the impl delegates to a `new()`
-  that itself invents nothing (`CatalogEntityBuilder`, `ScenarioBuilder<Empty>`,
-  `ParameterSubstitutionEngine`, `CatalogLoader`, `CatalogManager` ×2, `CatalogResolver`,
-  `CatalogLocations`, `ChoiceGroupRegistry`, `ScenarioValidator`, `ValidationResult`), or the type
-  isn't XSD-backed scenario content at all but internal parser/validator tooling
-  (`ValidationConfig`).
-- **29 fabricate content the policy forbids**, entirely outside `src/builder/conditions/*` and
-  outside every OSR-03/OSR-04 agent's assigned file set — they live in `src/catalog/`,
-  `src/types/catalogs/{references,files,environments,controllers,trajectories,routes}.rs`,
-  `src/types/distributions/{mod,deterministic,stochastic}.rs`, plus two strays:
-  `src/types/positions/trajectory.rs` (`Trajectory::default()` — its `Polyline` shape defaults to
-  zero vertices, the F16 trap: `Schema/OpenSCENARIO.xsd`'s `Polyline` requires
-  `minOccurs="2"`) and `src/types/conditions/entity.rs:613` (`SpeedCondition::default()` invents
-  `value: 10.0, rule: GreaterThan` — missed by OSR-04 agent C's otherwise-complete pass over that
-  file). Representative fabrications: `CatalogFile::default()` → `"DefaultCatalog"`;
-  `ParameterAssignment::default()` (two separate types, `catalogs/references.rs` and
-  `distributions/deterministic.rs`) → `"defaultParam"`/`"parameter"` and a literal `"0.0"`/
-  `"defaultValue"`; `Axles`/`Axle::default()` → `Self::car()`/`Self::rear_car()`, fixed geometry
-  nobody specified; `Stochastic::default()` → `numberOfTestRuns: 1` where
-  `Schema/OpenSCENARIO.xsd:2085` marks the attribute `use="required"` with no schema default;
-  `ParameterValueDistribution::default()` fabricates a whole nested `Deterministic` distribution
-  tree. None of this is new — it predates OSR-04 and was simply never in scope for any agent in
-  this series — but it means the policy is enforced across `src/types/{actions,conditions,
-  entities,positions,scenario}/`, `src/types/basic.rs`, and now all of `src/builder/`, while
-  `src/catalog/`, `src/types/catalogs/`, `src/types/distributions/`, one straggler in
-  `src/types/positions/trajectory.rs`, and one in `src/types/conditions/entity.rs` remain
-  unaddressed. That is a new OSR, not a rounding error.
+**OSR-08 agent H removed all 18 of those 29 that live in `src/types/distributions/{deterministic,
+mod,stochastic}.rs` and `src/types/entities/axles.rs`** — the two directories F4's original sweep
+missed entirely. `grep -rn "^impl Default for" src/` now finds **26**. What was removed and why,
+per the classification method used across this series:
+
+- `deterministic.rs` (9 impls, all removed): `DeterministicParameterDistribution` and
+  `DeterministicSingleParameterDistributionType` are xsd:choice groups whose every variant
+  requires real content — no member "states nothing". `DeterministicSingleParameterDistribution`,
+  `DistributionSet`, `DistributionSetElement`, `DistributionRange`, `ValueSetDistribution`,
+  `ParameterValueSet`, and `ParameterAssignment` all either fabricated a required attribute value
+  (a parameter name, a step width, a distribution value) or an empty/single-element `Vec` that
+  isn't schema-valid either — `Schema/OpenSCENARIO.xsd` gives `DistributionSet.Element`,
+  `ValueSetDistribution.ParameterValueSet`, and `ParameterValueSet.ParameterAssignment` no
+  `minOccurs="0"` (all `maxOccurs="unbounded"` with implicit `minOccurs="1"`), so this is the F16
+  trap, not the benign case. Each now has an explicit `::new()` requiring the caller to supply
+  real content.
+- `mod.rs` (6 impls, all removed): `ParameterValueDistribution::default()` fabricated a whole
+  nested `Deterministic` distribution tree plus a fake `"default.xosc"` scenario file — the
+  "fabricating a whole child" case with no defensible replacement (`new_deterministic`/
+  `new_stochastic` already existed). `DistributionDefinition`,
+  `DistributionDefinitionGroup`, `DeterministicParameterDistributionGroup`, and
+  `DeterministicSingleParameterDistributionTypeGroup` are xsd:choice wrappers with the same
+  no-empty-variant problem as above. `UserDefinedDistribution::default()` invented
+  `content`/`type` literal `"default"` for two fields both `use="required"`; it now has a
+  `::new(content, distribution_type)`. Two structs (`DeterministicMultiParameterDistributionTypeGroup`,
+  `ParameterValueDistributionDefinitionGroup`) also lost a *derived* `Default` (not counted in the
+  44/26, since the grep is for hand-written `impl Default for`) once their single required field's
+  type stopped implementing it.
+- `stochastic.rs` (1 impl, removed): `Stochastic::default()` fabricated `numberOfTestRuns: 1`
+  where `Schema/OpenSCENARIO.xsd:2085` marks the attribute `use="required"` with no schema
+  default, and defaulted `distributions` to an empty `Vec` where `StochasticDistribution` also
+  has no `minOccurs="0"` — another F16 instance. Replaced with `::new(number_of_test_runs, first,
+  rest)`.
+- `entities/axles.rs` (2 impls, removed): `Axles`/`Axle::default()` returned `Self::car()`/
+  `Self::rear_car()` — fixed vehicle geometry nobody specified, invented from five separately
+  `use="required"` attributes with no schema default. The named presets (`car()`, `truck()`,
+  `trailer()`, `motorcycle()`, `front_car()`, `rear_car()`, …) remain as explicit constructors;
+  only the silent `Default`/`::default()` path was removed.
+
+That leaves the remaining ~11 fabricating impls this issue assigned to **agent I**, entirely
+outside `src/builder/conditions/*`, `src/types/distributions/`, and `src/types/entities/axles.rs`:
+they live in `src/catalog/`, `src/types/catalogs/{references,files,environments,controllers,
+trajectories,routes}.rs`, plus two strays — `src/types/positions/trajectory.rs`
+(`Trajectory::default()` — its `Polyline` shape defaults to zero vertices, the F16 trap:
+`Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`) and
+`src/types/conditions/entity.rs:613` (`SpeedCondition::default()` invents `value: 10.0, rule:
+GreaterThan` — missed by OSR-04 agent C's otherwise-complete pass over that file). Representative
+fabrication still outstanding: `CatalogFile::default()` → `"DefaultCatalog"`. None of this is new
+— it predates OSR-04 and was simply never in scope for any agent before OSR-08 — but it means the
+policy is now enforced across `src/types/{actions,conditions,entities,positions,scenario}/`
+(minus the two entity.rs/trajectory.rs stragglers), `src/types/basic.rs`, all of `src/builder/`,
+and now `src/types/distributions/` and `src/types/entities/axles.rs`, while `src/catalog/`,
+`src/types/catalogs/`, and those two stragglers remain unaddressed pending agent I.
 
 ## A trap: unknown fields are silent
 
