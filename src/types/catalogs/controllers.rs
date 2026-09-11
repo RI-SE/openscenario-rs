@@ -36,17 +36,6 @@ pub struct CatalogController {
     pub properties: Option<ControllerProperties>,
 }
 
-impl Default for CatalogController {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogController".to_string(),
-            controller_type: Some(Value::Literal(ControllerType::Movement)),
-            parameter_declarations: None,
-            properties: None,
-        }
-    }
-}
-
 /// Properties specific to catalog controllers
 ///
 /// Container for controller parameters and configuration options that
@@ -74,15 +63,6 @@ pub struct ControllerProperty {
     /// Property value (can be parameterized)
     #[serde(rename = "@value")]
     pub value: OSString,
-}
-
-impl Default for ControllerProperty {
-    fn default() -> Self {
-        Self {
-            name: "defaultProperty".to_string(),
-            value: Value::Literal("defaultValue".to_string()),
-        }
-    }
 }
 
 // Implementation methods for catalog controllers
@@ -316,12 +296,19 @@ mod tests {
 
     #[test]
     fn test_defaults() {
-        let controller = CatalogController::default();
+        // `ControllerProperties::default()` is honest: XSD `Properties` has all of
+        // `Property`/`File`/`CustomContent` at `minOccurs="0"`, so an empty
+        // collection states nothing (F16). `CatalogController` and `ControllerProperty`
+        // have no `Default` — `@name` is `use="required"` on both with no schema
+        // default, so callers must supply one explicitly via `new`/`with_literal`.
         let properties = ControllerProperties::default();
-        let property = ControllerProperty::default();
+        let controller =
+            CatalogController::new("ExplicitController".to_string(), ControllerType::Movement);
+        let property =
+            ControllerProperty::with_literal("explicitProp".to_string(), "value".to_string());
 
-        assert_eq!(controller.name, "DefaultCatalogController");
+        assert_eq!(controller.name, "ExplicitController");
         assert!(properties.properties.is_empty());
-        assert_eq!(property.name, "defaultProperty");
+        assert_eq!(property.name, "explicitProp");
     }
 }

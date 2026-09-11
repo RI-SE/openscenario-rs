@@ -34,19 +34,6 @@ pub struct CatalogTrajectory {
     pub shape: CatalogShape,
 }
 
-impl Default for CatalogTrajectory {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogTrajectory".to_string(),
-            closed: Value::Literal(false),
-            parameter_declarations: None,
-            shape: CatalogShape::new(CatalogTrajectoryShape::Polyline(CatalogPolyline {
-                vertices: Vec::new(),
-            })),
-        }
-    }
-}
-
 /// Wrapper for the `<Shape>` element of a catalog trajectory.
 ///
 /// The XSD models `<Shape>` as a container holding exactly one of
@@ -206,7 +193,13 @@ pub struct NurbsKnot {
 // Implementation methods for catalog trajectories
 
 impl CatalogTrajectory {
-    /// Creates a new catalog trajectory with the specified name
+    /// Creates a new catalog trajectory with the specified name.
+    ///
+    /// There used to be a `Default` impl here. It fabricated `@name` as
+    /// `"DefaultCatalogTrajectory"` and, worse, defaulted `shape` to a `Polyline`
+    /// with zero `Vertex` children — XSD `Polyline` requires `minOccurs="2"`, so
+    /// that default could never serialize to schema-valid XML (F16, same trap as
+    /// `positions::trajectory::Trajectory`). Removed; callers must supply both.
     pub fn new(name: String, shape: CatalogTrajectoryShape) -> Self {
         Self {
             name,
@@ -729,11 +722,13 @@ mod tests {
     }
 
     #[test]
-    fn test_defaults() {
-        let trajectory = CatalogTrajectory::default();
-        let polyline = CatalogPolyline {
-            vertices: Vec::new(),
-        };
+    fn test_constructors_do_not_fabricate_name_or_shape() {
+        let trajectory = CatalogTrajectory::new(
+            "ExplicitTrajectory".to_string(),
+            CatalogTrajectoryShape::Polyline(CatalogPolyline {
+                vertices: Vec::new(),
+            }),
+        );
         let clothoid = CatalogClothoid::new(
             Value::Literal(0.0),
             Value::Literal(0.0),
@@ -741,8 +736,7 @@ mod tests {
         );
         let nurbs = CatalogNurbs::new(Value::Literal(2));
 
-        assert_eq!(trajectory.name, "DefaultCatalogTrajectory");
-        assert!(polyline.vertices.is_empty());
+        assert_eq!(trajectory.name, "ExplicitTrajectory");
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);
         assert_eq!(nurbs.order.as_literal().unwrap(), &2);
     }

@@ -141,10 +141,21 @@ pub struct ScenarioDefinition {
 }
 
 /// Catalog definition for catalog files
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`: it wrapped `CatalogContent`, whose `@name` is `use="required"`
+/// with no XSD `default="…"`. The derive here used to piggy-back on
+/// `CatalogContent`'s own (now-removed) fabricating `Default`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: CatalogContent,
+}
+
+impl CatalogDefinition {
+    /// Create a new catalog definition wrapping the given catalog content.
+    pub fn new(catalog: CatalogContent) -> Self {
+        Self { catalog }
+    }
 }
 
 /// The OpenSCENARIO revision this crate targets, as declared in `FileHeader`.
@@ -266,7 +277,9 @@ mod tests {
         let mut doc = test_scenario_document();
         doc.entities = None;
         doc.storyboard = None;
-        doc.catalog = Some(CatalogDefinition::default());
+        doc.catalog = Some(CatalogDefinition::new(CatalogContent::new(
+            "TestCatalog".to_string(),
+        )));
         assert_eq!(doc.document_type(), OpenScenarioDocumentType::Catalog);
         assert!(doc.is_catalog());
     }

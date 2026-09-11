@@ -468,20 +468,90 @@ per the classification method used across this series:
   `trailer()`, `motorcycle()`, `front_car()`, `rear_car()`, …) remain as explicit constructors;
   only the silent `Default`/`::default()` path was removed.
 
-That leaves the remaining ~11 fabricating impls this issue assigned to **agent I**, entirely
-outside `src/builder/conditions/*`, `src/types/distributions/`, and `src/types/entities/axles.rs`:
-they live in `src/catalog/`, `src/types/catalogs/{references,files,environments,controllers,
-trajectories,routes}.rs`, plus two strays — `src/types/positions/trajectory.rs`
-(`Trajectory::default()` — its `Polyline` shape defaults to zero vertices, the F16 trap:
-`Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`) and
-`src/types/conditions/entity.rs:613` (`SpeedCondition::default()` invents `value: 10.0, rule:
-GreaterThan` — missed by OSR-04 agent C's otherwise-complete pass over that file). Representative
-fabrication still outstanding: `CatalogFile::default()` → `"DefaultCatalog"`. None of this is new
-— it predates OSR-04 and was simply never in scope for any agent before OSR-08 — but it means the
-policy is now enforced across `src/types/{actions,conditions,entities,positions,scenario}/`
-(minus the two entity.rs/trajectory.rs stragglers), `src/types/basic.rs`, all of `src/builder/`,
-and now `src/types/distributions/` and `src/types/entities/axles.rs`, while `src/catalog/`,
-`src/types/catalogs/`, and those two stragglers remain unaddressed pending agent I.
+**OSR-08 agent I closed the two stragglers and the rest of the catalog subtree.**
+`src/types/conditions/entity.rs:613` (`SpeedCondition::default()`, inventing `value: 10.0, rule:
+GreaterThan`) and `src/types/positions/trajectory.rs` (`Trajectory::default()`, whose `Polyline`
+defaulted to zero vertices — F16: `Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`,
+so that value could never serialize to schema-valid XML) were both removed with an explicit
+`::new()` in their place; `SpeedCondition::new` already existed, `Trajectory::new` is new and
+mirrors the identical constructor already present on the sibling
+`actions::movement::Trajectory`.
+
+The catalog subtree contributed nine more removals, all fabricating a required field with no
+XSD `default="…"`, each replaced with an explicit constructor: `CatalogRoute`/`RouteWaypoint`
+(`types/catalogs/routes.rs` — name `"DefaultCatalogRoute"` and a fabricated origin waypoint with
+`RouteStrategy::Fastest`), `CatalogController`/`ControllerProperty`
+(`types/catalogs/controllers.rs` — name/type and a fake `"defaultProperty"`/`"defaultValue"`
+pair; `ControllerProperties`'s own `#[derive(Default)]` stays, since XSD `Properties` has every
+child at `minOccurs="0"`), `CatalogFog` (`types/catalogs/environments.rs` — a fabricated 100km
+`visualRange`; `CatalogFog::new(visual_range)` replaces it, `CatalogWeather`'s own
+`#[derive(Default)]` stays as all-`Option`), `CatalogFile`/`CatalogContent`
+(`types/catalogs/files.rs` — the issue's namesake offender, `"DefaultCatalog"`/
+`"openscenario-rs"`), `ParameterAssignment` (`types/catalogs/references.rs` — fabricated
+`"defaultParam"`/`"defaultValue"`; sibling `ParameterAssignments`' `#[derive(Default)]` stays,
+XSD `minOccurs="0"`), and `CatalogTrajectory` (`types/catalogs/trajectories.rs` — the same
+double fabrication as `positions::trajectory::Trajectory`: an invented name *and* an
+`F16`-invalid zero-vertex `Polyline`).
+
+Removing `CatalogContent`'s `Default` surfaced two **derived** defaults (not counted by
+`grep -rn "^impl Default for"`, which only sees hand-written impls) that had been silently
+piggy-backing on it: `catalogs::mod::Catalog`/`CatalogDefinition` and
+`scenario::storyboard::CatalogDefinition` each wrapped a required `CatalogContent` field and
+would otherwise still fabricate `"DefaultCatalog"` through the derive even with the hand-written
+impl gone. Both lost their `#[derive(Default)]`; the storyboard one gained a `::new()` it never
+had.
+
+`src/catalog/{mod,loader,resolver,parameters}.rs`, `src/parser/{validation,choice_groups}.rs`,
+`src/builder/{scenario,catalog}.rs`, and `src/types/controllers/mod.rs` were all **verified, not
+assumed**: every remaining impl there was read against its type's shape, not just its file's
+prior "done" status.
+
+**`grep -rn "^impl Default for" src/` now finds 15 — every one reviewed individually, none
+fabricating:**
+
+- `catalog/loader.rs` `CatalogLoader`, `catalog/mod.rs` `CatalogManager`, `catalog/resolver.rs`
+  `CatalogManager`/`CatalogResolver`, `catalog/parameters.rs` `ParameterSubstitutionEngine`,
+  `builder/catalog.rs` `CatalogEntityBuilder`, `builder/scenario.rs`
+  `ScenarioBuilder<Empty>` — all pure delegations to a non-fabricating `::new()`; no field is
+  invented, only empty collections/`None`/a fixed regex pattern used purely as an implementation
+  detail (`ParameterSubstitutionEngine`'s parameter-placeholder regex), not scenario content.
+- `parser/validation.rs` `ValidationConfig`/`ScenarioValidator`/`ValidationResult`,
+  `parser/choice_groups.rs` `ChoiceGroupRegistry` — non-XSD tooling types (validation feature
+  toggles, a zero-field parser registry, an empty validation-run result). These describe the
+  crate's own machinery, not `.xosc` content, so the policy's rationale (a default that
+  "describes something nobody wrote" in a *scenario*) does not apply to them.
+- `types/catalogs/locations.rs` `CatalogLocations` — delegates to `::new()`, all eight catalog
+  slots `None`; XSD's `CatalogLocations` model group has every child `minOccurs="0"`.
+- `types/controllers/mod.rs` `ObjectController` — all-`None` (`name`/`controller`/
+  `catalog_reference`); XSD `ObjectController` makes `@name` optional and its `xsd:choice` body
+  has no required branch, so all-`None` is a schema-valid "nothing selected" choice container.
+- `types/actions/traffic.rs` `TrafficStopAction` — a zero-field struct (`Self {}`); confirmed
+  benign survivor from OSR-04 agent B.
+- `types/actions/control.rs` `AssignControllerAction` — all seven fields `Option`, a `xsd:choice`
+  plus independently-optional activation flags; confirmed benign survivor from OSR-04 agent D.
+
+**A textual grep still undercounts.** A manual sweep for `#[derive(Default)]` on structs with a
+required (non-`Option`, non-`Vec`) field — the same shape `grep -rn "^impl Default for"` cannot
+see — turned up one more confirmed live fabrication, **outside every file this issue or OSR-04
+assigned to any agent**: `src/types/scenario/story.rs:249` derives `Default` for `Actors`, whose
+`@selectTriggeringEntities` is `use="required"` in `Schema/OpenSCENARIO.xsd` (`:727`) with no
+schema `default="…"`. The derive fabricates `false`, and it is not dead code —
+`src/types/scenario/story.rs:365` calls `Actors::default()` live. Every other struct the same
+sweep flagged (`TeleportAction`, `AcquirePositionAction`, `AddEntityAction` — each wrapping a
+`Position`, itself an all-`None` choice; `ScenarioDefinition` in both `types/scenario/mod.rs` and
+`types/scenario/storyboard.rs`, `Init`, `Storyboard` — each a required child whose own `Default`
+bottoms out in all-`None`/empty-and-schema-valid state; `ValidationContext`, non-XSD tooling) was
+individually checked and is benign for the reason given.
+
+**The honest claim: the policy is enforced everywhere this campaign has looked, and it has now
+looked everywhere in `src/` — but "everywhere" surfaced one more fabricating derive the day the
+last hand-written impl was checked off, in a file nobody had assigned.** Ten agents across
+OSR-03, OSR-04, and OSR-08 removed 174 fabricating impls (hand-written and derived) with zero
+harness regressions; the crate's `Default` policy is real and it holds for every impl this report
+lists. It is not, today, true that *no* fabricating `Default` remains — `Actors::default()` is
+one, named above, unfixed, because `types/scenario/story.rs` was never on this or any prior
+issue's file list. The lesson this issue exists to teach held once more: state the count you
+verified, not the count you assume, and do not write "and N others."
 
 ## A trap: unknown fields are silent
 

@@ -162,15 +162,6 @@ impl ParameterAssignment {
     }
 }
 
-impl Default for ParameterAssignment {
-    fn default() -> Self {
-        Self {
-            parameter_ref: Value::Literal("defaultParam".to_string()),
-            value: Value::Literal("defaultValue".to_string()),
-        }
-    }
-}
-
 // Type aliases for common catalog reference types
 use super::entities::{CatalogController, CatalogPedestrian, CatalogVehicle};
 

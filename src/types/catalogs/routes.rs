@@ -35,17 +35,6 @@ pub struct CatalogRoute {
     pub waypoints: Vec<RouteWaypoint>,
 }
 
-impl Default for CatalogRoute {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogRoute".to_string(),
-            closed: Value::Literal(false),
-            parameter_declarations: None,
-            waypoints: Vec::new(),
-        }
-    }
-}
-
 /// Waypoint in a route with position and routing configuration
 ///
 /// Represents a point along a route with optional routing strategy
@@ -60,35 +49,6 @@ pub struct RouteWaypoint {
     /// Routing strategy to reach this waypoint (required per XSD)
     #[serde(rename = "@routeStrategy")]
     pub route_strategy: Value<RouteStrategy>,
-}
-
-impl Default for RouteWaypoint {
-    fn default() -> Self {
-        use crate::types::positions::WorldPosition;
-
-        Self {
-            position: Position {
-                world_position: Some(WorldPosition {
-                    x: Value::Literal(0.0),
-                    y: Value::Literal(0.0),
-                    z: Some(Value::Literal(0.0)),
-                    h: None,
-                    p: None,
-                    r: None,
-                }),
-                relative_world_position: None,
-                road_position: None,
-                relative_road_position: None,
-                lane_position: None,
-                relative_lane_position: None,
-                route_position: None,
-                trajectory_position: None,
-                geographic_position: None,
-                relative_object_position: None,
-            },
-            route_strategy: Value::Literal(RouteStrategy::Fastest),
-        }
-    }
 }
 
 /// Parameter assignments for route references
@@ -457,11 +417,11 @@ mod tests {
     }
 
     #[test]
-    fn test_defaults() {
-        let route = CatalogRoute::default();
-        let waypoint = RouteWaypoint::default();
+    fn test_constructors_do_not_fabricate_name_or_strategy() {
+        let route = CatalogRoute::new("ExplicitRoute".to_string());
+        let waypoint = RouteWaypoint::new(Position::default(), RouteStrategy::Fastest);
 
-        assert_eq!(route.name, "DefaultCatalogRoute");
+        assert_eq!(route.name, "ExplicitRoute");
         assert_eq!(
             waypoint.route_strategy,
             Value::Literal(RouteStrategy::Fastest)

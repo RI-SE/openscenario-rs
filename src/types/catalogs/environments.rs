@@ -162,10 +162,16 @@ pub struct CatalogFog {
     pub bounding_box: Option<crate::types::geometry::BoundingBox>,
 }
 
-impl Default for CatalogFog {
-    fn default() -> Self {
+impl CatalogFog {
+    /// Create a new `CatalogFog`. XSD `Fog` (:2601-2606): `@visualRange` is
+    /// `use="required"` with no `default="…"`; `BoundingBox` is optional and
+    /// left unset here.
+    ///
+    /// There used to be a `Default` impl inventing a 100km "clear visibility"
+    /// `visualRange`. Removed — that number was never in the source XML.
+    pub fn new(visual_range: f64) -> Self {
         Self {
-            visual_range: Value::Literal(100000.0), // 100km clear visibility
+            visual_range: Value::Literal(visual_range),
             bounding_box: None,
         }
     }
@@ -374,7 +380,7 @@ impl CatalogWeather {
                 elevation: Value::Literal(1.571),
                 illuminance: None,
             }),
-            fog: Some(CatalogFog::default()),
+            fog: Some(CatalogFog::new(100000.0)), // 100km clear visibility, explicit in this preset
             precipitation: Some(CatalogPrecipitation {
                 precipitation_type: Value::Literal(PrecipitationType::Dry),
                 intensity: Some(Value::Literal(0.0)),

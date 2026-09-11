@@ -610,16 +610,6 @@ impl<'de> serde::Deserialize<'de> for EntityCondition {
     }
 }
 
-impl Default for SpeedCondition {
-    fn default() -> Self {
-        Self {
-            value: Double::literal(10.0),
-            rule: Value::Literal(Rule::GreaterThan),
-            direction: None,
-        }
-    }
-}
-
 impl AccelerationCondition {
     /// Create a new acceleration condition
     pub fn new(value: f64, rule: Rule) -> Self {

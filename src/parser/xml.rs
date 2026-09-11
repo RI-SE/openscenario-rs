@@ -462,7 +462,11 @@ mod tests {
 
     #[test]
     fn test_catalog_serialization_roundtrip() {
-        let catalog = CatalogFile::default();
+        let catalog = CatalogFile::new(
+            "TestCatalog".to_string(),
+            "TestAuthor".to_string(),
+            "Test catalog file".to_string(),
+        );
 
         let xml = serialize_catalog_to_string(&catalog).unwrap();
         assert!(xml.contains("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));

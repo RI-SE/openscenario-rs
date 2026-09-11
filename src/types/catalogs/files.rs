@@ -191,22 +191,6 @@ impl CatalogContent {
     }
 }
 
-impl Default for CatalogFile {
-    fn default() -> Self {
-        Self::new(
-            "DefaultCatalog".to_string(),
-            "openscenario-rs".to_string(),
-            "Default catalog file".to_string(),
-        )
-    }
-}
-
-impl Default for CatalogContent {
-    fn default() -> Self {
-        Self::new("DefaultCatalog".to_string())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,22 +222,30 @@ mod tests {
     }
 
     #[test]
-    fn test_catalog_file_default() {
-        let catalog = CatalogFile::default();
+    fn test_catalog_file_new_takes_explicit_name_and_author() {
+        // `CatalogFile`/`CatalogContent` have no `Default` — `FileHeader`'s
+        // `@author`/`@description` and `Catalog`'s `@name` are all `use="required"`
+        // with no XSD `default="…"`, so a fabricated "DefaultCatalog"/"openscenario-rs"
+        // would describe a catalog nobody named. `new` requires the caller to say so.
+        let catalog = CatalogFile::new(
+            "ExplicitCatalog".to_string(),
+            "ExplicitAuthor".to_string(),
+            "Explicit catalog file".to_string(),
+        );
         assert_eq!(
             catalog.catalog_name().as_literal().unwrap(),
-            "DefaultCatalog"
+            "ExplicitCatalog"
         );
         assert_eq!(
             catalog.file_header.author.as_literal().unwrap(),
-            "openscenario-rs"
+            "ExplicitAuthor"
         );
     }
 
     #[test]
-    fn test_catalog_content_default() {
-        let content = CatalogContent::default();
-        assert_eq!(content.name.as_literal().unwrap(), "DefaultCatalog");
+    fn test_catalog_content_new_takes_explicit_name() {
+        let content = CatalogContent::new("ExplicitCatalog".to_string());
+        assert_eq!(content.name.as_literal().unwrap(), "ExplicitCatalog");
         assert_eq!(content.entity_count(), 0);
     }
 

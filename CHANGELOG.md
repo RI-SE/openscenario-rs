@@ -547,6 +547,51 @@ Breaking, unless noted.
   See `docs/type_system_guide.md`'s `Default`-policy section for the full breakdown — it no
   longer claims full enforcement, and says so plainly rather than rounding up. This is scoped
   as a new OSR, not folded into this one.
+- **`Default` impls that invent scenario data (OSR-08, agent H: `src/types/distributions/
+  {deterministic,mod,stochastic}.rs`, `src/types/entities/axles.rs` — the coverage gap F4's
+  file sweep missed entirely).** All 18 hand-written impls there removed: `xsd:choice` groups
+  that defaulted to a specific variant with invented data; distribution containers defaulting a
+  required `Vec` to empty or to one fake element where the XSD gives the child no
+  `minOccurs="0"` (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
+  `ParameterValueSet.ParameterAssignment`, `Stochastic.StochasticDistribution` — the F16 trap);
+  `Stochastic::default()` inventing `numberOfTestRuns: 1` for a `use="required"` attribute with
+  no schema default; `Axles`/`Axle::default()` picking fixed `car()`/`rear_car()` geometry
+  nobody specified. Each gained an explicit `::new()`. `grep -rn "^impl Default for" src/ | wc
+  -l`: 44 → 26. Harness and lib tests at baseline (172/172/172/13, 742 tests, 178 clippy
+  warnings).
+- **`Default` impls that invent scenario data (OSR-08, agent I: the two stragglers plus the
+  entire catalog subtree — the issue's last assigned target set).** `src/types/conditions/
+  entity.rs:613` (`SpeedCondition::default()`, inventing `value: 10.0, rule: GreaterThan` — a
+  miss inside OSR-04 agent C's otherwise-complete file) and `src/types/positions/trajectory.rs`
+  (`Trajectory::default()`, whose `Polyline` defaulted to zero vertices — a live F16 instance,
+  since `Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`) were both removed with
+  an explicit `::new()`. Nine more removed across `src/types/catalogs/{routes,controllers,
+  environments,files,references,trajectories}.rs`: `CatalogRoute`/`RouteWaypoint` (fabricated
+  name and an origin waypoint with `RouteStrategy::Fastest`), `CatalogController`/
+  `ControllerProperty` (fabricated name/type and a `"defaultProperty"`/`"defaultValue"` pair),
+  `CatalogFog` (a fabricated 100km `visualRange`), `CatalogFile`/`CatalogContent` (the issue's
+  namesake — `"DefaultCatalog"`/`"openscenario-rs"`), `ParameterAssignment` (fabricated
+  `"defaultParam"`/`"defaultValue"`), and `CatalogTrajectory` (name plus the same F16 zero-vertex
+  `Polyline` as the `trajectory.rs` straggler). Removing `CatalogContent`'s `Default` surfaced
+  two derived defaults piggy-backing on it — `catalogs::mod::Catalog`/`CatalogDefinition` and
+  `scenario::storyboard::CatalogDefinition` — which lost `#[derive(Default)]` as well (not
+  counted by the hand-written-impl grep). `src/catalog/{mod,loader,resolver,parameters}.rs`,
+  `src/parser/{validation,choice_groups}.rs`, `src/builder/{scenario,catalog}.rs`, and
+  `src/types/controllers/mod.rs` were verified rather than assumed benign; all 15 impls that
+  remain there are individually justified in `docs/type_system_guide.md`.
+  `grep -rn "^impl Default for" src/ | wc -l`: 26 → 15. Harness at baseline (172/172/172/13),
+  742 lib tests, clippy 178 warnings, all unchanged.
+
+  **This closes out OSR-03/OSR-04/OSR-08's running tally, and the claim is deliberately not
+  "full enforcement."** Ten agents removed 174 fabricating `Default` impls (hand-written and
+  derived) across this series with zero harness regressions. A final manual sweep for
+  `#[derive(Default)]` on structs with a required field — the shape the hand-written-impl grep
+  cannot see — found one more confirmed live fabrication outside every file any agent in this
+  series was ever assigned: `src/types/scenario/story.rs:249`'s `Actors` derives `Default` over
+  a required `@selectTriggeringEntities` boolean with no XSD default, fabricating `false`, and
+  `Actors::default()` is called live at `story.rs:365`. It is reported, not fixed, because
+  `types/scenario/story.rs` was on no issue's file list. See `docs/type_system_guide.md` for
+  every survivor's individual justification.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed

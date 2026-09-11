@@ -126,20 +126,23 @@ impl TrajectoryPosition {
     }
 }
 
-impl Default for Trajectory {
-    fn default() -> Self {
+impl Trajectory {
+    /// Create a new `Trajectory`.
+    ///
+    /// XSD `Trajectory` (:2356-2364): `@name` and `@closed` are both `use="required"`
+    /// with no `default="…"`; `ParameterDeclarations` is `minOccurs="0"` and defaults
+    /// to `None` here; `Shape` is a required child and must be supplied by the caller.
+    ///
+    /// There used to be a `Default` impl here. It set `shape` to a `Polyline` with
+    /// zero `Vertex` children, but the XSD requires `minOccurs="2"` on `Polyline`'s
+    /// `Vertex` — that default could never serialize to schema-valid XML (F16).
+    /// Removed rather than kept, matching every other `Default` this policy removed.
+    pub fn new(name: impl Into<String>, closed: bool, shape: Shape) -> Self {
         Self {
-            name: OSString::literal(String::new()),
-            closed: false,
+            name: OSString::literal(name.into()),
+            closed,
             parameter_declarations: None,
-            shape: Shape {
-                polyline: Some(crate::types::geometry::shapes::Polyline {
-                    vertices: Vec::new(),
-                }),
-                clothoid: None,
-                clothoid_spline: None,
-                nurbs: None,
-            },
+            shape,
         }
     }
 }
@@ -195,12 +198,32 @@ mod tests {
     }
 
     #[test]
-    fn test_trajectory_default_is_empty_polyline() {
-        let traj = Trajectory::default();
-        assert_eq!(traj.name.as_literal(), Some(&String::new()));
+    fn test_trajectory_new_requires_explicit_shape() {
+        use crate::types::geometry::shapes::{Polyline, Vertex};
+        use crate::types::positions::{Position, WorldPosition};
+
+        let shape = Shape {
+            polyline: Some(Polyline {
+                vertices: vec![
+                    Vertex::new(Position {
+                        world_position: Some(WorldPosition::new(0.0, 0.0)),
+                        ..Position::empty()
+                    }),
+                    Vertex::new(Position {
+                        world_position: Some(WorldPosition::new(1.0, 1.0)),
+                        ..Position::empty()
+                    }),
+                ],
+            }),
+            clothoid: None,
+            clothoid_spline: None,
+            nurbs: None,
+        };
+        let traj = Trajectory::new("TestTrajectory", false, shape);
+        assert_eq!(traj.name.as_literal(), Some(&"TestTrajectory".to_string()));
         assert!(!traj.closed);
         match &traj.shape.polyline {
-            Some(p) => assert!(p.vertices.is_empty()),
+            Some(p) => assert_eq!(p.vertices.len(), 2),
             None => panic!("Expected Polyline shape"),
         }
     }
