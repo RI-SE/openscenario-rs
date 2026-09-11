@@ -147,6 +147,26 @@ Breaking, unless noted.
 
 ### Removed
 
+- **Duplicate and dead types (OSR-11, F14).** Each entry names the surviving twin:
+  - **`catalog::resolver::CatalogManager`** — a second, shadowing `CatalogManager` distinct
+    from the canonical `catalog::CatalogManager` (`src/catalog/mod.rs`), which is what
+    `lib.rs`'s `pub use catalog::{… CatalogManager …}` has always resolved to. The
+    duplicate's only consumers were three dead-weight accessors on `CatalogResolver`
+    (`with_catalog_manager`, `set_catalog_manager`, `catalog_manager`) and the private
+    `catalog_manager` field they wrote to; nothing ever read it. Those are removed with it.
+    **Surviving twin: `openscenario_rs::catalog::CatalogManager`.**
+  - **`catalog::resolver::CatalogResolvable<T>`** — a second `CatalogResolvable` trait with
+    **zero** impls crate-wide. **Surviving twin:
+    `types::catalogs::references::CatalogResolvable`**, which is implemented for
+    `CatalogReference<T>`.
+  - **`types::positions::trajectory::Trajectory`** (and its `positions::Trajectory`
+    re-export) — a dead duplicate with no consumers outside its own `impl` and unit tests,
+    which also modeled the required `@closed` attribute as a plain Rust `bool` where
+    `Schema/OpenSCENARIO.xsd:2361` declares it XSD type `Boolean`, a union that admits
+    `$param`. **Surviving twin: `types::actions::movement::Trajectory`**, which uses
+    `Boolean` and is what `TrajectoryRef` already boxes.
+  - **`types::actions::ValidateAction`** — a trait with zero impls; its only mention in the
+    tree was a commented-out line. **Surviving twin: `types::mod::Validate`.**
 - **Five public types with no schema counterpart**: `controllers::ControllerDistribution`,
   `controllers::ActivateControllerAction`, `controllers::ControllerAssignment`,
   `positions::RoadCoordinate` and `positions::LaneCoordinate`. The `controllers` module now

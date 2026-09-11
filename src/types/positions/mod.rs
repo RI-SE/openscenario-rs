@@ -25,7 +25,7 @@ pub use route::{
     InRoutePosition, PositionInLaneCoordinates, PositionInRoadCoordinates, PositionOfCurrentEntity,
     RoutePosition, RouteRefElement,
 };
-pub use trajectory::{Trajectory, TrajectoryPosition};
+pub use trajectory::TrajectoryPosition;
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
