@@ -16,8 +16,8 @@ use openscenario_rs::types::actions::movement::{
 };
 use openscenario_rs::types::actions::traffic::{TrafficSignalAction, TrafficSignalActionChoice};
 use openscenario_rs::types::actions::wrappers::{
-    Action, EntityAction, EntityActionChoice, GlobalAction, ModifyRuleChoice, NamedAction,
-    ParameterAction, ParameterActionChoice, TrafficAction, TrafficActionChoice, VariableAction,
+    EntityAction, EntityActionChoice, ModifyRuleChoice, NamedAction, ParameterAction,
+    ParameterActionChoice, TrafficAction, TrafficActionChoice, VariableAction,
     VariableActionChoice, VariableModifyRuleChoice,
 };
 use openscenario_rs::types::routing::RouteRef;
@@ -293,33 +293,10 @@ fn named_action_user_defined_action_round_trip() {
     let xml = r#"<Action name="a1"><UserDefinedAction><CustomCommandAction type="myCommand"/></UserDefinedAction></Action>"#;
     let action: NamedAction = de(xml);
     assert_eq!(action.name.to_string(), "a1");
-    assert!(matches!(action.action, Action::UserDefinedAction(_)));
+    assert!(action.user_defined_action.is_some());
     let out = ser("Action", &action);
     assert!(out.contains("UserDefinedAction"), "got: {out}");
     assert!(out.contains("name=\"a1\""), "got: {out}");
-}
-
-/// KNOWN LIMITATION: `NamedAction` flattens `Action`, whose `GlobalAction` /
-/// `PrivateAction` variants carry a *nested* externally-tagged enum. quick-xml
-/// cannot serialize an enum newtype variant nested inside flattened map content,
-/// so this branch deserializes correctly but cannot be re-serialized. `NamedAction`
-/// is not used by the scenario tree (see `StoryAction` in `scenario/story.rs`,
-/// which uses parallel `Option` fields instead), so real files are unaffected.
-#[test]
-fn named_action_global_action_deserializes_but_cannot_serialize() {
-    let xml = r#"<Action name="a1"><GlobalAction><SetMonitorAction monitorRef="m1" value="true"/></GlobalAction></Action>"#;
-    let action: NamedAction = de(xml);
-    assert_eq!(action.name.to_string(), "a1");
-    match &action.action {
-        Action::GlobalAction(GlobalAction::SetMonitorAction(m)) => {
-            assert_eq!(m.monitor_ref.to_string(), "m1")
-        }
-        other => panic!("expected GlobalAction/SetMonitorAction, got {other:?}"),
-    }
-    assert!(
-        quick_xml::se::to_string_with_root("Action", &action).is_err(),
-        "nested enum-in-flatten unexpectedly serialized; update this test if fixed"
-    );
 }
 
 // ─── traffic.rs: TrafficSignalAction ────────────────────────────────────────
@@ -385,4 +362,25 @@ fn override_gear_action_manual_gear_round_trip() {
     }
     let out = ser("OverrideGearAction", &action);
     assert!(out.contains("ManualGear"), "got: {out}");
+}
+
+// ─── F13 / OSR-11: NamedAction must round-trip ALL THREE branches ───────────
+// XSD:705-712 Action := choice(GlobalAction | UserDefinedAction | PrivateAction) + @name
+
+#[test]
+fn named_action_global_action_round_trips_byte_identically() {
+    let xml = r#"<Action name="a1"><GlobalAction><SetMonitorAction monitorRef="m1" value="true"/></GlobalAction></Action>"#;
+    let action: NamedAction = de(xml);
+    let out = quick_xml::se::to_string_with_root("Action", &action)
+        .expect("NamedAction/GlobalAction failed to serialize");
+    assert_eq!(out, xml, "GlobalAction branch did not round-trip");
+}
+
+#[test]
+fn named_action_private_action_round_trips_byte_identically() {
+    let xml = r#"<Action name="a1"><PrivateAction><TeleportAction><Position><WorldPosition x="1" y="2"/></Position></TeleportAction></PrivateAction></Action>"#;
+    let action: NamedAction = de(xml);
+    let out = quick_xml::se::to_string_with_root("Action", &action)
+        .expect("NamedAction/PrivateAction failed to serialize");
+    assert_eq!(out, xml, "PrivateAction branch did not round-trip");
 }

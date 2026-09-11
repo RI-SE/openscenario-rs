@@ -326,13 +326,100 @@ pub struct ParameterMultiplyByValueRule {
     pub value: Double,
 }
 
-// Named Action wrapper type matching XSD schema
+/// Element wrapper hosting the `GlobalAction` choice as a named child element.
+///
+/// XSD `GlobalAction` (:1282-1293) is a choice, modeled as the externally-tagged
+/// enum `GlobalAction` above. As a *named child element* the choice has to sit
+/// behind a wrapper struct — the same shape `StoryGlobalAction`
+/// (`scenario/story.rs`) and `RoutePosition.RouteRefElement` already use.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "GlobalAction")]
+pub struct GlobalActionElement {
+    #[serde(flatten)]
+    pub action: GlobalAction,
+}
+
+/// Element wrapper hosting the `PrivateAction` choice as a named child element.
+///
+/// XSD `PrivateAction` (:1777-1791). Same shape as `GlobalActionElement`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "PrivateAction")]
+pub struct PrivateActionElement {
+    #[serde(flatten)]
+    pub action: PrivateAction,
+}
+
+/// XSD `Action` (:705-712): `@name` (required) plus
+/// `xsd:choice(GlobalAction | UserDefinedAction | PrivateAction)`.
+///
+/// (OSR-11, F13) This used to be `#[serde(flatten)] action: Action`. Flattening an
+/// externally-tagged enum whose *variant payloads are themselves* externally-tagged
+/// enums is not serializable by quick-xml — `GlobalAction` and `PrivateAction`
+/// deserialized fine and then failed to write with
+/// `Unsupported("cannot serialize enum newtype variant ...")`. Replaced with the
+/// parallel-`Option` choice shape this crate prefers (see `AGENT_PROMPT.md` and
+/// `StoryAction`, which models the very same XSD type), so each branch now
+/// round-trips.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NamedAction {
     #[serde(rename = "@name")]
     pub name: OSString,
-    #[serde(flatten)]
-    pub action: Action,
+
+    #[serde(
+        rename = "GlobalAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub global_action: Option<GlobalActionElement>,
+
+    #[serde(
+        rename = "UserDefinedAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub user_defined_action: Option<UserDefinedAction>,
+
+    #[serde(
+        rename = "PrivateAction",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub private_action: Option<PrivateActionElement>,
+}
+
+impl NamedAction {
+    fn empty(name: impl Into<String>) -> Self {
+        NamedAction {
+            name: OSString::literal(name.into()),
+            global_action: None,
+            user_defined_action: None,
+            private_action: None,
+        }
+    }
+
+    /// `<GlobalAction>` branch of the XSD `Action` choice (:705-712).
+    pub fn global(name: impl Into<String>, action: GlobalAction) -> Self {
+        NamedAction {
+            global_action: Some(GlobalActionElement { action }),
+            ..Self::empty(name)
+        }
+    }
+
+    /// `<UserDefinedAction>` branch of the XSD `Action` choice (:705-712).
+    pub fn user_defined(name: impl Into<String>, action: UserDefinedAction) -> Self {
+        NamedAction {
+            user_defined_action: Some(action),
+            ..Self::empty(name)
+        }
+    }
+
+    /// `<PrivateAction>` branch of the XSD `Action` choice (:705-712).
+    pub fn private(name: impl Into<String>, action: PrivateAction) -> Self {
+        NamedAction {
+            private_action: Some(PrivateActionElement { action }),
+            ..Self::empty(name)
+        }
+    }
 }
 
 // XSD `RandomRouteAction` (:1813-1814) is an empty complexType.
