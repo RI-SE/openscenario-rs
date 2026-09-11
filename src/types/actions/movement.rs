@@ -2161,6 +2161,3 @@ mod tests {
         assert_eq!(action, reparsed);
     }
 }
-
-// Add movement action validation
-// impl ValidateAction for SpeedAction, TeleportAction
