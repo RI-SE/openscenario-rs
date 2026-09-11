@@ -239,14 +239,73 @@ The analysis is in [xsd_gaps.md](xsd_gaps.md).
 
 ## The `Default` policy
 
-`Default` is implemented only where a default states nothing. Container and choice structs
-that default to all-`None` or empty (`Actions`, `GlobalAction`, `PrivateAction`,
-`EnvironmentAction`, `ParameterDeclarations`) keep theirs.
+`Default` sorts into **three** categories, not two. The first two were written down from the
+start; the third was discovered six times in the field before it was named here, and once it was
+*created* by a cleanup pass that was removing instances of it.
 
-Impls that would fabricate scenario content were removed deliberately. A `TeleportAction`
-whose `Default` invents a world position at the origin produces a document that parses
-cleanly and describes something nobody wrote, which is worse than a compile error. If a type
-needs every field to say anything at all, it should require every field.
+**1. Fabricates content — remove.** A `TeleportAction` whose `Default` invents a world position
+at the origin produces a document that parses cleanly and describes something nobody wrote, which
+is worse than a compile error. If a type needs every field to say anything at all, it should
+require every field. Give it an explicit `::new` (or per-branch constructors, for a choice) and
+let the compiler point at every call site that was relying on the invented value.
+
+**2. States nothing, and the schema permits that — keep.** A container or choice struct whose
+`Default` is all-`None` or an empty `Vec`, *where the schema allows the empty form to appear*.
+`ParameterDeclarations` is the model case: its only child is `minOccurs="0"`
+(`Schema/OpenSCENARIO.xsd:1642-1646`), so `ParameterDeclarations::default()` serializes to XML
+that validates. Nothing is invented and nothing is claimed.
+
+**3. Schema-invalid empty — do not keep silently.** An empty `Vec` or an all-`None` choice invents
+nothing, but that does not make it benign. It is only benign when the schema permits the empty
+form. When it does not, `T::default()` constructs a value that *cannot* be serialized into
+schema-valid XML — a different defect from category 1, and one no round-trip test will catch,
+because nothing in the corpus constructs such a value and serializes it.
+
+```xml
+<xsd:complexType name="ConditionGroup">
+  <xsd:sequence><xsd:element name="Condition" type="Condition" maxOccurs="unbounded"/></xsd:sequence>
+</xsd:complexType>          <!-- no minOccurs ⇒ minOccurs=1: at least one Condition required -->
+
+<xsd:complexType name="Polyline">
+  <xsd:sequence><xsd:element name="Vertex" type="Vertex" minOccurs="2" maxOccurs="unbounded"/></xsd:sequence>
+</xsd:complexType>          <!-- at least TWO vertices required -->
+```
+
+**The check to run, before deriving or keeping a `Default` on any container or choice type:**
+
+1. Open `Schema/OpenSCENARIO.xsd` and find the type's declaration.
+2. For each child element, read its `minOccurs`. **An absent `minOccurs` means `1`, not `0`** —
+   that is the trap, and it is how every instance of this category got in.
+3. Empty is schema-valid only if *every* child is `minOccurs="0"`. If any child is required, the
+   type belongs in category 3: no `Default` — give it a constructor that takes the required
+   children.
+4. For an `xsd:choice`, the same rule applies to the choice particle itself. A choice without
+   `minOccurs="0"` must select a branch, so an all-`None` value is invalid however many `Option`
+   fields it has. `PrivateAction` (`Schema/OpenSCENARIO.xsd:1777-1791`) is a bare `xsd:choice`
+   with no `minOccurs="0"` override, so a Rust struct mirroring it gets per-branch constructors,
+   not a derived `Default`.
+5. `#[derive(Default)]` counts. A derive on a struct with a required non-`Option`, non-`Vec` field
+   fabricates that field's own `Default` silently — see the third detector below.
+
+"It states nothing" is a claim about the schema, not about the Rust struct. Verify it against the
+schema or do not make it.
+
+### Detecting violations
+
+Three detectors, none of which subsumes the others. Run all three:
+
+| # | detector | finds |
+|---|---|---|
+| 1 | `grep -rn "^impl Default for" src/` | hand-written impls |
+| 2 | `grep -rn 'literal("Default' src/` | fabricated name strings (`"DefaultVehicle"`, …) |
+| 3 | `#[derive(Default)]` on a struct with a required (non-`Option`, non-`Vec`) field | derives that fabricate a field silently — **invisible to 1 and 2** |
+
+Detector 3 is not a grep; it needs the struct body. It was added late, after ten agents had run
+only the two textual ones, and it immediately found a class neither could see — including one
+instance the campaign itself had just introduced. The lesson generalizes: before calling any sweep
+complete, ask what shape the detector cannot represent.
+
+### Enforcement history
 
 **The policy is stated and not yet fully enforced.** A sweep found roughly 124 hand-written
 `Default` impls across the crate that fabricate content (a name, a coordinate, a whole nested
@@ -609,7 +668,10 @@ pub trait Resolve<T> {
    applying the optionality rules above.
 3. If it is a choice, pick the idiom that matches how the choice appears, and name flattened
    variants for their **elements**.
-4. Add a round-trip test. If the type is a flattened choice, add it to
+4. Before writing `#[derive(Default)]` or `impl Default`, run the three-category check in
+   [The `Default` policy](#the-default-policy) — including detector 3, which no grep performs:
+   a derive on a struct with a required non-`Option`, non-`Vec` field fabricates that field.
+5. Add a round-trip test. If the type is a flattened choice, add it to
    `tests/choice_flatten_roundtrip_test.rs`.
-5. Run the conformance gates. Their locations and what each one catches are in
+6. Run the conformance gates. Their locations and what each one catches are in
    [xsd_gaps.md](xsd_gaps.md).
