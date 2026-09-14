@@ -293,7 +293,7 @@ mod tests {
 
     /// Pins the *agreement* between construction sites, not just the value: every place
     /// that mints a `FileHeader` must use `DEFAULT_REV_MAJOR`/`DEFAULT_REV_MINOR` so a
-    /// future revision bump cannot re-split them (OSR-02).
+    /// future revision bump cannot re-split them.
     #[test]
     fn file_header_construction_sites_agree_on_default_revision() {
         assert_eq!(DEFAULT_REV_MAJOR, 1);

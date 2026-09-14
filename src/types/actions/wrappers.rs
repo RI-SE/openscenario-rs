@@ -91,7 +91,7 @@ pub enum TrafficActionChoice {
 
 // InfrastructureAction wrapper type
 //
-// (OSR-04, agent B) `#[derive(Default)]` removed: it required
+// `#[derive(Default)]` removed: it required
 // `TrafficSignalAction: Default`, which fabricated a choice — the removed
 // impl silently picked the `TrafficSignalStateAction` branch. Construct the
 // field explicitly instead.
@@ -111,8 +111,9 @@ impl InfrastructureAction {
 
 // AddEntityAction type
 //
-// (OSR-09) `#[derive(Default)]` removed. F17's sweep table listed nine structs; re-running
-// the same method here found a tenth, this one. XSD `AddEntityAction`
+// `#[derive(Default)]` removed. A derive on a struct with a required, non-`Option` field
+// fabricates that field silently, which a grep for `impl Default` cannot see; this was one
+// such case. XSD `AddEntityAction`
 // (`Schema/OpenSCENARIO.xsd:729-732`) requires the `Position` child, and XSD `Position`
 // (`:1738-1751`) is a bare `xsd:choice` — category 3, schema-invalid empty.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -352,7 +353,7 @@ pub struct PrivateActionElement {
 /// XSD `Action` (:705-712): `@name` (required) plus
 /// `xsd:choice(GlobalAction | UserDefinedAction | PrivateAction)`.
 ///
-/// (OSR-11, F13) This used to be `#[serde(flatten)] action: Action`. Flattening an
+/// This used to be `#[serde(flatten)] action: Action`. Flattening an
 /// externally-tagged enum whose *variant payloads are themselves* externally-tagged
 /// enums is not serializable by quick-xml — `GlobalAction` and `PrivateAction`
 /// deserialized fine and then failed to write with
@@ -426,7 +427,7 @@ impl NamedAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RandomRouteAction {}
 
-// (OSR-04, agent D) `Action`, `GlobalAction` and `PrivateAction` no longer
+// `Action`, `GlobalAction` and `PrivateAction` no longer
 // implement `Default`: each is an externally-tagged `xsd:choice` (XSD:705-712,
 // 1282-1293, 1777-1786) and a `Default` silently picked one branch
 // (`PrivateAction::TeleportAction`, `TrafficAction`). None of the three has a

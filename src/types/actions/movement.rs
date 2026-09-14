@@ -84,7 +84,7 @@ where
     deserializer.deserialize_any(OptionalDoubleVisitor)
 }
 
-// (OSR-04, agent A') `#[derive(Default)]` removed: it required
+// `#[derive(Default)]` removed: it required
 // `TransitionDynamics: Default` and `SpeedActionTarget: Default`, both of
 // which fabricated content (a duration of 1.0s, a target speed of 10.0).
 // Call sites in `src/types/scenario/init.rs` and `tests/xsd_validation_test.rs`
@@ -97,9 +97,9 @@ pub struct SpeedAction {
     pub speed_action_target: SpeedActionTarget,
 }
 
-// (OSR-09) `#[derive(Default)]` removed. OSR-04 agent A kept it, reasoning that
-// `Position::default()` is an all-`None` choice and so "states nothing". F16
-// falsified that reasoning: XSD `Position` (`Schema/OpenSCENARIO.xsd:1738-1751`) is a
+// `#[derive(Default)]` removed. An earlier pass kept it, reasoning that
+// `Position::default()` is an all-`None` choice and so "states nothing". The schema
+// says otherwise: XSD `Position` (`Schema/OpenSCENARIO.xsd:1738-1751`) is a
 // bare `xsd:choice` with no `minOccurs="0"`, so a branch must be selected. Verified by
 // serializing `TeleportAction::default()` inside a document and validating it —
 // libxml2 rejects it with *"Element 'Position': Missing child element(s)"*. That is
@@ -269,7 +269,7 @@ pub struct FollowTrajectoryAction {
     pub initial_distance_offset: Option<Double>,
 }
 
-// (OSR-04) No `Default`: it fabricated a whole child `Trajectory` named
+// No `Default`: it fabricated a whole child `Trajectory` named
 // "DefaultTrajectory" (`Some(Trajectory::default())`) — the worst class of
 // fabrication, with no defensible replacement. Use `::with_trajectory`,
 // `::with_catalog_reference`, or `::from_catalog` instead.
@@ -278,7 +278,7 @@ pub struct FollowTrajectoryAction {
 ///
 /// Assigns a route to an entity, either through direct route definition
 /// or catalog reference, enabling route-based navigation scenarios.
-// (OSR-04) No `Default`: it required `routing::RouteRef: Default`, which
+// No `Default`: it required `routing::RouteRef: Default`, which
 // silently picked the `Direct` branch of a choice — see
 // `types/routing/mod.rs`. Use `AssignRouteAction::new`, `::direct_route`, or
 // `::catalog_route` instead.
@@ -320,7 +320,7 @@ pub struct RoutingAction {
 }
 
 /// Lane change action for lateral lane movements
-// (OSR-04, agent A') `#[derive(Default)]` removed: it required
+// `#[derive(Default)]` removed: it required
 // `LaneChangeTarget: Default`, which silently picked the `RelativeTargetLane`
 // choice branch. Use `LaneChangeAction::new` instead.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -693,7 +693,7 @@ pub struct RelativeSpeedToMaster {
 }
 
 /// Acquire position action for moving to a specific position
-// (OSR-09) `#[derive(Default)]` removed, same reasoning as `TeleportAction` above:
+// `#[derive(Default)]` removed, same reasoning as `TeleportAction` above:
 // XSD `AcquirePositionAction` (`:692-696`) requires the `Position` child, and `Position`
 // is a bare `xsd:choice`, so an all-`None` value is schema-invalid empty (category 3).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -711,7 +711,7 @@ impl AcquirePositionAction {
 
 // Default implementations
 
-// (OSR-04, agent A') `TransitionDynamics`, `SpeedActionTarget` and
+// `TransitionDynamics`, `SpeedActionTarget` and
 // `AbsoluteTargetSpeed` no longer implement `Default` — see the constructors
 // below and the removed-derive note above `SpeedAction`.
 
@@ -810,7 +810,7 @@ impl SpeedAction {
     }
 }
 
-// (OSR-04, agent A') `Trajectory` and `TrajectoryFollowingMode` no longer
+// `Trajectory` and `TrajectoryFollowingMode` no longer
 // implement `Default` — see the constructors below. External call sites in
 // `tests/xsd_validation_test.rs`, `src/types/positions/mod.rs`,
 // `src/types/positions/trajectory.rs` and `tests/advanced_positions_test.rs`
@@ -880,7 +880,7 @@ impl TimeReference {
     }
 }
 
-// (OSR-04, agent A') `TrajectoryRef` no longer implements `Default` — XSD
+// `TrajectoryRef` no longer implements `Default` — XSD
 // `TrajectoryRef` is a `choice` of `Trajectory` | `CatalogReference`, and
 // `Default` silently picked the `Trajectory` branch, fabricating a whole
 // child `Trajectory` named "DefaultTrajectory". Use `TrajectoryRef::with_trajectory`,
@@ -1205,42 +1205,42 @@ impl LateralAction {
     }
 }
 
-// (OSR-04, agent A') `LaneChangeTarget` no longer implements `Default` —
+// `LaneChangeTarget` no longer implements `Default` —
 // XSD `LaneChangeTarget` is a `choice` of `RelativeTargetLane` |
 // `AbsoluteTargetLane`, and `Default` silently picked the relative branch.
 // Use `LaneChangeTarget::relative` or `::absolute`.
 
-// (OSR-04, agent A') `RelativeTargetLane` no longer implements `Default`
+// `RelativeTargetLane` no longer implements `Default`
 // (it invented entity "DefaultEntity" and lane value `1`): use
 // `RelativeTargetLane::new`.
 
-// (OSR-04) `AbsoluteTargetLane` no longer implements `Default` (it invented
+// `AbsoluteTargetLane` no longer implements `Default` (it invented
 // lane "1"): use `AbsoluteTargetLane::new`.
 
-// (OSR-04) `LaneOffsetAction` no longer implements `Default` (it invented a
+// `LaneOffsetAction` no longer implements `Default` (it invented a
 // choice branch via `LaneOffsetTarget::default()`): use
 // `LaneOffsetAction::new`.
 
-// (OSR-04) `LaneOffsetTarget` no longer implements `Default` — XSD
+// `LaneOffsetTarget` no longer implements `Default` — XSD
 // `LaneOffsetTarget` is a `choice` of `RelativeTargetLaneOffset` |
 // `AbsoluteTargetLaneOffset`, and `Default` silently picked the absolute
 // branch. Use `LaneOffsetTarget::relative` or `::absolute`.
 
-// (OSR-04) `RelativeTargetLaneOffset` no longer implements `Default` (it
+// `RelativeTargetLaneOffset` no longer implements `Default` (it
 // invented entity "DefaultEntity" and value `0.0`): use
 // `RelativeTargetLaneOffset::new`.
 
-// (OSR-04) `AbsoluteTargetLaneOffset` no longer implements `Default` (it
+// `AbsoluteTargetLaneOffset` no longer implements `Default` (it
 // invented value `0.0`): use `AbsoluteTargetLaneOffset::new`.
 
-// (OSR-04, agent A') `LateralAction` no longer implements `Default` — XSD
+// `LateralAction` no longer implements `Default` — XSD
 // `LateralAction` is a `choice` of `LaneChangeAction` | `LaneOffsetAction` |
 // `LateralDistanceAction`, and `Default` silently picked the lane-change
 // branch (itself requiring a fabricating `LaneChangeAction::default()`).
 // Use `LateralAction::lane_change`, `::lane_offset`, or `::lateral_distance`
 // instead.
 
-// (OSR-04) `LaneOffsetActionDynamics` no longer implements `Default` (it
+// `LaneOffsetActionDynamics` no longer implements `Default` (it
 // invented `DynamicsShape::Linear`): use `LaneOffsetActionDynamics::new`.
 
 impl LateralDistanceAction {
@@ -1269,7 +1269,7 @@ impl LateralDistanceAction {
     }
 }
 
-// (OSR-04, agent A') `LongitudinalAction` no longer implements `Default` —
+// `LongitudinalAction` no longer implements `Default` —
 // XSD `LongitudinalAction` is a `choice` of `SpeedAction` |
 // `LongitudinalDistanceAction` | `SpeedProfileAction`, and `Default`
 // silently picked the speed branch (itself requiring a fabricating
@@ -1300,7 +1300,7 @@ impl LongitudinalAction {
     }
 }
 
-// (OSR-04, agent A') `LongitudinalDistanceAction`, `SpeedProfileAction` and
+// `LongitudinalDistanceAction`, `SpeedProfileAction` and
 // `SpeedProfileEntry` no longer implement `Default` — see the constructors
 // below.
 impl LongitudinalDistanceAction {
@@ -1954,7 +1954,7 @@ mod tests {
 
     #[test]
     fn test_action_defaults() {
-        // (OSR-04, agent A') `AcquirePositionAction::default()` is the only
+        // `AcquirePositionAction::default()` is the only
         // one of these that still implements `Default` — see the comment
         // above its definition. `LaneChangeAction` no longer does.
         let lane_change = LaneChangeAction::new(

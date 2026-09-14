@@ -39,7 +39,7 @@ impl InitActionBuilder {
     ///
     /// `environment_name` is required by XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`,
     /// `@name` `use="required"`, no schema default) — it used to be silently invented as
-    /// `"DefaultEnvironment"` here; callers now state it (OSR-04, agent G).
+    /// `"DefaultEnvironment"` here; callers now state it.
     pub fn with_default_environment(environment_name: &str) -> Self {
         Self::new().add_global_environment_action(environment_name)
     }

@@ -59,7 +59,7 @@ pub struct StoryAction {
 /// `wrappers::GlobalAction`. As a named child element the choice has to sit
 /// behind a wrapper struct, the same shape `RoutePosition.RouteRefElement`
 /// uses.
-// (OSR-04, agent D) `#[derive(Default)]` removed: it required
+// `#[derive(Default)]` removed: it required
 // `wrappers::GlobalAction: Default`, which fabricated a choice branch
 // (`GlobalAction::TrafficAction`) for what XSD:1282-1293 declares a
 // `xsd:choice` with no default. `global_action` above is `Option<..>`, so
@@ -247,7 +247,7 @@ pub struct Event {
 /// Actors define which entities will participate in a ManeuverGroup
 /// and can optionally select from triggering entities.
 ///
-/// (OSR-09) No `Default`. XSD `Actors` (`Schema/OpenSCENARIO.xsd:723-728`) marks
+/// No `Default`. XSD `Actors` (`Schema/OpenSCENARIO.xsd:723-728`) marks
 /// `@selectTriggeringEntities` `use="required"` with no schema `default="…"`, so the
 /// derived impl invented `false` — category 1, a fabricated required attribute. The
 /// `EntityRef` child *is* `minOccurs="0"`, so only the bool half was wrong; the
@@ -292,13 +292,13 @@ pub struct EntityRef {
     pub entity_ref: OSString,
 }
 
-// (OSR-04, agent G) `Default` impls removed for both types below. `StoryAction`'s `@name`
+// `Default` impls removed for both types below. `StoryAction`'s `@name`
 // is `use="required"` (XSD `Action`, :705-712) with no schema default, and its old impl
 // additionally fabricated a whole `PrivateAction` child nobody wrote. `StoryPrivateAction`
 // mirrors XSD `PrivateAction` (:1777-1791), a bare `xsd:choice` with no `minOccurs="0"`
-// override — the choice itself is required, so an all-`None` value (which F16 flags as the
-// wrong reasoning for "states nothing") is *also* not schema-valid content, on top of the old
-// impl's fabricated `SpeedAction` branch. Neither type gets a replacement `Default`; callers
+// override — the choice itself is required, so an all-`None` value is *also* not schema-valid
+// content ("it states nothing" is no defence when the schema demands a branch), on top of the
+// old impl's fabricated `SpeedAction` branch. Neither type gets a replacement `Default`; callers
 // build one branch explicitly via the constructors below.
 impl StoryAction {
     /// Create a named `PrivateAction` (XSD `Action` choice member; `@name` is required and has
@@ -386,7 +386,7 @@ impl ManeuverGroup {
     /// type="UnsignedInt" use="required"/>`) with no `default="…"`, so there is
     /// no schema-backed value to assume here — the caller must supply one.
     ///
-    /// (OSR-09) `actors` likewise became a parameter: it used to be `Actors::default()`,
+    /// `actors` likewise became a parameter: it used to be `Actors::default()`,
     /// which fabricated `selectTriggeringEntities="false"` — an attribute the XSD marks
     /// `use="required"` with no schema default. `Actors` is required here too
     /// (`Schema/OpenSCENARIO.xsd` `ManeuverGroup`), so there is nothing to elide.

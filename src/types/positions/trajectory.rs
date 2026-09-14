@@ -3,7 +3,7 @@
 use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 
-// (OSR-11, F14) The `Trajectory` struct that used to live here was a dead duplicate of
+// The `Trajectory` struct that used to live here was a dead duplicate of
 // `actions::movement::Trajectory` (the canonical one, boxed inside `TrajectoryRef`). It had
 // zero consumers outside its own `impl`, its own unit tests and the `pub use` in
 // `positions/mod.rs`, and it was also schema-wrong: `@closed` is XSD type `Boolean`

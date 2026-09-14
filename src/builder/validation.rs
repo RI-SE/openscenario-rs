@@ -329,7 +329,7 @@ impl BuilderValidationRule for ParameterReferenceValidationRule {
         //   * `$name` -- the `parameter` production, which is what `Value::Parameter` emits
         //     and the only spelling the 37 enumeration unions accept. Scanning for `${`
         //     alone used to be sufficient because `Value::Parameter` also emitted braces;
-        //     since OSR-06 it does not, and a `$name`-only scan gap would let an undeclared
+        //     it no longer does, and a `$name`-only scan gap would let an undeclared
         //     parameter through this rule silently.
         let bytes = xml.as_bytes();
         let mut i = 0usize;

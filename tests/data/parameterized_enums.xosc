@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <OpenSCENARIO>
-  <FileHeader revMajor="1" revMinor="3" date="2026-09-10T12:00:00" description="Parameterized enumeration attributes (OSR-06 fixture)" author="openscenario-rs tests"/>
+  <FileHeader revMajor="1" revMinor="3" date="2026-09-10T12:00:00" description="Parameterized enumeration attributes fixture" author="openscenario-rs tests"/>
   <ParameterDeclarations>
     <ParameterDeclaration name="cat" parameterType="string" value="truck"/>
     <ParameterDeclaration name="vrole" parameterType="string" value="police"/>

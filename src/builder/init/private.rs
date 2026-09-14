@@ -299,7 +299,7 @@ impl GlobalActionBuilder {
     ///
     /// XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`) requires `@name`; there is no
     /// schema default, so the caller supplies it rather than getting a silently invented
-    /// `"DefaultEnvironment"` (OSR-04, agent G).
+    /// `"DefaultEnvironment"`.
     pub fn add_named_environment_action(mut self, name: &str) -> Self {
         self.environment_action = Some(EnvironmentAction {
             environment: Some(Environment::new(name)),

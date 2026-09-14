@@ -406,8 +406,8 @@ fn test_parameter_support_in_entity_selection() {
 
 #[test]
 fn test_all_defaults() {
-    // OSR-04 (agent E): these types no longer fabricate content via `Default` — each
-    // requires an explicit, stated value instead. `SelectedEntities` and `EntityDistribution` now offer explicit `new()` constructors instead of a derived `Default` (OSR-10): the
+    // these types no longer fabricate content via `Default` — each
+    // requires an explicit, stated value instead. `SelectedEntities` and `EntityDistribution` now offer explicit `new()` constructors instead of a derived `Default`: the
     // schema requires at least one child of each, so an empty value is category 3.
     let _entity_selection = EntitySelection::new("Selection1", SelectedEntities::new());
     let _selected_entities = SelectedEntities::new();

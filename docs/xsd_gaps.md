@@ -164,7 +164,7 @@ an `xsd:union` whose second member is `<xsd:restriction base="parameter"/>`, so
 `<Vehicle vehicleCategory="$cat">` is schema-valid, and the crate — modelling each of the
 **75 XSD attributes** so declared as a bare Rust enum — rejected all of them outright. In
 Rust terms that was **90 fields across 25 files** (54 bare, 36 `Option<>`; the count exceeds
-75 because the catalog twins duplicate several). The pass-4 ledger counted 89 — the 90th,
+75 because the catalog twins duplicate several). The pass-4 count was 89 — the 90th,
 `VehicleRoleDistributionEntry::role` in `src/types/actions/traffic.rs`, was written
 fully-qualified as `crate::types::enums::Role` and had escaped every previous sweep, which is
 its own small lesson about grepping for type names. All 90 now hold `Value<E>` /

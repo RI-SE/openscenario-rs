@@ -182,7 +182,7 @@ impl InRoutePosition {
 /// already modeled as `crate::types::routing::RouteRef`. As an *element* the
 /// choice has to sit behind a named wrapper, so this struct only re-hosts the
 /// existing enum via `flatten` (the same shape `AssignRouteAction` uses).
-// (OSR-04) No `Default`: it required `routing::RouteRef: Default`, which
+// No `Default`: it required `routing::RouteRef: Default`, which
 // silently picked the `Direct` branch of a choice — see
 // `types/routing/mod.rs`. Construct via `RouteRefElement { route_ref: ... }`
 // or `RoutePosition::new`.
@@ -197,7 +197,7 @@ pub struct RouteRefElement {
 ///
 /// XSD `RoutePosition` (:1968-1974) is an `xsd:all` of `RouteRef` (required),
 /// `Orientation` (optional) and `InRoutePosition` (required).
-// (OSR-04) No `Default`: `route_ref: RouteRefElement` no longer implements
+// No `Default`: `route_ref: RouteRefElement` no longer implements
 // it (see above). Construct via `RoutePosition::new`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "RoutePosition")]

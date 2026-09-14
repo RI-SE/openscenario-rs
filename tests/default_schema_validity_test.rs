@@ -1,4 +1,4 @@
-//! OSR-10: the honest `Default` detector.
+//! The honest `Default` detector.
 //!
 //! `docs/type_system_guide.md` sorts `Default` impls into *fabricates content* (remove),
 //! *states nothing and the schema permits it* (keep), and *schema-invalid empty* (remove).
@@ -495,12 +495,12 @@ fn every_registered_xsd_type_exists_in_the_schema() {
 }
 
 // ---------------------------------------------------------------------------------------
-// OSR-09's narrative cases: the three categories, in full documents
+// Narrative cases: the three categories, in full documents
 // ---------------------------------------------------------------------------------------
 
 fn header() -> FileHeader {
     FileHeader {
-        author: Value::literal("OSR-09".to_string()),
+        author: Value::literal("openscenario-rs".to_string()),
         date: Value::literal("2024-01-01T00:00:00".to_string()),
         description: Value::literal("Default-policy schema validity".to_string()),
         rev_major: Value::literal(1u16),
@@ -540,7 +540,7 @@ fn validate(document: &OpenScenario) -> Vec<String> {
 
 /// Category 2 — *states nothing, and the schema permits it*.
 ///
-/// This is the evidence behind OSR-09's decision to **keep** `Default` on the four
+/// This is the evidence behind the decision to **keep** `Default` on the four
 /// structural containers (`ScenarioDefinition` ×2, `Storyboard`, `Init`). Each of their
 /// XSD-required children is a non-`Option` Rust field, so it is always emitted; and every
 /// child of `CatalogLocations` (`:867-878`), `RoadNetwork` (`:1933-1940`), `Entities`

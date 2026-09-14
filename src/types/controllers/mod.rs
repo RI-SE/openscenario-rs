@@ -143,7 +143,7 @@ impl<'de> Deserialize<'de> for ObjectController {
     }
 }
 
-// (OSR-09) `Default` removed. XSD `ObjectController`
+// `Default` removed. XSD `ObjectController`
 // (`Schema/OpenSCENARIO.xsd:1522-1528`) is a bare `xsd:choice` of `CatalogReference |
 // Controller`, neither carrying `minOccurs="0"`, so exactly one must be present. The
 // all-`None` default emitted `<ObjectController />`, which libxml2 rejects with
@@ -170,7 +170,7 @@ pub struct ControllerProperties {
 ///
 /// Specifies where controller catalog files can be found.
 ///
-/// OSR-04 (agent E): `#[derive(Default)]` removed — `Directory`'s `Default` fabricated an
+/// `#[derive(Default)]` removed — `Directory`'s `Default` fabricated an
 /// empty `@path` (`Schema/OpenSCENARIO.xsd:1067-1069` declares `@path` `use="required"`
 /// with no schema default). This type has no constructor or call site of its own; it
 /// appears to be an unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_controller_defaults() {
-        // (OSR-09) `ObjectController` no longer has a `Default`: its XSD choice
+        // `ObjectController` no longer has a `Default`: its XSD choice
         // (`:1522-1528`) requires a branch, so the all-`None` form was schema-invalid.
         // A controller built via a branch constructor leaves the *other* branch `None`,
         // which is what this test is actually about.

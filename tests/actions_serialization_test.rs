@@ -405,7 +405,7 @@ fn test_random_route_action() {
 
 #[test]
 fn test_type_aliases() {
-    // (OSR-04, agent D) These types' `Default` impls fabricated content
+    // These types' `Default` impls fabricated content
     // (a name, an enum branch) for XSD `use="required"` attributes/choices
     // and were removed; exercise the named constructors instead.
     let _entity_action: EntityAction = EntityAction::delete("defaultEntity");
@@ -436,7 +436,7 @@ fn test_constructors_and_benign_defaults() {
     // Choice/container structs that default to all-`None` keep their `Default` only when
     // the schema permits the empty form (category 2 in `docs/type_system_guide.md`).
     // `TeleportAction`/`AddEntityAction` do not qualify — XSD `Position` (`:1738-1751`) is a
-    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3, OSR-09). These
+    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3). These
     // now name a branch.
     let _global_action = GlobalAction::TrafficAction(TrafficAction::new(
         TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
@@ -456,8 +456,8 @@ fn test_constructors_and_benign_defaults() {
     let _delete_entity = DeleteEntityAction::default();
     let _user_action = UserDefinedAction::new(CustomCommandAction::new("default", ""));
 
-    // (OSR-11, F13) `NamedAction` now models the XSD `Action` choice (:705-712) as
-    // parallel `Option` fields and round-trips every branch; the OSR-04 serialize-only
+    // `NamedAction` now models the XSD `Action` choice (:705-712) as
+    // parallel `Option` fields and round-trips every branch; the earlier serialize-only
     // limitation is gone. Named per-branch constructors below.
     let _action_wrapper = NamedAction::private(
         "defaultTraffic",

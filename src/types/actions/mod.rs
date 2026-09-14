@@ -76,6 +76,6 @@ pub use control::{
 // Export wrapper types from the wrappers module
 pub use wrappers::*;
 
-// (OSR-11, F14) `pub trait ValidateAction` removed. It had zero impls crate-wide — its only
+// `pub trait ValidateAction` removed. It had zero impls crate-wide — its only
 // mention was a commented-out line at `actions/movement.rs:2166`. `types::mod::Validate` is
 // the live validation trait; use that.

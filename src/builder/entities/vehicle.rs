@@ -457,7 +457,7 @@ mod tests {
 
     #[test]
     fn category_setters_cover_both_the_literal_and_the_parameter_case() {
-        // OSR-06: the literal setter keeps the bare enum, so no existing call site
+        // The literal setter keeps the bare enum, so no existing call site
         // changed; the parallel `_param` setter reaches the `$name` form that the
         // attribute's `xsd:union` also admits.
         let literal = DetachedVehicleBuilder::new("ego")

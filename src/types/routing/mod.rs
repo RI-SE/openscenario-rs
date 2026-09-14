@@ -132,7 +132,7 @@ pub enum RouteRef {
     Catalog(CatalogReference),
 }
 
-// (OSR-04, resolves OSR-03's NOTE) `Route`, `Waypoint` and `RouteRef` no
+// `Route`, `Waypoint` and `RouteRef` no
 // longer implement `Default`: it fabricated a `Route` named "DefaultRoute",
 // a `Waypoint` with an invented `Position::default()` and
 // `RouteStrategy::Shortest`, and — worst — a `RouteRef` that silently picked

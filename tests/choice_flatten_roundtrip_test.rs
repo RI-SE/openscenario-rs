@@ -364,7 +364,7 @@ fn override_gear_action_manual_gear_round_trip() {
     assert!(out.contains("ManualGear"), "got: {out}");
 }
 
-// ─── F13 / OSR-11: NamedAction must round-trip ALL THREE branches ───────────
+// ─── NamedAction must round-trip ALL THREE branches ────────────────────────
 // XSD:705-712 Action := choice(GlobalAction | UserDefinedAction | PrivateAction) + @name
 
 #[test]

@@ -453,7 +453,7 @@ pub struct DirectionOfTravelDistribution {
     pub opposite: Double,
 }
 
-// (OSR-04, agent B) `impl Default` removed for every fabricating type in this
+// `impl Default` removed for every fabricating type in this
 // file: `TrafficSourceAction`, `TrafficSinkAction`, `TrafficSwarmAction`,
 // `TrafficSignalAction` (a choice — its old default silently picked the
 // `TrafficSignalStateAction` branch), `TrafficSignalStateAction`,
@@ -1270,7 +1270,7 @@ mod tests {
 
     #[test]
     fn test_traffic_action_construction() {
-        // (OSR-04, agent B) `TrafficSourceAction`/`TrafficSinkAction`/
+        // `TrafficSourceAction`/`TrafficSinkAction`/
         // `TrafficSwarmAction` no longer implement `Default` — every field
         // they fabricated was `use="required"` in the XSD. Exercise the
         // explicit constructors instead.
@@ -1439,7 +1439,7 @@ mod tests {
 
     #[test]
     fn test_traffic_signal_construction() {
-        // (OSR-04, agent B) None of these types implement `Default` anymore
+        // None of these types implement `Default` anymore
         // — every fabricated field (`name`, `duration`, ids, `state`) was
         // `use="required"` in the XSD with no declared default. Exercise the
         // explicit constructors instead.

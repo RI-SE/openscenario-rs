@@ -189,7 +189,7 @@ mod tests {
     use crate::types::basic::Value;
 
     /// Replaces `test_position_default_is_all_none`, whose subject — the derived
-    /// `Default` — OSR-10 removed. `world_origin` is the honest replacement, and its
+    /// `Default` — has been removed. `world_origin` is the honest replacement, and its
     /// contract is the opposite one: it *does* select a branch, which is the whole point.
     #[test]
     fn test_position_world_origin_selects_the_world_branch() {
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_relative_world_position_new() {
-        // OSR-04 (agent G): `RelativeWorldPosition` no longer has a fabricating `Default`
+        // `RelativeWorldPosition` no longer has a fabricating `Default`
         // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
         let rwp = RelativeWorldPosition::new("Ego", 1.0, 2.0);
         assert_eq!(rwp.entity_ref.as_literal().unwrap(), "Ego");

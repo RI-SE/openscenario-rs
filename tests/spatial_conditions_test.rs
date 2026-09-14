@@ -216,7 +216,7 @@ fn test_spatial_condition_constructors() {
     assert_eq!(reach_pos.tolerance, Double::literal(1.0));
     // Was `is_none()`, which asserted a property of the removed `Position::default()`
     // rather than of the constructor. The contract is that the position is stored as given
-    // — `Position::world_origin()` (OSR-10) selects the WorldPosition branch.
+    // — `Position::world_origin()` selects the WorldPosition branch.
     assert!(reach_pos.position.world_position.is_some());
 
     let distance = DistanceCondition::new(Position::world_origin(), 10.0, true, Rule::LessThan);

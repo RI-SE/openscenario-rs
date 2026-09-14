@@ -1,4 +1,4 @@
-//! OSR-06 — parameterized enumeration attributes.
+//! Parameterized enumeration attributes.
 //!
 //! All 37 enumeration `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose
 //! second member is `<xsd:restriction base="parameter"/>`, so every enum-typed attribute

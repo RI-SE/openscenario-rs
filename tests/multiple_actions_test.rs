@@ -77,7 +77,7 @@ fn test_event_multiple_actions_xml_parsing() {
 
 #[test]
 fn test_event_new_starts_with_no_actions() {
-    // OSR-03: Event no longer has a Default impl (it used to fabricate a name,
+    // Event no longer has a Default impl (it used to fabricate a name,
     // a Priority::Overwrite, and a whole StoryAction nobody wrote). Event::new
     // requires name and priority explicitly and starts with zero actions —
     // callers must state what action(s) the event actually performs.

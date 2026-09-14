@@ -298,7 +298,7 @@ mod tests {
     fn test_defaults() {
         // `ControllerProperties::default()` is honest: XSD `Properties` has all of
         // `Property`/`File`/`CustomContent` at `minOccurs="0"`, so an empty
-        // collection states nothing (F16). `CatalogController` and `ControllerProperty`
+        // collection states nothing. `CatalogController` and `ControllerProperty`
         // have no `Default` — `@name` is `use="required"` on both with no schema
         // default, so callers must supply one explicitly via `new`/`with_literal`.
         let properties = ControllerProperties::default();

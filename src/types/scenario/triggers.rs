@@ -216,7 +216,7 @@ mod tests {
     use crate::types::enums::{ConditionEdge, Rule};
 
     /// A stand-in `ConditionType` for tests that don't care which branch is used.
-    /// `ConditionType::default()` was removed (OSR-04, agent E) — it silently picked
+    /// `ConditionType::default()` was removed — it silently picked
     /// the `ByValue`/`SimulationTimeCondition` branch of an `xsd:choice`.
     fn test_condition_type() -> ConditionType {
         ConditionType::ByValue(ByValueCondition::simulation_time(
@@ -256,8 +256,8 @@ mod tests {
 
     #[test]
     fn test_trigger_or_logic() {
-        // `Trigger::default()` is now the benign empty-groups container (OSR-04, agent
-        // E); build the first group explicitly rather than relying on it to fabricate one.
+        // `Trigger::default()` is now the benign empty-groups container; build the first
+        // group explicitly rather than relying on it to fabricate one.
         let first_condition = Condition::new("FirstCondition", test_condition_type());
         let mut trigger = Trigger::new(ConditionGroup::new(first_condition));
 

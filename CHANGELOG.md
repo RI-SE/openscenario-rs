@@ -17,7 +17,7 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 ### Added
 
-- **`FromStr`/`Display` on all 37 `src/types/enums.rs` enumerations (OSR-05).** Nine enums
+- **`FromStr`/`Display` on all 37 `src/types/enums.rs` enumerations.** Nine enums
   (`TriggeringEntitiesRule`, `Priority`, `StoryboardElementState`, `StoryboardElementType`,
   `ParameterType`, `CoordinateSystem`, `ReferenceContext`, `SpeedTargetValueType`,
   `DynamicsShape`) previously had neither, which blocked wrapping them in `Value<T>`
@@ -34,7 +34,7 @@ The conformance ledger, including what the test corpus does and does not prove, 
   (`src/types/enums.rs`) now generates all three plus an `ALL: &[Self]` slice per enum
   from one table, making that drift structurally impossible going forward.
   `src/types/enums.rs` shrank from 1929 to 963 lines. No field changed type and no impl
-  was removed — this issue only adds impls and refactors existing ones into the macro; the
+  was removed — this change only adds impls and refactors existing ones into the macro; the
   conformance harness (`report`/`lossy`/`validate`) is byte-identical to baseline. Wrapping
   any field in `Value<Enum>` remains out of scope (tracked separately).
 - **`validation` cargo feature and `XsdValidator`.** `src/validation.rs` exposes libxml-backed
@@ -64,7 +64,7 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
-- **90 enum-typed attributes now accept parameter references (OSR-06).** All 37 enumeration
+- **90 enum-typed attributes now accept parameter references.** All 37 enumeration
   `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose second member is
   `<xsd:restriction base="parameter"/>`, so `<Vehicle vehicleCategory="$cat">` is
   schema-valid. The crate modelled each of the 75 XSD attributes so declared as a bare Rust
@@ -97,7 +97,7 @@ Breaking, unless noted.
   `Value<E>` is not a stringly-typed escape hatch: `vehicleCategory="spaceship"` is still a
   hard parse error, pinned by `tests/parameterized_enum_test.rs`.
 
-- **`Value::Parameter` now serializes as `$name`, not `${name}` (OSR-06).** The schema
+- **`Value::Parameter` now serializes as `$name`, not `${name}`.** The schema
   defines `parameter` as `[$][A-Za-z_][A-Za-z0-9_]*` and `expression` as `[$][{]…[\}]`
   (`Schema/OpenSCENARIO.xsd:4-13`). Every scalar union lists both members, so the braced
   spelling validated there and went unchallenged; **all 37 enumeration unions list
@@ -147,7 +147,7 @@ Breaking, unless noted.
 
 ### Removed
 
-- **Duplicate and dead types (OSR-11, F14).** Each entry names the surviving twin:
+- **Duplicate and dead types.** Each entry names the surviving twin:
   - **`catalog::resolver::CatalogManager`** — a second, shadowing `CatalogManager` distinct
     from the canonical `catalog::CatalogManager` (`src/catalog/mod.rs`), which is what
     `lib.rs`'s `pub use catalog::{… CatalogManager …}` has always resolved to. The
@@ -174,7 +174,7 @@ Breaking, unless noted.
 - **`Condition` and `ConditionWrapper`**, neither of which the schema defines.
 - **Non-schema extension fields** on `ActivateControllerAction` and `SpeedCondition`, and a
   broader sweep of fields and types with no schema counterpart.
-- **`Default` impls that invent scenario data (OSR-03, first tier).** `Default` was
+- **`Default` impls that invent scenario data (first tier).** `Default` was
   implemented on types whose defaults invented scenario content the schema does not define —
   a `GeographicPosition` at latitude 0, an `EntityRef` pointing at `"DefaultEntity"`, an
   `Event` containing a fabricated `Priority::Overwrite` action, a `CatalogTimeOfDay`
@@ -186,9 +186,10 @@ Breaking, unless noted.
   structs that default to all-`None` or empty keep their `Default`. This is a first,
   verified-small tier; roughly 110 further fabricating impls remain and are tracked
   separately (see `docs/type_system_guide.md`'s "Default policy" section).
-- **`Default` impls that invent scenario data (OSR-04, agent A: `types/actions/movement.rs`,
+- **`Default` impls that invent scenario data (`types/actions/movement.rs`,
   `types/positions/route.rs`, `types/routing/mod.rs`).** 21 further fabricating impls
-  removed, including the `Route`/`Waypoint`/`RouteRef` carve-out OSR-03 could not complete:
+  removed, including the `Route`/`Waypoint`/`RouteRef` carve-out the first tier could not
+  complete:
   `RouteRef::default()` silently picked the `Direct` branch of a schema choice, `Route`
   invented the name `"DefaultRoute"`, and `Waypoint` invented `RouteStrategy::Shortest`. None
   of `Route`'s, `Waypoint`'s or `RouteRef`'s XSD attributes carry a `default="…"` — all are
@@ -208,15 +209,15 @@ Breaking, unless noted.
   `SpeedActionTarget`, `AbsoluteTargetSpeed`, `Trajectory`, `TrajectoryFollowingMode`,
   `TrajectoryRef`, `LaneChangeTarget`, `RelativeTargetLane`, `LateralAction`,
   `LongitudinalAction`, `LongitudinalDistanceAction`, `SpeedProfileAction`,
-  `SpeedProfileEntry`) could not be removed within agent A's file-disjoint scope: their
-  `Default` was required by call sites in `src/types/scenario/init.rs`,
-  `src/types/actions/wrappers.rs`, and shared `tests/*.rs` files outside agent A's file list.
+  `SpeedProfileEntry`) could not be removed while this change stayed inside those three files:
+  their `Default` was required by call sites in `src/types/scenario/init.rs`,
+  `src/types/actions/wrappers.rs`, and shared `tests/*.rs` files.
   `TeleportAction` and `AcquirePositionAction` keep their derived `Default`: both wrap a
-  single `Position`, whose own `Default` (out of this issue's scope) is an all-`None` choice
+  single `Position`, whose own `Default` is an all-`None` choice
   with no branch selected, so it states nothing rather than fabricating a position.
-- **`Default` impls that invent scenario data (OSR-04, agent A′: the 13 impls agent A could
-  not finish).** Working under the revised removal-target partition (agents own *types*, not
-  files, and may fix call sites wherever the compiler points), agent A′ removed all 13:
+- **`Default` impls that invent scenario data (the 13 impls the entry above could not
+  finish).** Fixing call sites wherever the compiler points, rather than staying inside one
+  file set, removes all 13:
   `TransitionDynamics` (invented `DynamicsDimension::Time`/`DynamicsShape::Linear`/`1.0`),
   `SpeedActionTarget` (silently picked the absolute branch of a schema choice),
   `AbsoluteTargetSpeed` (invented `10.0`), `Trajectory` (invented `"DefaultTrajectory"`),
@@ -236,7 +237,7 @@ Breaking, unless noted.
   `tests/xsd_validation_test.rs`, `tests/advanced_positions_test.rs` and
   `tests/actions_serialization_test.rs`. This closes out all fabricating `Default` impls in
   `types/actions/movement.rs`, `types/positions/route.rs` and `types/routing/mod.rs`.
-- **`Default` impls that invent scenario data (OSR-04, agent B: `types/actions/traffic.rs`).**
+- **`Default` impls that invent scenario data (`types/actions/traffic.rs`).**
   All 18 fabricating impls removed, leaving only the benign `TrafficStopAction` (an empty
   XSD complexType, so `Default` states nothing). Removed: `TrafficSourceAction`,
   `TrafficSinkAction`, `TrafficSwarmAction` (each fabricated a whole child `Position` and/or
@@ -272,8 +273,8 @@ Breaking, unless noted.
   `src/types/actions/wrappers.rs`, `tests/actions_serialization_test.rs` and
   `examples/action_wrappers_demo.rs`. This closes out all fabricating `Default` impls in
   `types/actions/traffic.rs`.
-- **`Default` impls that invent scenario data (OSR-04, agent C:
-  `types/conditions/{entity,value,spatial}.rs`).** All 26 fabricating impls removed; no
+- **`Default` impls that invent scenario data
+  (`types/conditions/{entity,value,spatial}.rs`).** All 26 fabricating impls removed; no
   benign `Default` impls existed in these three files to begin with (every retained `Default`
   in scope was already a container/choice struct with a derived, all-`None`/empty impl, e.g.
   `CollisionCondition`, `ByEntityCondition`'s own field defaults). In `entity.rs` (15):
@@ -309,15 +310,15 @@ Breaking, unless noted.
   needed removing. None of the underlying XSD attributes carry a `default="…"` — all are
   `use="required"`, checked individually against `Schema/OpenSCENARIO.xsd`. Two call sites
   outside `conditions/`: `Condition::default()` and `ConditionType::default()`
-  (`src/types/scenario/triggers.rs`, owned by OSR-04 agent E) called
+  (`src/types/scenario/triggers.rs`) called
   `ByValueCondition::default()`; both now call
   `ByValueCondition::simulation_time(SimulationTimeCondition::new(10.0, Rule::GreaterThan))`
-  explicitly — the same fabricated content as before, now named rather than defaulted. Agent
-  E's own `Default` impls in `triggers.rs` were left in place. This closes out all
+  explicitly — the same fabricated content as before, now named rather than defaulted. The
+  other `Default` impls in `triggers.rs` are dealt with in a later entry. This closes out all
   fabricating `Default` impls in `types/conditions/entity.rs`, `types/conditions/value.rs`
   and `types/conditions/spatial.rs`.
-- **`Default` impls that invent scenario data (OSR-04, agent D:
-  `types/actions/{wrappers,appearance,control,trailer}.rs`).** All fabricating impls removed:
+- **`Default` impls that invent scenario data
+  (`types/actions/{wrappers,appearance,control,trailer}.rs`).** All fabricating impls removed:
   19 in `wrappers.rs`, 5 in `appearance.rs`, 6 in `control.rs`, 1 in `trailer.rs` — 31 total,
   plus `StoryGlobalAction`'s dependent `#[derive(Default)]` in `types/scenario/story.rs`.
   Benign container/choice defaults (all-`None`/empty, or already-derived) were left alone: 2
@@ -331,7 +332,7 @@ Breaking, unless noted.
   are themselves the constructors, so no replacement method was needed), `EntityAction`
   (invented `"defaultEntity"` and picked the delete branch — gained `::add`/`::delete`),
   `TrafficAction` (picked the stop branch — gained `::new(action)`/`::with_name`),
-  `NamedAction` (F13, known-broken for serialization — `Default` removed, no replacement),
+  `NamedAction` (serialization known-broken at the time — `Default` removed, no replacement),
   `SetMonitorAction`, `VariableAction`, `VariableSetAction`, `VariableAddValueRule`,
   `VariableMultiplyByValueRule`, `ParameterAction`, `ParameterSetAction`,
   `ParameterAddValueRule`, `ParameterMultiplyByValueRule` (each invented a name/ref/value for
@@ -365,16 +366,15 @@ Breaking, unless noted.
   `Option<StoryGlobalAction>`, so no default is needed.
   None of the underlying XSD attributes carries a `default="…"` — all are `use="required"` or
   simply optional with no schema default (checked individually against
-  `Schema/OpenSCENARIO.xsd`; running total across OSR-03 and every OSR-04 agent so far: no
-  genuine schema default found in any file touched by this series).
+  `Schema/OpenSCENARIO.xsd`; running total across every pass so far: no genuine schema default
+  found in any file touched).
   Call sites fixed in `tests/actions_serialization_test.rs` (two tests exercising the
   fabricated defaults rewritten to exercise the new constructors instead — same test count as
   before, 742 lib tests, so no coverage was lost),
   `tests/init_action_choices_test.rs`, and within the four owned files' own test modules.
   This closes out all fabricating `Default` impls in `types/actions/wrappers.rs`,
   `types/actions/appearance.rs`, `types/actions/control.rs` and `types/actions/trailer.rs`.
-- **`Default` impls that invent scenario data (OSR-04, agent E:
-  `types/entities/selection.rs`, `types/geometry/shapes.rs`, `types/scenario/triggers.rs`,
+- **`Default` impls that invent scenario data (`types/entities/selection.rs`, `types/geometry/shapes.rs`, `types/scenario/triggers.rs`,
   `types/basic.rs`, `types/positions/road.rs`, `types/scenario/init.rs`).** 25 fabricating
   impls removed, 0 genuinely benign found (every attribute checked against
   `Schema/OpenSCENARIO.xsd` carries neither a schema default nor an optional/`Vec`
@@ -408,9 +408,9 @@ Breaking, unless noted.
   instead of the schema-neutral empty `Vec`, despite `Vertex` having `minOccurs="2"`,
   XSD:1733-1737) were both replaced with `#[derive(Default)]`, matching the pattern already
   used for `Position` elsewhere in the crate.
-  In `scenario/triggers.rs`: `Condition`/`ConditionType` — flagged explicitly by OSR-04 agent
-  C as inherited fabrication — invented a whole-child `ByValueCondition` (via
-  `ByValueCondition::simulation_time(...)`, the branch C's fix named but did not remove) and,
+  In `scenario/triggers.rs`: `Condition`/`ConditionType` — flagged by the conditions pass as
+  inherited fabrication — invented a whole-child `ByValueCondition` (via
+  `ByValueCondition::simulation_time(...)`, the branch that fix named but did not remove) and,
   for `ConditionType`, additionally picked the `ByValue` branch of the `Condition` choice
   group, XSD:953-961; both removed with no replacement (`Condition::new` already existed;
   `ConditionType`'s variants are constructed directly). `TriggeringEntities` (invented
@@ -426,7 +426,7 @@ Breaking, unless noted.
   `Rule::EqualTo`/`"0"`, XSD:2442-2445), `Range` (invented `lowerLimit: 0.0`/
   `upperLimit: 100.0`, XSD:1815-1818), `Directory` (invented an empty `@path`, XSD:1067-1069)
   — all four `use="required"` attributes with no schema default; all four already had
-  `::new`-style constructors. `Value<T>`'s serde impls were not touched (F15).
+  `::new`-style constructors. `Value<T>`'s serde impls were not touched.
   In `positions/road.rs`: `RelativeRoadPosition`/`RelativeLanePosition` (each invented
   `"DefaultEntity"` plus zeroed deltas for `use="required"` attributes — `::new` already
   existed for both).
@@ -437,8 +437,8 @@ Breaking, unless noted.
   treatment of the sibling `PrivateAction`/`GlobalAction` choice groups in the same file —
   `LongitudinalAction` is a bare `xsd:choice` (XSD:1431-1437) modelled as parallel `Option`s,
   and all-`None` states nothing about which branch was chosen.
-  Two collateral `#[derive(Default)]` removals in files outside this issue's list, both
-  reported per the "say so explicitly" rule: `ControllerCatalogLocation`
+  Two collateral `#[derive(Default)]` removals in files outside that list, reported here
+  explicitly: `ControllerCatalogLocation`
   (`src/types/controllers/mod.rs`) required `Directory: Default` and had no constructor or
   call site of its own — it appears to be an unused duplicate of
   `catalogs::locations::ControllerCatalogLocation`, which already has no `Default`. Several
@@ -449,16 +449,16 @@ Breaking, unless noted.
   than softened with `unwrap_or_default()`.
   None of the underlying XSD attributes carries a `default="…"` — all are `use="required"` or
   optional with no schema default (checked individually against `Schema/OpenSCENARIO.xsd`;
-  running total across OSR-03 and every OSR-04 agent so far: still no genuine schema default
-  found in any file touched by this series). `cargo test --features builder,validation`: 742
+  running total across every pass so far: still no genuine schema default found in any file
+  touched). `cargo test --features builder,validation`: 742
   lib tests (same count as baseline — no coverage lost), and the conformance harness
   (`report`/`lossy`/`validate`/`builder`) is unchanged from baseline (172/172/172/13, 0
   dropped/invented). `grep -rn 'literal("Default' src/ | wc -l` went from 16 to 9.
   This closes out all fabricating `Default` impls in `types/entities/selection.rs`,
   `types/geometry/shapes.rs`, `types/scenario/triggers.rs`, `types/basic.rs`,
   `types/positions/road.rs` and `types/scenario/init.rs`.
-- **`Default` impls that invent scenario data (OSR-04, agent G: coverage gap — 10 fabricating
-  impls in files no prior OSR-04 agent was assigned, added 2026-09-10).** All 10 removed, 0
+- **`Default` impls that invent scenario data (coverage gap — 10 fabricating impls in files no
+  prior pass covered, 2026-09-10).** All 10 removed, 0
   benign found.
   `types/entities/vehicle.rs`: `Vehicle` (invented `"DefaultVehicle"` for `@name`, a fabricated
   `BoundingBox`/`Performance`, XSD:2007-2012 `use="required"` name with no schema default —
@@ -473,16 +473,17 @@ Breaking, unless noted.
   `types/positions/mod.rs`: `RelativeWorldPosition` (invented `"DefaultEntity"`/`0.0`/`0.0`,
   XSD:1910-1922 — gained `::new(entity_ref, dx, dy)`, no constructor previously existed).
   `types/scenario/story.rs`: `StoryAction`/`StoryPrivateAction` — the whole-child fabricators
-  OSR-03 deliberately deferred (`StoryAction` invented `"DefaultAction"` for a `use="required"`
+  the first tier deliberately deferred (`StoryAction` invented `"DefaultAction"` for a `use="required"`
   `@name` with no schema default, XSD `Action` :705-712, plus a fabricated
   `StoryPrivateAction::default()` child; that impl in turn invented a whole `LongitudinalAction`
   child). Both removed with **no** replacement `Default`: `StoryPrivateAction` mirrors XSD
   `PrivateAction` (:1777-1791), a bare `xsd:choice` with no `minOccurs="0"` override, so an
-  all-`None` derived default would *also* be schema-invalid (the F16 trap — not repeated here).
+  all-`None` derived default would *also* be schema-invalid (the schema-invalid-empty trap —
+  not repeated here).
   Both types gained explicit constructors instead: `StoryAction::private(name,
   private_action)`; `StoryPrivateAction::{longitudinal, visibility, teleport}`, one per branch
   actually exercised by existing call sites.
-  In `src/builder/` (outside `builder/conditions/*`, agent F's territory, untouched):
+  In `src/builder/` (outside `builder/conditions/*`, which the next entry handles):
   `VisibilityActionBuilder` (`builder/actions/visibility.rs`) invented "fully visible" —
   `graphics`/`sensors`/`traffic` all `true` — for three XSD-required attributes with no
   schema default (`Schema/OpenSCENARIO.xsd:2554-2556`); the `Default` impl was removed and its
@@ -501,21 +502,19 @@ Breaking, unless noted.
   (`builder/catalog.rs`, `builder/scenario.rs`) were reviewed and kept: both simply delegate
   to their own `::new()` and invent nothing beyond what `::new()` already does.
   None of the underlying XSD attributes carries a `default="…"` (checked individually;
-  running total across OSR-03 and every OSR-04 agent: still no genuine schema default found
-  anywhere in this series). `cargo test --features builder,validation`: 742 lib tests (same
+  running total across every pass: still no genuine schema default found anywhere). `cargo test --features builder,validation`: 742 lib tests (same
   count as baseline), and the conformance harness (`report`/`lossy`/`validate`/`builder`) is
   unchanged from baseline (172/172/172/13, 0 dropped/invented).
   `grep -rn 'literal("Default' src/ | wc -l` went from 9 to 1 — the one survivor
-  (`types/conditions/spatial.rs:345`) belongs to OSR-04 agent C's already-closed file and was
-  left alone as out of this issue's scope.
-  This closes the OSR-04 coverage gap: every fabricating `Default` impl in `src/` is now gone
+  (`types/conditions/spatial.rs:345`) sits in an already-closed file and was left alone here.
+  This closes the coverage gap: every fabricating `Default` impl in `src/` is now gone
   **except** the seven `Default` impls in `src/builder/conditions/*`
   (`AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`,
   `TraveledDistanceConditionBuilder`, `SpeedConditionBuilder`, `ParameterConditionBuilder`,
-  `VariableConditionBuilder`, `RelativeDistanceConditionBuilder`), which remain OSR-04 agent
-  F's assigned scope and were not touched here.
-- **`Default` impls that invent scenario data (OSR-04, agent F: `src/builder/conditions/
-  {entity,value,spatial}.rs`, the issue's last assigned target set).** All seven removed, 0
+  `VariableConditionBuilder`, `RelativeDistanceConditionBuilder`), which the next entry
+  handles.
+- **`Default` impls that invent scenario data
+  (`src/builder/conditions/{entity,value,spatial}.rs`).** All seven removed, 0
   benign found in scope. `AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`
   (`entity.rs`), `SpeedConditionBuilder`, `ParameterConditionBuilder`,
   `VariableConditionBuilder` (`value.rs`) each fabricated a `Rule` (`GreaterThan`/`EqualTo`,
@@ -538,26 +537,26 @@ Breaking, unless noted.
   derived impl states nothing) rather than hand-writing one — `new()` stays
   `clippy::new_without_default`-clean with no `#[allow]` needed. `grep -rn 'literal("Default'
   src/ | wc -l`: unchanged at 1 (the one survivor, `types/conditions/spatial.rs:345`, is
-  agent C's file and was left alone). `cargo build --features builder,validation --all-targets`:
+  an already-closed file and was left alone). `cargo build --features builder,validation --all-targets`:
   clean, no fallout beyond the files just described. `cargo test --features builder,validation`:
   742 lib tests (unchanged). `cargo clippy --features builder,validation --all-targets`: 178
   warnings (unchanged from baseline; no `new_without_default` introduced). Conformance harness
   (`report`/`lossy`/`validate`/`builder`) unchanged from baseline: 172/172/172/13,
   0 dropped/invented.
 
-  **Correction to agent G's entry above.** "Every fabricating `Default` impl in `src/` is now
-  gone except the seven in `src/builder/conditions/*`" was wrong the moment it was written —
-  those seven were never the *only* gap, they were only the only gap *inside OSR-03/OSR-04's
-  own file assignments*. A full manual review of `grep -rn "^impl Default for" src/` (44 impls
+  **Correction to the coverage-gap entry above.** "Every fabricating `Default` impl in `src/`
+  is now gone except the seven in `src/builder/conditions/*`" was wrong the moment it was
+  written — those seven were never the *only* gap, only the only gap *inside the file sets the
+  passes so far had covered*. A full manual review of `grep -rn "^impl Default for" src/` (44 impls
   remain after this entry's seven are removed, down from 51) finds **29 that still fabricate
-  content**, all outside every OSR-03/OSR-04 agent's assigned scope: `src/catalog/`,
+  content**, all outside every file covered so far: `src/catalog/`,
   `src/types/catalogs/{references,files,environments,controllers,trajectories,routes}.rs`,
   `src/types/distributions/{mod,deterministic,stochastic}.rs`, one straggler in
   `src/types/positions/trajectory.rs` (`Trajectory::default()`'s `Polyline` shape defaults to
-  zero vertices — schema-invalid on its own terms, the F16 trap, since `Polyline` requires
+  zero vertices — schema-invalid on its own terms, since `Polyline` requires
   `minOccurs="2"`), and one in `src/types/conditions/entity.rs:613`
-  (`SpeedCondition::default()` — a miss in OSR-04 agent C's otherwise-complete pass over that
-  file, inventing `value: 10.0, rule: GreaterThan`). Representative: `CatalogFile::default()`
+  (`SpeedCondition::default()` — a miss in the otherwise-complete pass over that file,
+  inventing `value: 10.0, rule: GreaterThan`). Representative: `CatalogFile::default()`
   → `"DefaultCatalog"`; `Axles`/`Axle::default()` → fixed `Self::car()`/`Self::rear_car()`
   geometry nobody specified; `Stochastic::default()` → `numberOfTestRuns: 1`
   (`Schema/OpenSCENARIO.xsd:2085`, `use="required"`, no schema default);
@@ -566,32 +565,34 @@ Breaking, unless noted.
   delegate to a `new()` that invents nothing, or aren't XSD-backed scenario content at all).
   See `docs/type_system_guide.md`'s `Default`-policy section for the full breakdown — it no
   longer claims full enforcement, and says so plainly rather than rounding up. This is scoped
-  as a new OSR, not folded into this one.
-- **`Default` impls that invent scenario data (OSR-08, agent H: `src/types/distributions/
-  {deterministic,mod,stochastic}.rs`, `src/types/entities/axles.rs` — the coverage gap F4's
-  file sweep missed entirely).** All 18 hand-written impls there removed: `xsd:choice` groups
+  as separate work, not folded in here.
+- **`Default` impls that invent scenario data (`src/types/distributions/
+  {deterministic,mod,stochastic}.rs`, `src/types/entities/axles.rs` — the coverage gap the
+  original file sweep missed entirely).** All 18 hand-written impls there removed: `xsd:choice` groups
   that defaulted to a specific variant with invented data; distribution containers defaulting a
   required `Vec` to empty or to one fake element where the XSD gives the child no
   `minOccurs="0"` (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
-  `ParameterValueSet.ParameterAssignment`, `Stochastic.StochasticDistribution` — the F16 trap);
+  `ParameterValueSet.ParameterAssignment`, `Stochastic.StochasticDistribution` — schema-invalid
+  empty);
   `Stochastic::default()` inventing `numberOfTestRuns: 1` for a `use="required"` attribute with
   no schema default; `Axles`/`Axle::default()` picking fixed `car()`/`rear_car()` geometry
   nobody specified. Each gained an explicit `::new()`. `grep -rn "^impl Default for" src/ | wc
   -l`: 44 → 26. Harness and lib tests at baseline (172/172/172/13, 742 tests, 178 clippy
   warnings).
-- **`Default` impls that invent scenario data (OSR-08, agent I: the two stragglers plus the
-  entire catalog subtree — the issue's last assigned target set).** `src/types/conditions/
+- **`Default` impls that invent scenario data (the two stragglers plus the entire catalog
+  subtree).** `src/types/conditions/
   entity.rs:613` (`SpeedCondition::default()`, inventing `value: 10.0, rule: GreaterThan` — a
-  miss inside OSR-04 agent C's otherwise-complete file) and `src/types/positions/trajectory.rs`
-  (`Trajectory::default()`, whose `Polyline` defaulted to zero vertices — a live F16 instance,
+  miss inside an otherwise-complete file) and `src/types/positions/trajectory.rs`
+  (`Trajectory::default()`, whose `Polyline` defaulted to zero vertices — schema-invalid empty,
   since `Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`) were both removed with
   an explicit `::new()`. Nine more removed across `src/types/catalogs/{routes,controllers,
   environments,files,references,trajectories}.rs`: `CatalogRoute`/`RouteWaypoint` (fabricated
   name and an origin waypoint with `RouteStrategy::Fastest`), `CatalogController`/
   `ControllerProperty` (fabricated name/type and a `"defaultProperty"`/`"defaultValue"` pair),
-  `CatalogFog` (a fabricated 100km `visualRange`), `CatalogFile`/`CatalogContent` (the issue's
-  namesake — `"DefaultCatalog"`/`"openscenario-rs"`), `ParameterAssignment` (fabricated
-  `"defaultParam"`/`"defaultValue"`), and `CatalogTrajectory` (name plus the same F16 zero-vertex
+  `CatalogFog` (a fabricated 100km `visualRange`), `CatalogFile`/`CatalogContent` (the
+  `literal("Default` grep's namesake — `"DefaultCatalog"`/`"openscenario-rs"`),
+  `ParameterAssignment` (fabricated `"defaultParam"`/`"defaultValue"`), and `CatalogTrajectory`
+  (name plus the same zero-vertex
   `Polyline` as the `trajectory.rs` straggler). Removing `CatalogContent`'s `Default` surfaced
   two derived defaults piggy-backing on it — `catalogs::mod::Catalog`/`CatalogDefinition` and
   `scenario::storyboard::CatalogDefinition` — which lost `#[derive(Default)]` as well (not
@@ -602,15 +603,15 @@ Breaking, unless noted.
   `grep -rn "^impl Default for" src/ | wc -l`: 26 → 15. Harness at baseline (172/172/172/13),
   742 lib tests, clippy 178 warnings, all unchanged.
 
-  **This closes out OSR-03/OSR-04/OSR-08's running tally, and the claim is deliberately not
-  "full enforcement."** Ten agents removed 174 fabricating `Default` impls (hand-written and
-  derived) across this series with zero harness regressions. A final manual sweep for
+  **This closes out the running tally, and the claim is deliberately not "full
+  enforcement."** The passes above removed 174 fabricating `Default` impls (hand-written and
+  derived) with zero harness regressions. A final manual sweep for
   `#[derive(Default)]` on structs with a required field — the shape the hand-written-impl grep
-  cannot see — found one more confirmed live fabrication outside every file any agent in this
-  series was ever assigned: `src/types/scenario/story.rs:249`'s `Actors` derives `Default` over
+  cannot see — found one more confirmed live fabrication outside every file covered so far:
+  `src/types/scenario/story.rs:249`'s `Actors` derives `Default` over
   a required `@selectTriggeringEntities` boolean with no XSD default, fabricating `false`, and
   `Actors::default()` is called live at `story.rs:365`. It is reported, not fixed, because
-  `types/scenario/story.rs` was on no issue's file list. See `docs/type_system_guide.md` for
+  `types/scenario/story.rs` was in none of the file sets covered. See `docs/type_system_guide.md` for
   every survivor's individual justification.
 - Divergent duplicate types, folded into their canonical definitions.
 

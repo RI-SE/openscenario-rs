@@ -17,7 +17,7 @@ use std::str::FromStr;
 ///
 /// Before this macro existed, the rename, the `Display` match and the `FromStr`
 /// match were three independent hand-written transcriptions of the same table --
-/// see OSR-05 / `docs/type_system_guide.md:220-231`. Folding them into one macro
+/// see `docs/type_system_guide.md:220-231`. Folding them into one macro
 /// invocation per enum makes drift between them structurally impossible: there is
 /// only one place to edit a wire name, and every representation changes together.
 ///
@@ -128,7 +128,7 @@ osc_enum! {
     /// Triggering entities rule enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s
-    /// `TriggeringEntitiesRule` simple type (OSR-05).
+    /// `TriggeringEntitiesRule` simple type.
     pub enum TriggeringEntitiesRule {
         All => "all",
         Any => "any",
@@ -139,7 +139,7 @@ osc_enum! {
     /// Priority level for events and actions
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `Priority` simple
-    /// type (OSR-05). The schema marks `overwrite` deprecated in favor of
+    /// type. The schema marks `overwrite` deprecated in favor of
     /// `override`; both remain valid wire values and are kept here.
     pub enum Priority {
         Overwrite => "overwrite",
@@ -153,7 +153,7 @@ osc_enum! {
     /// Storyboard element state enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s
-    /// `StoryboardElementState` simple type (OSR-05).
+    /// `StoryboardElementState` simple type.
     pub enum StoryboardElementState {
         CompleteState => "completeState",
         EndTransition => "endTransition",
@@ -169,7 +169,7 @@ osc_enum! {
     /// Storyboard element type enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s
-    /// `StoryboardElementType` simple type (OSR-05).
+    /// `StoryboardElementType` simple type.
     pub enum StoryboardElementType {
         Act => "act",
         Action => "action",
@@ -184,7 +184,7 @@ osc_enum! {
     /// Parameter data type enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `ParameterType`
-    /// simple type (OSR-05). The schema marks `integer` deprecated in favor of
+    /// simple type. The schema marks `integer` deprecated in favor of
     /// `int`; both remain valid wire values and are kept here.
     pub enum ParameterType {
         Boolean => "boolean",
@@ -202,7 +202,7 @@ osc_enum! {
     /// Coordinate system enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `CoordinateSystem`
-    /// simple type (OSR-05).
+    /// simple type.
     pub enum CoordinateSystem {
         Entity => "entity",
         Lane => "lane",
@@ -216,7 +216,7 @@ osc_enum! {
     /// Reference context enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `ReferenceContext`
-    /// simple type (OSR-05).
+    /// simple type.
     pub enum ReferenceContext {
         Relative => "relative",
         Absolute => "absolute",
@@ -227,7 +227,7 @@ osc_enum! {
     /// Speed target value type
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s
-    /// `SpeedTargetValueType` simple type (OSR-05).
+    /// `SpeedTargetValueType` simple type.
     pub enum SpeedTargetValueType {
         Delta => "delta",
         Factor => "factor",
@@ -238,7 +238,7 @@ osc_enum! {
     /// Dynamics shape enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `DynamicsShape`
-    /// simple type (OSR-05).
+    /// simple type.
     pub enum DynamicsShape {
         Linear => "linear",
         Cubic => "cubic",

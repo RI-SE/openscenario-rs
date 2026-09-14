@@ -389,7 +389,7 @@ impl ValidateDistribution for ParameterValueSet {
 // minOccurs="1" in the schema (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
 // `ParameterValueSet.ParameterAssignment` all lack `minOccurs="0"`/have no `minOccurs="0"` —
 // verified against `Schema/OpenSCENARIO.xsd`), so an empty `Vec` would not be schema-valid either
-// (F16). There is no default that states nothing; callers must supply the required content via
+// There is no default that states nothing; callers must supply the required content via
 // `::new()`.
 
 impl DeterministicSingleParameterDistribution {

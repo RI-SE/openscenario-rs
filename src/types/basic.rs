@@ -325,7 +325,7 @@ pub fn is_expression(s: &str) -> bool {
 /// <xsd:pattern value="[$][A-Za-z_][A-Za-z0-9_]*"/>
 /// ```
 ///
-/// (OSR-11) The check used to be `char::is_alphanumeric`, which is **Unicode**
+/// The check used to be `char::is_alphanumeric`, which is **Unicode**
 /// alphanumeric, so the crate accepted `$café` where the schema does not. The pattern
 /// is ASCII-only: first character `[A-Za-z_]`, the rest `[A-Za-z0-9_]`. Note this
 /// governs the *parameter* production only — the `expression` production
@@ -403,7 +403,7 @@ mod tests {
         assert!(!is_valid_parameter_name("")); // Can't be empty
         assert!(!is_valid_parameter_name("speed-limit")); // No hyphens
 
-        // (OSR-11) Non-ASCII is rejected: the XSD character classes are `[A-Za-z_]` and
+        // Non-ASCII is rejected: the XSD character classes are `[A-Za-z_]` and
         // `[A-Za-z0-9_]`, not Unicode alphanumeric. `char::is_alphanumeric` accepted all
         // of these.
         assert!(!is_valid_parameter_name("café")); // non-ASCII in the tail
@@ -414,7 +414,7 @@ mod tests {
         assert!(!is_valid_parameter_name("\u{FF41}bc")); // fullwidth 'a'
     }
 
-    /// (OSR-11) Tightening the `parameter` production to ASCII must not tighten the
+    /// Tightening the `parameter` production to ASCII must not tighten the
     /// `expression` production, which has its own character class
     /// (`Schema/OpenSCENARIO.xsd:11`) and is deliberately left alone.
     #[test]
@@ -438,8 +438,8 @@ mod tests {
         // parameter reference; it falls through to a literal parse, which fails for f64.
         assert!(quick_xml::de::from_str::<Value<f64>>(r#"<v>$café</v>"#).is_err());
 
-        // `$speed` (the F15 spelling) still deserializes as a parameter and re-serializes
-        // with the bare sigil.
+        // `$speed` (the schema's `parameter` production) still deserializes as a
+        // parameter and re-serializes with the bare sigil.
         let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$speed</v>"#).unwrap();
         assert!(matches!(bare, Value::Parameter(ref p) if p == "speed"));
         assert_eq!(bare.to_string(), "$speed");

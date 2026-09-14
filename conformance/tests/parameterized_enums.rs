@@ -1,4 +1,4 @@
-//! Gate for the OSR-06 parameterized-enumeration fixtures.
+//! Gate for the parameterized-enumeration fixtures.
 //!
 //! The corpus cannot cover this. All 172 corpus files spell every enum-typed attribute as a
 //! literal, so `report`, `lossy` and `validate` were green for four audit passes on a crate

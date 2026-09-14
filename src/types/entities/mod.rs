@@ -271,8 +271,8 @@ mod tests {
 
     #[test]
     fn test_scenario_object_creation() {
-        // Vehicle::new_car requires the (inner) vehicle name explicitly (OSR-04, agent G:
-        // `Vehicle` no longer has a fabricating `Default`), which is deliberately different
+        // Vehicle::new_car requires the (inner) vehicle name explicitly
+        // (`Vehicle` no longer has a fabricating `Default`), which is deliberately different
         // from the outer `ScenarioObject`'s own name to prove they are independent fields.
         let vehicle = Vehicle::new_car("InnerVehicle".to_string());
         let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
