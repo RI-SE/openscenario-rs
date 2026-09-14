@@ -568,9 +568,12 @@ per the classification method above:
 GreaterThan`) and `src/types/positions/trajectory.rs` (`Trajectory::default()`, whose `Polyline`
 defaulted to zero vertices: `Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`,
 so that value could never serialize to schema-valid XML) were both removed with an explicit
-`::new()` in their place; `SpeedCondition::new` already existed, `Trajectory::new` is new and
-mirrors the identical constructor already present on the sibling
-`actions::movement::Trajectory`.
+`::new()` in their place; `SpeedCondition::new` already existed, `Trajectory::new` was added to
+mirror the identical constructor on the sibling `actions::movement::Trajectory`. That sibling is
+why `positions::trajectory::Trajectory` was later deleted outright: it was a duplicate of the
+`movement` type with no consumers, and its `closed` field was a plain `bool` where the XSD
+declares `type="Boolean" use="required"`. `actions::movement::Trajectory` is now the only
+`Trajectory`.
 
 The catalog subtree contributed nine more removals, all fabricating a required field with no
 XSD `default="…"`, each replaced with an explicit constructor: `CatalogRoute`/`RouteWaypoint`

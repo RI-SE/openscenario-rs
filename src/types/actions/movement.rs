@@ -1953,10 +1953,9 @@ mod tests {
     }
 
     #[test]
-    fn test_action_defaults() {
-        // `AcquirePositionAction::default()` is the only
-        // one of these that still implements `Default` — see the comment
-        // above its definition. `LaneChangeAction` no longer does.
+    fn test_action_constructors() {
+        // No type in this file implements `Default` any more. Each action is
+        // built through its explicit constructor.
         let lane_change = LaneChangeAction::new(
             TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
             LaneChangeTarget::relative("Ego", -1),
