@@ -1,4 +1,5 @@
-//! The enumerations of the OpenSCENARIO specification.
+//! The 37 enumerations of the OpenSCENARIO specification. `enum_wire_names_test`
+//! pins that count, so a new one cannot be added without the test noticing.
 //!
 //! Each carries the serde renames that map its variants to the wire names the schema
 //! uses. Deprecated values are kept and marked, not dropped, since a file that still
