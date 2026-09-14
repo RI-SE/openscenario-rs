@@ -1,12 +1,9 @@
-//! Basic data types with expression and parameter support
+//! The scalar types every attribute is built from, and [`Value<T>`] – the wrapper that
+//! lets an attribute hold a literal, a `$parameter` reference, or a `${expression}`.
 //!
-//! This file contains:
-//! - Value<T> enum for literals, parameters, and expressions (${param}, ${expr})
-//! - Implementation of all basic OpenSCENARIO types (String, Double, Boolean, etc.)
-//! - Parameter resolution logic and expression evaluation
-//! - Serde serialization/deserialization for XML attributes
-//! - Validation helpers for parameter names and expression syntax
-//!
+//! [`Value<T>`] serializes through `Display`, not through its derived `Serialize`, so
+//! a parameter round-trips as the reference it was rather than as the value it
+//! resolved to. `OSString`, `Double`, `Boolean` and the rest are aliases over it.
 use crate::error::{Error, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;

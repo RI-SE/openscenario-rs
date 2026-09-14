@@ -1,11 +1,7 @@
-//! Initialization system for OpenSCENARIO scenarios
+//! The `Init` block: the state of the world before the story starts.
 //!
-//! This file contains:
-//! - Init structure with Actions container for scenario initialization
-//! - GlobalAction types for environment and infrastructure setup
-//! - Private actions for entity-specific initialization
-//! - Integration with existing action and environment systems
-//!
+//! Its `Actions` container holds `GlobalAction`s for environment and infrastructure
+//! and `Private` actions for each entity's starting position, speed and controller.
 use crate::types::actions::appearance::{AppearanceAction, VisibilityAction};
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{

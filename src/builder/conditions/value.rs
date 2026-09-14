@@ -1,16 +1,4 @@
-//! Value-based condition builders (time, speed, etc.)
-//!
-//! This module provides builders for creating value-based conditions that trigger
-//! based on simulation time, parameters, variables, and other non-entity values.
-//!
-//! # Supported Conditions
-//!
-//! - **SimulationTimeCondition**: Triggers at specific simulation times
-//! - **SpeedCondition**: Triggers when entity speed meets criteria
-//! - **ParameterCondition**: Triggers based on parameter values
-//! - **VariableCondition**: Triggers based on variable state changes
-//!
-//! # Usage
+//! Condition builders for simulation time, parameters, variables, and entity speed.
 //!
 //! ```rust
 //! use openscenario_rs::builder::conditions::TimeConditionBuilder;

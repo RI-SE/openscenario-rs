@@ -1,7 +1,5 @@
-//! Distribution system module for scenario parameterization and variation
-//!
-//! This module provides the core distribution framework for OpenSCENARIO parameter variation.
-//! It supports both deterministic (systematic) and stochastic (probabilistic) parameter distributions.
+//! Parameter variation: [`deterministic`] distributions enumerate their values
+//! systematically, [`stochastic`] ones sample from a probability distribution.
 
 use crate::error::Result;
 use crate::types::entities::vehicle::File;

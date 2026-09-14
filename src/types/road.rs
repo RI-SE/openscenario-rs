@@ -1,7 +1,5 @@
-//! Road network types for OpenSCENARIO
-//!
-//! This module defines types for road network definitions including
-//! logic files and road network references.
+//! `RoadNetwork`: the logic file describing the road, an optional scene graph file,
+//! and any traffic signal definitions attached to it.
 
 use crate::types::actions::traffic::TrafficSignalController;
 use crate::types::basic::OSString;

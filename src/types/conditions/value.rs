@@ -1,13 +1,6 @@
-//! Value-based condition types for parameter and time-based triggering
-//!
-//! This file contains:
-//! - Parameter conditions for scenario parameter monitoring
-//! - Variable conditions for dynamic variable state checking
-//! - Time-based conditions (simulation time, time-of-day)
-//! - Storyboard element state conditions for execution flow control
-//! - Traffic signal conditions for infrastructure interaction
-//! - User-defined custom condition support
-//!
+//! Conditions on values instead of entities: scenario parameters and variables,
+//! simulation time and time of day, storyboard element state, traffic signal state,
+//! and user-defined conditions.
 use crate::types::basic::DateTime;
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::enums::{Rule, StoryboardElementState, StoryboardElementType};

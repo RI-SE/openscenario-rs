@@ -1,7 +1,5 @@
-//! Environment catalog types for OpenSCENARIO reusable environment definitions
-//!
-//! This module contains catalog-specific environment types that enable reuse of
-//! environment configurations across multiple scenarios with parameter substitution.
+//! `CatalogEnvironment`: an environment in its catalog-file form. Weather, time of day
+//! and road condition become reusable across scenarios through it.
 
 use crate::types::basic::{Boolean, Double, OSString, ParameterDeclarations, Value};
 use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType, Wetness};

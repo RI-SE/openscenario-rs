@@ -1,7 +1,5 @@
-//! Action wrapper types matching OpenSCENARIO XSD schema structure
-//!
-//! This module contains the main wrapper types that organize individual actions
-//! according to the OpenSCENARIO specification hierarchy.
+//! The wrapper types that hold the XSD action hierarchy: `Action` and its
+//! global / user-defined / private branches, down to the individual action choices.
 
 use crate::types::basic::{Boolean, Double, OSString};
 use crate::types::positions::Position;

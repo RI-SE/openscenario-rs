@@ -1,8 +1,4 @@
-//! Validation integration for builder system
-//!
-//! This module provides validation support for the builder system,
-//! integrating with the existing validation framework to ensure
-//! built scenarios comply with OpenSCENARIO schema requirements.
+//! Validation hooks for the builder, so a scenario can be checked as it is assembled.
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::scenario::storyboard::OpenScenario;

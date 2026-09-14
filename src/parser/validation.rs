@@ -1,54 +1,27 @@
-//! Validation system for parsed OpenSCENARIO content
+//! Domain validation for parsed scenarios.
 //!
-//! This module provides comprehensive validation of OpenSCENARIO documents beyond basic XML
-//! parsing, ensuring logical consistency and adherence to domain-specific constraints.
-//!
-//! # Features
-//!
-//! - **Multi-level validation** - structure, references, constraints, and semantics
-//! - **Detailed error reporting** with location context and fix suggestions
-//! - **Performance metrics** and caching for large scenario validation
-//! - **Configurable validation** modes (strict, lenient, custom rules)
-//! - **Cross-reference checking** for entities, catalogs, and parameters
-//!
-//! # Basic Usage
-//!
-//! ## Simple Validation
+//! Checks that run on a document once it has parsed: required fields, entity and
+//! catalog references that resolve, business rules, and logical consistency. Each
+//! finding carries a location, a message, and where possible a suggested fix.
 //!
 //! ```rust,no_run
 //! use openscenario_rs::parser::validation::ScenarioValidator;
 //! use openscenario_rs::parser::xml::parse_from_file;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Parse and validate a scenario
 //! let scenario = parse_from_file("scenario.xosc")?;
 //! let mut validator = ScenarioValidator::new();
 //! let result = validator.validate_scenario(&scenario);
 //!
-//! if result.is_valid() {
-//!     println!("✓ Scenario is valid");
-//! } else {
-//!     println!("✗ Found {} errors:", result.errors.len());
-//!     for error in &result.errors {
-//!         println!("  - {}: {}", error.location, error.message);
-//!         if let Some(suggestion) = &error.suggestion {
-//!             println!("    Suggestion: {}", suggestion);
-//!         }
-//!     }
-//! }
-//!
-//! // Check warnings too
-//! if !result.warnings.is_empty() {
-//!     println!("⚠ {} warnings found", result.warnings.len());
-//!     for warning in &result.warnings {
-//!         println!("  - {}: {}", warning.location, warning.message);
-//!     }
+//! for error in &result.errors {
+//!     println!("{}: {}", error.location, error.message);
 //! }
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! ## Custom Validation Configuration
+//! Structure is always checked; [`ValidationConfig`] switches the reference,
+//! constraint and semantic passes on or off and caps how many errors to collect.
 //!
 //! ```rust,no_run
 //! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
@@ -57,54 +30,21 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # let scenario = parse_from_file("scenario.xosc")?;
 //! let config = ValidationConfig {
-//!     strict_mode: true,           // Treat warnings as errors
-//!     validate_references: true,   // Check entity/catalog references
-//!     validate_constraints: true,  // Check business rules
-//!     validate_semantics: true,    // Check logical consistency
-//!     max_errors: 50,             // Stop after 50 errors
-//!     use_cache: true,            // Enable performance caching
+//!     strict_mode: true,
+//!     max_errors: 50,
+//!     validate_semantics: false,
+//!     ..Default::default()
 //! };
 //!
 //! let mut validator = ScenarioValidator::with_config(config);
 //! let result = validator.validate_scenario(&scenario);
-//!
-//! println!("Validation completed in {}ms", result.metrics.duration_ms);
-//! println!("Validated {} elements", result.metrics.elements_validated);
+//! println!("{} elements in {}ms", result.metrics.elements_validated, result.metrics.duration_ms);
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! ## Validation Categories
-//!
-//! The validator checks multiple categories of issues:
-//!
-//! ### Structural Validation
-//! - Required fields and attributes
-//! - Valid data types and ranges
-//! - Schema compliance
-//!
-//! ### Reference Validation
-//! ```rust
-//! // Checks that entity references point to defined entities
-//! // Validates catalog references exist and are accessible
-//! // Ensures parameter references resolve correctly
-//! ```
-//!
-//! ### Constraint Validation
-//! ```rust
-//! // Enforces OpenSCENARIO business rules
-//! // Checks unique names and IDs
-//! // Validates value ranges and relationships
-//! ```
-//!
-//! ### Semantic Validation
-//! ```rust
-//! // Ensures logical consistency
-//! // Detects impossible scenarios
-//! // Validates temporal relationships
-//! ```
-//!
-//! # Error Categories and Handling
+//! Every finding carries a [`ValidationErrorCategory`], so a caller can branch on the
+//! kind of problem it reports:
 //!
 //! ```rust
 //! use openscenario_rs::parser::validation::ValidationErrorCategory;
@@ -112,84 +52,18 @@
 //! # let result = openscenario_rs::parser::validation::ValidationResult::new();
 //! for error in &result.errors {
 //!     match error.category {
-//!         ValidationErrorCategory::MissingRequired => {
-//!             // Handle missing required fields
-//!             eprintln!("Missing required field: {}", error.location);
-//!         }
-//!         ValidationErrorCategory::InvalidReference => {
-//!             // Handle broken references
-//!             eprintln!("Invalid reference at {}: {}", error.location, error.message);
-//!         }
-//!         ValidationErrorCategory::ConstraintViolation => {
-//!             // Handle business rule violations
-//!             eprintln!("Constraint violation: {}", error.message);
-//!         }
-//!         ValidationErrorCategory::SemanticError => {
-//!             // Handle logical inconsistencies
-//!             eprintln!("Semantic error: {}", error.message);
-//!         }
-//!         ValidationErrorCategory::TypeMismatch => {
-//!             // Handle type errors
-//!             eprintln!("Type mismatch: {}", error.message);
-//!         }
-//!         ValidationErrorCategory::ParameterError => {
-//!             // Handle parameter resolution errors
-//!             eprintln!("Parameter error: {}", error.message);
-//!         }
+//!         ValidationErrorCategory::MissingRequired => {}
+//!         ValidationErrorCategory::InvalidReference => {}
+//!         ValidationErrorCategory::ConstraintViolation => {}
+//!         ValidationErrorCategory::SemanticError => {}
+//!         ValidationErrorCategory::TypeMismatch => {}
+//!         ValidationErrorCategory::ParameterError => {}
 //!     }
 //! }
 //! ```
 //!
-//! # Performance Optimization
-//!
-//! For large scenarios or repeated validations:
-//!
-//! ```rust,no_run
-//! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
-//! use openscenario_rs::parser::xml::parse_from_file;
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! # let scenario_files = vec!["scenario1.xosc", "scenario2.xosc"];
-//! let config = ValidationConfig {
-//!     use_cache: true,         // Enable validation caching
-//!     max_errors: 20,          // Stop early to save time
-//!     validate_semantics: false, // Skip expensive semantic checks
-//!     ..Default::default()
-//! };
-//!
-//! let mut validator = ScenarioValidator::with_config(config);
-//!
-//! // Validate multiple scenarios efficiently
-//! for scenario_file in scenario_files {
-//!     let scenario = parse_from_file(scenario_file)?;
-//!     let result = validator.validate_scenario(&scenario);
-//!
-//!     println!("Cache hit ratio: {:.1}%", result.metrics.cache_hit_ratio * 100.0);
-//! }
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! # Integration with Parsing
-//!
-//! ```rust,no_run
-//! use openscenario_rs::parser::{xml, validation};
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Parse and validate in one step
-//! let scenario = xml::parse_from_file_validated("scenario.xosc")?;
-//!
-//! // Then do domain-specific validation
-//! let mut validator = validation::ScenarioValidator::new();
-//! let validation_result = validator.validate_scenario(&scenario);
-//!
-//! // Check both parsing and validation results
-//! if validation_result.is_clean() {
-//!     println!("Scenario is fully valid and clean");
-//! }
-//! # Ok(())
-//! # }
-//! ```
+//! `xml::parse_from_file_validated` runs the parse and the structural pass
+//! together; the validator here is the domain pass on top of it.
 
 use crate::{
     types::{
@@ -206,13 +80,9 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
-/// Comprehensive validation engine for OpenSCENARIO documents
-///
-/// This validator performs multi-level validation:
-/// 1. Structural validation - ensures proper hierarchy and required fields
-/// 2. Reference validation - validates entity and catalog references
-/// 3. Constraint validation - enforces business rules and constraints
-/// 4. Semantic validation - ensures logical consistency
+/// Runs the four validation passes over a parsed document: structure (hierarchy and
+/// required fields), references (entities and catalogs), constraints (business rules),
+/// and semantics (logical consistency). [`ValidationConfig`] selects which run.
 #[derive(Debug)]
 pub struct ScenarioValidator {
     /// Validation configuration options

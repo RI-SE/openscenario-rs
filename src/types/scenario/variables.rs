@@ -1,7 +1,5 @@
-//! Variable declaration types for OpenSCENARIO
-//!
-//! This module contains variable declaration types that follow the same pattern
-//! as parameter declarations but for runtime variables rather than compile-time parameters.
+//! Variable declarations. Same shape as parameter declarations, but variables may
+//! change during the run where parameters are fixed once resolved.
 
 use crate::types::basic::{OSString, Value};
 use crate::types::enums::ParameterType;

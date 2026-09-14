@@ -1,10 +1,8 @@
-//! Parameter substitution engine for catalog resolution
+//! Parameter substitution during catalog resolution.
 //!
-//! This module handles:
-//! - Parameter parsing and substitution in catalog entities
-//! - Parameter validation against schemas and constraints
-//! - Nested parameter reference resolution
-//! - Context-aware parameter evaluation
+//! A catalog entry declares parameters; the reference that names it supplies the
+//! assignments. This module applies those assignments, including where a value is
+//! itself a reference to a parameter from the enclosing scope.
 
 use crate::error::{Error, Result};
 use crate::types::basic::Value;

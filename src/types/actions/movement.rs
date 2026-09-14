@@ -1,12 +1,7 @@
-//! Movement action types for entity positioning and motion
-//!
-//! This file contains:
-//! - Movement actions (SpeedAction, LaneChangeAction, TeleportAction, etc.)
-//! - Dynamics and transition specifications for smooth movement
-//! - Target specification types (absolute, relative, following)
-//! - Spatial relationship actions (distance keeping, synchronization)
-//! - Trajectory following and path planning actions
-//!
+//! Actions that move an entity: `SpeedAction`, `LaneChangeAction`, `LaneOffsetAction`,
+//! `TeleportAction`, `FollowTrajectoryAction`, `SynchronizeAction`, and the distance
+//! actions. `TransitionDynamics` says how a change is reached: its shape, and whether
+//! the dimension bounding it is time, distance or rate.
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::catalogs::trajectories::CatalogTrajectory;

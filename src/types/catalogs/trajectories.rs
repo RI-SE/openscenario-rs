@@ -1,7 +1,5 @@
-//! Trajectory catalog types for OpenSCENARIO reusable trajectory definitions
-//!
-//! This module contains catalog-specific trajectory types that enable reuse of
-//! trajectory definitions across multiple scenarios with parameter substitution.
+//! `CatalogTrajectory`: a trajectory in its catalog-file form, with parameter
+//! declarations covering its shape.
 
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
 use crate::types::positions::Position;

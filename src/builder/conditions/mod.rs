@@ -1,21 +1,9 @@
-//! Condition and trigger builders for event-driven scenario control
+//! Condition and trigger builders.
 //!
-//! This module provides builders for creating OpenSCENARIO conditions and triggers
-//! that control when events fire in scenarios. It supports both value-based conditions
-//! (time, parameters) and entity-based conditions (speed, distance, collision).
-//!
-//! # Architecture
-//!
-//! - **Value Conditions**: Time-based, parameter-based, and state-based triggers
-//! - **Spatial Conditions**: Distance, position, and collision-based triggers  
-//! - **Trigger Builder**: Combines conditions with AND/OR logic
-//! - **Integration**: Works with existing storyboard and event builders
-//!
-//! # Usage
-//!
-//! Triggers are used within storyboard builders.
-//! For detailed usage examples, see the storyboard module documentation.
-//! ```
+//! [`value`] holds the conditions that watch time, parameters and variables;
+//! [`spatial`] and [`entity`] hold the ones that watch entities. [`TriggerBuilder`]
+//! assembles them into the OR-of-ANDs shape a `Trigger` takes, and the storyboard
+//! builders attach the result.
 
 pub mod entity;
 pub mod spatial;

@@ -1,10 +1,8 @@
-//! Catalog reference resolution functionality
+//! Resolution of catalog references into the content they name.
 //!
-//! This module handles:
-//! - Resolving catalog references to actual entities
-//! - Dependency tracking and circular reference detection
-//! - Parameter substitution during resolution
-//! - Integration of resolved content into scenarios
+//! Resolution substitutes the reference's parameter assignments into the catalog entry
+//! as it goes. A reference that reaches itself raises
+//! [`crate::Error::circular_dependency`] instead of recursing.
 
 use crate::error::{Error, Result};
 use std::collections::{HashMap, HashSet};

@@ -1,12 +1,7 @@
-//! Spatial condition types for position and distance-based triggering
-//!
-//! This file contains:
-//! - Position-based conditions (reach position with tolerance)
-//! - Distance conditions (absolute distance to position)
-//! - Relative distance conditions (distance between entities)
-//! - Coordinate system and routing algorithm support
-//! - Distance measurement type configurations
-//!
+//! Conditions on distance and position: `ReachPositionCondition`,
+//! `DistanceCondition` to a fixed position, and `RelativeDistanceCondition` between
+//! two entities. Each selects a coordinate system and a distance measure, and chooses
+//! whether to measure freespace or bounding-box separation.
 use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::enums::{CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule};
 use crate::types::positions::Position;

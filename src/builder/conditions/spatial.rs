@@ -1,15 +1,6 @@
-//! Spatial condition builders (distance, position, etc.)
-//!
-//! This module provides builders for creating spatial conditions that trigger
-//! based on entity positions, distances, and spatial relationships.
-//!
-//! # Supported Conditions
-//!
-//! - **DistanceCondition**: Triggers based on distance to a position
-//! - **ReachPositionCondition**: Triggers when entity reaches a position
-//! - **RelativeDistanceCondition**: Triggers based on distance between entities
-//! - **CollisionCondition**: Triggers on collision detection
-//!
+//! Condition builders for spatial relationships: `DistanceCondition` to a position,
+//! `RelativeDistanceCondition` between entities, `ReachPositionCondition`, and
+//! `CollisionCondition`.
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Value;

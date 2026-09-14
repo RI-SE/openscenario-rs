@@ -1,12 +1,9 @@
-//! Trigger and event types for scenario timing and control
+//! Triggers, events, and the conditions that gate them.
 //!
-//! This file contains:
-//! - Event definitions with actions and trigger conditions
-//! - Trigger combinations and condition group logic
-//! - Condition evaluation and edge detection logic
-//! - TriggeringEntities for entity-based condition evaluation
-//! - Event priority and execution order management
-//!
+//! A `Trigger` is a disjunction of `ConditionGroup`s, each a conjunction of
+//! `Condition`s: OR of ANDs, as the XSD defines it. `TriggeringEntities` names which
+//! entities a condition applies to, and `conditionEdge` says whether it fires on the
+//! rising edge, the falling edge, or both.
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::conditions::{ByEntityCondition, ByValueCondition};
 use crate::types::enums::{ConditionEdge, TriggeringEntitiesRule};

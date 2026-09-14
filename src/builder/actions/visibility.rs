@@ -1,24 +1,19 @@
-//! Visibility action builder for controlling entity visibility
+//! Visibility action builder.
 //!
-//! This module provides a builder for visibility actions, which control
-//! whether entities are visible to graphics systems, sensors, and traffic.
-//!
-//! # Usage Examples
+//! Visibility is three independent flags: graphics, sensors, and traffic. An entity
+//! may be set visible to one and not the others.
 //!
 //! ```rust
 //! use openscenario_rs::builder::actions::visibility::VisibilityActionBuilder;
 //!
-//! // Make entity fully visible
 //! let visible_action = VisibilityActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .visible();
 //!
-//! // Make entity invisible
 //! let invisible_action = VisibilityActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .invisible();
 //!
-//! // Custom visibility settings
 //! let custom_action = VisibilityActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .graphics(true)

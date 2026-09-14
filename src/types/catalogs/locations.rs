@@ -1,14 +1,5 @@
-//! Catalog location types for OpenSCENARIO
-//!
-//! This file contains all 8 catalog location types that reference Directory paths:
-//! - VehicleCatalogLocation
-//! - ControllerCatalogLocation  
-//! - PedestrianCatalogLocation
-//! - MiscObjectCatalogLocation
-//! - EnvironmentCatalogLocation
-//! - ManeuverCatalogLocation
-//! - TrajectoryCatalogLocation
-//! - RouteCatalogLocation
+//! The eight catalog location types, one per catalog kind. Each wraps a `Directory`
+//! path and differs only in element name, so they share a shape and a constructor.
 
 use crate::types::basic::Directory;
 

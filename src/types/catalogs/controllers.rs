@@ -1,7 +1,5 @@
-//! Controller catalog types for OpenSCENARIO reusable controller definitions
-//!
-//! This module contains catalog-specific controller types that enable reuse of
-//! controller definitions across multiple scenarios with parameter substitution.
+//! `CatalogController`: a controller definition in its catalog-file form, carrying the
+//! parameter declarations that a `CatalogReference` supplies values for.
 
 use crate::types::basic::{OSString, ParameterDeclarations, Value};
 use crate::types::controllers::Controller;

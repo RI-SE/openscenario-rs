@@ -1,7 +1,5 @@
-//! Catalog entity types for reference resolution
-//!
-//! This module contains catalog-specific entity types that can be loaded from
-//! catalog files and resolved into scenario entities with parameter substitution.
+//! Catalog-file forms of the three entity kinds: vehicle, pedestrian, and misc
+//! object. Each adds parameter declarations to the scenario type it mirrors.
 
 use crate::error::Result;
 use crate::types::basic::{Double, OSString, Value};

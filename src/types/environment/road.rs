@@ -1,9 +1,5 @@
-//! Road condition and infrastructure types
-//!
-//! This file contains:
-//! - RoadCondition with friction scale factors for surface properties
-//! - Road surface properties affecting vehicle dynamics
-//!
+//! `RoadCondition`: the friction scale factor applied to the road surface, and the
+//! optional properties that go with it.
 use crate::types::basic::{Double, Value};
 use crate::types::entities::vehicle::Properties;
 use crate::types::enums::Wetness;

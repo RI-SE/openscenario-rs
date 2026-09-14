@@ -1,7 +1,5 @@
-//! Template builders for common scenario patterns
-//!
-//! This module provides pre-configured builders for common OpenSCENARIO patterns,
-//! making it easier to create executable scenarios quickly.
+//! Prebuilt starting points for the common scenario shapes, each returning a
+//! `ScenarioBuilder` already past the header and entity stages.
 
 pub mod basic;
 

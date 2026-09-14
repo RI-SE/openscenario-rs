@@ -1,22 +1,8 @@
-//! Movement action builders (SpeedAction, TeleportAction, etc.)
+//! Movement action builders: [`SpeedActionBuilder`] for speed targets and
+//! [`TeleportActionBuilder`] for instantaneous repositioning.
 //!
-//! This module provides builders for actions that control entity movement,
-//! including speed changes and position updates.
-//!
-//! # Available Builders
-//!
-//! - [`SpeedActionBuilder`] - Control entity speed (absolute speed targets)
-//! - [`TeleportActionBuilder`] - Instantly move entities to new positions
-//!
-//! # Usage Examples
-//!
-//! SpeedActionBuilder and TeleportActionBuilder are used within maneuver builders.
-//! For standalone usage, see detached builders in the storyboard module.
-//!
-//! ```rust
-//! // Speed actions are added to maneuvers within the storyboard
-//! // See storyboard/maneuver module for detailed usage examples
-//! ```
+//! Both attach to a maneuver and are reached through [`crate::builder::storyboard`].
+//! To build one on its own, use the `Detached*` variant.
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::positions::PositionBuilder;

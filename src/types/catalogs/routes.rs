@@ -1,7 +1,5 @@
-//! Route catalog types for OpenSCENARIO reusable route definitions
-//!
-//! This module contains catalog-specific route types that enable reuse of
-//! route definitions across multiple scenarios with parameter substitution.
+//! `CatalogRoute` and `RouteWaypoint`: a route in its catalog-file form, with parameter
+//! declarations covering the waypoints it holds.
 
 use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
 use crate::types::enums::RouteStrategy;

@@ -1,12 +1,7 @@
-//! Story and Act types for scenario execution flow
+//! The story tree: `Story` → `Act` → `ManeuverGroup` → `Maneuver` → `Event`.
 //!
-//! This file contains:
-//! - Story definition with parameter scope and act sequences
-//! - Act organization with maneuver groups and execution triggers
-//! - ManeuverGroup for coordinating entity behaviors
-//! - Maneuver definitions with event sequences and timing
-//! - Actor selection and entity assignment to maneuvers
-//!
+//! Each level carries its own parameter scope and its own triggers. A `ManeuverGroup`
+//! binds maneuvers to actors; an `Act` starts and stops on triggers of its own.
 use crate::types::basic::{OSString, UnsignedInt, Value};
 use crate::types::enums::Priority;
 use serde::{Deserialize, Serialize};

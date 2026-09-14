@@ -1,12 +1,6 @@
-//! Road-based position types for highway and street positioning
-//!
-//! This file contains:
-//! - RoadPosition for road-relative coordinates (road ID, s, t)
-//! - RelativeRoadPosition for entity-relative road positioning
-//! - LanePosition for lane-specific positioning with offsets
-//! - RelativeLanePosition for lane-relative positioning
-//! - Road network integration and coordinate validation
-//!
+//! Positions expressed against the road network, not the world frame:
+//! `RoadPosition` (road id plus s/t), `LanePosition` (road, lane, s plus offset),
+//! and the `Relative*` forms of each, which are measured from another entity.
 use crate::types::basic::{Double, Int, OSString, Value};
 use crate::types::enums::ReferenceContext;
 use serde::{Deserialize, Serialize};

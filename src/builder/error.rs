@@ -1,7 +1,4 @@
-//! Builder-specific error extensions and utilities
-//!
-//! This module provides specialized error types for builder operations,
-//! extending the existing error system with builder-specific context.
+//! [`BuilderError`], and the context it carries: which field was missing, at which stage.
 
 use thiserror::Error;
 

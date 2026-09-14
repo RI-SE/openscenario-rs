@@ -1,12 +1,8 @@
-//! All enumeration types from the OpenSCENARIO specification
+//! The enumerations of the OpenSCENARIO specification.
 //!
-//! This file contains:
-//! - All 37 enumeration types with their complete value sets
-//! - Serde annotations for correct XML serialization (rename attributes)
-//! - Deprecation markers for legacy enum values
-//! - Default implementations where appropriate
-//! - String conversion helpers for debugging and display
-//!
+//! Each carries the serde renames that map its variants to the wire names the schema
+//! uses. Deprecated values are kept and marked, not dropped, since a file that still
+//! sets one remains schema-valid.
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;

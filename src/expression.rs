@@ -1,17 +1,12 @@
-//! OpenSCENARIO expression parsing and evaluation engine
+//! Parsing and evaluation of OpenSCENARIO expressions.
 //!
-//! This module provides:
-//! - Expression parsing for OpenSCENARIO's mathematical expressions
-//! - Expression evaluation with parameter substitution
-//! - Support for ${expression} syntax from the XSD schema
-//! - Comprehensive error handling for invalid expressions
+//! The XSD admits `${...}` wherever a value is expected, against the pattern
+//! `[$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]`. This module parses that content and
+//! evaluates it once the parameters it names are bound.
 //!
-//! Supported operators: +, -, *, /, %, (, ), >, <, >=, <=, ==, !=
-//! Supported types: numeric literals, parameters, function calls, constants
-//! Supported functions: sin, cos, tan, sqrt, abs, floor, ceil, min, max
-//! Supported constants: PI, E
-//!
-//! XSD Pattern: `[$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]`
+//! Operators: `+ - * / %`, parentheses, and `> < >= <= == !=`.
+//! Operands: numeric literals, parameter references, and the constants `PI` and `E`.
+//! Functions: `sin`, `cos`, `tan`, `sqrt`, `abs`, `floor`, `ceil`, `min`, `max`.
 
 use crate::error::{Error, Result};
 use std::collections::HashMap;

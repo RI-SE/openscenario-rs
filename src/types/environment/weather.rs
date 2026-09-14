@@ -1,11 +1,8 @@
-//! Weather condition types for environmental simulation
+//! `Weather` and its children: `Sun` (azimuth, elevation, illuminance), `Fog`
+//! (visual range, optional bounding box), and `Precipitation` (type and intensity).
 //!
-//! This file contains:
-//! - Weather definition with atmospheric conditions and precipitation
-//! - Sun positioning and lighting conditions with intensity and angles
-//! - Fog conditions with visibility parameters
-//! - Precipitation types (rain, snow, dry) with intensity specifications
-//!
+//! Every field is optional, including the deprecated `@cloudState`, which is kept
+//! because a file that still sets it remains schema-valid.
 use crate::types::basic::{Double, Value};
 use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType};
 use crate::types::geometry::BoundingBox;

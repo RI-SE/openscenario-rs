@@ -1,7 +1,5 @@
-//! Controller system types for OpenSCENARIO.
-//!
-//! This module provides comprehensive controller functionality for entity behavior management,
-//! including controller definitions, activation actions, and parameter management.
+//! Controller definitions and the properties that configure them. The actions that
+//! assign and activate a controller live in [`crate::types::actions::control`].
 
 use crate::types::basic::{Directory, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;

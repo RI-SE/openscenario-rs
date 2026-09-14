@@ -1,12 +1,6 @@
-//! Action type module organizing all OpenSCENARIO action definitions
-//!
-//! This file contains:
-//! - Re-exports from action submodules (movement, control, appearance, traffic)
-//! - Base Action trait defining common action behaviors
-//! - Action validation logic and constraint checking
-//! - Action execution context and state management
-//! - Cross-cutting action concerns (timing, priority, conditions)
-//!
+//! Action types, re-exported from the submodules that define them: [`movement`],
+//! [`control`], [`appearance`], [`traffic`], [`trailer`], and the [`wrappers`] that
+//! model the XSD's action choice groups.
 pub mod appearance; // Appearance and visibility actions
 pub mod control; // Controller actions
 pub mod movement; // Movement actions (SpeedAction, TeleportAction, etc.)

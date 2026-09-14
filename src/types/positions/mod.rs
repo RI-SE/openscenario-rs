@@ -1,12 +1,6 @@
-//! Position type module for all spatial positioning systems
-//!
-//! This file contains:
-//! - Base position traits and common positioning behaviors
-//! - Position conversion utilities between coordinate systems
-//! - Orientation handling and coordinate system transformations
-//! - Position validation and constraint checking
-//! - Spatial relationship calculations and utilities
-//!
+//! Position types. `Position` is the XSD choice: exactly one of world, relative,
+//! road, lane, trajectory or route coordinates. Its constructors each select one
+//! branch, since a `Position` with no branch set is not schema-valid.
 use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 

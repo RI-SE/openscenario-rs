@@ -1,11 +1,6 @@
-//! Controller actions implementation
-//!
-//! This file contains:
-//! - Controller assignment and activation actions following OpenSCENARIO specification  
-//! - Override actions for manual control (throttle, brake, steering, gear)
-//! - Controller configuration and parameter setting per OpenSCENARIO XSD schema
-//! - Gear control types (manual/automatic) and supporting enumerations
-//!
+//! Controller actions: assigning a controller to an entity, activating one, and the
+//! override actions that take manual control of throttle, brake, steering, clutch and
+//! gear. Gear override carries either a manual gear number or an automatic gear.
 use crate::types::basic::{Boolean, Double, Int, OSString, Value};
 use crate::types::catalogs::entities::CatalogController;
 use crate::types::catalogs::references::CatalogReference;

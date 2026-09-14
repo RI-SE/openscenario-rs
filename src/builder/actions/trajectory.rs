@@ -1,21 +1,8 @@
-//! Trajectory action builders for path-following scenarios
+//! Trajectory action builders.
 //!
-//! This module provides builders for creating trajectory-based actions, including
-//! trajectory definitions with polyline shapes and follow trajectory actions.
-//!
-//! # Available Builders
-//!
-//! - [`TrajectoryBuilder`] - Build trajectory definitions with polyline shapes
-//! - [`PolylineBuilder`] - Build polyline shapes with time-positioned vertices
-//! - [`VertexBuilder`] - Build individual trajectory vertices
-//! - [`FollowTrajectoryActionBuilder`] - Build follow trajectory actions
-//!
-//! # Usage Examples
-//!
-//! Trajectory actions are used within maneuver builders.
-//! For detailed usage examples, see the storyboard module documentation.
-//! ```
-//! //
+//! [`TrajectoryBuilder`] defines the path, [`PolylineBuilder`] and [`VertexBuilder`]
+//! its shape as time-stamped vertices, and [`FollowTrajectoryActionBuilder`] the
+//! action that puts an entity on it. Reached through a maneuver builder.
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Value;

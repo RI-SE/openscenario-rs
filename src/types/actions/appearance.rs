@@ -1,13 +1,8 @@
-//! Appearance and animation action types for visual representation
+//! Actions that change how an entity looks: lights, animations, and visibility.
 //!
-//! This file contains:
-//! - Light state actions for vehicle lighting systems
-//! - Animation actions for entity movement and component animation
-//! - Pedestrian gesture and motion animations
-//! - Vehicle component animations (doors, windows, etc.)
-//! - Custom user-defined animation support
-//! - Visibility actions for entity appearance control
-//!
+//! Animations cover pedestrian gesture and motion, vehicle components such as doors
+//! and windows, and user-defined animation files. Visibility is separate: it decides
+//! which subsystems see the entity, not how it is drawn.
 use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::entities::vehicle::File;
 use crate::types::enums::{
