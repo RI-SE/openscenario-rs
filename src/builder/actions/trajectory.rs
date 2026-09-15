@@ -1,23 +1,11 @@
-//! Trajectory action builders for path-following scenarios
+//! Trajectory action builders.
 //!
-//! This module provides builders for creating trajectory-based actions, including
-//! trajectory definitions with polyline shapes and follow trajectory actions.
-//!
-//! # Available Builders
-//!
-//! - [`TrajectoryBuilder`] - Build trajectory definitions with polyline shapes
-//! - [`PolylineBuilder`] - Build polyline shapes with time-positioned vertices
-//! - [`VertexBuilder`] - Build individual trajectory vertices
-//! - [`FollowTrajectoryActionBuilder`] - Build follow trajectory actions
-//!
-//! # Usage Examples
-//!
-//! Trajectory actions are used within maneuver builders.
-//! For detailed usage examples, see the storyboard module documentation.
-//! ```
-//! //
+//! [`TrajectoryBuilder`] defines the path, [`PolylineBuilder`] and [`VertexBuilder`]
+//! its shape as time-stamped vertices, and [`FollowTrajectoryActionBuilder`] the
+//! action that puts an entity on it. Reached through a maneuver builder.
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
         FollowTrajectoryAction, RoutingAction, TimeReference, Timing, Trajectory,
@@ -253,7 +241,7 @@ impl VertexBuilder {
 pub struct FollowTrajectoryActionBuilder {
     entity_ref: Option<String>,
     trajectory: Option<Trajectory>,
-    following_mode: Option<FollowingMode>,
+    following_mode: Option<Value<FollowingMode>>,
     initial_distance_offset: Option<f64>,
 }
 
@@ -277,13 +265,13 @@ impl FollowTrajectoryActionBuilder {
 
     /// Set following mode to "follow" (entity follows trajectory timing)
     pub fn following_mode_follow(mut self) -> Self {
-        self.following_mode = Some(FollowingMode::Follow);
+        self.following_mode = Some(Value::Literal(FollowingMode::Follow));
         self
     }
 
     /// Set following mode to "position" (entity reaches positions at specified times)
     pub fn following_mode_position(mut self) -> Self {
-        self.following_mode = Some(FollowingMode::Position);
+        self.following_mode = Some(Value::Literal(FollowingMode::Position));
         self
     }
 
@@ -304,7 +292,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             time_reference: TimeReference {
                 none: None,
                 timing: Some(Timing {
-                    domain_absolute_relative: ReferenceContext::Absolute,
+                    domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
                     scale: Double::literal(1.0),
                     offset: Double::literal(0.0),
                 }),
@@ -547,7 +535,7 @@ mod tests {
                 assert!(follow_action.trajectory.is_some());
                 assert_eq!(
                     follow_action.trajectory_following_mode.following_mode,
-                    FollowingMode::Follow
+                    Value::Literal(FollowingMode::Follow)
                 );
             }
             _ => panic!("Expected RoutingAction"),
@@ -579,7 +567,7 @@ mod tests {
                 let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
                 assert_eq!(
                     follow_action.trajectory_following_mode.following_mode,
-                    FollowingMode::Position
+                    Value::Literal(FollowingMode::Position)
                 );
             }
             _ => panic!("Expected RoutingAction"),

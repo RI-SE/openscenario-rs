@@ -1,7 +1,6 @@
-//! Enhanced catalog reference system with type-safe generics
-//!
-//! This module provides the enhanced catalog reference system that enables
-//! type-safe catalog entity resolution with parameter substitution.
+//! `CatalogReference`: the catalog name, the entry name, and the parameter
+//! assignments applied on resolution. Generic over the entry type, so a reference
+//! resolves to the type it names and not to a common enum.
 
 use super::entities::CatalogEntity;
 use crate::catalog::{CatalogManager, ResolvedCatalog};
@@ -158,15 +157,6 @@ impl ParameterAssignment {
         Self {
             parameter_ref,
             value,
-        }
-    }
-}
-
-impl Default for ParameterAssignment {
-    fn default() -> Self {
-        Self {
-            parameter_ref: Value::Literal("defaultParam".to_string()),
-            value: Value::Literal("defaultValue".to_string()),
         }
     }
 }

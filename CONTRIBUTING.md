@@ -159,3 +159,12 @@ Documentation drifts faster than code, and this repository has been through one 
 correction already. When you change public API, update the guide that covers it in the same
 change. Every type name, function signature and cargo command in `docs/` should be checkable
 against the source – if you cannot grep for it, do not write it.
+
+`docs/` is tracked wholesale, including every `.md` file in it. That is easy to miss:
+`.gitignore`'s `/*.md` is root-anchored (its own comment says "Temporary Rust files in root
+directory") and does not reach into `docs/`. `docs/xsd_gaps.md` was assumed to be covered by
+that rule, was never committed, and survived only as a `cargo package` build artifact until
+it was recovered – with a `scripts/hooks/pre-push` stage now checking that every relative
+markdown link in the repo still resolves, specifically so this cannot happen silently again.
+Do not add a `docs/*.md` ignore rule to "clean up" an untracked file in that directory –
+check first whether it belongs in git.

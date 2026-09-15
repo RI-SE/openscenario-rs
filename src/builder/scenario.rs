@@ -1,24 +1,16 @@
-//! Core scenario builder for programmatic scenario construction
+//! The scenario builder itself.
 //!
-//! This module provides the main [`ScenarioBuilder`] type that enables type-safe,
-//! fluent construction of OpenSCENARIO documents. The builder uses compile-time
-//! state validation to ensure scenarios are constructed in the correct order.
-//!
-//! # Type States
-//!
-//! The builder progresses through several type states:
-//! - [`Empty`] → [`HasHeader`] → [`HasEntities`] → [`Complete`]
-//!
-//! Each state transition unlocks new methods while preventing invalid operations.
-//!
-//! # Example
+//! [`ScenarioBuilder`] carries a type state that advances
+//! [`Empty`] → [`HasHeader`] → [`HasEntities`] → [`Complete`]. Each state exposes
+//! only the methods legal at that point, so calling the stages out of order is a
+//! compile error. Missing values within a stage surface at `build()`.
 //!
 //! ```rust
 //! use openscenario_rs::types::catalogs::locations::CatalogLocations;
 //! use openscenario_rs::types::road::RoadNetwork;
 //! use openscenario_rs::ScenarioBuilder;
 //!
-//! // CatalogLocations and RoadNetwork are required of a scenario document by the XSD.
+//! // The XSD requires CatalogLocations and RoadNetwork of a scenario document.
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Highway Test", "Test Author")
 //!     .with_catalog_locations(CatalogLocations::default())
@@ -34,6 +26,7 @@
 
 use super::validation::ValidationContextBuilder;
 use super::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     basic::{OSString, ParameterDeclaration, ParameterDeclarations, UnsignedShort},
     catalogs::locations::CatalogLocations,
@@ -117,24 +110,11 @@ impl ScenarioBuilder<Empty> {
         }
     }
 
-    /// Set file header information and transition to HasHeader state
+    /// Set the file header and advance to `HasHeader`.
     ///
-    /// The file header contains essential metadata about the scenario including
-    /// description, author, and creation timestamp. The revision defaults to **1.3**, the
-    /// version of the standard this crate targets and validates against; override it with
-    /// [`ScenarioBuilder::with_revision`] when writing for an older consumer.
-    ///
-    /// # Arguments
-    ///
-    /// * `description` - Human-readable description of the scenario
-    /// * `author` - Name of the scenario author/creator
-    ///
-    /// # Returns
-    ///
-    /// A `ScenarioBuilder<HasHeader>` that can accept optional components like
-    /// parameters, catalogs, and road networks before adding entities.
-    ///
-    /// # Example
+    /// The date is stamped at the time of the call. The revision defaults to **1.3**,
+    /// the version this crate targets and validates against; [`ScenarioBuilder::with_revision`]
+    /// overrides it when writing for an older consumer.
     ///
     /// ```rust
     /// use openscenario_rs::ScenarioBuilder;
@@ -147,8 +127,8 @@ impl ScenarioBuilder<Empty> {
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
 
         self.data.file_header = Some(FileHeader {
-            rev_major: UnsignedShort::literal(1),
-            rev_minor: UnsignedShort::literal(3),
+            rev_major: UnsignedShort::literal(crate::types::DEFAULT_REV_MAJOR),
+            rev_minor: UnsignedShort::literal(crate::types::DEFAULT_REV_MINOR),
             date: OSString::literal(now),
             description: OSString::literal(description.to_string()),
             author: OSString::literal(author.to_string()),
@@ -189,16 +169,7 @@ impl ScenarioBuilder<HasHeader> {
         self
     }
 
-    /// Add parameter declarations to the scenario
-    ///
-    /// Parameters allow scenarios to be configurable and reusable. This method
-    /// accepts a complete `ParameterDeclarations` structure with multiple parameters.
-    ///
-    /// # Arguments
-    ///
-    /// * `params` - Complete parameter declarations structure
-    ///
-    /// # Example
+    /// Set the scenario's parameter declarations, replacing any already set.
     ///
     /// ```rust
     /// use openscenario_rs::{ScenarioBuilder, types::basic::ParameterDeclarations};
@@ -213,19 +184,8 @@ impl ScenarioBuilder<HasHeader> {
         self
     }
 
-    /// Add a single parameter declaration (convenience method)
-    ///
-    /// This is a convenience method for adding individual parameters without
-    /// constructing the full `ParameterDeclarations` structure manually.
-    /// Multiple calls to this method will accumulate parameters.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - Parameter name (used in `${name}` references)
-    /// * `param_type` - Type of the parameter (Double, Integer, String, etc.)
-    /// * `value` - Default value for the parameter
-    ///
-    /// # Example
+    /// Declare one parameter, named as `${name}` elsewhere in the scenario.
+    /// Calls accumulate, unlike [`ScenarioBuilder::with_parameters`].
     ///
     /// ```rust
     /// use openscenario_rs::{ScenarioBuilder, types::enums::ParameterType};
@@ -240,7 +200,7 @@ impl ScenarioBuilder<HasHeader> {
 
         params.parameter_declarations.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: param_type,
+            parameter_type: Value::Literal(param_type),
             value: OSString::literal(value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -501,7 +461,7 @@ mod tests {
         let scenario = minimal_builder().build().unwrap();
 
         // Verify basic structure
-        if let crate::types::basic::Value::Literal(desc) = &scenario.file_header.description {
+        if let Value::Literal(desc) = &scenario.file_header.description {
             assert_eq!(desc, "Test Scenario");
         } else {
             panic!("Description should be literal");

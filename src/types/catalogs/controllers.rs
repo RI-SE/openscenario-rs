@@ -1,7 +1,5 @@
-//! Controller catalog types for OpenSCENARIO reusable controller definitions
-//!
-//! This module contains catalog-specific controller types that enable reuse of
-//! controller definitions across multiple scenarios with parameter substitution.
+//! `CatalogController`: a controller definition in its catalog-file form, carrying the
+//! parameter declarations that a `CatalogReference` supplies values for.
 
 use crate::types::basic::{OSString, ParameterDeclarations, Value};
 use crate::types::controllers::Controller;
@@ -22,7 +20,7 @@ pub struct CatalogController {
 
     /// Type of controller (interactive, external, etc.)
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
-    pub controller_type: Option<ControllerType>,
+    pub controller_type: Option<Value<ControllerType>>,
 
     /// Parameter declarations for this controller
     #[serde(
@@ -34,17 +32,6 @@ pub struct CatalogController {
     /// Controller-specific properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
     pub properties: Option<ControllerProperties>,
-}
-
-impl Default for CatalogController {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogController".to_string(),
-            controller_type: Some(ControllerType::Movement),
-            parameter_declarations: None,
-            properties: None,
-        }
-    }
 }
 
 /// Properties specific to catalog controllers
@@ -76,15 +63,6 @@ pub struct ControllerProperty {
     pub value: OSString,
 }
 
-impl Default for ControllerProperty {
-    fn default() -> Self {
-        Self {
-            name: "defaultProperty".to_string(),
-            value: Value::Literal("defaultValue".to_string()),
-        }
-    }
-}
-
 // Implementation methods for catalog controllers
 
 impl CatalogController {
@@ -92,7 +70,7 @@ impl CatalogController {
     pub fn new(name: String, controller_type: ControllerType) -> Self {
         Self {
             name,
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
         }
@@ -106,7 +84,7 @@ impl CatalogController {
     ) -> Self {
         Self {
             name,
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: Some(parameters),
             properties: None,
         }
@@ -120,7 +98,7 @@ impl CatalogController {
     ) -> Self {
         Self {
             name,
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: Some(properties),
         }
@@ -217,7 +195,10 @@ mod tests {
             CatalogController::new("TestController".to_string(), ControllerType::Movement);
 
         assert_eq!(controller.name, "TestController");
-        assert_eq!(controller.controller_type, Some(ControllerType::Movement));
+        assert_eq!(
+            controller.controller_type,
+            Some(Value::Literal(ControllerType::Movement))
+        );
         assert!(controller.parameter_declarations.is_none());
         assert!(controller.properties.is_none());
     }
@@ -259,7 +240,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("speed".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("30.0".to_string()),
                 constraint_groups: Vec::new(),
             }],
@@ -306,19 +287,26 @@ mod tests {
         );
         assert_eq!(
             scenario_controller.controller_type,
-            Some(ControllerType::Movement)
+            Some(Value::Literal(ControllerType::Movement))
         );
         assert!(scenario_controller.properties.is_some());
     }
 
     #[test]
     fn test_defaults() {
-        let controller = CatalogController::default();
+        // `ControllerProperties::default()` is honest: XSD `Properties` has all of
+        // `Property`/`File`/`CustomContent` at `minOccurs="0"`, so an empty
+        // collection states nothing. `CatalogController` and `ControllerProperty`
+        // have no `Default` — `@name` is `use="required"` on both with no schema
+        // default, so callers must supply one explicitly via `new`/`with_literal`.
         let properties = ControllerProperties::default();
-        let property = ControllerProperty::default();
+        let controller =
+            CatalogController::new("ExplicitController".to_string(), ControllerType::Movement);
+        let property =
+            ControllerProperty::with_literal("explicitProp".to_string(), "value".to_string());
 
-        assert_eq!(controller.name, "DefaultCatalogController");
+        assert_eq!(controller.name, "ExplicitController");
         assert!(properties.properties.is_empty());
-        assert_eq!(property.name, "defaultProperty");
+        assert_eq!(property.name, "explicitProp");
     }
 }

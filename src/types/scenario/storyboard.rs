@@ -141,11 +141,27 @@ pub struct ScenarioDefinition {
 }
 
 /// Catalog definition for catalog files
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`: it wrapped `CatalogContent`, whose `@name` is `use="required"`
+/// with no XSD `default="…"`. The derive here used to piggy-back on
+/// `CatalogContent`'s own (now-removed) fabricating `Default`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: CatalogContent,
 }
+
+impl CatalogDefinition {
+    /// Create a new catalog definition wrapping the given catalog content.
+    pub fn new(catalog: CatalogContent) -> Self {
+        Self { catalog }
+    }
+}
+
+/// The OpenSCENARIO revision this crate targets, as declared in `FileHeader`.
+/// Matches the bundled `Schema/OpenSCENARIO.xsd`.
+pub const DEFAULT_REV_MAJOR: u16 = 1;
+pub const DEFAULT_REV_MINOR: u16 = 3;
 
 /// File header with scenario metadata
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -213,8 +229,8 @@ pub(crate) fn test_scenario_document() -> OpenScenario {
             author: crate::types::basic::Value::literal("Test Author".to_string()),
             date: crate::types::basic::Value::literal("2024-01-01T00:00:00".to_string()),
             description: crate::types::basic::Value::literal("Test scenario".to_string()),
-            rev_major: crate::types::basic::Value::literal(1),
-            rev_minor: crate::types::basic::Value::literal(0),
+            rev_major: crate::types::basic::Value::literal(DEFAULT_REV_MAJOR),
+            rev_minor: crate::types::basic::Value::literal(DEFAULT_REV_MINOR),
             license: None,
             properties: None,
         },
@@ -261,7 +277,9 @@ mod tests {
         let mut doc = test_scenario_document();
         doc.entities = None;
         doc.storyboard = None;
-        doc.catalog = Some(CatalogDefinition::default());
+        doc.catalog = Some(CatalogDefinition::new(CatalogContent::new(
+            "TestCatalog".to_string(),
+        )));
         assert_eq!(doc.document_type(), OpenScenarioDocumentType::Catalog);
         assert!(doc.is_catalog());
     }
@@ -271,6 +289,36 @@ mod tests {
         let sb = Storyboard::default();
         assert!(sb.stories.is_empty());
         assert!(sb.stop_trigger.is_none());
+    }
+
+    /// Pins the *agreement* between construction sites, not just the value: every place
+    /// that mints a `FileHeader` must use `DEFAULT_REV_MAJOR`/`DEFAULT_REV_MINOR` so a
+    /// future revision bump cannot re-split them.
+    #[test]
+    fn file_header_construction_sites_agree_on_default_revision() {
+        assert_eq!(DEFAULT_REV_MAJOR, 1);
+        assert_eq!(DEFAULT_REV_MINOR, 3);
+
+        let doc = test_scenario_document();
+        assert_eq!(
+            doc.file_header.rev_major.as_literal().copied(),
+            Some(DEFAULT_REV_MAJOR)
+        );
+        assert_eq!(
+            doc.file_header.rev_minor.as_literal().copied(),
+            Some(DEFAULT_REV_MINOR)
+        );
+
+        let catalog_file =
+            crate::types::catalogs::files::CatalogFile::new("n".into(), "a".into(), "d".into());
+        assert_eq!(
+            catalog_file.file_header.rev_major.as_literal().copied(),
+            Some(DEFAULT_REV_MAJOR)
+        );
+        assert_eq!(
+            catalog_file.file_header.rev_minor.as_literal().copied(),
+            Some(DEFAULT_REV_MINOR)
+        );
     }
 
     #[test]

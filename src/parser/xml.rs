@@ -1,35 +1,21 @@
-//! XML parsing implementation using quick-xml and serde
+//! XML parsing and serialization, over quick-xml and serde.
 //!
-//! This module provides efficient XML parsing and serialization for OpenSCENARIO documents
-//! with comprehensive error handling and validation capabilities.
-//!
-//! # Features
-//!
-//! - **High-performance parsing** using quick-xml with zero-copy deserialization
-//! - **Comprehensive validation** with detailed error reporting and suggestions
-//! - **Catalog support** for reusable component libraries
-//! - **UTF-8 BOM handling** for cross-platform compatibility
-//! - **Pretty-printed output** with configurable formatting
-//!
-//! # Basic Usage
-//!
-//! ## Parsing Scenarios
+//! Every function here returns `Result<T>`, and the error carries the file path and
+//! the position that failed, not only the serde message. Parsing
+//! strips a UTF-8 BOM if one is present; serialization pretty-prints.
 //!
 //! ```rust,no_run
 //! use openscenario_rs::{parse_from_file, parse_from_str};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Parse from file with automatic error context
 //! let scenario = parse_from_file("my_scenario.xosc")?;
-//! println!("Scenario author: {}", scenario.file_header.author);
+//! println!("author: {}", scenario.file_header.author);
 //!
-//! // Parse from XML string
 //! let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 //! <OpenSCENARIO>
 //!   <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00"
 //!               author="Example" description="Test scenario"/>
 //!   <ScenarioDefinition>
-//!     <!-- scenario content -->
 //!   </ScenarioDefinition>
 //! </OpenSCENARIO>"#;
 //! let scenario = parse_from_str(xml)?;
@@ -37,24 +23,18 @@
 //! # }
 //! ```
 //!
-//! ## Serialization
-//!
 //! ```rust,no_run
 //! use openscenario_rs::{serialize_to_string, serialize_to_file};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # let scenario = openscenario_rs::parse_from_file("scenario.xosc")?;
-//! // Serialize to formatted XML string
 //! let xml_output = serialize_to_string(&scenario)?;
-//! println!("{}", xml_output);
-//!
-//! // Write directly to file
 //! serialize_to_file(&scenario, "output.xosc")?;
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! # Catalog File Operations
+//! Catalog files are a separate document root and get their own entry points:
 //!
 //! ```rust,no_run
 //! use openscenario_rs::parser::xml::{
@@ -63,44 +43,29 @@
 //! };
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Parse vehicle catalog
 //! let catalog = parse_catalog_from_file("vehicles.xosc")?;
 //!
-//! // Validate catalog structure
 //! let catalog_xml = openscenario_rs::serialize_catalog_to_string(&catalog)?;
 //! let validated_catalog = parse_catalog_from_str_validated(&catalog_xml)?;
 //!
-//! // Export modified catalog
 //! serialize_catalog_to_file(&catalog, "updated_vehicles.xosc")?;
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! # Error Handling
-//!
-//! All parsing functions return `Result<T>` with detailed error context:
+//! The `*_validated` variants run a structural pass on top of the parse; the plain
+//! ones return as soon as deserialization succeeds.
 //!
 //! ```rust,no_run
 //! # use openscenario_rs::parser::xml::parse_from_file;
 //! match parse_from_file("scenario.xosc") {
-//!     Ok(scenario) => {
-//!         // Process valid scenario
-//!         println!("Loaded scenario with {} entities",
-//!                  scenario.entities.as_ref().map_or(0, |e| e.scenario_objects.len()));
-//!     }
-//!     Err(e) => {
-//!         eprintln!("Parse error: {}", e);
-//!         // Error includes file path and specific parsing context
-//!     }
+//!     Ok(scenario) => println!(
+//!         "{} entities",
+//!         scenario.entities.as_ref().map_or(0, |e| e.scenario_objects.len())
+//!     ),
+//!     Err(e) => eprintln!("parse error: {}", e),
 //! }
 //! ```
-//!
-//! # Performance Notes
-//!
-//! - Use `parse_from_file` for fastest parsing without validation
-//! - Use `parse_from_file_validated` when you need structure validation
-//! - For very large files (>50MB), consider chunked processing
-//! - Validation adds ~10-15% overhead but catches malformed XML early
 
 use crate::error::{Error, Result};
 use crate::types::catalogs::files::CatalogFile;
@@ -462,7 +427,11 @@ mod tests {
 
     #[test]
     fn test_catalog_serialization_roundtrip() {
-        let catalog = CatalogFile::default();
+        let catalog = CatalogFile::new(
+            "TestCatalog".to_string(),
+            "TestAuthor".to_string(),
+            "Test catalog file".to_string(),
+        );
 
         let xml = serialize_catalog_to_string(&catalog).unwrap();
         assert!(xml.contains("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));

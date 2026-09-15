@@ -1,13 +1,6 @@
-//! Routing and navigation types for OpenSCENARIO
-//!
-//! This module contains:
-//! - Core Route and Waypoint types per XSD specification
-//! - RouteRef for direct and catalog-based route references
-//! - Route analytics and validation utilities
-//! - Integration with existing position and action systems
-//! - Support for parameterizable routes and waypoints
-//!
-use crate::types::basic::{Boolean, Double, OSString};
+//! `Route` and `Waypoint`, and the `RouteRef` choice between an inline route and a
+//! catalog reference to one. `types::positions::route` reuses both.
+use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::enums::{ParameterType, RouteStrategy};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
@@ -59,7 +52,7 @@ pub struct ParameterDeclaration {
 
     /// Parameter type
     #[serde(rename = "@parameterType")]
-    pub parameter_type: ParameterType,
+    pub parameter_type: Value<ParameterType>,
 
     /// Default value
     #[serde(rename = "@value")]
@@ -115,7 +108,7 @@ pub struct Waypoint {
 
     /// Routing strategy to reach this waypoint
     #[serde(rename = "@routeStrategy")]
-    pub route_strategy: RouteStrategy,
+    pub route_strategy: Value<RouteStrategy>,
 }
 
 /// Route reference - can contain direct route or catalog reference
@@ -132,32 +125,17 @@ pub enum RouteRef {
     Catalog(CatalogReference),
 }
 
-// Default implementations
-impl Default for Route {
-    fn default() -> Self {
-        Self {
-            parameter_declarations: None,
-            waypoints: Vec::new(),
-            closed: Boolean::literal(false),
-            name: OSString::literal("DefaultRoute".to_string()),
-        }
-    }
-}
-
-impl Default for Waypoint {
-    fn default() -> Self {
-        Self {
-            position: Position::default(),
-            route_strategy: RouteStrategy::Shortest,
-        }
-    }
-}
-
-impl Default for RouteRef {
-    fn default() -> Self {
-        RouteRef::Direct(Route::default())
-    }
-}
+// `Route`, `Waypoint` and `RouteRef` no
+// longer implement `Default`: it fabricated a `Route` named "DefaultRoute",
+// a `Waypoint` with an invented `Position::default()` and
+// `RouteStrategy::Shortest`, and — worst — a `RouteRef` that silently picked
+// the `Direct` branch of what is a choice (XSD `RouteRef`, a `choice` of
+// `Route` | `CatalogReference`, no default). None of the three has a
+// schema-declared default: `Route`'s `@closed`/`@name` and `Waypoint`'s
+// `@routeStrategy` are all `use="required"` with no `default="…"`.
+// `AssignRouteAction` (`types/actions/movement.rs`) and `RouteRefElement`
+// (`types/positions/route.rs`) now use explicit constructors instead of
+// `#[derive(Default)]`.
 
 // Implementation methods for Route
 impl Route {
@@ -310,7 +288,7 @@ impl Waypoint {
     pub fn new(position: Position, route_strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy,
+            route_strategy: Value::Literal(route_strategy),
         }
     }
 
@@ -318,7 +296,7 @@ impl Waypoint {
     pub fn world_position(x: f64, y: f64, z: f64, strategy: RouteStrategy) -> Self {
         use crate::types::positions::WorldPosition;
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = Some(WorldPosition {
             x: Double::literal(x),
             y: Double::literal(y),
@@ -343,7 +321,7 @@ impl Waypoint {
     ) -> Self {
         use crate::types::positions::{LanePosition, Orientation};
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = None;
         position.relative_world_position = None;
         position.road_position = None;
@@ -373,7 +351,7 @@ impl Waypoint {
     ) -> Self {
         use crate::types::positions::RelativeWorldPosition;
 
-        let mut position = Position::default();
+        let mut position = Position::empty();
         position.world_position = None;
         position.relative_world_position = Some(RelativeWorldPosition {
             entity_ref: OSString::literal(entity_ref.into()),
@@ -414,8 +392,8 @@ mod tests {
     #[test]
     fn test_route_creation_and_building() {
         let route = Route::new("TestRoute", false)
-            .add_position(Position::default(), RouteStrategy::Shortest)
-            .add_position(Position::default(), RouteStrategy::Fastest);
+            .add_position(Position::world_origin(), RouteStrategy::Shortest)
+            .add_position(Position::world_origin(), RouteStrategy::Fastest);
 
         assert_eq!(
             route
@@ -432,11 +410,11 @@ mod tests {
     fn test_waypoint_convenience_constructors() {
         let wp1 = Waypoint::world_position(100.0, 200.0, 0.0, RouteStrategy::Shortest);
         assert!(wp1.position.world_position.is_some());
-        assert_eq!(wp1.route_strategy, RouteStrategy::Shortest);
+        assert_eq!(wp1.route_strategy, Value::Literal(RouteStrategy::Shortest));
 
         let wp2 = Waypoint::lane_position("road1", "lane1", 50.0, RouteStrategy::Fastest);
         assert!(wp2.position.lane_position.is_some());
-        assert_eq!(wp2.route_strategy, RouteStrategy::Fastest);
+        assert_eq!(wp2.route_strategy, Value::Literal(RouteStrategy::Fastest));
 
         let wp3 = Waypoint::relative_world_position(
             "entity1",
@@ -446,7 +424,10 @@ mod tests {
             RouteStrategy::LeastIntersections,
         );
         assert!(wp3.position.relative_world_position.is_some());
-        assert_eq!(wp3.route_strategy, RouteStrategy::LeastIntersections);
+        assert_eq!(
+            wp3.route_strategy,
+            Value::Literal(RouteStrategy::LeastIntersections)
+        );
     }
 
     #[test]
@@ -616,7 +597,7 @@ mod tests {
             .parameter_declarations
             .push(ParameterDeclaration {
                 name: OSString::literal("routeSpeed".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("50.0".to_string()),
                 constraint_groups: Vec::new(),
             });

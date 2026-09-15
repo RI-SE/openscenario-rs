@@ -25,10 +25,14 @@ pub struct PositionOfCurrentEntity {
     pub entity_ref: OSString,
 }
 
-impl Default for PositionOfCurrentEntity {
-    fn default() -> Self {
+impl PositionOfCurrentEntity {
+    /// Create a new `PositionOfCurrentEntity`.
+    ///
+    /// XSD `PositionOfCurrentEntity`: `@entityRef` is `use="required"` with
+    /// no `default="…"`.
+    pub fn new(entity_ref: impl Into<String>) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            entity_ref: OSString::literal(entity_ref.into()),
         }
     }
 }
@@ -45,12 +49,13 @@ pub struct PositionInRoadCoordinates {
     pub t: Double,
 }
 
-impl Default for PositionInRoadCoordinates {
-    fn default() -> Self {
-        Self {
-            path_s: Double::literal(0.0),
-            t: Double::literal(0.0),
-        }
+impl PositionInRoadCoordinates {
+    /// Create a new `PositionInRoadCoordinates`.
+    ///
+    /// XSD `PositionInRoadCoordinates`: `@pathS` and `@t` are both
+    /// `use="required"` with no `default="…"`.
+    pub fn new(path_s: Double, t: Double) -> Self {
+        Self { path_s, t }
     }
 }
 
@@ -74,13 +79,24 @@ pub struct PositionInLaneCoordinates {
     pub path_s: Double,
 }
 
-impl Default for PositionInLaneCoordinates {
-    fn default() -> Self {
+impl PositionInLaneCoordinates {
+    /// Create a new `PositionInLaneCoordinates`.
+    ///
+    /// XSD `PositionInLaneCoordinates`: `@laneId` and `@pathS` are
+    /// `use="required"` with no `default="…"`; `@laneOffset` is optional
+    /// (no schema default) and defaults to `None` here.
+    pub fn new(lane_id: impl Into<String>, path_s: Double) -> Self {
         Self {
-            lane_id: OSString::literal("-1".to_string()),
+            lane_id: OSString::literal(lane_id.into()),
             lane_offset: None,
-            path_s: Double::literal(0.0),
+            path_s,
         }
+    }
+
+    /// Set the optional `@laneOffset`.
+    pub fn with_lane_offset(mut self, lane_offset: Double) -> Self {
+        self.lane_offset = Some(lane_offset);
+        self
     }
 }
 
@@ -88,7 +104,7 @@ impl Default for PositionInLaneCoordinates {
 ///
 /// XSD `InRoutePosition` (:1323-1329) is a choice; modeled as parallel
 /// `Option` fields following the dominant pattern in this crate.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "InRoutePosition")]
 pub struct InRoutePosition {
     #[serde(rename = "FromCurrentEntity", skip_serializing_if = "Option::is_none")]
@@ -106,13 +122,32 @@ pub struct InRoutePosition {
 }
 
 impl InRoutePosition {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `InRoutePosition (`:1327-1333`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            from_current_entity: None,
+            from_road_coordinates: None,
+            from_lane_coordinates: None,
+        }
+    }
+}
+
+impl InRoutePosition {
     /// Create an `InRoutePosition` from the current entity.
     pub fn from_current_entity(entity_ref: impl Into<String>) -> Self {
         Self {
             from_current_entity: Some(PositionOfCurrentEntity {
                 entity_ref: OSString::literal(entity_ref.into()),
             }),
-            ..Default::default()
+            ..Self::empty()
         }
     }
 
@@ -120,7 +155,7 @@ impl InRoutePosition {
     pub fn from_road_coordinates(path_s: Double, t: Double) -> Self {
         Self {
             from_road_coordinates: Some(PositionInRoadCoordinates { path_s, t }),
-            ..Default::default()
+            ..Self::empty()
         }
     }
 
@@ -136,7 +171,7 @@ impl InRoutePosition {
                 lane_offset,
                 path_s,
             }),
-            ..Default::default()
+            ..Self::empty()
         }
     }
 }
@@ -147,7 +182,11 @@ impl InRoutePosition {
 /// already modeled as `crate::types::routing::RouteRef`. As an *element* the
 /// choice has to sit behind a named wrapper, so this struct only re-hosts the
 /// existing enum via `flatten` (the same shape `AssignRouteAction` uses).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// No `Default`: it required `routing::RouteRef: Default`, which
+// silently picked the `Direct` branch of a choice — see
+// `types/routing/mod.rs`. Construct via `RouteRefElement { route_ref: ... }`
+// or `RoutePosition::new`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "RouteRef")]
 pub struct RouteRefElement {
     #[serde(flatten)]
@@ -158,7 +197,9 @@ pub struct RouteRefElement {
 ///
 /// XSD `RoutePosition` (:1968-1974) is an `xsd:all` of `RouteRef` (required),
 /// `Orientation` (optional) and `InRoutePosition` (required).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// No `Default`: `route_ref: RouteRefElement` no longer implements
+// it (see above). Construct via `RoutePosition::new`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "RoutePosition")]
 pub struct RoutePosition {
     #[serde(rename = "RouteRef")]

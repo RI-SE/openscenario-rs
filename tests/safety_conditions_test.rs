@@ -1,5 +1,6 @@
 //! Tests for safety conditions: CollisionCondition, OffroadCondition, EndOfRoadCondition
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     conditions::{
@@ -29,7 +30,7 @@ fn test_collision_condition_with_type() {
     assert_eq!(condition.target, None);
     assert!(condition.by_type.is_some());
     if let Some(by_type) = condition.by_type {
-        assert_eq!(by_type.target_type, ObjectType::Pedestrian);
+        assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
     }
 }
 
@@ -42,15 +43,15 @@ fn test_collision_condition_any_collision() {
 
 #[test]
 fn test_collision_condition_default() {
-    let condition = CollisionCondition::default();
+    let condition = CollisionCondition::empty();
     assert_eq!(condition.target, None);
     assert_eq!(condition.by_type, None);
 }
 
 #[test]
-fn test_collision_target_default() {
-    let target = CollisionTarget::default();
-    assert_eq!(target.target_type, ObjectType::Vehicle);
+fn test_collision_target_new() {
+    let target = CollisionTarget::new(ObjectType::Vehicle);
+    assert_eq!(target.target_type, Value::Literal(ObjectType::Vehicle));
 }
 
 #[test]
@@ -66,8 +67,8 @@ fn test_off_road_condition_with_duration() {
 }
 
 #[test]
-fn test_off_road_condition_default() {
-    let condition = OffroadCondition::default();
+fn test_off_road_condition_new_value() {
+    let condition = OffroadCondition::new(1.0);
     assert_eq!(condition.duration, Double::literal(1.0));
 }
 
@@ -84,14 +85,14 @@ fn test_end_of_road_condition_with_duration() {
 }
 
 #[test]
-fn test_end_of_road_condition_default() {
-    let condition = EndOfRoadCondition::default();
+fn test_end_of_road_condition_new_value() {
+    let condition = EndOfRoadCondition::new(1.0);
     assert_eq!(condition.duration, Double::literal(1.0));
 }
 
 #[test]
 fn test_by_entity_condition_collision_variants() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
     let collision_type =
@@ -125,7 +126,7 @@ fn test_by_entity_condition_collision_variants() {
 
 #[test]
 fn test_by_entity_condition_safety_variants() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let off_road = ByEntityCondition::off_road(triggering_entities.clone(), 2.0);
     let end_of_road = ByEntityCondition::end_of_road(triggering_entities, 3.0);
 
@@ -170,7 +171,7 @@ fn test_safety_conditions_serialization() {
 #[test]
 fn test_by_entity_condition_enum_completeness() {
     // Test that all variants can be matched
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let conditions = vec![
         ByEntityCondition::collision(triggering_entities.clone()),
         ByEntityCondition::off_road(triggering_entities.clone(), 1.0),
@@ -201,7 +202,7 @@ fn test_by_entity_condition_enum_completeness() {
 
 #[test]
 fn test_by_entity_condition_safety_integration() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
 
     // Test collision conditions
     let collision_target =

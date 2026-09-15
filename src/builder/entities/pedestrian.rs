@@ -1,5 +1,6 @@
 //! Pedestrian entity builder with fluent API
 
+use crate::types::basic::Value;
 use crate::types::{
     basic::{Double, OSString},
     entities::ScenarioObject,
@@ -25,9 +26,9 @@ pub struct DetachedPedestrianBuilder {
 #[derive(Debug, Default)]
 struct PartialPedestrianData {
     name: Option<String>,
-    pedestrian_category: Option<PedestrianCategory>,
+    pedestrian_category: Option<Value<PedestrianCategory>>,
     mass: Option<Double>,
-    role: Option<Role>,
+    role: Option<Value<Role>>,
     model3d: Option<String>,
     bounding_box: Option<BoundingBox>,
     properties: Option<crate::types::entities::vehicle::Properties>,
@@ -49,7 +50,8 @@ impl<'parent> PedestrianBuilder<'parent> {
 
     /// Set pedestrian as standard pedestrian
     pub fn pedestrian(mut self) -> Self {
-        self.pedestrian_data.pedestrian_category = Some(PedestrianCategory::Pedestrian);
+        self.pedestrian_data.pedestrian_category =
+            Some(Value::Literal(PedestrianCategory::Pedestrian));
         self.pedestrian_data.name = Some("StandardPedestrian".to_string());
 
         // Default pedestrian dimensions
@@ -71,7 +73,8 @@ impl<'parent> PedestrianBuilder<'parent> {
 
     /// Set pedestrian as wheelchair user
     pub fn wheelchair(mut self) -> Self {
-        self.pedestrian_data.pedestrian_category = Some(PedestrianCategory::Wheelchair);
+        self.pedestrian_data.pedestrian_category =
+            Some(Value::Literal(PedestrianCategory::Wheelchair));
         self.pedestrian_data.name = Some("Wheelchair".to_string());
 
         // Default wheelchair dimensions
@@ -93,7 +96,7 @@ impl<'parent> PedestrianBuilder<'parent> {
 
     /// Set pedestrian as animal
     pub fn animal(mut self) -> Self {
-        self.pedestrian_data.pedestrian_category = Some(PedestrianCategory::Animal);
+        self.pedestrian_data.pedestrian_category = Some(Value::Literal(PedestrianCategory::Animal));
         self.pedestrian_data.name = Some("Animal".to_string());
 
         // Default animal dimensions
@@ -121,10 +124,20 @@ impl<'parent> PedestrianBuilder<'parent> {
 
     /// Set custom dimensions
     pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        let existing_bbox = self.pedestrian_data.bounding_box.unwrap_or_default();
+        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
+        // `xsd:all` of required attributes with no schema default
+        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
+        // via `with_center`/an animal preset, keep it; otherwise the origin is the
+        // explicit fallback, not an invented one.
+        let existing_center = self
+            .pedestrian_data
+            .bounding_box
+            .as_ref()
+            .map(|bbox| bbox.center.clone())
+            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
-            center: existing_bbox.center,
+            center: existing_center,
             dimensions: Dimensions {
                 width: Double::literal(width),
                 length: Double::literal(length),
@@ -137,7 +150,14 @@ impl<'parent> PedestrianBuilder<'parent> {
 
     /// Set role (civil, police, ambulance, etc.)
     pub fn with_role(mut self, role: Role) -> Self {
-        self.pedestrian_data.role = Some(role);
+        self.pedestrian_data.role = Some(Value::Literal(role));
+        self
+    }
+
+    /// Set role to a parameter reference (`role="$name"`), which `@role`'s
+    /// `xsd:union` admits alongside the literal enumeration. `name` omits the `$`.
+    pub fn with_role_param(mut self, name: &str) -> Self {
+        self.pedestrian_data.role = Some(Value::Parameter(name.to_string()));
         self
     }
 
@@ -161,7 +181,7 @@ impl<'parent> PedestrianBuilder<'parent> {
             pedestrian_category: self
                 .pedestrian_data
                 .pedestrian_category
-                .unwrap_or(PedestrianCategory::Pedestrian),
+                .unwrap_or(Value::Literal(PedestrianCategory::Pedestrian)),
             mass: self
                 .pedestrian_data
                 .mass
@@ -169,7 +189,17 @@ impl<'parent> PedestrianBuilder<'parent> {
             role: self.pedestrian_data.role,
             model: None,
             model3d: self.pedestrian_data.model3d,
-            bounding_box: self.pedestrian_data.bounding_box.unwrap_or_default(),
+            bounding_box: self
+                .pedestrian_data
+                .bounding_box
+                .unwrap_or_else(|| BoundingBox {
+                    center: Center::new(0.0, 0.0, 0.0),
+                    dimensions: Dimensions {
+                        width: Double::literal(0.6),
+                        length: Double::literal(0.6),
+                        height: Double::literal(1.8),
+                    },
+                }),
             properties: self.pedestrian_data.properties,
             parameter_declarations: None,
         };
@@ -196,7 +226,8 @@ impl DetachedPedestrianBuilder {
 
     /// Set pedestrian as standard pedestrian
     pub fn pedestrian(mut self) -> Self {
-        self.pedestrian_data.pedestrian_category = Some(PedestrianCategory::Pedestrian);
+        self.pedestrian_data.pedestrian_category =
+            Some(Value::Literal(PedestrianCategory::Pedestrian));
         self.pedestrian_data.name = Some("StandardPedestrian".to_string());
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
@@ -217,7 +248,8 @@ impl DetachedPedestrianBuilder {
 
     /// Set pedestrian as wheelchair user
     pub fn wheelchair(mut self) -> Self {
-        self.pedestrian_data.pedestrian_category = Some(PedestrianCategory::Wheelchair);
+        self.pedestrian_data.pedestrian_category =
+            Some(Value::Literal(PedestrianCategory::Wheelchair));
         self.pedestrian_data.name = Some("Wheelchair".to_string());
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
@@ -238,7 +270,7 @@ impl DetachedPedestrianBuilder {
 
     /// Set pedestrian as animal
     pub fn animal(mut self) -> Self {
-        self.pedestrian_data.pedestrian_category = Some(PedestrianCategory::Animal);
+        self.pedestrian_data.pedestrian_category = Some(Value::Literal(PedestrianCategory::Animal));
         self.pedestrian_data.name = Some("Animal".to_string());
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
@@ -265,10 +297,20 @@ impl DetachedPedestrianBuilder {
 
     /// Set custom dimensions
     pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        let existing_bbox = self.pedestrian_data.bounding_box.unwrap_or_default();
+        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
+        // `xsd:all` of required attributes with no schema default
+        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
+        // via `with_center`/an animal preset, keep it; otherwise the origin is the
+        // explicit fallback, not an invented one.
+        let existing_center = self
+            .pedestrian_data
+            .bounding_box
+            .as_ref()
+            .map(|bbox| bbox.center.clone())
+            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
 
         self.pedestrian_data.bounding_box = Some(BoundingBox {
-            center: existing_bbox.center,
+            center: existing_center,
             dimensions: Dimensions {
                 width: Double::literal(width),
                 length: Double::literal(length),
@@ -281,7 +323,14 @@ impl DetachedPedestrianBuilder {
 
     /// Set role
     pub fn with_role(mut self, role: Role) -> Self {
-        self.pedestrian_data.role = Some(role);
+        self.pedestrian_data.role = Some(Value::Literal(role));
+        self
+    }
+
+    /// Set role to a parameter reference (`role="$name"`), which `@role`'s
+    /// `xsd:union` admits alongside the literal enumeration. `name` omits the `$`.
+    pub fn with_role_param(mut self, name: &str) -> Self {
+        self.pedestrian_data.role = Some(Value::Parameter(name.to_string()));
         self
     }
 
@@ -307,7 +356,7 @@ impl DetachedPedestrianBuilder {
             pedestrian_category: self
                 .pedestrian_data
                 .pedestrian_category
-                .unwrap_or(PedestrianCategory::Pedestrian),
+                .unwrap_or(Value::Literal(PedestrianCategory::Pedestrian)),
             mass: self
                 .pedestrian_data
                 .mass
@@ -315,7 +364,17 @@ impl DetachedPedestrianBuilder {
             role: self.pedestrian_data.role,
             model: None,
             model3d: self.pedestrian_data.model3d,
-            bounding_box: self.pedestrian_data.bounding_box.unwrap_or_default(),
+            bounding_box: self
+                .pedestrian_data
+                .bounding_box
+                .unwrap_or_else(|| BoundingBox {
+                    center: Center::new(0.0, 0.0, 0.0),
+                    dimensions: Dimensions {
+                        width: Double::literal(0.6),
+                        length: Double::literal(0.6),
+                        height: Double::literal(1.8),
+                    },
+                }),
             properties: self.pedestrian_data.properties,
             parameter_declarations: None,
         };
@@ -333,7 +392,10 @@ mod tests {
         let obj = DetachedPedestrianBuilder::new("ped1").build();
         let p = obj.pedestrian.as_ref().unwrap();
         assert_eq!(p.name.as_literal(), Some(&"DefaultPedestrian".to_string()));
-        assert_eq!(p.pedestrian_category, PedestrianCategory::Pedestrian);
+        assert_eq!(
+            p.pedestrian_category,
+            Value::Literal(PedestrianCategory::Pedestrian)
+        );
         assert_eq!(p.mass.as_literal(), Some(&75.0));
         assert!(p.role.is_none());
         assert!(p.model3d.is_none());
@@ -352,7 +414,10 @@ mod tests {
     fn test_animal_preset_differs_from_pedestrian() {
         let obj = DetachedPedestrianBuilder::new("dog").animal().build();
         let p = obj.pedestrian.as_ref().unwrap();
-        assert_eq!(p.pedestrian_category, PedestrianCategory::Animal);
+        assert_eq!(
+            p.pedestrian_category,
+            Value::Literal(PedestrianCategory::Animal)
+        );
         assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&0.8));
     }
 
@@ -360,7 +425,10 @@ mod tests {
     fn test_wheelchair_preset() {
         let obj = DetachedPedestrianBuilder::new("w1").wheelchair().build();
         let p = obj.pedestrian.as_ref().unwrap();
-        assert_eq!(p.pedestrian_category, PedestrianCategory::Wheelchair);
+        assert_eq!(
+            p.pedestrian_category,
+            Value::Literal(PedestrianCategory::Wheelchair)
+        );
         assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&1.4));
     }
 
@@ -375,7 +443,7 @@ mod tests {
             .build();
         let p = obj.pedestrian.as_ref().unwrap();
         assert_eq!(p.mass.as_literal(), Some(&90.0));
-        assert_eq!(p.role, Some(Role::Civil));
+        assert_eq!(p.role, Some(Value::Literal(Role::Civil)));
         assert_eq!(p.model3d, Some("models/person.fbx".to_string()));
         assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&1.9));
         // Center preserved from pedestrian preset

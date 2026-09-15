@@ -1,8 +1,6 @@
-//! OpenSCENARIO type system
-//!
-//! This module organizes all OpenSCENARIO data types into logical categories,
-//! provides common traits and utilities, and establishes the foundation for
-//! the complete type system covering 347+ specification types.
+//! The OpenSCENARIO type system, organized by what each group describes: [`basic`]
+//! scalars, [`entities`], [`positions`], [`actions`], [`conditions`], [`scenario`]
+//! structure, [`catalogs`], [`environment`], and the [`enums`] shared across them.
 
 use std::collections::HashMap;
 
@@ -54,7 +52,7 @@ pub use scenario::init::{
 };
 pub use scenario::storyboard::{
     CatalogDefinition, FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition,
-    Storyboard,
+    Storyboard, DEFAULT_REV_MAJOR, DEFAULT_REV_MINOR,
 };
 
 // Re-export distribution types
@@ -113,10 +111,12 @@ pub use routing::{Route, RouteRef, Waypoint};
 // Re-export entity types
 pub use entities::{Axle, Axles, Entities, Pedestrian, ScenarioObject, Vehicle};
 
-/// Common trait for types that support validation
+/// Validation against a resolved context.
 ///
-/// This trait will be implemented by all major OpenSCENARIO types to enable
-/// comprehensive validation of scenario documents.
+/// Only [`crate::types::basic::Value`] implements this today, and that impl is a
+/// no-op. Schema validation lives in [`crate::validation`]; the domain checks live in
+/// [`crate::parser::validation`]. This trait is the hook for moving the per-type
+/// checks that several types currently do through bespoke methods.
 pub trait Validate {
     /// Validate this object using the provided validation context
     fn validate(&self, ctx: &ValidationContext) -> crate::Result<()>;
@@ -199,7 +199,7 @@ pub struct EntityRef {
     /// Entity name
     pub name: String,
     /// Entity type
-    pub object_type: ObjectType,
+    pub object_type: Value<ObjectType>,
 }
 
 /// Reference to a catalog entry  

@@ -79,10 +79,29 @@ fn test_deterministic_backward_compatibility() {
     let mut det = Deterministic::default();
 
     // Test adding distributions manually
-    let single = DeterministicSingleParameterDistribution::default();
+    let single = DeterministicSingleParameterDistribution::new(
+        openscenario_rs::types::basic::Value::Literal("speed".to_string()),
+        Some(DistributionSet::new(
+            DistributionSetElement::new(openscenario_rs::types::basic::Value::Literal(
+                "30.0".to_string(),
+            )),
+            vec![],
+        )),
+        None,
+        None,
+    );
     det.single_distributions.push(single);
 
-    let multi = DeterministicMultiParameterDistribution::default();
+    let multi = DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
+        ParameterValueSet::new(
+            ParameterAssignment::new(
+                "position".to_string(),
+                openscenario_rs::types::basic::Value::Literal("100.0".to_string()),
+            ),
+            vec![],
+        ),
+        vec![],
+    ));
     det.multi_distributions.push(multi);
 
     let total_count = det.single_distributions.len() + det.multi_distributions.len();

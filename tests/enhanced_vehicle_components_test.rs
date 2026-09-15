@@ -13,7 +13,7 @@ use std::collections::HashMap;
 fn test_enhanced_bounding_box_volume() {
     // Test volume calculation without parameters
     let bbox = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::new(2.0, 4.0, 1.5),
     };
 
@@ -22,7 +22,7 @@ fn test_enhanced_bounding_box_volume() {
 
     // Test volume calculation with parameters
     let bbox_with_params = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions {
             width: Value::parameter("width".to_string()),
             length: Value::parameter("length".to_string()),
@@ -41,7 +41,7 @@ fn test_enhanced_bounding_box_volume() {
 #[test]
 fn test_enhanced_bounding_box_contains_point() {
     let bbox = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::new(4.0, 6.0, 2.0),
     };
 
@@ -243,7 +243,7 @@ fn test_vehicle_integration_with_enhanced_components() {
 #[test]
 fn test_bounding_box_geometric_operations() {
     let bbox1 = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::new(2.0, 2.0, 2.0),
     };
 
@@ -303,7 +303,7 @@ fn test_dimensions_calculations() {
 fn test_xml_serialization_compatibility() {
     // Test that all enhanced components can be serialized to XML
     let bbox = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::vehicle_default(),
     };
 

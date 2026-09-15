@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "openscenario-rs"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 rust-version = "1.90"
 authors = ["Ashfaq Farooqui"]
@@ -37,6 +37,9 @@ validation = []
 
 
 [dev-dependencies]
+# Also a normal dependency; repeated here so `tests/default_schema_validity_test.rs` can
+# serialize a bare type under a chosen root element (`se::to_string_with_root`).
+quick-xml = { version = "0.38", features = ["serialize"] }
 proptest = "1.0"
 criterion = "0.7"
 tempfile = "3.0"

@@ -3,6 +3,7 @@
 //! Tests the integration of spatial conditions with the ByEntityCondition enum
 //! and verifies that all condition types work together seamlessly.
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Boolean, Double, OSString},
     conditions::{
@@ -11,19 +12,19 @@ use openscenario_rs::types::{
     },
     enums::{RelativeDistanceType, Rule},
     positions::{Position, WorldPosition},
-    scenario::triggers::TriggeringEntities,
+    scenario::triggers::{EntityRef, TriggeringEntities},
 };
 
 #[test]
 fn test_by_entity_condition_speed() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let speed_condition =
         ByEntityCondition::speed(triggering_entities, 25.0, Rule::GreaterThan, "ego_vehicle");
 
     match speed_condition.entity_condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
-            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
         _ => panic!("Expected Speed condition"),
     }
@@ -31,10 +32,10 @@ fn test_by_entity_condition_speed() {
 
 #[test]
 fn test_by_entity_condition_reach_position() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let position = Position {
         world_position: Some(WorldPosition::new(100.0, 200.0)),
-        ..Default::default()
+        ..Position::empty()
     };
     let reach_condition = ByEntityCondition::reach_position(triggering_entities, position, 3.0);
 
@@ -49,8 +50,8 @@ fn test_by_entity_condition_reach_position() {
 
 #[test]
 fn test_by_entity_condition_distance() {
-    let triggering_entities = TriggeringEntities::default();
-    let position = Position::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let position = Position::world_origin();
     let distance_condition =
         ByEntityCondition::distance(triggering_entities, position, 40.0, true, Rule::LessThan);
 
@@ -58,7 +59,7 @@ fn test_by_entity_condition_distance() {
         EntityCondition::Distance(distance) => {
             assert_eq!(distance.value, Double::literal(40.0));
             assert_eq!(distance.freespace, Boolean::literal(true));
-            assert_eq!(distance.rule, Rule::LessThan);
+            assert_eq!(distance.rule, Value::Literal(Rule::LessThan));
         }
         _ => panic!("Expected Distance condition"),
     }
@@ -66,7 +67,7 @@ fn test_by_entity_condition_distance() {
 
 #[test]
 fn test_by_entity_condition_relative_distance() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let relative_condition = ByEntityCondition::relative_distance(
         triggering_entities,
         "target_vehicle",
@@ -86,24 +87,26 @@ fn test_by_entity_condition_relative_distance() {
             assert_eq!(relative.freespace, Boolean::literal(false));
             assert_eq!(
                 relative.relative_distance_type,
-                RelativeDistanceType::Longitudinal
+                Value::Literal(RelativeDistanceType::Longitudinal)
             );
-            assert_eq!(relative.rule, Rule::GreaterOrEqual);
+            assert_eq!(relative.rule, Value::Literal(Rule::GreaterOrEqual));
         }
         _ => panic!("Expected RelativeDistance condition"),
     }
 }
 
 #[test]
-fn test_by_entity_condition_default() {
-    let default_condition = ByEntityCondition::default();
+fn test_by_entity_condition_speed_construction() {
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let condition =
+        ByEntityCondition::speed(triggering_entities, 10.0, Rule::GreaterThan, "ego_vehicle");
 
-    match default_condition.entity_condition {
+    match condition.entity_condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(10.0));
-            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
-        _ => panic!("Expected default to be Speed condition"),
+        _ => panic!("Expected Speed condition"),
     }
 }
 
@@ -114,12 +117,12 @@ fn test_spatial_condition_builders() {
     assert_eq!(reach_pos.tolerance, Double::literal(2.0));
 
     // Test DistanceCondition builders
-    let distance_less = DistanceCondition::less_than(Position::default(), 50.0, true);
-    assert_eq!(distance_less.rule, Rule::LessThan);
+    let distance_less = DistanceCondition::less_than(Position::world_origin(), 50.0, true);
+    assert_eq!(distance_less.rule, Value::Literal(Rule::LessThan));
     assert_eq!(distance_less.value, Double::literal(50.0));
 
-    let distance_greater = DistanceCondition::greater_than(Position::default(), 30.0, false);
-    assert_eq!(distance_greater.rule, Rule::GreaterThan);
+    let distance_greater = DistanceCondition::greater_than(Position::world_origin(), 30.0, false);
+    assert_eq!(distance_greater.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(distance_greater.value, Double::literal(30.0));
 
     // Test RelativeDistanceCondition builders
@@ -131,7 +134,7 @@ fn test_spatial_condition_builders() {
     );
     assert_eq!(
         longitudinal.relative_distance_type,
-        RelativeDistanceType::Longitudinal
+        Value::Literal(RelativeDistanceType::Longitudinal)
     );
 
     let lateral = RelativeDistanceCondition::lateral(
@@ -142,7 +145,7 @@ fn test_spatial_condition_builders() {
     );
     assert_eq!(
         lateral.relative_distance_type,
-        RelativeDistanceType::Lateral
+        Value::Literal(RelativeDistanceType::Lateral)
     );
 
     let cartesian = RelativeDistanceCondition::cartesian(
@@ -153,16 +156,16 @@ fn test_spatial_condition_builders() {
     );
     assert_eq!(
         cartesian.relative_distance_type,
-        RelativeDistanceType::Cartesian
+        Value::Literal(RelativeDistanceType::Cartesian)
     );
 }
 
 #[test]
 fn test_condition_equality() {
     // Test that identical conditions are equal
-    let triggering_entities1 = TriggeringEntities::default();
-    let triggering_entities2 = TriggeringEntities::default();
-    let triggering_entities3 = TriggeringEntities::default();
+    let triggering_entities1 = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities2 = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities3 = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let condition1 =
         ByEntityCondition::speed(triggering_entities1, 25.0, Rule::EqualTo, "vehicle1");
     let condition2 =
@@ -176,7 +179,7 @@ fn test_condition_equality() {
 
 #[test]
 fn test_condition_cloning() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let original = ByEntityCondition::relative_distance(
         triggering_entities,
         "test_vehicle",
@@ -218,9 +221,9 @@ fn test_entity_condition_xml_deserialization() {
             assert_eq!(rel_dist.freespace, Boolean::literal(true));
             assert_eq!(
                 rel_dist.relative_distance_type,
-                RelativeDistanceType::Longitudinal
+                Value::Literal(RelativeDistanceType::Longitudinal)
             );
-            assert_eq!(rel_dist.rule, Rule::LessThan);
+            assert_eq!(rel_dist.rule, Value::Literal(Rule::LessThan));
         }
         _ => panic!("Expected RelativeDistanceCondition, got: {:?}", condition),
     }
@@ -246,7 +249,7 @@ fn test_entity_condition_xml_deserialization_speed() {
     match condition {
         EntityCondition::Speed(speed) => {
             assert_eq!(speed.value, Double::literal(25.0));
-            assert_eq!(speed.rule, Rule::GreaterThan);
+            assert_eq!(speed.rule, Value::Literal(Rule::GreaterThan));
         }
         _ => panic!("Expected SpeedCondition, got: {:?}", condition),
     }

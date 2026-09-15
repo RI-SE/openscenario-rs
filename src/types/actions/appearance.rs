@@ -1,14 +1,9 @@
-//! Appearance and animation action types for visual representation
+//! Actions that change how an entity looks: lights, animations, and visibility.
 //!
-//! This file contains:
-//! - Light state actions for vehicle lighting systems
-//! - Animation actions for entity movement and component animation
-//! - Pedestrian gesture and motion animations
-//! - Vehicle component animations (doors, windows, etc.)
-//! - Custom user-defined animation support
-//! - Visibility actions for entity appearance control
-//!
-use crate::types::basic::{Boolean, Double, OSString};
+//! Animations cover pedestrian gesture and motion, vehicle components such as doors
+//! and windows, and user-defined animation files. Visibility is separate: it decides
+//! which subsystems see the entity, not how it is drawn.
+use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::entities::vehicle::File;
 use crate::types::enums::{
     ColorType, LightMode, PedestrianGestureType, PedestrianMotionType, VehicleComponentType,
@@ -37,7 +32,7 @@ pub struct VisibilityAction {
 }
 
 /// Set of sensor references for selective visibility control
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SensorReferenceSet {
     /// Individual sensor references
     #[serde(rename = "SensorReference")]
@@ -53,7 +48,7 @@ pub struct SensorReference {
 }
 
 /// Appearance actions for visual changes and animations
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppearanceAction {
     /// Light state action for lighting control
     #[serde(rename = "LightStateAction", skip_serializing_if = "Option::is_none")]
@@ -62,6 +57,24 @@ pub struct AppearanceAction {
     /// Animation action for entity animations
     #[serde(rename = "AnimationAction", skip_serializing_if = "Option::is_none")]
     pub animation_action: Option<AnimationAction>,
+}
+
+impl AppearanceAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `AppearanceAction (`:754-760`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            light_state_action: None,
+            animation_action: None,
+        }
+    }
 }
 
 /// Light state control action for vehicle lighting systems
@@ -85,7 +98,7 @@ pub struct LightStateAction {
 }
 
 /// Choice of the light being addressed: a standard vehicle light or a user-defined one
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LightType {
     /// Standard vehicle light
     #[serde(rename = "VehicleLight", skip_serializing_if = "Option::is_none")]
@@ -101,7 +114,7 @@ pub struct LightType {
 pub struct VehicleLight {
     /// Type of the vehicle light
     #[serde(rename = "@vehicleLightType")]
-    pub vehicle_light_type: VehicleLightType,
+    pub vehicle_light_type: Value<VehicleLightType>,
 }
 
 /// User-defined light identified by a free-form type name
@@ -117,7 +130,7 @@ pub struct UserDefinedLight {
 pub struct LightState {
     /// Light mode (on, off, flashing)
     #[serde(rename = "@mode")]
-    pub mode: LightMode,
+    pub mode: Value<LightMode>,
 
     /// Luminous intensity in lumen
     #[serde(
@@ -153,7 +166,7 @@ pub struct LightState {
 pub struct Color {
     /// Coarse color classification
     #[serde(rename = "@colorType")]
-    pub color_type: ColorType,
+    pub color_type: Value<ColorType>,
 
     /// RGB definition of the color
     #[serde(rename = "ColorRgb", skip_serializing_if = "Option::is_none")]
@@ -201,6 +214,14 @@ pub struct ColorCmyk {
 }
 
 /// Animation action for entity movement and component animation
+///
+/// No `Default`. The derive that used to sit here was justified as "every field is
+/// `None`, so it states nothing" — reasoning the schema contradicts.
+/// XSD `AnimationAction` (`Schema/OpenSCENARIO.xsd:740-747`) declares `AnimationType`
+/// with no `minOccurs="0"`, so the element is required; and `AnimationType` is itself
+/// a bare `xsd:choice` (`:757-764`) that must select a branch. The derived default
+/// therefore emitted `<AnimationType/>`, which validates against nothing — category 3,
+/// schema-invalid empty.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnimationAction {
     /// Whether the animation repeats
@@ -225,7 +246,11 @@ pub struct AnimationAction {
 }
 
 /// Choice of animation being addressed
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`: XSD `AnimationType` (`Schema/OpenSCENARIO.xsd:757-764`) is a
+/// bare `xsd:choice` with no `minOccurs="0"`, so an all-`None` value cannot serialize to
+/// valid XML. Use the per-branch constructors below.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnimationType {
     /// Animation of a vehicle or user-defined component
     #[serde(rename = "ComponentAnimation", skip_serializing_if = "Option::is_none")]
@@ -251,7 +276,10 @@ pub struct AnimationType {
 }
 
 /// Choice of component being animated
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`: XSD `ComponentAnimation` (`Schema/OpenSCENARIO.xsd:947-952`) is a
+/// bare `xsd:choice` with no `minOccurs="0"` — same category 3 as its parent `AnimationType`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComponentAnimation {
     /// Standard vehicle component
     #[serde(rename = "VehicleComponent", skip_serializing_if = "Option::is_none")]
@@ -270,7 +298,7 @@ pub struct ComponentAnimation {
 pub struct VehicleComponent {
     /// Type of the vehicle component
     #[serde(rename = "@vehicleComponentType")]
-    pub vehicle_component_type: VehicleComponentType,
+    pub vehicle_component_type: Value<VehicleComponentType>,
 }
 
 /// User-defined component identified by a free-form type name
@@ -286,7 +314,7 @@ pub struct UserDefinedComponent {
 pub struct PedestrianAnimation {
     /// Type of pedestrian motion
     #[serde(rename = "@motion", default, skip_serializing_if = "Option::is_none")]
-    pub motion: Option<PedestrianMotionType>,
+    pub motion: Option<Value<PedestrianMotionType>>,
 
     /// User-defined pedestrian animation name
     #[serde(
@@ -310,7 +338,7 @@ pub struct PedestrianAnimation {
 pub struct PedestrianGesture {
     /// Type of the gesture
     #[serde(rename = "@gesture")]
-    pub gesture: PedestrianGestureType,
+    pub gesture: Value<PedestrianGestureType>,
 }
 
 /// Animation defined by an external file
@@ -345,36 +373,113 @@ pub struct AnimationState {
     pub state: Double,
 }
 
-impl Default for VisibilityAction {
-    fn default() -> Self {
+// `VisibilityAction`, `LightStateAction`, `LightState` and
+// `AnimationState` no longer implement `Default`: all fabricated a value for
+// an XSD `use="required"` attribute (`VisibilityAction` :2550-2557, `LightState`
+// :1402-1409, `LightStateAction` :1411-1417, `AnimationState` :754-756) — none
+// declares a `default="…"`. Construct them explicitly.
+impl AnimationAction {
+    /// Create an animation action for the given animation (XSD-required child).
+    pub fn new(animation_type: AnimationType) -> Self {
         Self {
-            graphics: Boolean::literal(true),
-            sensors: Boolean::literal(true),
-            traffic: Boolean::literal(true),
+            r#loop: None,
+            animation_duration: None,
+            animation_type,
+            animation_state: None,
+        }
+    }
+}
+
+impl AnimationType {
+    fn empty() -> Self {
+        Self {
+            component_animation: None,
+            pedestrian_animation: None,
+            animation_file: None,
+            user_defined_animation: None,
+        }
+    }
+
+    /// `ComponentAnimation` branch of the choice.
+    pub fn component(component_animation: ComponentAnimation) -> Self {
+        Self {
+            component_animation: Some(component_animation),
+            ..Self::empty()
+        }
+    }
+
+    /// `PedestrianAnimation` branch of the choice.
+    pub fn pedestrian(pedestrian_animation: PedestrianAnimation) -> Self {
+        Self {
+            pedestrian_animation: Some(pedestrian_animation),
+            ..Self::empty()
+        }
+    }
+
+    /// `AnimationFile` branch of the choice.
+    pub fn file(animation_file: AnimationFile) -> Self {
+        Self {
+            animation_file: Some(animation_file),
+            ..Self::empty()
+        }
+    }
+
+    /// `UserDefinedAnimation` branch of the choice.
+    pub fn user_defined(user_defined_animation: UserDefinedAnimation) -> Self {
+        Self {
+            user_defined_animation: Some(user_defined_animation),
+            ..Self::empty()
+        }
+    }
+}
+
+impl ComponentAnimation {
+    /// `VehicleComponent` branch of the choice.
+    pub fn vehicle(vehicle_component: VehicleComponent) -> Self {
+        Self {
+            vehicle_component: Some(vehicle_component),
+            user_defined_component: None,
+        }
+    }
+
+    /// `UserDefinedComponent` branch of the choice.
+    pub fn user_defined(user_defined_component: UserDefinedComponent) -> Self {
+        Self {
+            vehicle_component: None,
+            user_defined_component: Some(user_defined_component),
+        }
+    }
+}
+
+impl VisibilityAction {
+    /// XSD `VisibilityAction` (:2550-2557): all three attributes required.
+    pub fn new(graphics: bool, sensors: bool, traffic: bool) -> Self {
+        Self {
+            graphics: Boolean::literal(graphics),
+            sensors: Boolean::literal(sensors),
+            traffic: Boolean::literal(traffic),
             sensor_reference_set: None,
         }
     }
 }
 
-impl Default for LightStateAction {
-    fn default() -> Self {
+impl LightStateAction {
+    /// XSD `LightStateAction` (:1411-1417): `LightType` and `LightState`
+    /// children are both required.
+    pub fn new(light_type: LightType, light_state: LightState) -> Self {
         Self {
             transition_time: None,
-            light_type: LightType {
-                vehicle_light: Some(VehicleLight {
-                    vehicle_light_type: VehicleLightType::LowBeam,
-                }),
-                user_defined_light: None,
-            },
-            light_state: LightState::default(),
+            light_type,
+            light_state,
         }
     }
 }
 
-impl Default for LightState {
-    fn default() -> Self {
+impl LightState {
+    /// XSD `LightState` (:1402-1409): `@mode` is the only required attribute.
+    pub fn new(mode: LightMode) -> Self {
         Self {
-            mode: LightMode::On,
+            mode: Value::Literal(mode),
             luminous_intensity: None,
             flashing_on_duration: None,
             flashing_off_duration: None,
@@ -383,29 +488,20 @@ impl Default for LightState {
     }
 }
 
-impl Default for AnimationAction {
-    fn default() -> Self {
+impl AnimationState {
+    /// XSD `AnimationState` (:754-756): required `@state`.
+    pub fn new(state: f64) -> Self {
         Self {
-            r#loop: None,
-            animation_duration: None,
-            animation_type: AnimationType::default(),
-            animation_state: None,
+            state: Double::literal(state),
         }
     }
 }
 
-impl Default for AnimationState {
-    fn default() -> Self {
+impl SensorReference {
+    /// XSD `SensorReference` (:2019-2021): required `@name`.
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            state: Double::literal(0.0),
-        }
-    }
-}
-
-impl Default for SensorReference {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultSensor".to_string()),
+            name: OSString::literal(name.into()),
         }
     }
 }
@@ -415,8 +511,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_visibility_action_default_all_true() {
-        let va = VisibilityAction::default();
+    fn test_visibility_action_new_constructor() {
+        let va = VisibilityAction::new(true, true, true);
         assert_eq!(va.graphics.as_literal(), Some(&true));
         assert_eq!(va.sensors.as_literal(), Some(&true));
         assert_eq!(va.traffic.as_literal(), Some(&true));
@@ -425,14 +521,16 @@ mod tests {
 
     #[test]
     fn test_appearance_action_default_is_empty() {
-        let aa = AppearanceAction::default();
+        let aa = AppearanceAction::empty();
         assert!(aa.light_state_action.is_none());
         assert!(aa.animation_action.is_none());
     }
 
     #[test]
     fn test_sensor_reference_set_default_empty_vec() {
-        let srs = SensorReferenceSet::default();
+        let srs = SensorReferenceSet {
+            sensor_references: Vec::new(),
+        };
         assert!(srs.sensor_references.is_empty());
     }
 
@@ -447,9 +545,9 @@ mod tests {
                 .as_ref()
                 .unwrap()
                 .vehicle_light_type,
-            VehicleLightType::LowBeam
+            Value::Literal(VehicleLightType::LowBeam)
         );
-        assert_eq!(action.light_state.mode, LightMode::On);
+        assert_eq!(action.light_state.mode, Value::Literal(LightMode::On));
         assert!(action.transition_time.is_none());
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
@@ -471,14 +569,15 @@ mod tests {
         );
 
         let color = action.light_state.color.as_ref().unwrap();
-        assert_eq!(color.color_type, ColorType::Red);
+        assert_eq!(color.color_type, Value::Literal(ColorType::Red));
         assert_eq!(
             color.color_rgb.as_ref().unwrap().red.as_literal(),
             Some(&1.0)
         );
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
-        assert!(serialized.contains("transitionTime=\"${transition}\""));
+        // `$transition` is the schema's `parameter` production; see `Value`'s `Serialize`.
+        assert!(serialized.contains("transitionTime=\"$transition\""));
         let reparsed: LightStateAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action, reparsed);
     }
@@ -519,7 +618,7 @@ mod tests {
                 .as_ref()
                 .unwrap()
                 .vehicle_component_type,
-            VehicleComponentType::DoorFrontLeft
+            Value::Literal(VehicleComponentType::DoorFrontLeft)
         );
         assert_eq!(
             action.animation_state.as_ref().unwrap().state.as_literal(),
@@ -535,11 +634,14 @@ mod tests {
         let xml = r#"<AnimationAction><AnimationType><PedestrianAnimation motion="walking" userDefinedPedestrianAnimation="limp"><PedestrianGesture gesture="wavingLeftArm"/><PedestrianGesture gesture="crossArms"/></PedestrianAnimation></AnimationType></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
         let ped = action.animation_type.pedestrian_animation.as_ref().unwrap();
-        assert_eq!(ped.motion, Some(PedestrianMotionType::Walking));
+        assert_eq!(
+            ped.motion,
+            Some(Value::Literal(PedestrianMotionType::Walking))
+        );
         assert_eq!(ped.pedestrian_gestures.len(), 2);
         assert_eq!(
             ped.pedestrian_gestures[0].gesture,
-            PedestrianGestureType::WavingLeftArm
+            Value::Literal(PedestrianGestureType::WavingLeftArm)
         );
         let serialized = quick_xml::se::to_string(&action).unwrap();
         let reparsed: AnimationAction = quick_xml::de::from_str(&serialized).unwrap();
@@ -579,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_visibility_action_xml_roundtrip() {
-        let va = VisibilityAction::default();
+        let va = VisibilityAction::new(true, true, true);
         let xml = quick_xml::se::to_string(&va).unwrap();
         let deserialized: VisibilityAction = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(va, deserialized);

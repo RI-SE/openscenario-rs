@@ -1,13 +1,9 @@
-//! Catalog system for OpenSCENARIO
+//! Catalog loading and reference resolution.
 //!
-//! This module provides comprehensive catalog management for OpenSCENARIO scenarios:
-//! - Loading and parsing catalog files from Directory paths
-//! - Resolving catalog references within scenarios
-//! - Full integration of catalog content into scenario structures
-//!
-//! The catalog system enables modular scenario design by allowing reusable
-//! components (vehicles, controllers, routes, etc.) to be defined in separate
-//! files and referenced from main scenarios.
+//! A catalog holds reusable definitions – vehicles, controllers, routes – in their own
+//! file, which a scenario then references by catalog name and entry name. This module
+//! loads those files from the `Directory` paths declared in `CatalogLocations` and
+//! resolves each reference into the content it names.
 
 use crate::types::basic::Directory;
 

@@ -1,7 +1,5 @@
-//! Trajectory catalog types for OpenSCENARIO reusable trajectory definitions
-//!
-//! This module contains catalog-specific trajectory types that enable reuse of
-//! trajectory definitions across multiple scenarios with parameter substitution.
+//! `CatalogTrajectory`: a trajectory in its catalog-file form, with parameter
+//! declarations covering its shape.
 
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
 use crate::types::positions::Position;
@@ -32,19 +30,6 @@ pub struct CatalogTrajectory {
     /// Shape definition of the trajectory
     #[serde(rename = "Shape")]
     pub shape: CatalogShape,
-}
-
-impl Default for CatalogTrajectory {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogTrajectory".to_string(),
-            closed: Value::Literal(false),
-            parameter_declarations: None,
-            shape: CatalogShape::new(CatalogTrajectoryShape::Polyline(CatalogPolyline {
-                vertices: Vec::new(),
-            })),
-        }
-    }
 }
 
 /// Wrapper for the `<Shape>` element of a catalog trajectory.
@@ -206,7 +191,14 @@ pub struct NurbsKnot {
 // Implementation methods for catalog trajectories
 
 impl CatalogTrajectory {
-    /// Creates a new catalog trajectory with the specified name
+    /// Creates a new catalog trajectory with the specified name.
+    ///
+    /// There used to be a `Default` impl here. It fabricated `@name` as
+    /// `"DefaultCatalogTrajectory"` and, worse, defaulted `shape` to a `Polyline`
+    /// with zero `Vertex` children — XSD `Polyline` requires `minOccurs="2"`, so
+    /// that default could never serialize to schema-valid XML. An empty container only
+    /// "states nothing" when the schema permits zero children, and `Polyline` does not.
+    /// Removed; callers must supply both.
     pub fn new(name: String, shape: CatalogTrajectoryShape) -> Self {
         Self {
             name,
@@ -373,17 +365,19 @@ impl CatalogPolyline {
 }
 
 impl CatalogClothoid {
-    /// Creates a new clothoid with the specified parameters
-    pub fn new(curvature: Double, curvature_dot: Double, length: Double) -> Self {
-        Self {
-            curvature,
-            curvature_dot: Some(curvature_dot),
-            curvature_prime: None,
-            length,
-            start_time: None,
-            stop_time: None,
-            start_position: Position::default(),
-        }
+    /// Creates a new clothoid with the specified parameters.
+    ///
+    /// `start_position` is required: XSD `Clothoid` (`Schema/OpenSCENARIO.xsd:894-897`)
+    /// declares its `Position` child with no `minOccurs="0"`. This constructor previously
+    /// filled it with `Position::default()`, inventing a start point nobody wrote; it is now
+    /// a parameter instead.
+    pub fn new(
+        curvature: Double,
+        curvature_dot: Double,
+        length: Double,
+        start_position: Position,
+    ) -> Self {
+        Self::with_start_position(curvature, curvature_dot, length, start_position)
     }
 
     /// Creates a clothoid with a start position
@@ -552,14 +546,14 @@ mod tests {
 
     #[test]
     fn test_catalog_polyline() {
-        let pos1 = Position::default();
-        let pos2 = Position::default();
+        let pos1 = Position::world_origin();
+        let pos2 = Position::world_origin();
 
         let mut polyline = CatalogPolyline::from_positions(vec![pos1, pos2]);
 
         assert_eq!(polyline.vertices.len(), 2);
 
-        let pos3 = Position::default();
+        let pos3 = Position::world_origin();
         polyline.add_vertex(pos3, Some(Value::Literal(10.0)));
 
         assert_eq!(polyline.vertices.len(), 3);
@@ -572,6 +566,7 @@ mod tests {
             Value::Literal(0.1),
             Value::Parameter("curvature_rate".to_string()),
             Value::Literal(50.0),
+            Position::world_origin(),
         );
 
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.1);
@@ -583,8 +578,8 @@ mod tests {
     fn test_catalog_nurbs() {
         let mut nurbs = CatalogNurbs::new(Value::Literal(3));
 
-        let pos1 = Position::default();
-        let pos2 = Position::default();
+        let pos1 = Position::world_origin();
+        let pos2 = Position::world_origin();
 
         nurbs.add_control_point(pos1, Some(Value::Literal(1.0)));
         nurbs.add_control_point(pos2, None);
@@ -604,7 +599,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("length".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("100.0".to_string()),
                 constraint_groups: Vec::new(),
             }],
@@ -614,6 +609,7 @@ mod tests {
             Value::Literal(0.0),
             Value::Literal(0.01),
             Value::Parameter("length".to_string()),
+            Position::world_origin(),
         ));
 
         let trajectory = CatalogTrajectory::with_parameters(
@@ -650,11 +646,11 @@ mod tests {
             vertices: vec![
                 CatalogVertex {
                     time: Some(Value::Literal(0.0)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 },
                 CatalogVertex {
                     time: Some(Value::Literal(5.0)),
-                    position: Position::default(),
+                    position: Position::world_origin(),
                 },
             ],
         });
@@ -686,8 +682,8 @@ mod tests {
         use crate::types::catalogs::entities::CatalogEntity;
 
         let mut nurbs = CatalogNurbs::new(Value::Literal(3));
-        nurbs.add_control_point(Position::default(), Some(Value::Literal(1.0)));
-        nurbs.add_control_point(Position::default(), None);
+        nurbs.add_control_point(Position::world_origin(), Some(Value::Literal(1.0)));
+        nurbs.add_control_point(Position::world_origin(), None);
         nurbs.add_knot(Value::Literal(0.0));
         nurbs.add_knot(Value::Literal(1.0));
 
@@ -714,6 +710,7 @@ mod tests {
                 Value::Literal(0.1),
                 Value::Literal(0.01),
                 Value::Parameter("segmentLength".to_string()),
+                Position::world_origin(),
             )),
         );
 
@@ -729,20 +726,22 @@ mod tests {
     }
 
     #[test]
-    fn test_defaults() {
-        let trajectory = CatalogTrajectory::default();
-        let polyline = CatalogPolyline {
-            vertices: Vec::new(),
-        };
+    fn test_constructors_do_not_fabricate_name_or_shape() {
+        let trajectory = CatalogTrajectory::new(
+            "ExplicitTrajectory".to_string(),
+            CatalogTrajectoryShape::Polyline(CatalogPolyline {
+                vertices: Vec::new(),
+            }),
+        );
         let clothoid = CatalogClothoid::new(
             Value::Literal(0.0),
             Value::Literal(0.0),
             Value::Literal(1.0),
+            Position::world_origin(),
         );
         let nurbs = CatalogNurbs::new(Value::Literal(2));
 
-        assert_eq!(trajectory.name, "DefaultCatalogTrajectory");
-        assert!(polyline.vertices.is_empty());
+        assert_eq!(trajectory.name, "ExplicitTrajectory");
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);
         assert_eq!(nurbs.order.as_literal().unwrap(), &2);
     }

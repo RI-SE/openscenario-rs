@@ -7,6 +7,7 @@
 //! - Failing tests indicate missing functionality to implement next
 
 use openscenario_rs::parse_str;
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
 use openscenario_rs::types::OpenScenario;
 use std::fs;
@@ -84,7 +85,10 @@ fn can_access_entities() {
 
     if let Some(vehicle) = &ego.vehicle {
         assert_eq!(vehicle.name.as_literal().unwrap(), "EgoVehicle");
-        assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
+        assert_eq!(
+            vehicle.vehicle_category,
+            Value::Literal(VehicleCategory::Car)
+        );
 
         // Check bounding box
         assert_eq!(vehicle.bounding_box.center.x.as_literal().unwrap(), &0.0);
@@ -108,7 +112,7 @@ fn can_access_entities() {
         assert_eq!(pedestrian.name.as_literal().unwrap(), "TestPedestrian");
         assert_eq!(
             pedestrian.pedestrian_category,
-            PedestrianCategory::Pedestrian
+            Value::Literal(PedestrianCategory::Pedestrian)
         );
 
         // Check bounding box
@@ -218,8 +222,8 @@ fn can_create_and_serialize_actions() {
     // Test creating a SpeedAction
     let speed_action = SpeedAction {
         speed_action_dynamics: TransitionDynamics {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             following_mode: None,
             value: openscenario_rs::types::Double::literal(5.0),
         },
@@ -233,7 +237,7 @@ fn can_create_and_serialize_actions() {
 
     // Test creating a TeleportAction
     let teleport_action = TeleportAction {
-        position: Position::default(),
+        position: Position::world_origin(),
     };
 
     // If we get here without compile errors, the actions are working
@@ -249,22 +253,25 @@ fn can_create_and_serialize_conditions() {
     // Test creating a SimulationTimeCondition
     let simulation_time_condition = SimulationTimeCondition {
         value: openscenario_rs::types::Double::literal(10.0),
-        rule: Rule::GreaterThan,
+        rule: Value::Literal(Rule::GreaterThan),
     };
 
     // Test creating a SpeedCondition
     let speed_condition = SpeedCondition {
         value: openscenario_rs::types::Double::literal(25.0),
-        rule: Rule::LessThan,
+        rule: Value::Literal(Rule::LessThan),
         direction: None,
     };
 
-    assert_eq!(simulation_time_condition.rule, Rule::GreaterThan);
+    assert_eq!(
+        simulation_time_condition.rule,
+        Value::Literal(Rule::GreaterThan)
+    );
     assert_eq!(
         simulation_time_condition.value,
         openscenario_rs::types::Double::literal(10.0)
     );
-    assert_eq!(speed_condition.rule, Rule::LessThan);
+    assert_eq!(speed_condition.rule, Value::Literal(Rule::LessThan));
     assert_eq!(
         speed_condition.value,
         openscenario_rs::types::Double::literal(25.0)
@@ -377,7 +384,10 @@ mod cut_in_scenario_tests {
 
             if let Some(vehicle) = &ego.vehicle {
                 assert_eq!(vehicle.name.as_literal().unwrap(), "Default_car");
-                assert_eq!(vehicle.vehicle_category, VehicleCategory::Car);
+                assert_eq!(
+                    vehicle.vehicle_category,
+                    Value::Literal(VehicleCategory::Car)
+                );
 
                 // Check basic bounding box dimensions (what's currently implemented)
                 assert_eq!(vehicle.bounding_box.center.x.as_literal().unwrap(), &1.5);
@@ -705,8 +715,13 @@ fn can_parse_routing_actions_in_story_events() {
                         // Verify trajectory following mode
                         use openscenario_rs::types::enums::FollowingMode;
                         match follow_action.trajectory_following_mode.following_mode {
-                            FollowingMode::Follow => println!("  - Following mode: Follow"),
-                            FollowingMode::Position => println!("  - Following mode: Position"),
+                            Value::Literal(FollowingMode::Follow) => {
+                                println!("  - Following mode: Follow")
+                            }
+                            Value::Literal(FollowingMode::Position) => {
+                                println!("  - Following mode: Position")
+                            }
+                            ref other => println!("  - Following mode: {other}"),
                         }
                     }
                 }
@@ -748,7 +763,7 @@ fn can_validate_trajectory_following_modes() {
                                         use openscenario_rs::types::enums::FollowingMode;
                                         assert_eq!(
                                             follow_action.trajectory_following_mode.following_mode,
-                                            FollowingMode::Follow,
+                                            Value::Literal(FollowingMode::Follow),
                                             "cut_in_101_exam.xosc uses followingMode='follow'"
                                         );
                                     }
@@ -948,13 +963,13 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     // Create a simulation time condition
     let time_condition = SimulationTimeCondition {
         value: Value::literal(5.0),
-        rule: Rule::GreaterThan,
+        rule: Value::Literal(Rule::GreaterThan),
     };
 
     // Create a condition with the time condition
     let condition = Condition {
         name: Value::literal("StartCondition".to_string()),
-        condition_edge: ConditionEdge::Rising,
+        condition_edge: Value::Literal(ConditionEdge::Rising),
         delay: Value::literal(1.0),
         by_value_condition: Some(ByValueCondition {
             simulation_time_condition: Some(time_condition),
@@ -982,8 +997,8 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     // Create a speed action
     let speed_action = SpeedAction {
         speed_action_dynamics: TransitionDynamics {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
+            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+            dynamics_shape: Value::Literal(DynamicsShape::Linear),
             following_mode: None,
             value: Value::literal(3.0),
         },
@@ -999,7 +1014,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let event = Event {
         name: Value::literal("SpeedEvent".to_string()),
         maximum_execution_count: Some(Value::literal(1)),
-        priority: Priority::Override,
+        priority: Value::Literal(Priority::Override),
         actions: vec![StoryAction {
             global_action: None,
             user_defined_action: None,
@@ -1060,7 +1075,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let parameter_declarations = ParameterDeclarations {
         parameter_declarations: vec![ParameterDeclaration {
             name: Value::literal("MaxSpeed".to_string()),
-            parameter_type: ParameterType::Double,
+            parameter_type: Value::Literal(ParameterType::Double),
             value: Value::literal("30.0".to_string()),
             constraint_groups: Vec::new(),
         }],
@@ -1095,7 +1110,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     let event = &maneuver.events[0];
     assert_eq!(event.name.as_literal().unwrap(), "SpeedEvent");
-    assert_eq!(event.priority, Priority::Override);
+    assert_eq!(event.priority, Value::Literal(Priority::Override));
 
     // Verify the trigger system
     let trigger = event.start_trigger.as_ref().unwrap();
@@ -1106,7 +1121,10 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     let condition = &condition_group.conditions[0];
     assert_eq!(condition.name.as_literal().unwrap(), "StartCondition");
-    assert_eq!(condition.condition_edge, ConditionEdge::Rising);
+    assert_eq!(
+        condition.condition_edge,
+        Value::Literal(ConditionEdge::Rising)
+    );
     assert_eq!(condition.delay.as_literal().unwrap(), &1.0);
 
     // Verify the action system
@@ -1116,11 +1134,11 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
             if let Some(speed_action) = &longitudinal_action.speed_action {
                 assert_eq!(
                     speed_action.speed_action_dynamics.dynamics_dimension,
-                    DynamicsDimension::Time
+                    Value::Literal(DynamicsDimension::Time)
                 );
                 assert_eq!(
                     speed_action.speed_action_dynamics.dynamics_shape,
-                    DynamicsShape::Linear
+                    Value::Literal(DynamicsShape::Linear)
                 );
                 assert_eq!(
                     speed_action
@@ -1154,7 +1172,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     let param = &params.parameter_declarations[0];
     assert_eq!(param.name.as_literal().unwrap(), "MaxSpeed");
-    assert_eq!(param.parameter_type, ParameterType::Double);
+    assert_eq!(param.parameter_type, Value::Literal(ParameterType::Double));
     assert_eq!(param.value.as_literal().unwrap(), "30.0");
 
     println!("✅ Successfully created complete OpenSCENARIO structure:");
@@ -1220,7 +1238,10 @@ fn test_parameter_declarations_with_constraints() {
 
     let speed_param = &declarations.parameter_declarations[0];
     assert_eq!(speed_param.name.as_literal().unwrap(), "MaxSpeed");
-    assert_eq!(speed_param.parameter_type, ParameterType::Double);
+    assert_eq!(
+        speed_param.parameter_type,
+        Value::Literal(ParameterType::Double)
+    );
     assert!(speed_param.has_constraints());
 
     // Test constraints
@@ -1237,7 +1258,10 @@ fn test_parameter_declarations_with_constraints() {
 
     let name_param = &declarations.parameter_declarations[1];
     assert_eq!(name_param.name.as_literal().unwrap(), "VehicleName");
-    assert_eq!(name_param.parameter_type, ParameterType::String);
+    assert_eq!(
+        name_param.parameter_type,
+        Value::Literal(ParameterType::String)
+    );
     assert!(!name_param.has_constraints());
 }
 

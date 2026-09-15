@@ -1,9 +1,7 @@
-//! Variable declaration types for OpenSCENARIO
-//!
-//! This module contains variable declaration types that follow the same pattern
-//! as parameter declarations but for runtime variables rather than compile-time parameters.
+//! Variable declarations. Same shape as parameter declarations, but variables may
+//! change during the run where parameters are fixed once resolved.
 
-use crate::types::basic::OSString;
+use crate::types::basic::{OSString, Value};
 use crate::types::enums::ParameterType;
 use serde::{Deserialize, Serialize};
 
@@ -20,19 +18,9 @@ pub struct VariableDeclaration {
     #[serde(rename = "@name")]
     pub name: OSString,
     #[serde(rename = "@variableType")]
-    pub variable_type: ParameterType,
+    pub variable_type: Value<ParameterType>,
     #[serde(rename = "@value")]
     pub value: OSString,
-}
-
-impl Default for VariableDeclaration {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultVariable".to_string()),
-            variable_type: ParameterType::String,
-            value: OSString::literal("".to_string()),
-        }
-    }
 }
 
 impl VariableDeclarations {
@@ -46,7 +34,7 @@ impl VariableDeclarations {
         Self {
             variable_declarations: vec![VariableDeclaration {
                 name: OSString::literal(name),
-                variable_type: var_type,
+                variable_type: Value::Literal(var_type),
                 value: OSString::literal(value),
             }],
         }
@@ -56,7 +44,7 @@ impl VariableDeclarations {
     pub fn add_variable(&mut self, name: String, var_type: ParameterType, value: String) {
         self.variable_declarations.push(VariableDeclaration {
             name: OSString::literal(name),
-            variable_type: var_type,
+            variable_type: Value::Literal(var_type),
             value: OSString::literal(value),
         });
     }
@@ -77,7 +65,7 @@ impl VariableDeclaration {
     pub fn new(name: String, var_type: ParameterType, value: String) -> Self {
         Self {
             name: OSString::literal(name),
-            variable_type: var_type,
+            variable_type: Value::Literal(var_type),
             value: OSString::literal(value),
         }
     }
@@ -126,13 +114,19 @@ mod tests {
     fn test_variable_declaration_creation() {
         let string_var =
             VariableDeclaration::string_variable("name".to_string(), "value".to_string());
-        assert_eq!(string_var.variable_type, ParameterType::String);
+        assert_eq!(
+            string_var.variable_type,
+            Value::Literal(ParameterType::String)
+        );
 
         let int_var = VariableDeclaration::int_variable("count".to_string(), 42);
-        assert_eq!(int_var.variable_type, ParameterType::Int);
+        assert_eq!(int_var.variable_type, Value::Literal(ParameterType::Int));
 
         let bool_var = VariableDeclaration::bool_variable("flag".to_string(), true);
-        assert_eq!(bool_var.variable_type, ParameterType::Boolean);
+        assert_eq!(
+            bool_var.variable_type,
+            Value::Literal(ParameterType::Boolean)
+        );
     }
 
     #[test]
@@ -148,11 +142,11 @@ mod tests {
         assert_eq!(decls.len(), 2);
         assert_eq!(
             decls.variable_declarations[0].variable_type,
-            ParameterType::String
+            Value::Literal(ParameterType::String)
         );
         assert_eq!(
             decls.variable_declarations[1].variable_type,
-            ParameterType::Int
+            Value::Literal(ParameterType::Int)
         );
     }
 }

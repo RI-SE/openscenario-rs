@@ -1,11 +1,7 @@
-//! Initialization system for OpenSCENARIO scenarios
+//! The `Init` block: the state of the world before the story starts.
 //!
-//! This file contains:
-//! - Init structure with Actions container for scenario initialization
-//! - GlobalAction types for environment and infrastructure setup
-//! - Private actions for entity-specific initialization
-//! - Integration with existing action and environment systems
-//!
+//! Its `Actions` container holds `GlobalAction`s for environment and infrastructure
+//! and `Private` actions for each entity's starting position, speed and controller.
 use crate::types::actions::appearance::{AppearanceAction, VisibilityAction};
 use crate::types::actions::control::{ActivateControllerAction, ControllerAction};
 use crate::types::actions::movement::{
@@ -50,7 +46,7 @@ pub struct Actions {
 ///
 /// Modelled as parallel `Option` fields (crate convention for choice groups);
 /// exactly one must be `Some` — see [`GlobalAction::validate`].
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GlobalAction {
     #[serde(
         rename = "EnvironmentAction",
@@ -95,6 +91,29 @@ pub struct GlobalAction {
         skip_serializing_if = "Option::is_none"
     )]
     pub variable_action: Option<crate::types::actions::wrappers::VariableAction>,
+}
+
+impl GlobalAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `GlobalAction (`:1257-1266`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            environment_action: None,
+            entity_action: None,
+            infrastructure_action: None,
+            set_monitor_action: None,
+            parameter_action: None,
+            traffic_action: None,
+            variable_action: None,
+        }
+    }
 }
 
 impl GlobalAction {
@@ -145,7 +164,7 @@ impl GlobalAction {
 }
 
 /// Environment setup action: XSD choice of an inline Environment or a CatalogReference
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EnvironmentAction {
     #[serde(
         rename = "Environment",
@@ -177,7 +196,7 @@ pub struct Private {
 /// Private actions that can be applied to individual entities
 /// XSD requires exactly one child element (choice group)
 /// The PrivateAction element in XML contains one of these action types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivateAction {
     /// Exactly one of these fields should be present (XML choice group)
     #[serde(
@@ -243,6 +262,32 @@ pub struct PrivateAction {
 }
 
 impl PrivateAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `PrivateAction (`:1777-1791`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            longitudinal_action: None,
+            lateral_action: None,
+            teleport_action: None,
+            routing_action: None,
+            synchronize_action: None,
+            activate_controller_action: None,
+            visibility_action: None,
+            controller_action: None,
+            appearance_action: None,
+            trailer_action: None,
+        }
+    }
+}
+
+impl PrivateAction {
     /// Get the action type contained in this PrivateAction
     pub fn get_action_type(&self) -> Option<&str> {
         if self.longitudinal_action.is_some() {
@@ -299,7 +344,13 @@ impl PrivateAction {
 }
 
 /// Longitudinal movement actions (speed control, etc.)
-/// XSD requires exactly one child element (choice group)
+///
+/// XSD `LongitudinalAction` (`:1431-1437`): a bare `xsd:choice` of `SpeedAction` |
+/// `LongitudinalDistanceAction` | `SpeedProfileAction`, no `minOccurs="0"` wrapper — but
+/// modelled here as parallel `Option`s per the crate's choice-group convention (see
+/// `PrivateAction` above). The derived `Default` — all three branches `None` — states
+/// nothing about which branch was chosen and is kept per the container/choice policy,
+/// consistent with `PrivateAction`'s and `GlobalAction`'s derived defaults in this file.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
     /// Exactly one of these fields should be present (XML choice group)
@@ -321,6 +372,25 @@ pub struct LongitudinalAction {
         default
     )]
     pub speed_profile_action: Option<SpeedProfileAction>,
+}
+
+impl LongitudinalAction {
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own.** XSD `LongitudinalAction (`:1411-1417`)` is a bare `xsd:choice`, so an
+    /// instance must select exactly one branch; this value selects none. It exists to be
+    /// the base of the per-branch constructors and struct-update expressions below, each of
+    /// which immediately fills one branch in. It replaces a derived `Default`, which said
+    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
+    /// `Default` and inherit the invalidity silently. See the `Default` policy in
+    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
+    pub fn empty() -> Self {
+        Self {
+            speed_action: None,
+            longitudinal_distance_action: None,
+            speed_profile_action: None,
+        }
+    }
 }
 
 impl LongitudinalAction {
@@ -356,31 +426,12 @@ impl LongitudinalAction {
     }
 }
 
-impl Default for LongitudinalAction {
-    fn default() -> Self {
-        Self {
-            speed_action: Some(SpeedAction::default()),
-            longitudinal_distance_action: None,
-            speed_profile_action: None,
-        }
-    }
-}
-
 /// Types of longitudinal actions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum LongitudinalActionType {
     SpeedAction(SpeedAction),
     // SpeedProfileAction, SynchronizeAction, etc. can be added later
-}
-
-impl Default for Private {
-    fn default() -> Self {
-        Self {
-            entity_ref: crate::types::basic::Value::literal("DefaultEntity".to_string()),
-            private_actions: Vec::new(),
-        }
-    }
 }
 
 impl Private {
@@ -402,7 +453,11 @@ impl Private {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::actions::movement::{
+        SpeedActionTarget, SpeedProfileEntry, TransitionDynamics,
+    };
     use crate::types::basic::Value;
+    use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode};
     use crate::types::environment::{RoadCondition, TimeOfDay, Weather};
 
     #[test]
@@ -420,7 +475,7 @@ mod tests {
                         }),
                         catalog_reference: None,
                     }),
-                    ..Default::default()
+                    ..GlobalAction::empty()
                 }],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
@@ -443,7 +498,14 @@ mod tests {
         let private = Private::new("TestEntity")
             .add_action(PrivateAction {
                 longitudinal_action: Some(LongitudinalAction {
-                    speed_action: Some(SpeedAction::default()),
+                    speed_action: Some(SpeedAction::new(
+                        TransitionDynamics::new(
+                            DynamicsDimension::Time,
+                            DynamicsShape::Linear,
+                            1.0,
+                        ),
+                        SpeedActionTarget::absolute(10.0),
+                    )),
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
@@ -454,18 +516,22 @@ mod tests {
                 activate_controller_action: None,
                 visibility_action: None,
                 controller_action: None,
-                ..Default::default()
+                ..PrivateAction::empty()
             })
             .add_action(PrivateAction {
                 longitudinal_action: None,
                 lateral_action: None,
-                teleport_action: Some(TeleportAction::default()),
+                teleport_action: Some(TeleportAction::new(
+                    crate::types::positions::Position::world(
+                        crate::types::positions::WorldPosition::new(1.0, 2.0),
+                    ),
+                )),
                 routing_action: None,
                 synchronize_action: None,
                 activate_controller_action: None,
                 visibility_action: None,
                 controller_action: None,
-                ..Default::default()
+                ..PrivateAction::empty()
             });
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
@@ -561,7 +627,7 @@ mod tests {
                         }),
                         catalog_reference: None,
                     }),
-                    ..Default::default()
+                    ..GlobalAction::empty()
                 }],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
@@ -579,7 +645,10 @@ mod tests {
     fn test_longitudinal_action_validation() {
         // Test valid action with SpeedAction
         let valid_speed = LongitudinalAction {
-            speed_action: Some(SpeedAction::default()),
+            speed_action: Some(SpeedAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                SpeedActionTarget::absolute(10.0),
+            )),
             longitudinal_distance_action: None,
             speed_profile_action: None,
         };
@@ -588,7 +657,9 @@ mod tests {
         // Test valid action with LongitudinalDistanceAction
         let valid_distance = LongitudinalAction {
             speed_action: None,
-            longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+            longitudinal_distance_action: Some(
+                LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+            ),
             speed_profile_action: None,
         };
         assert!(valid_distance.validate().is_ok());
@@ -597,7 +668,10 @@ mod tests {
         let valid_profile = LongitudinalAction {
             speed_action: None,
             longitudinal_distance_action: None,
-            speed_profile_action: Some(SpeedProfileAction::default()),
+            speed_profile_action: Some(SpeedProfileAction::new(
+                FollowingMode::Follow,
+                vec![SpeedProfileEntry::new(10.0)],
+            )),
         };
         assert!(valid_profile.validate().is_ok());
 
@@ -611,8 +685,13 @@ mod tests {
 
         // Test invalid action with multiple actions
         let invalid_multiple = LongitudinalAction {
-            speed_action: Some(SpeedAction::default()),
-            longitudinal_distance_action: Some(LongitudinalDistanceAction::default()),
+            speed_action: Some(SpeedAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                SpeedActionTarget::absolute(10.0),
+            )),
+            longitudinal_distance_action: Some(
+                LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+            ),
             speed_profile_action: None,
         };
         assert!(invalid_multiple.validate().is_err());
@@ -622,7 +701,7 @@ mod tests {
     fn test_private_action_validation() {
         // Test valid action with LongitudinalAction
         let valid_longitudinal = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction::default()),
+            longitudinal_action: Some(LongitudinalAction::empty()),
             lateral_action: None,
             teleport_action: None,
             routing_action: None,
@@ -630,26 +709,31 @@ mod tests {
             activate_controller_action: None,
             visibility_action: None,
             controller_action: None,
-            ..Default::default()
+            ..PrivateAction::empty()
         };
         assert!(valid_longitudinal.validate().is_ok());
 
         // Test invalid action with no actions
-        let invalid_none = PrivateAction::default();
+        let invalid_none = PrivateAction::empty();
         // Default has no actions (all None), so validation should fail
         assert!(invalid_none.validate().is_err());
 
         // Test invalid action with multiple actions
         let invalid_multiple = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction::default()),
-            lateral_action: Some(crate::types::actions::movement::LateralAction::default()),
+            longitudinal_action: Some(LongitudinalAction::empty()),
+            lateral_action: Some(crate::types::actions::movement::LateralAction::lane_change(
+                crate::types::actions::movement::LaneChangeAction::new(
+                    TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                    crate::types::actions::movement::LaneChangeTarget::relative("Ego", -1),
+                ),
+            )),
             teleport_action: None,
             routing_action: None,
             synchronize_action: None,
             activate_controller_action: None,
             visibility_action: None,
             controller_action: None,
-            ..Default::default()
+            ..PrivateAction::empty()
         };
         assert!(invalid_multiple.validate().is_err());
     }

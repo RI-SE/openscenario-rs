@@ -75,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n4. Collision Detection:");
 
     let bbox1 = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions::car(),
     };
 
@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // === Point Containment Tests ===
     println!("\n5. Point Containment Tests:");
     let test_bbox = BoundingBox {
-        center: Center::default(),
+        center: Center::new(0.0, 0.0, 0.0),
         dimensions: Dimensions {
             width: openscenario_rs::types::basic::Value::literal(2.0),
             length: openscenario_rs::types::basic::Value::literal(4.0),

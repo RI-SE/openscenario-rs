@@ -13,6 +13,7 @@
 //! - **raw XML deserialise** tests: parse a hard-coded XML string and assert field
 //!   values.  These prove that the *correct* XSD attribute names are accepted.
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Boolean, Double, Int, OSString},
     conditions::{
@@ -143,7 +144,7 @@ fn test_collision_condition_serializes_by_object_type_element() {
 #[test]
 fn test_collision_target_xml_round_trip() {
     let original = CollisionTarget {
-        target_type: ObjectType::Vehicle,
+        target_type: Value::Literal(ObjectType::Vehicle),
     };
     let deserialized: CollisionTarget = round_trip(&original);
     assert_eq!(original, deserialized);
@@ -152,7 +153,7 @@ fn test_collision_target_xml_round_trip() {
 #[test]
 fn test_collision_target_serializes_object_type_attribute() {
     let target = CollisionTarget {
-        target_type: ObjectType::Pedestrian,
+        target_type: Value::Literal(ObjectType::Pedestrian),
     };
     let xml = quick_xml::se::to_string(&target).expect("serialize failed");
     // XSD:832 - complexType ByObjectType has required attribute `type`
@@ -177,7 +178,7 @@ fn test_time_to_collision_target_entity_xml_round_trip() {
 
 #[test]
 fn test_time_to_collision_target_position_xml_round_trip() {
-    let original = TimeToCollisionTarget::position(Position::default());
+    let original = TimeToCollisionTarget::position(Position::world_origin());
     let deserialized: TimeToCollisionTarget = round_trip(&original);
     assert_eq!(original, deserialized);
 }
@@ -209,7 +210,7 @@ fn test_time_to_collision_condition_entity_target_xml_round_trip() {
 #[test]
 fn test_time_to_collision_condition_position_target_xml_round_trip() {
     let original = TimeToCollisionCondition::with_position_target(
-        Position::default(),
+        Position::world_origin(),
         2.5,
         Rule::LessThan,
         false,
@@ -239,7 +240,7 @@ fn test_time_to_collision_condition_serializes_correct_target_element() {
 #[test]
 fn test_angle_condition_xml_round_trip() {
     let original = AngleCondition {
-        angle_type: AngleType::Heading,
+        angle_type: Value::Literal(AngleType::Heading),
         angle: Double::literal(1.57),
         angle_tolerance: Double::literal(0.1),
         coordinate_system: None,
@@ -252,10 +253,10 @@ fn test_angle_condition_xml_round_trip() {
 #[allow(clippy::approx_constant)] // 3.14 is a scenario angle value, not an approximation of PI
 fn test_angle_condition_with_coordinate_system_xml_round_trip() {
     let original = AngleCondition {
-        angle_type: AngleType::Pitch,
+        angle_type: Value::Literal(AngleType::Pitch),
         angle: Double::literal(3.14),
         angle_tolerance: Double::literal(0.05),
-        coordinate_system: Some(CoordinateSystem::Entity),
+        coordinate_system: Some(Value::Literal(CoordinateSystem::Entity)),
     };
     let deserialized: AngleCondition = round_trip(&original);
     assert_eq!(original, deserialized);
@@ -268,7 +269,7 @@ fn test_angle_condition_raw_xml_deserialize_attributes() {
     let xml = r#"<AngleCondition angleType="heading" angle="1.57" angleTolerance="0.1"/>"#;
     let condition: AngleCondition =
         quick_xml::de::from_str(xml).expect("failed to deserialise AngleCondition from raw XML");
-    assert_eq!(condition.angle_type, AngleType::Heading);
+    assert_eq!(condition.angle_type, Value::Literal(AngleType::Heading));
     assert_eq!(condition.angle, Double::literal(1.57));
     assert_eq!(condition.angle_tolerance, Double::literal(0.1));
     assert_eq!(condition.coordinate_system, None);
@@ -281,19 +282,22 @@ fn test_angle_condition_raw_xml_deserialize_with_coordinate_system() {
     let xml = r#"<AngleCondition angleType="pitch" angle="3.14" angleTolerance="0.05" coordinateSystem="entity"/>"#;
     let condition: AngleCondition = quick_xml::de::from_str(xml)
         .expect("failed to deserialise AngleCondition with coordinateSystem");
-    assert_eq!(condition.angle_type, AngleType::Pitch);
+    assert_eq!(condition.angle_type, Value::Literal(AngleType::Pitch));
     assert_eq!(condition.angle, Double::literal(3.14));
     assert_eq!(condition.angle_tolerance, Double::literal(0.05));
-    assert_eq!(condition.coordinate_system, Some(CoordinateSystem::Entity));
+    assert_eq!(
+        condition.coordinate_system,
+        Some(Value::Literal(CoordinateSystem::Entity))
+    );
 }
 
 #[test]
 fn test_angle_condition_serializes_correct_attribute_names() {
     let condition = AngleCondition {
-        angle_type: AngleType::Heading,
+        angle_type: Value::Literal(AngleType::Heading),
         angle: Double::literal(1.0),
         angle_tolerance: Double::literal(0.2),
-        coordinate_system: Some(CoordinateSystem::Road),
+        coordinate_system: Some(Value::Literal(CoordinateSystem::Road)),
     };
     let xml = quick_xml::se::to_string(&condition).expect("serialize failed");
     assert!(
@@ -329,7 +333,7 @@ fn test_angle_condition_serializes_correct_attribute_names() {
 fn test_relative_speed_condition_xml_round_trip() {
     let original = RelativeSpeedCondition {
         entity_ref: OSString::literal("front_vehicle".to_string()),
-        rule: Rule::LessThan,
+        rule: Value::Literal(Rule::LessThan),
         value: Double::literal(5.0),
         direction: None,
     };
@@ -341,9 +345,9 @@ fn test_relative_speed_condition_xml_round_trip() {
 fn test_relative_speed_condition_with_direction_xml_round_trip() {
     let original = RelativeSpeedCondition {
         entity_ref: OSString::literal("car_ahead".to_string()),
-        rule: Rule::GreaterThan,
+        rule: Value::Literal(Rule::GreaterThan),
         value: Double::literal(2.0),
-        direction: Some(DirectionalDimension::Longitudinal),
+        direction: Some(Value::Literal(DirectionalDimension::Longitudinal)),
     };
     let deserialized: RelativeSpeedCondition = round_trip(&original);
     assert_eq!(original, deserialized);
@@ -353,7 +357,7 @@ fn test_relative_speed_condition_with_direction_xml_round_trip() {
 fn test_relative_speed_condition_serializes_correct_attribute_names() {
     let condition = RelativeSpeedCondition {
         entity_ref: OSString::literal("target".to_string()),
-        rule: Rule::EqualTo,
+        rule: Value::Literal(Rule::EqualTo),
         value: Double::literal(0.0),
         direction: None,
     };
@@ -522,7 +526,7 @@ fn test_relative_clearance_condition_serializes_correct_attribute_names() {
 fn test_relative_angle_condition_xml_round_trip() {
     let original = RelativeAngleCondition {
         entity_ref: OSString::literal("lead_vehicle".to_string()),
-        angle_type: AngleType::Heading,
+        angle_type: Value::Literal(AngleType::Heading),
         angle: Double::literal(0.5),
         angle_tolerance: Double::literal(0.1),
         coordinate_system: None,
@@ -535,10 +539,10 @@ fn test_relative_angle_condition_xml_round_trip() {
 fn test_relative_angle_condition_with_coordinate_system_xml_round_trip() {
     let original = RelativeAngleCondition {
         entity_ref: OSString::literal("ref_entity".to_string()),
-        angle_type: AngleType::Pitch,
+        angle_type: Value::Literal(AngleType::Pitch),
         angle: Double::literal(1.0),
         angle_tolerance: Double::literal(0.2),
-        coordinate_system: Some(CoordinateSystem::Lane),
+        coordinate_system: Some(Value::Literal(CoordinateSystem::Lane)),
     };
     let deserialized: RelativeAngleCondition = round_trip(&original);
     assert_eq!(original, deserialized);
@@ -548,7 +552,7 @@ fn test_relative_angle_condition_with_coordinate_system_xml_round_trip() {
 fn test_relative_angle_condition_serializes_correct_attribute_names() {
     let condition = RelativeAngleCondition {
         entity_ref: OSString::literal("car".to_string()),
-        angle_type: AngleType::Heading,
+        angle_type: Value::Literal(AngleType::Heading),
         angle: Double::literal(0.0),
         angle_tolerance: Double::literal(0.1),
         coordinate_system: None,

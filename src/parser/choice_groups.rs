@@ -1,58 +1,17 @@
-//! XSD Choice Group Infrastructure
+//! Parsing for XSD choice groups with unbounded occurrences.
 //!
-//! This module provides the core infrastructure for handling XSD choice groups with
-//! unbounded occurrences. XSD choice groups allow mixed element types in any order,
-//! which cannot be properly handled by serde's sequential deserialization approach.
+//! A choice group admits a mix of element types in any order. An `Actions` element
+//! may hold `PrivateAction`, `UserDefinedAction` and `GlobalAction` children
+//! interleaved however the author wrote them. Serde deserializes
+//! sequentially and cannot express that, so these groups are parsed here instead.
 //!
-//! # Overview
+//! Implement [`XsdChoiceGroup`] for the container type and parse it with
+//! [`parse_choice_group`], or register it with [`ChoiceGroupRegistry`] when the
+//! same group is parsed repeatedly.
 //!
-//! OpenSCENARIO XML uses XSD choice groups extensively for polymorphic content.
-//! For example, an `Actions` element can contain any combination of `PrivateAction`,
-//! `UserDefinedAction`, and `GlobalAction` elements in any order.
-//!
-//! # Basic Usage
-//!
-//! ## Implementing Choice Groups
-//!
-//! Choice groups are implemented using the `XsdChoiceGroup` trait.
-//! See the trait documentation for implementation details.
-//!
-//! ## Parsing Choice Groups
-//!
-//! Choice groups are parsed using the `parse_choice_group` function
-//! which works with types implementing the `XsdChoiceGroup` trait.
-//!
-//! ## Registry-Based Parsing
-//!
-//! The `ChoiceGroupRegistry` provides a centralized way to parse choice groups.
-//!
-//! # Advanced Features
-//!
-//! ## Order Preservation
-//!
-//! The parser maintains the document order of elements, preserving
-//! the sequence in which they appear in the XML.
-//!
-//! ## Nested Element Handling
-//!
-//! The parser correctly handles nested elements and avoids false matches
-//! by tracking element depth and context.
-//!
-//! ## Empty Containers
-//!
-//! Empty containers (both `<Container></Container>` and `<Container/>`)
-//! are handled gracefully, returning empty collections.
-//!
-//! # Error Handling
-//!
-//! The parser provides detailed error information with context
-//! about which element failed and why.
-//!
-//! # Performance Considerations
-//!
-//! - The parser uses string manipulation for simplicity but is optimized for typical use cases
-//! - Element order detection adds minimal overhead (~5% for typical scenarios)
-//! - Use the registry for repeated parsing to avoid setup costs
+//! Document order is preserved. Depth tracking keeps a nested element of the same
+//! name from matching as a sibling. Both `<Container></Container>` and
+//! `<Container/>` parse to an empty collection rather than an error.
 
 use crate::error::{Error, Result};
 
@@ -111,11 +70,11 @@ impl ChoiceGroupParser {
         let start_pos = if let Some(pos) = self.xml.find(&container_start_tag) {
             // Find the end of the opening tag
 
-            (self.xml[pos..]
+            self.xml[pos..]
                 .find('>')
                 .ok_or_else(|| Error::validation_error("xml", "Malformed container start tag"))?
                 + pos
-                + 1)
+                + 1
         } else {
             return Err(Error::validation_error(
                 "xml",

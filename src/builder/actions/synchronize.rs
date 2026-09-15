@@ -1,23 +1,17 @@
-//! Synchronize action builder for coordinated entity movement
+//! Synchronize action builder.
 //!
-//! This module provides a builder for the synchronize action, which allows
-//! entities to coordinate their movement with a master entity.
-//!
-//! # Usage Examples
+//! The action holds an entity's arrival at its own target position in step with a
+//! master entity's arrival at the master position.
 //!
 //! ```rust
 //! use openscenario_rs::builder::actions::synchronize::SynchronizeActionBuilder;
 //! use openscenario_rs::types::positions::Position;
 //!
-//! // Create synchronize action
-//! let master_position = Position::default();
-//! let entity_position = Position::default();
-//!
 //! let sync_action = SynchronizeActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .with_master("lead_vehicle")
-//!     .master_position(master_position)
-//!     .entity_position(entity_position);
+//!     .master_position(Position::world_origin())
+//!     .entity_position(Position::world_origin());
 //! ```
 
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
@@ -115,8 +109,8 @@ mod tests {
 
     #[test]
     fn test_synchronize_basic() {
-        let master_pos = Position::default();
-        let entity_pos = Position::default();
+        let master_pos = Position::world_origin();
+        let entity_pos = Position::world_origin();
 
         let builder = SynchronizeActionBuilder::new()
             .for_entity("ego")

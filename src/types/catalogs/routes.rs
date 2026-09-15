@@ -1,7 +1,5 @@
-//! Route catalog types for OpenSCENARIO reusable route definitions
-//!
-//! This module contains catalog-specific route types that enable reuse of
-//! route definitions across multiple scenarios with parameter substitution.
+//! `CatalogRoute` and `RouteWaypoint`: a route in its catalog-file form, with parameter
+//! declarations covering the waypoints it holds.
 
 use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
 use crate::types::enums::RouteStrategy;
@@ -35,17 +33,6 @@ pub struct CatalogRoute {
     pub waypoints: Vec<RouteWaypoint>,
 }
 
-impl Default for CatalogRoute {
-    fn default() -> Self {
-        Self {
-            name: "DefaultCatalogRoute".to_string(),
-            closed: Value::Literal(false),
-            parameter_declarations: None,
-            waypoints: Vec::new(),
-        }
-    }
-}
-
 /// Waypoint in a route with position and routing configuration
 ///
 /// Represents a point along a route with optional routing strategy
@@ -59,36 +46,7 @@ pub struct RouteWaypoint {
 
     /// Routing strategy to reach this waypoint (required per XSD)
     #[serde(rename = "@routeStrategy")]
-    pub route_strategy: RouteStrategy,
-}
-
-impl Default for RouteWaypoint {
-    fn default() -> Self {
-        use crate::types::positions::WorldPosition;
-
-        Self {
-            position: Position {
-                world_position: Some(WorldPosition {
-                    x: Value::Literal(0.0),
-                    y: Value::Literal(0.0),
-                    z: Some(Value::Literal(0.0)),
-                    h: None,
-                    p: None,
-                    r: None,
-                }),
-                relative_world_position: None,
-                road_position: None,
-                relative_road_position: None,
-                lane_position: None,
-                relative_lane_position: None,
-                route_position: None,
-                trajectory_position: None,
-                geographic_position: None,
-                relative_object_position: None,
-            },
-            route_strategy: RouteStrategy::Fastest,
-        }
-    }
+    pub route_strategy: Value<RouteStrategy>,
 }
 
 /// Parameter assignments for route references
@@ -155,7 +113,7 @@ impl CatalogRoute {
     pub fn add_position_waypoint(&mut self, position: Position, route_strategy: RouteStrategy) {
         self.waypoints.push(RouteWaypoint {
             position,
-            route_strategy,
+            route_strategy: Value::Literal(route_strategy),
         });
     }
 
@@ -170,7 +128,7 @@ impl RouteWaypoint {
     pub fn new(position: Position, route_strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy,
+            route_strategy: Value::Literal(route_strategy),
         }
     }
 
@@ -178,7 +136,7 @@ impl RouteWaypoint {
     pub fn with_strategy(position: Position, strategy: RouteStrategy) -> Self {
         Self {
             position,
-            route_strategy: strategy,
+            route_strategy: Value::Literal(strategy),
         }
     }
 }
@@ -325,8 +283,8 @@ mod tests {
     fn test_route_waypoints() {
         let mut route = CatalogRoute::new("WaypointRoute".to_string());
 
-        let pos1 = Position::default();
-        let pos2 = Position::default();
+        let pos1 = Position::world_origin();
+        let pos2 = Position::world_origin();
 
         route.add_position_waypoint(pos1, RouteStrategy::Shortest);
 
@@ -334,19 +292,31 @@ mod tests {
         route.add_waypoint(waypoint2);
 
         assert_eq!(route.waypoint_count(), 2);
-        assert_eq!(route.waypoints[0].route_strategy, RouteStrategy::Shortest);
-        assert_eq!(route.waypoints[1].route_strategy, RouteStrategy::Fastest);
+        assert_eq!(
+            route.waypoints[0].route_strategy,
+            Value::Literal(RouteStrategy::Shortest)
+        );
+        assert_eq!(
+            route.waypoints[1].route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 
     #[test]
     fn test_waypoint_creation() {
-        let pos = Position::default();
+        let pos = Position::world_origin();
 
         let waypoint1 = RouteWaypoint::new(pos.clone(), RouteStrategy::Fastest);
         let waypoint2 = RouteWaypoint::with_strategy(pos, RouteStrategy::Shortest);
 
-        assert_eq!(waypoint1.route_strategy, RouteStrategy::Fastest);
-        assert_eq!(waypoint2.route_strategy, RouteStrategy::Shortest);
+        assert_eq!(
+            waypoint1.route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
+        assert_eq!(
+            waypoint2.route_strategy,
+            Value::Literal(RouteStrategy::Shortest)
+        );
     }
 
     #[test]
@@ -354,7 +324,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("targetSpeed".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("50.0".to_string()),
                 constraint_groups: Vec::new(),
             }],
@@ -418,11 +388,11 @@ mod tests {
         let mut route = CatalogRoute::new("ResolvedRoute".to_string());
         route.closed = Value::Parameter("isClosed".to_string());
         route.add_waypoint(RouteWaypoint::with_strategy(
-            Position::default(),
+            Position::world_origin(),
             RouteStrategy::Shortest,
         ));
         route.add_waypoint(RouteWaypoint::with_strategy(
-            Position::default(),
+            Position::world_origin(),
             RouteStrategy::Fastest,
         ));
 
@@ -436,17 +406,23 @@ mod tests {
         assert_eq!(resolved.waypoints.len(), 2);
         assert_eq!(
             resolved.waypoints[0].route_strategy,
-            RouteStrategy::Shortest
+            Value::Literal(RouteStrategy::Shortest)
         );
-        assert_eq!(resolved.waypoints[1].route_strategy, RouteStrategy::Fastest);
+        assert_eq!(
+            resolved.waypoints[1].route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 
     #[test]
-    fn test_defaults() {
-        let route = CatalogRoute::default();
-        let waypoint = RouteWaypoint::default();
+    fn test_constructors_do_not_fabricate_name_or_strategy() {
+        let route = CatalogRoute::new("ExplicitRoute".to_string());
+        let waypoint = RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest);
 
-        assert_eq!(route.name, "DefaultCatalogRoute");
-        assert_eq!(waypoint.route_strategy, RouteStrategy::Fastest);
+        assert_eq!(route.name, "ExplicitRoute");
+        assert_eq!(
+            waypoint.route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 }

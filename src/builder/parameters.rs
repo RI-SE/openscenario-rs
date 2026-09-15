@@ -1,7 +1,4 @@
-//! Parameter builder support for dynamic scenario values
-//!
-//! This module provides builders for working with OpenSCENARIO parameters,
-//! enabling dynamic value substitution and parameterized scenarios.
+//! Builders for parameter declarations and the `${...}` references that use them.
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
@@ -26,7 +23,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_string_parameter(mut self, name: &str, default_value: &str) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::String,
+            parameter_type: Value::Literal(ParameterType::String),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -37,7 +34,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_double_parameter(mut self, name: &str, default_value: f64) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::Double,
+            parameter_type: Value::Literal(ParameterType::Double),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -48,7 +45,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_int_parameter(mut self, name: &str, default_value: i32) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::Int,
+            parameter_type: Value::Literal(ParameterType::Int),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -59,7 +56,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_boolean_parameter(mut self, name: &str, default_value: bool) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::Boolean,
+            parameter_type: Value::Literal(ParameterType::Boolean),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -70,7 +67,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_datetime_parameter(mut self, name: &str, default_value: &str) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::DateTime,
+            parameter_type: Value::Literal(ParameterType::DateTime),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -81,7 +78,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_unsigned_short_parameter(mut self, name: &str, default_value: u16) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::UnsignedShort,
+            parameter_type: Value::Literal(ParameterType::UnsignedShort),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -92,7 +89,7 @@ impl ParameterDeclarationsBuilder {
     pub fn add_unsigned_int_parameter(mut self, name: &str, default_value: u32) -> Self {
         self.parameters.push(ParameterDeclaration {
             name: OSString::literal(name.to_string()),
-            parameter_type: ParameterType::UnsignedInt,
+            parameter_type: Value::Literal(ParameterType::UnsignedInt),
             value: OSString::literal(default_value.to_string()),
             constraint_groups: Vec::new(),
         });
@@ -279,7 +276,10 @@ mod tests {
 
         let vehicle_param = &params.parameter_declarations[0];
         assert_eq!(vehicle_param.name.to_string(), "vehicle_name");
-        assert_eq!(vehicle_param.parameter_type, ParameterType::String);
+        assert_eq!(
+            vehicle_param.parameter_type,
+            Value::Literal(ParameterType::String)
+        );
         assert_eq!(vehicle_param.value.to_string(), "ego");
     }
 

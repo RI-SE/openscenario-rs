@@ -3,18 +3,18 @@
 use super::actions::InitActionBuilder;
 use crate::builder::actions::ActionBuilder as ActionBuilderTrait;
 use crate::builder::actions::{
-    AssignRouteActionBuilder, FollowTrajectoryActionBuilder, LongitudinalDistanceActionBuilder,
-    SpeedProfileActionBuilder, SynchronizeActionBuilder, VisibilityActionBuilder,
+    AssignRouteActionBuilder, LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder,
+    SynchronizeActionBuilder, VisibilityActionBuilder,
 };
 use crate::builder::BuilderResult;
+use crate::types::basic::Value;
 use crate::types::{
-    actions::appearance::VisibilityAction,
     actions::movement::{
-        LateralAction, LongitudinalAction as LongitudinalActionType, RoutingAction, SpeedAction,
-        SpeedActionTarget, SynchronizeAction, TeleportAction, TransitionDynamics,
+        LongitudinalAction as LongitudinalActionType, SpeedAction, SpeedActionTarget,
+        TeleportAction, TransitionDynamics,
     },
     actions::wrappers::PrivateAction as PrivateActionWrapper,
-    basic::{Double, Value},
+    basic::Double,
     enums::{DynamicsDimension, DynamicsShape},
     environment::Environment,
     positions::Position,
@@ -51,8 +51,8 @@ impl PrivateActionBuilder {
     pub fn add_speed_action(mut self, speed: f64) -> Self {
         let speed_action = SpeedAction {
             speed_action_dynamics: TransitionDynamics {
-                dynamics_dimension: DynamicsDimension::Time,
-                dynamics_shape: DynamicsShape::Step,
+                dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(DynamicsShape::Step),
                 following_mode: None,
                 value: Double::literal(1.0),
             },
@@ -197,46 +197,46 @@ impl PrivateActionBuilder {
                             _ => None,
                         },
                     }),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::LateralAction(lateral_action) => {
                 PrivateAction {
                     lateral_action: Some(lateral_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::RoutingAction(routing_action) => {
                 PrivateAction {
                     routing_action: Some(routing_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::VisibilityAction(visibility_action) => {
                 PrivateAction {
                     visibility_action: Some(visibility_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::SynchronizeAction(sync_action) => {
                 PrivateAction {
                     synchronize_action: Some(sync_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::TeleportAction(teleport_action) => {
                 PrivateAction {
                     teleport_action: Some(teleport_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
             PrivateActionWrapper::ControllerAction(controller_action) => {
                 PrivateAction {
                     controller_action: Some(controller_action),
-                    ..Default::default()
+                    ..PrivateAction::empty()
                 }
             }
-            _ => PrivateAction::default(),
+            _ => PrivateAction::empty(),
         }
     }
 
@@ -295,16 +295,14 @@ impl GlobalActionBuilder {
         self
     }
 
-    /// Add an environment action with default environment
-    pub fn add_default_environment_action(mut self) -> Self {
+    /// Add an environment action with a named environment
+    ///
+    /// XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`) requires `@name`; there is no
+    /// schema default, so the caller supplies it rather than getting a silently invented
+    /// `"DefaultEnvironment"`.
+    pub fn add_named_environment_action(mut self, name: &str) -> Self {
         self.environment_action = Some(EnvironmentAction {
-            environment: Some(Environment {
-                name: crate::types::basic::OSString::literal("DefaultEnvironment".to_string()),
-                parameter_declarations: None,
-                time_of_day: None,
-                weather: None,
-                road_condition: None,
-            }),
+            environment: Some(Environment::new(name)),
             catalog_reference: None,
         });
         self
@@ -314,7 +312,7 @@ impl GlobalActionBuilder {
     pub fn finish(self) -> InitActionBuilder {
         let global_action = GlobalAction {
             environment_action: self.environment_action,
-            ..Default::default()
+            ..GlobalAction::empty()
         };
         self.parent.add_global(global_action)
     }
@@ -323,7 +321,7 @@ impl GlobalActionBuilder {
     pub fn build(self) -> BuilderResult<GlobalAction> {
         Ok(GlobalAction {
             environment_action: self.environment_action,
-            ..Default::default()
+            ..GlobalAction::empty()
         })
     }
 }
@@ -403,7 +401,7 @@ mod tests {
     #[test]
     fn test_global_action_builder() {
         let global = GlobalActionBuilder::new(InitActionBuilder::new())
-            .add_default_environment_action()
+            .add_named_environment_action("TestEnvironment")
             .build()
             .unwrap();
 
@@ -414,7 +412,7 @@ mod tests {
     fn test_global_action_builder_fluent() {
         let init = InitActionBuilder::new()
             .create_global_action()
-            .add_default_environment_action()
+            .add_named_environment_action("TestEnvironment")
             .finish()
             .build()
             .unwrap();
@@ -432,7 +430,7 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .create_global_action()
-            .add_default_environment_action()
+            .add_named_environment_action("TestEnvironment")
             .finish()
             .create_private_action("ego")
             .add_teleport_action(position)

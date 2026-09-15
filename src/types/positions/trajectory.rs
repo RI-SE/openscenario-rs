@@ -1,31 +1,14 @@
 //! Trajectory and route-based position types for path following
 
-use crate::types::basic::{Double, OSString, ParameterDeclarations};
-use crate::types::geometry::shapes::Shape;
+use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 
-/// Trajectory definition with shape and parameters
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Trajectory {
-    /// Name of the trajectory — XSD attribute `name`, `use="required"`
-    #[serde(rename = "@name")]
-    pub name: OSString,
-    /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`, `use="required"`
-    #[serde(rename = "@closed")]
-    pub closed: bool,
-    /// Parameter declarations for this trajectory — XSD child element
-    /// `<ParameterDeclarations>`, `minOccurs="0"`, precedes `<Shape>`.
-    #[serde(
-        rename = "ParameterDeclarations",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_declarations: Option<ParameterDeclarations>,
-    /// Shape definition of the trajectory — XSD child element `<Shape>`, a choice of
-    /// Polyline | Clothoid | ClothoidSpline | Nurbs. See `geometry::shapes::Shape`.
-    #[serde(rename = "Shape")]
-    pub shape: Shape,
-}
+// The `Trajectory` struct that used to live here was a dead duplicate of
+// `actions::movement::Trajectory` (the canonical one, boxed inside `TrajectoryRef`). It had
+// zero consumers outside its own `impl`, its own unit tests and the `pub use` in
+// `positions/mod.rs`, and it was also schema-wrong: `@closed` is XSD type `Boolean`
+// (`Schema/OpenSCENARIO.xsd:2361`), a union that admits `$param`, and this copy declared it
+// as a plain Rust `bool`. Removed; use `crate::types::actions::movement::Trajectory`.
 
 /// Clothoid trajectory segment
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -126,31 +109,21 @@ impl TrajectoryPosition {
     }
 }
 
-impl Default for Trajectory {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal(String::new()),
-            closed: false,
-            parameter_declarations: None,
-            shape: Shape {
-                polyline: Some(crate::types::geometry::shapes::Polyline {
-                    vertices: Vec::new(),
-                }),
-                clothoid: None,
-                clothoid_spline: None,
-                nurbs: None,
-            },
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::geometry::shapes::Shape;
 
     #[test]
     fn test_trajectory_position_new() {
-        let pos = TrajectoryPosition::new(50.0, TrajectoryRef::default());
+        let pos = TrajectoryPosition::new(
+            50.0,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::empty(),
+            )),
+        );
         assert_eq!(pos.s.as_literal().unwrap(), &50.0);
         assert!(pos.t.is_none());
         assert!(pos.orientation.is_none());
@@ -158,29 +131,33 @@ mod tests {
 
     #[test]
     fn test_trajectory_position_with_offset() {
-        let pos = TrajectoryPosition::with_offset(100.0, -1.5, TrajectoryRef::default());
+        let pos = TrajectoryPosition::with_offset(
+            100.0,
+            -1.5,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::empty(),
+            )),
+        );
         assert_eq!(pos.s.as_literal().unwrap(), &100.0);
         assert_eq!(pos.t.unwrap().as_literal().unwrap(), &-1.5);
     }
 
     #[test]
     fn test_trajectory_position_xml_roundtrip() {
-        let pos = TrajectoryPosition::new(25.0, TrajectoryRef::default());
+        let pos = TrajectoryPosition::new(
+            25.0,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::empty(),
+            )),
+        );
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(xml.contains("s=\"25\""));
         let deserialized: TrajectoryPosition = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(pos, deserialized);
-    }
-
-    #[test]
-    fn test_trajectory_default_is_empty_polyline() {
-        let traj = Trajectory::default();
-        assert_eq!(traj.name.as_literal(), Some(&String::new()));
-        assert!(!traj.closed);
-        match &traj.shape.polyline {
-            Some(p) => assert!(p.vertices.is_empty()),
-            None => panic!("Expected Polyline shape"),
-        }
     }
 
     // ------------------------------------------------------------------
@@ -202,7 +179,6 @@ mod tests {
     /// A Vertex element with a `time` attribute must round-trip correctly.
     #[test]
     fn test_vertex_xml_roundtrip_with_time() {
-        use crate::types::basic::Value;
         use crate::types::geometry::shapes::Vertex;
         use crate::types::positions::{Position, WorldPosition};
 
@@ -327,35 +303,5 @@ mod tests {
         );
         let deserialized: Clothoid = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(clothoid, deserialized);
-    }
-
-    /// `Trajectory` in `positions::trajectory` must round-trip its optional
-    /// `<ParameterDeclarations>` element (XSD Trajectory :2356-2363).
-    #[test]
-    fn test_trajectory_parameter_declarations_round_trip() {
-        let xml = r#"<Trajectory name="Traj1" closed="false">
-    <ParameterDeclarations>
-        <ParameterDeclaration name="speed" parameterType="double" value="10.0"/>
-    </ParameterDeclarations>
-    <Shape>
-        <Polyline>
-            <Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex>
-        </Polyline>
-    </Shape>
-</Trajectory>"#;
-        let trajectory: Trajectory = quick_xml::de::from_str(xml).unwrap();
-        let decls = trajectory
-            .parameter_declarations
-            .as_ref()
-            .expect("ParameterDeclarations must be present");
-        assert_eq!(decls.parameter_declarations.len(), 1);
-
-        let serialized = quick_xml::se::to_string(&trajectory).unwrap();
-        assert!(
-            serialized.contains("<ParameterDeclarations>"),
-            "serialized: {serialized}"
-        );
-        let reparsed: Trajectory = quick_xml::de::from_str(&serialized).unwrap();
-        assert_eq!(trajectory, reparsed);
     }
 }

@@ -1,7 +1,5 @@
-//! Monitor declaration types for OpenSCENARIO
-//!
-//! This module contains monitor declaration types for runtime monitoring
-//! and validation of scenario conditions.
+//! Monitor declarations: named boolean state a scenario exposes for observation
+//! during the run.
 
 use crate::types::basic::{Boolean, OSString};
 use serde::{Deserialize, Serialize};
@@ -23,15 +21,6 @@ pub struct MonitorDeclaration {
     pub name: OSString,
     #[serde(rename = "@value")]
     pub value: Boolean,
-}
-
-impl Default for MonitorDeclaration {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultMonitor".to_string()),
-            value: Boolean::literal(false),
-        }
-    }
 }
 
 impl MonitorDeclarations {

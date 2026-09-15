@@ -271,7 +271,10 @@ mod tests {
 
     #[test]
     fn test_scenario_object_creation() {
-        let vehicle = Vehicle::default();
+        // Vehicle::new_car requires the (inner) vehicle name explicitly
+        // (`Vehicle` no longer has a fabricating `Default`), which is deliberately different
+        // from the outer `ScenarioObject`'s own name to prove they are independent fields.
+        let vehicle = Vehicle::new_car("InnerVehicle".to_string());
         let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
 
         assert_eq!(obj.get_name(), Some("TestVehicle"));
@@ -280,12 +283,12 @@ mod tests {
         assert!(obj.pedestrian.is_none());
 
         if let Some(v) = &obj.vehicle {
-            assert_eq!(v.name.as_literal().unwrap(), "DefaultVehicle");
+            assert_eq!(v.name.as_literal().unwrap(), "InnerVehicle");
         }
 
         match obj.get_entity_object() {
             Some(EntityObject::Vehicle(v)) => {
-                assert_eq!(v.name.as_literal().unwrap(), "DefaultVehicle");
+                assert_eq!(v.name.as_literal().unwrap(), "InnerVehicle");
             }
             _ => panic!("Expected vehicle"),
         }
@@ -295,7 +298,7 @@ mod tests {
     fn test_entities_container() {
         let mut entities = Entities::new();
 
-        let vehicle = Vehicle::default();
+        let vehicle = Vehicle::new_car("TestVehicle".to_string());
         let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
         entities.add_object(obj);
 
@@ -347,7 +350,10 @@ mod tests {
         use crate::types::controllers::Controller;
         use crate::types::enums::ControllerType;
 
-        let mut obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), Vehicle::default());
+        let mut obj = ScenarioObject::new_vehicle(
+            "TestVehicle".to_string(),
+            Vehicle::new_car("TestVehicle".to_string()),
+        );
 
         obj.object_controller
             .push(ObjectController::with_controller(Controller::new(
@@ -399,7 +405,7 @@ mod tests {
     fn test_entities_serialization() {
         let mut entities = Entities::new();
 
-        let vehicle = Vehicle::default();
+        let vehicle = Vehicle::new_car("TestVehicle".to_string());
         let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
         entities.add_object(obj);
 

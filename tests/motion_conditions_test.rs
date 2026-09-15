@@ -3,17 +3,18 @@
 //! Tests AccelerationCondition and StandStillCondition implementations
 
 use openscenario_rs::types::basic::Double;
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::conditions::entity::{
     AccelerationCondition, ByEntityCondition, EntityCondition, StandStillCondition,
 };
 use openscenario_rs::types::enums::{DirectionalDimension, Rule};
-use openscenario_rs::types::scenario::triggers::TriggeringEntities;
+use openscenario_rs::types::scenario::triggers::{EntityRef, TriggeringEntities};
 
 #[test]
 fn test_acceleration_condition_creation() {
     let condition = AccelerationCondition::new(5.0, Rule::GreaterThan);
     assert_eq!(condition.value, Double::literal(5.0));
-    assert_eq!(condition.rule, Rule::GreaterThan);
+    assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(condition.direction, None);
 }
 
@@ -21,21 +22,21 @@ fn test_acceleration_condition_creation() {
 fn test_acceleration_condition_with_direction() {
     let condition = AccelerationCondition::longitudinal(3.0, Rule::LessThan);
     assert_eq!(condition.value, Double::literal(3.0));
-    assert_eq!(condition.rule, Rule::LessThan);
+    assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
     assert_eq!(
         condition.direction,
-        Some(DirectionalDimension::Longitudinal)
+        Some(Value::Literal(DirectionalDimension::Longitudinal))
     );
 }
 
 #[test]
 fn test_acceleration_condition_convenience_methods() {
     let greater = AccelerationCondition::greater_than(2.5);
-    assert_eq!(greater.rule, Rule::GreaterThan);
+    assert_eq!(greater.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(greater.value, Double::literal(2.5));
 
     let less = AccelerationCondition::less_than(1.0);
-    assert_eq!(less.rule, Rule::LessThan);
+    assert_eq!(less.rule, Value::Literal(Rule::LessThan));
     assert_eq!(less.value, Double::literal(1.0));
 }
 
@@ -44,14 +45,20 @@ fn test_acceleration_condition_directional_methods() {
     let longitudinal = AccelerationCondition::longitudinal(4.0, Rule::EqualTo);
     assert_eq!(
         longitudinal.direction,
-        Some(DirectionalDimension::Longitudinal)
+        Some(Value::Literal(DirectionalDimension::Longitudinal))
     );
 
     let lateral = AccelerationCondition::lateral(2.0, Rule::GreaterOrEqual);
-    assert_eq!(lateral.direction, Some(DirectionalDimension::Lateral));
+    assert_eq!(
+        lateral.direction,
+        Some(Value::Literal(DirectionalDimension::Lateral))
+    );
 
     let vertical = AccelerationCondition::vertical(1.5, Rule::LessOrEqual);
-    assert_eq!(vertical.direction, Some(DirectionalDimension::Vertical));
+    assert_eq!(
+        vertical.direction,
+        Some(Value::Literal(DirectionalDimension::Vertical))
+    );
 }
 
 #[test]
@@ -68,13 +75,13 @@ fn test_standstill_condition_with_duration() {
 
 #[test]
 fn test_by_entity_condition_acceleration_variants() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let simple =
         ByEntityCondition::acceleration(triggering_entities.clone(), 3.0, Rule::GreaterThan);
     match simple.entity_condition {
         EntityCondition::Acceleration(acc) => {
             assert_eq!(acc.value, Double::literal(3.0));
-            assert_eq!(acc.rule, Rule::GreaterThan);
+            assert_eq!(acc.rule, Value::Literal(Rule::GreaterThan));
             assert_eq!(acc.direction, None);
         }
         _ => panic!("Expected Acceleration variant"),
@@ -89,8 +96,11 @@ fn test_by_entity_condition_acceleration_variants() {
     match with_direction.entity_condition {
         EntityCondition::Acceleration(acc) => {
             assert_eq!(acc.value, Double::literal(2.5));
-            assert_eq!(acc.rule, Rule::LessThan);
-            assert_eq!(acc.direction, Some(DirectionalDimension::Lateral));
+            assert_eq!(acc.rule, Value::Literal(Rule::LessThan));
+            assert_eq!(
+                acc.direction,
+                Some(Value::Literal(DirectionalDimension::Lateral))
+            );
         }
         _ => panic!("Expected Acceleration variant"),
     }
@@ -98,7 +108,7 @@ fn test_by_entity_condition_acceleration_variants() {
 
 #[test]
 fn test_by_entity_condition_standstill_variant() {
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let condition = ByEntityCondition::standstill(triggering_entities, 4.0);
     match condition.entity_condition {
         EntityCondition::StandStill(standstill) => {
@@ -109,14 +119,14 @@ fn test_by_entity_condition_standstill_variant() {
 }
 
 #[test]
-fn test_default_implementations() {
-    let acc_default = AccelerationCondition::default();
-    assert_eq!(acc_default.value, Double::literal(2.0));
-    assert_eq!(acc_default.rule, Rule::GreaterThan);
-    assert_eq!(acc_default.direction, None);
+fn test_constructors() {
+    let acc = AccelerationCondition::new(2.0, Rule::GreaterThan);
+    assert_eq!(acc.value, Double::literal(2.0));
+    assert_eq!(acc.rule, Value::Literal(Rule::GreaterThan));
+    assert_eq!(acc.direction, None);
 
-    let standstill_default = StandStillCondition::default();
-    assert_eq!(standstill_default.duration, Double::literal(1.0));
+    let standstill = StandStillCondition::new(1.0);
+    assert_eq!(standstill.duration, Double::literal(1.0));
 }
 
 #[test]
@@ -140,7 +150,7 @@ fn test_serialization_deserialization() {
 #[test]
 fn test_motion_conditions_in_enum() {
     // Test that both new condition types work within the ByEntityCondition enum
-    let triggering_entities = TriggeringEntities::default();
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let conditions = vec![
         ByEntityCondition::acceleration(triggering_entities.clone(), 5.0, Rule::GreaterThan),
         ByEntityCondition::standstill(triggering_entities.clone(), 2.0),
@@ -167,7 +177,10 @@ fn test_motion_conditions_in_enum() {
 
     match &conditions[2].entity_condition {
         EntityCondition::Acceleration(acc) => {
-            assert_eq!(acc.direction, Some(DirectionalDimension::Vertical));
+            assert_eq!(
+                acc.direction,
+                Some(Value::Literal(DirectionalDimension::Vertical))
+            );
         }
         _ => panic!("Expected Acceleration variant"),
     }
@@ -186,7 +199,7 @@ fn test_acceleration_condition_all_rules() {
 
     for rule in rules {
         let condition = AccelerationCondition::new(1.0, rule.clone());
-        assert_eq!(condition.rule, rule);
+        assert_eq!(condition.rule, Value::Literal(rule));
     }
 }
 
@@ -201,6 +214,6 @@ fn test_acceleration_condition_all_directions() {
     for direction in directions {
         let condition =
             AccelerationCondition::new(1.0, Rule::GreaterThan).with_direction(direction.clone());
-        assert_eq!(condition.direction, Some(direction));
+        assert_eq!(condition.direction, Some(Value::Literal(direction)));
     }
 }

@@ -1,15 +1,11 @@
-//! Trailer action types for trailer connection and disconnection
-//!
-//! This file contains:
-//! - Trailer connection and disconnection actions
-//! - Trailer reference management
-//!
+//! `ConnectTrailerAction` and `DisconnectTrailerAction`, and the trailer reference
+//! the first of them takes.
 
 use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};
 
 /// Main trailer action wrapper containing all trailer action types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrailerAction {
     /// Connect trailer action
     #[serde(
@@ -40,10 +36,11 @@ pub struct DisconnectTrailerAction {
     // Empty according to schema
 }
 
-impl Default for ConnectTrailerAction {
-    fn default() -> Self {
+impl ConnectTrailerAction {
+    /// XSD `ConnectTrailerAction` (:967-969): required `@trailerRef`.
+    pub fn new(trailer_ref: impl Into<String>) -> Self {
         Self {
-            trailer_ref: OSString::literal("DefaultTrailer".to_string()),
+            trailer_ref: OSString::literal(trailer_ref.into()),
         }
     }
 }
@@ -67,7 +64,7 @@ mod tests {
     #[test]
     fn test_trailer_action_serialization() {
         let action = TrailerAction {
-            connect_trailer_action: Some(ConnectTrailerAction::default()),
+            connect_trailer_action: Some(ConnectTrailerAction::new("DefaultTrailer")),
             disconnect_trailer_action: None,
         };
 

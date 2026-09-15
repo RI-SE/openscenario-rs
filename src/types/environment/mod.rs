@@ -1,12 +1,7 @@
-//! Environment type module for weather, lighting, and road conditions
+//! `Environment` and its children: `TimeOfDay`, `Weather`, and `RoadCondition`.
 //!
-//! This file contains:
-//! - Environment container with complete environmental setup
-//! - TimeOfDay settings for lighting and time progression
-//! - Weather conditions including sun, fog, and precipitation
-//! - Road conditions with friction and surface properties
-//! - Integration with rendering and physics systems
-//!
+//! Every child is optional, as the XSD has it: an `Environment` that sets only the
+//! time of day is valid, and the fields it omits stay `None`.
 use crate::types::basic::{Boolean, OSString, ParameterDeclarations};
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +32,20 @@ pub struct Environment {
         skip_serializing_if = "Option::is_none"
     )]
     pub road_condition: Option<RoadCondition>,
+}
+
+impl Environment {
+    /// Create an environment with just the required `@name` (XSD `Environment`, :1186-1194:
+    /// `name` is `use="required"`, every child is `minOccurs="0"`).
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: OSString::literal(name.to_string()),
+            parameter_declarations: None,
+            time_of_day: None,
+            weather: None,
+            road_condition: None,
+        }
+    }
 }
 
 /// Time of day settings for lighting and animation

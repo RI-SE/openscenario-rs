@@ -1,5 +1,6 @@
 #[cfg(feature = "builder")]
 mod pedestrian_builder_tests {
+    use openscenario_rs::types::basic::Value;
     use openscenario_rs::types::catalogs::locations::CatalogLocations;
     use openscenario_rs::types::enums::{PedestrianCategory, Role};
     use openscenario_rs::types::road::RoadNetwork;
@@ -31,7 +32,10 @@ mod pedestrian_builder_tests {
         assert!(obj.pedestrian.is_some());
 
         let ped = obj.pedestrian.as_ref().unwrap();
-        assert_eq!(ped.pedestrian_category, PedestrianCategory::Pedestrian);
+        assert_eq!(
+            ped.pedestrian_category,
+            Value::Literal(PedestrianCategory::Pedestrian)
+        );
         assert_eq!(ped.mass.as_literal().unwrap(), &75.0);
     }
 
@@ -60,9 +64,12 @@ mod pedestrian_builder_tests {
         let obj = &scenario.entities.unwrap().scenario_objects[0];
         let ped = obj.pedestrian.as_ref().unwrap();
 
-        assert_eq!(ped.pedestrian_category, PedestrianCategory::Wheelchair);
+        assert_eq!(
+            ped.pedestrian_category,
+            Value::Literal(PedestrianCategory::Wheelchair)
+        );
         assert_eq!(ped.mass.as_literal().unwrap(), &85.0);
-        assert_eq!(ped.role.as_ref().unwrap(), &Role::Civil);
+        assert_eq!(ped.role.as_ref().unwrap(), &Value::Literal(Role::Civil));
     }
 
     #[test]
@@ -90,7 +97,10 @@ mod pedestrian_builder_tests {
         let obj = &scenario.entities.unwrap().scenario_objects[0];
         let ped = obj.pedestrian.as_ref().unwrap();
 
-        assert_eq!(ped.pedestrian_category, PedestrianCategory::Animal);
+        assert_eq!(
+            ped.pedestrian_category,
+            Value::Literal(PedestrianCategory::Animal)
+        );
         assert_eq!(ped.mass.as_literal().unwrap(), &50.0);
         assert_eq!(ped.model3d.as_ref().unwrap(), "./models/dog.glb");
     }
@@ -159,12 +169,15 @@ mod pedestrian_builder_tests {
 
         let pedestrian = Pedestrian {
             name: openscenario_rs::types::basic::Value::literal("test".to_string()),
-            pedestrian_category: PedestrianCategory::Pedestrian,
+            pedestrian_category: Value::Literal(PedestrianCategory::Pedestrian),
             mass: openscenario_rs::types::basic::Double::literal(75.0),
-            role: Some(Role::Civil),
+            role: Some(Value::Literal(Role::Civil)),
             model: None,
             model3d: Some("./model.glb".to_string()),
-            bounding_box: openscenario_rs::types::geometry::BoundingBox::default(),
+            bounding_box: openscenario_rs::types::geometry::BoundingBox::new(
+                openscenario_rs::types::geometry::Center::new(0.0, 0.0, 0.0),
+                openscenario_rs::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };

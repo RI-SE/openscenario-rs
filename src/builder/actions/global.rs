@@ -48,7 +48,7 @@ impl EnvironmentActionBuilder {
 
         Ok(GlobalAction {
             environment_action: Some(environment_action),
-            ..Default::default()
+            ..GlobalAction::empty()
         })
     }
 
@@ -77,7 +77,7 @@ impl EnvironmentActionBuilder {
 ///
 /// let action = EntityActionBuilder::new()
 ///     .for_entity("spawned_vehicle")
-///     .add_entity(Position::default())
+///     .add_entity(Position::world_origin())
 ///     .build()?;
 /// # Ok::<(), openscenario_rs::builder::BuilderError>(())
 /// ```
@@ -141,7 +141,7 @@ impl EntityActionBuilder {
                 entity_ref: OSString::literal(entity_ref),
                 action,
             }),
-            ..Default::default()
+            ..GlobalAction::empty()
         })
     }
 }
@@ -198,7 +198,7 @@ impl VariableActionBuilder {
                     value: OSString::literal(value.to_string()),
                 }),
             }),
-            ..Default::default()
+            ..GlobalAction::empty()
         })
     }
 }
@@ -225,7 +225,7 @@ mod tests {
             (
                 EntityActionBuilder::new()
                     .for_entity("spawned")
-                    .add_entity(Position::default()),
+                    .add_entity(Position::world_origin()),
                 "AddEntityAction",
             ),
         ] {

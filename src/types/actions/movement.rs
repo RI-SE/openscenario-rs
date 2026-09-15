@@ -1,13 +1,8 @@
-//! Movement action types for entity positioning and motion
-//!
-//! This file contains:
-//! - Movement actions (SpeedAction, LaneChangeAction, TeleportAction, etc.)
-//! - Dynamics and transition specifications for smooth movement
-//! - Target specification types (absolute, relative, following)
-//! - Spatial relationship actions (distance keeping, synchronization)
-//! - Trajectory following and path planning actions
-//!
-use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations};
+//! Actions that move an entity: `SpeedAction`, `LaneChangeAction`, `LaneOffsetAction`,
+//! `TeleportAction`, `FollowTrajectoryAction`, `SynchronizeAction`, and the distance
+//! actions. `TransitionDynamics` says how a change is reached: its shape, and whether
+//! the dimension bounding it is time, distance or rate.
+use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::enums::{
@@ -84,7 +79,12 @@ where
     deserializer.deserialize_any(OptionalDoubleVisitor)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// `#[derive(Default)]` removed: it required
+// `TransitionDynamics: Default` and `SpeedActionTarget: Default`, both of
+// which fabricated content (a duration of 1.0s, a target speed of 10.0).
+// Call sites in `src/types/scenario/init.rs` and `tests/xsd_validation_test.rs`
+// fixed to use `SpeedAction::new` instead.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedAction {
     #[serde(rename = "SpeedActionDynamics")]
     pub speed_action_dynamics: TransitionDynamics,
@@ -92,10 +92,25 @@ pub struct SpeedAction {
     pub speed_action_target: SpeedActionTarget,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// `#[derive(Default)]` removed. An earlier pass kept it, reasoning that
+// `Position::default()` is an all-`None` choice and so "states nothing". The schema
+// says otherwise: XSD `Position` (`Schema/OpenSCENARIO.xsd:1738-1751`) is a
+// bare `xsd:choice` with no `minOccurs="0"`, so a branch must be selected. Verified by
+// serializing `TeleportAction::default()` inside a document and validating it —
+// libxml2 rejects it with *"Element 'Position': Missing child element(s)"*. That is
+// category 3, schema-invalid empty: it invents nothing, and is still unusable.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TeleportAction {
     #[serde(rename = "Position")]
     pub position: Position,
+}
+
+impl TeleportAction {
+    /// Teleport to the given position (XSD `TeleportAction`, `:2148-2152`: the
+    /// `Position` child is required and its choice must select a branch).
+    pub fn new(position: Position) -> Self {
+        Self { position }
+    }
 }
 
 // Remove duplicate import
@@ -104,15 +119,15 @@ pub struct TeleportAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransitionDynamics {
     #[serde(rename = "@dynamicsDimension")]
-    pub dynamics_dimension: DynamicsDimension,
+    pub dynamics_dimension: Value<DynamicsDimension>,
     #[serde(rename = "@dynamicsShape")]
-    pub dynamics_shape: DynamicsShape,
+    pub dynamics_shape: Value<DynamicsShape>,
     #[serde(
         rename = "@followingMode",
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub following_mode: Option<FollowingMode>,
+    pub following_mode: Option<Value<FollowingMode>>,
     #[serde(rename = "@value")]
     pub value: Double,
 }
@@ -144,7 +159,7 @@ pub struct RelativeTargetSpeed {
     #[serde(rename = "@entityRef")]
     pub entity_ref: String,
     #[serde(rename = "@speedTargetValueType")]
-    pub value_type: SpeedTargetValueType,
+    pub value_type: Value<SpeedTargetValueType>,
     #[serde(rename = "@continuous")]
     pub continuous: bool,
 }
@@ -187,7 +202,7 @@ pub struct TrajectoryRef {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrajectoryFollowingMode {
     #[serde(rename = "@followingMode")]
-    pub following_mode: FollowingMode,
+    pub following_mode: Value<FollowingMode>,
 }
 
 /// Empty element representing the absence of timing in a `TimeReference`.
@@ -211,7 +226,7 @@ pub struct TimeReference {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Timing {
     #[serde(rename = "@domainAbsoluteRelative")]
-    pub domain_absolute_relative: ReferenceContext,
+    pub domain_absolute_relative: Value<ReferenceContext>,
     #[serde(rename = "@scale")]
     pub scale: Double,
     #[serde(rename = "@offset")]
@@ -249,26 +264,21 @@ pub struct FollowTrajectoryAction {
     pub initial_distance_offset: Option<Double>,
 }
 
-impl Default for FollowTrajectoryAction {
-    fn default() -> Self {
-        Self {
-            trajectory: Some(Trajectory::default()),
-            catalog_reference: None,
-            time_reference: TimeReference::default(),
-            trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
-            initial_distance_offset: None,
-        }
-    }
-}
+// No `Default`: it fabricated a whole child `Trajectory` named
+// "DefaultTrajectory" (`Some(Trajectory::default())`) — the worst class of
+// fabrication, with no defensible replacement. Use `::with_trajectory`,
+// `::with_catalog_reference`, or `::from_catalog` instead.
 
 /// Assign route action for setting entity routes
 ///
 /// Assigns a route to an entity, either through direct route definition
 /// or catalog reference, enabling route-based navigation scenarios.
+// No `Default`: it required `routing::RouteRef: Default`, which
+// silently picked the `Direct` branch of a choice — see
+// `types/routing/mod.rs`. Use `AssignRouteAction::new`, `::direct_route`, or
+// `::catalog_route` instead.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "AssignRouteAction")]
-#[derive(Default)]
 pub struct AssignRouteAction {
     /// Route reference (direct or catalog-based)
     #[serde(flatten)]
@@ -279,7 +289,7 @@ pub struct AssignRouteAction {
 ///
 /// XSD `RoutingAction` (:1981-1988) is a choice of `AssignRouteAction` |
 /// `FollowTrajectoryAction` | `AcquirePositionAction` | `RandomRouteAction`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoutingAction {
     /// Assign route action
     #[serde(rename = "AssignRouteAction", skip_serializing_if = "Option::is_none")]
@@ -305,7 +315,10 @@ pub struct RoutingAction {
 }
 
 /// Lane change action for lateral lane movements
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// `#[derive(Default)]` removed: it required
+// `LaneChangeTarget: Default`, which silently picked the `RelativeTargetLane`
+// choice branch. Use `LaneChangeAction::new` instead.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneChangeAction {
     #[serde(
         rename = "@targetLaneOffset",
@@ -366,7 +379,7 @@ pub struct LaneOffsetAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneOffsetActionDynamics {
     #[serde(rename = "@dynamicsShape")]
-    pub dynamics_shape: DynamicsShape,
+    pub dynamics_shape: Value<DynamicsShape>,
     #[serde(rename = "@maxLateralAcc", skip_serializing_if = "Option::is_none")]
     pub max_lateral_acc: Option<Double>,
 }
@@ -436,13 +449,13 @@ pub struct LateralDistanceAction {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub displacement: Option<LateralDisplacement>,
+    pub displacement: Option<Value<LateralDisplacement>>,
     #[serde(
         rename = "@coordinateSystem",
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
     #[serde(
         rename = "DynamicConstraints",
         default,
@@ -483,11 +496,11 @@ pub struct LongitudinalDistanceAction {
 
     /// Coordinate system for distance measurement
     #[serde(rename = "@coordinateSystem", skip_serializing_if = "Option::is_none")]
-    pub coordinate_system: Option<CoordinateSystem>,
+    pub coordinate_system: Option<Value<CoordinateSystem>>,
 
     /// Displacement type for leading referenced entity
     #[serde(rename = "@displacement", skip_serializing_if = "Option::is_none")]
-    pub displacement: Option<LongitudinalDisplacement>,
+    pub displacement: Option<Value<LongitudinalDisplacement>>,
 
     #[serde(rename = "@freespace")]
     pub freespace: Boolean,
@@ -507,7 +520,7 @@ pub struct SpeedProfileAction {
     )]
     pub entity_ref: Option<OSString>,
     #[serde(rename = "@followingMode")]
-    pub following_mode: FollowingMode,
+    pub following_mode: Value<FollowingMode>,
     #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
     #[serde(rename = "SpeedProfileEntry", default)]
@@ -652,7 +665,7 @@ pub struct AbsoluteSpeed {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeSpeedToMaster {
     #[serde(rename = "@speedTargetValueType")]
-    pub speed_target_value_type: SpeedTargetValueType,
+    pub speed_target_value_type: Value<SpeedTargetValueType>,
 
     #[serde(rename = "@value")]
     pub value: Double,
@@ -675,101 +688,198 @@ pub struct RelativeSpeedToMaster {
 }
 
 /// Acquire position action for moving to a specific position
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// `#[derive(Default)]` removed, same reasoning as `TeleportAction` above:
+// XSD `AcquirePositionAction` (`:692-696`) requires the `Position` child, and `Position`
+// is a bare `xsd:choice`, so an all-`None` value is schema-invalid empty (category 3).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AcquirePositionAction {
     #[serde(rename = "Position")]
     pub position: Position,
 }
 
-// Default implementations
-
-impl Default for TransitionDynamics {
-    fn default() -> Self {
-        Self {
-            dynamics_dimension: DynamicsDimension::Time,
-            dynamics_shape: DynamicsShape::Linear,
-            following_mode: None,
-            value: Double::literal(1.0),
-        }
+impl AcquirePositionAction {
+    /// Acquire the given position (XSD `AcquirePositionAction`, `:692-696`).
+    pub fn new(position: Position) -> Self {
+        Self { position }
     }
 }
 
-impl Default for SpeedActionTarget {
-    fn default() -> Self {
+// Default implementations
+
+// `TransitionDynamics`, `SpeedActionTarget` and
+// `AbsoluteTargetSpeed` no longer implement `Default` — see the constructors
+// below and the removed-derive note above `SpeedAction`.
+
+impl TransitionDynamics {
+    /// Create a new `TransitionDynamics`.
+    ///
+    /// XSD `TransitionDynamics` (:2386-2392): `@dynamicsDimension`,
+    /// `@dynamicsShape` and `@value` are all `use="required"` with no
+    /// `default="…"`; `@followingMode` is optional and defaults to `None`
+    /// here.
+    pub fn new(
+        dynamics_dimension: DynamicsDimension,
+        dynamics_shape: DynamicsShape,
+        value: f64,
+    ) -> Self {
         Self {
-            absolute: Some(AbsoluteTargetSpeed::default()),
+            dynamics_dimension: Value::Literal(dynamics_dimension),
+            dynamics_shape: Value::Literal(dynamics_shape),
+            following_mode: None,
+            value: Double::literal(value),
+        }
+    }
+
+    /// Set the optional `@followingMode`.
+    pub fn with_following_mode(mut self, following_mode: FollowingMode) -> Self {
+        self.following_mode = Some(Value::Literal(following_mode));
+        self
+    }
+}
+
+impl SpeedActionTarget {
+    /// Create a `SpeedActionTarget` carrying an absolute target speed.
+    ///
+    /// XSD `SpeedActionTarget` is a `choice` of `RelativeTargetSpeed` |
+    /// `AbsoluteTargetSpeed`, so a `Default` impl would silently pick a
+    /// branch; call this explicitly instead.
+    pub fn absolute(value: f64) -> Self {
+        Self {
+            absolute: Some(AbsoluteTargetSpeed::new(value)),
             relative: None,
         }
     }
-}
 
-impl Default for AbsoluteTargetSpeed {
-    fn default() -> Self {
+    /// Create a `SpeedActionTarget` carrying a relative target speed.
+    pub fn relative(relative: RelativeTargetSpeed) -> Self {
         Self {
-            value: Double::literal(10.0),
+            absolute: None,
+            relative: Some(relative),
         }
     }
 }
 
-impl Default for RelativeTargetSpeed {
-    fn default() -> Self {
+impl AbsoluteTargetSpeed {
+    /// Create a new `AbsoluteTargetSpeed`.
+    ///
+    /// XSD `AbsoluteTargetSpeed` (:684-686): `@value` is `use="required"`
+    /// with no `default="…"`.
+    pub fn new(value: f64) -> Self {
         Self {
-            value: Double::literal(0.0),
-            entity_ref: "DefaultEntity".to_string(),
-            value_type: SpeedTargetValueType::Delta,
-            continuous: false,
+            value: Double::literal(value),
         }
     }
 }
 
-impl Default for Trajectory {
-    fn default() -> Self {
+impl RelativeTargetSpeed {
+    /// Create a new `RelativeTargetSpeed`.
+    ///
+    /// XSD `RelativeTargetSpeed`: `@entityRef`, `@continuous`,
+    /// `@speedTargetValueType` and `@value` are all `use="required"` with no
+    /// `default="…"`.
+    pub fn new(
+        value: f64,
+        entity_ref: impl Into<String>,
+        value_type: SpeedTargetValueType,
+        continuous: bool,
+    ) -> Self {
         Self {
-            name: OSString::literal("DefaultTrajectory".to_string()),
-            closed: Boolean::literal(false),
+            value: Double::literal(value),
+            entity_ref: entity_ref.into(),
+            value_type: Value::Literal(value_type),
+            continuous,
+        }
+    }
+}
+
+impl SpeedAction {
+    /// Create a new `SpeedAction`.
+    ///
+    /// XSD `SpeedAction` (:2043-2048): both `SpeedActionDynamics` and
+    /// `SpeedActionTarget` are required child elements.
+    pub fn new(dynamics: TransitionDynamics, target: SpeedActionTarget) -> Self {
+        Self {
+            speed_action_dynamics: dynamics,
+            speed_action_target: target,
+        }
+    }
+}
+
+// `Trajectory` and `TrajectoryFollowingMode` no longer
+// implement `Default` — see the constructors below. External call sites in
+// `tests/xsd_validation_test.rs`, `src/types/positions/mod.rs`,
+// `src/types/positions/trajectory.rs` and `tests/advanced_positions_test.rs`
+// fixed to use them.
+
+impl Trajectory {
+    /// Create a new `Trajectory`.
+    ///
+    /// XSD `Trajectory` (:2356-2364): `@name` and `@closed` are both
+    /// `use="required"` with no `default="…"`; `ParameterDeclarations` is
+    /// optional and defaults to `None` here.
+    pub fn new(name: impl Into<String>, closed: bool, shape: Shape) -> Self {
+        Self {
+            name: OSString::literal(name.into()),
+            closed: Boolean::literal(closed),
             parameter_declarations: None,
-            shape: Shape::default(),
+            shape,
         }
     }
 }
 
-impl Default for TrajectoryFollowingMode {
-    fn default() -> Self {
+impl TrajectoryFollowingMode {
+    /// Create a new `TrajectoryFollowingMode`.
+    ///
+    /// XSD `TrajectoryFollowingMode` (:2369-2371): `@followingMode` is
+    /// `use="required"` with no `default="…"`.
+    pub fn new(following_mode: FollowingMode) -> Self {
         Self {
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(following_mode),
         }
     }
 }
 
-impl Default for Timing {
-    fn default() -> Self {
+impl Timing {
+    /// Create a new `Timing`.
+    ///
+    /// XSD `Timing`: `@domainAbsoluteRelative`, `@offset` and `@scale` are
+    /// all `use="required"` with no `default="…"`.
+    pub fn new(domain_absolute_relative: ReferenceContext, scale: f64, offset: f64) -> Self {
         Self {
-            domain_absolute_relative: ReferenceContext::Absolute,
-            scale: Double::literal(1.0),
-            offset: Double::literal(0.0),
+            domain_absolute_relative: Value::Literal(domain_absolute_relative),
+            scale: Double::literal(scale),
+            offset: Double::literal(offset),
         }
     }
 }
 
-impl Default for TimeReference {
-    /// Defaults to `<None/>` (no timing constraint), matching the most common
-    /// use-case and what OpenSCENARIO generators like esmini emit.
-    fn default() -> Self {
+impl TimeReference {
+    /// Create a `TimeReference` carrying no timing constraint (`<None/>`).
+    ///
+    /// XSD `TimeReference` is a `choice` of `None` | `Timing`, so a
+    /// `Default` impl would silently pick a branch; call this explicitly
+    /// instead.
+    pub fn none() -> Self {
         Self {
-            none: Some(NoneElement::default()),
+            none: Some(NoneElement {}),
             timing: None,
         }
     }
-}
 
-impl Default for TrajectoryRef {
-    fn default() -> Self {
+    /// Create a `TimeReference` carrying explicit `Timing`.
+    pub fn timing(timing: Timing) -> Self {
         Self {
-            trajectory: Some(Box::new(Trajectory::default())),
-            catalog_reference: None,
+            none: None,
+            timing: Some(timing),
         }
     }
 }
+
+// `TrajectoryRef` no longer implements `Default` — XSD
+// `TrajectoryRef` is a `choice` of `Trajectory` | `CatalogReference`, and
+// `Default` silently picked the `Trajectory` branch, fabricating a whole
+// child `Trajectory` named "DefaultTrajectory". Use `TrajectoryRef::with_trajectory`,
+// `::with_catalog_reference`, or `::from_catalog` instead.
 
 // Helper implementations for catalog-based actions
 
@@ -815,9 +925,11 @@ impl FollowTrajectoryAction {
         Self {
             trajectory: Some(trajectory),
             catalog_reference: None,
-            time_reference: TimeReference::default(),
+            time_reference: TimeReference::none(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode { following_mode },
+            trajectory_following_mode: TrajectoryFollowingMode {
+                following_mode: Value::Literal(following_mode),
+            },
             initial_distance_offset: None,
         }
     }
@@ -850,9 +962,11 @@ impl FollowTrajectoryAction {
         Self {
             trajectory: None,
             catalog_reference: Some(catalog_reference),
-            time_reference: TimeReference::default(),
+            time_reference: TimeReference::none(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode { following_mode },
+            trajectory_following_mode: TrajectoryFollowingMode {
+                following_mode: Value::Literal(following_mode),
+            },
             initial_distance_offset: None,
         }
     }
@@ -1007,7 +1121,7 @@ impl LaneOffsetActionDynamics {
     /// Create new lane offset action dynamics
     pub fn new(dynamics_shape: DynamicsShape) -> Self {
         Self {
-            dynamics_shape,
+            dynamics_shape: Value::Literal(dynamics_shape),
             max_lateral_acc: None,
         }
     }
@@ -1086,150 +1200,198 @@ impl LateralAction {
     }
 }
 
-impl Default for LaneChangeTarget {
-    fn default() -> Self {
-        Self {
-            target_choice: LaneChangeTargetChoice::RelativeTargetLane(RelativeTargetLane::default()),
-        }
-    }
-}
+// `LaneChangeTarget` no longer implements `Default` —
+// XSD `LaneChangeTarget` is a `choice` of `RelativeTargetLane` |
+// `AbsoluteTargetLane`, and `Default` silently picked the relative branch.
+// Use `LaneChangeTarget::relative` or `::absolute`.
 
-impl Default for RelativeTargetLane {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            value: Int::literal(1),
-        }
-    }
-}
+// `RelativeTargetLane` no longer implements `Default`
+// (it invented entity "DefaultEntity" and lane value `1`): use
+// `RelativeTargetLane::new`.
 
-impl Default for AbsoluteTargetLane {
-    fn default() -> Self {
-        Self {
-            value: OSString::literal("1".to_string()),
-        }
-    }
-}
+// `AbsoluteTargetLane` no longer implements `Default` (it invented
+// lane "1"): use `AbsoluteTargetLane::new`.
 
-impl Default for LaneOffsetAction {
-    fn default() -> Self {
-        Self {
-            continuous: Boolean::literal(false),
-            dynamics: LaneOffsetActionDynamics::default(),
-            target: LaneOffsetTarget::default(),
-        }
-    }
-}
+// `LaneOffsetAction` no longer implements `Default` (it invented a
+// choice branch via `LaneOffsetTarget::default()`): use
+// `LaneOffsetAction::new`.
 
-impl Default for LaneOffsetTarget {
-    fn default() -> Self {
-        Self {
-            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(
-                AbsoluteTargetLaneOffset::default(),
-            ),
-        }
-    }
-}
+// `LaneOffsetTarget` no longer implements `Default` — XSD
+// `LaneOffsetTarget` is a `choice` of `RelativeTargetLaneOffset` |
+// `AbsoluteTargetLaneOffset`, and `Default` silently picked the absolute
+// branch. Use `LaneOffsetTarget::relative` or `::absolute`.
 
-impl Default for RelativeTargetLaneOffset {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            value: Double::literal(0.0),
-        }
-    }
-}
+// `RelativeTargetLaneOffset` no longer implements `Default` (it
+// invented entity "DefaultEntity" and value `0.0`): use
+// `RelativeTargetLaneOffset::new`.
 
-impl Default for AbsoluteTargetLaneOffset {
-    fn default() -> Self {
-        Self {
-            value: Double::literal(0.0),
-        }
-    }
-}
+// `AbsoluteTargetLaneOffset` no longer implements `Default` (it
+// invented value `0.0`): use `AbsoluteTargetLaneOffset::new`.
 
-impl Default for LateralAction {
-    fn default() -> Self {
-        Self {
-            lateral_choice: LateralActionChoice::LaneChangeAction(LaneChangeAction::default()),
-        }
-    }
-}
+// `LateralAction` no longer implements `Default` — XSD
+// `LateralAction` is a `choice` of `LaneChangeAction` | `LaneOffsetAction` |
+// `LateralDistanceAction`, and `Default` silently picked the lane-change
+// branch (itself requiring a fabricating `LaneChangeAction::default()`).
+// Use `LateralAction::lane_change`, `::lane_offset`, or `::lateral_distance`
+// instead.
 
-impl Default for LaneOffsetActionDynamics {
-    fn default() -> Self {
-        Self {
-            dynamics_shape: DynamicsShape::Linear,
-            max_lateral_acc: None,
-        }
-    }
-}
+// `LaneOffsetActionDynamics` no longer implements `Default` (it
+// invented `DynamicsShape::Linear`): use `LaneOffsetActionDynamics::new`.
 
-impl Default for LateralDistanceAction {
-    fn default() -> Self {
+impl LateralDistanceAction {
+    /// Create a new `LateralDistanceAction`.
+    ///
+    /// XSD `LateralDistanceAction`: `@entityRef`, `@continuous` and
+    /// `@freespace` are `use="required"` with no `default="…"`; `@distance`,
+    /// `@displacement`, `@coordinateSystem` and `DynamicConstraints` are all
+    /// optional and default to `None` here.
+    pub fn new(entity_ref: impl Into<String>, freespace: bool, continuous: bool) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            distance: Some(Double::literal(2.0)),
-            freespace: Boolean::literal(true),
-            continuous: Boolean::literal(false),
+            entity_ref: OSString::literal(entity_ref.into()),
+            distance: None,
+            freespace: Boolean::literal(freespace),
+            continuous: Boolean::literal(continuous),
             displacement: None,
             coordinate_system: None,
             dynamic_constraints: None,
         }
     }
+
+    /// Set the optional `@distance`.
+    pub fn with_distance(mut self, distance: f64) -> Self {
+        self.distance = Some(Double::literal(distance));
+        self
+    }
 }
 
-impl Default for LongitudinalAction {
-    fn default() -> Self {
+// `LongitudinalAction` no longer implements `Default` —
+// XSD `LongitudinalAction` is a `choice` of `SpeedAction` |
+// `LongitudinalDistanceAction` | `SpeedProfileAction`, and `Default`
+// silently picked the speed branch (itself requiring a fabricating
+// `SpeedAction::default()`). Use `LongitudinalAction::speed`,
+// `::longitudinal_distance`, or `::speed_profile` instead.
+impl LongitudinalAction {
+    /// Create a `LongitudinalAction` carrying a `SpeedAction`.
+    pub fn speed(action: SpeedAction) -> Self {
         Self {
-            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(
-                SpeedAction::default(),
+            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(action),
+        }
+    }
+
+    /// Create a `LongitudinalAction` carrying a `LongitudinalDistanceAction`.
+    pub fn longitudinal_distance(action: LongitudinalDistanceAction) -> Self {
+        Self {
+            longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
+                action,
             ),
+        }
+    }
+
+    /// Create a `LongitudinalAction` carrying a `SpeedProfileAction`.
+    pub fn speed_profile(action: SpeedProfileAction) -> Self {
+        Self {
+            longitudinal_action_choice: LongitudinalActionChoice::SpeedProfileAction(action),
         }
     }
 }
 
-impl Default for LongitudinalDistanceAction {
-    fn default() -> Self {
+// `LongitudinalDistanceAction`, `SpeedProfileAction` and
+// `SpeedProfileEntry` no longer implement `Default` — see the constructors
+// below.
+impl LongitudinalDistanceAction {
+    /// Create a new `LongitudinalDistanceAction`.
+    ///
+    /// XSD `LongitudinalDistanceAction` (:1438-1447): `@entityRef`,
+    /// `@continuous` and `@freespace` are all `use="required"` with no
+    /// `default="…"`; `@distance`, `@timeGap`, `@displacement`,
+    /// `@coordinateSystem` and `DynamicConstraints` are all optional and
+    /// default to `None` here.
+    pub fn new(entity_ref: impl Into<String>, freespace: bool, continuous: bool) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            distance: Some(Double::literal(10.0)),
+            entity_ref: OSString::literal(entity_ref.into()),
+            distance: None,
             time_gap: None,
             coordinate_system: None,
             displacement: None,
-            freespace: Boolean::literal(true),
-            continuous: Boolean::literal(false),
+            freespace: Boolean::literal(freespace),
+            continuous: Boolean::literal(continuous),
             dynamic_constraints: None,
         }
     }
+
+    /// Set the optional `@distance`.
+    pub fn with_distance(mut self, distance: f64) -> Self {
+        self.distance = Some(Double::literal(distance));
+        self
+    }
+
+    /// Set the optional `@timeGap`.
+    pub fn with_time_gap(mut self, time_gap: f64) -> Self {
+        self.time_gap = Some(Double::literal(time_gap));
+        self
+    }
 }
 
-impl Default for SpeedProfileAction {
-    fn default() -> Self {
+impl SpeedProfileAction {
+    /// Create a new `SpeedProfileAction`.
+    ///
+    /// XSD `SpeedProfileAction` (:2060-2067): `@followingMode` is
+    /// `use="required"` with no `default="…"`, and `SpeedProfileEntry` has
+    /// `maxOccurs="unbounded"` with no `minOccurs` override, i.e. at least
+    /// one entry is required; `@entityRef` and `DynamicConstraints` are
+    /// optional and default to `None` here.
+    pub fn new(following_mode: FollowingMode, entries: Vec<SpeedProfileEntry>) -> Self {
         Self {
             entity_ref: None,
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(following_mode),
             dynamic_constraints: None,
-            entries: vec![SpeedProfileEntry::default()],
+            entries,
         }
+    }
+
+    /// Set the optional `@entityRef`.
+    pub fn with_entity_ref(mut self, entity_ref: impl Into<String>) -> Self {
+        self.entity_ref = Some(OSString::literal(entity_ref.into()));
+        self
     }
 }
 
-impl Default for SpeedProfileEntry {
-    fn default() -> Self {
+impl SpeedProfileEntry {
+    /// Create a new `SpeedProfileEntry`.
+    ///
+    /// XSD `SpeedProfileEntry` (:2068-2071): `@speed` is `use="required"`
+    /// with no `default="…"`; `@time` is optional and defaults to `None`
+    /// here.
+    pub fn new(speed: f64) -> Self {
         Self {
-            time: Some(Double::literal(0.0)),
-            speed: Double::literal(10.0),
+            time: None,
+            speed: Double::literal(speed),
         }
+    }
+
+    /// Set the optional `@time`.
+    pub fn with_time(mut self, time: f64) -> Self {
+        self.time = Some(Double::literal(time));
+        self
     }
 }
 
-impl Default for SynchronizeAction {
-    fn default() -> Self {
+impl SynchronizeAction {
+    /// Create a new `SynchronizeAction`.
+    ///
+    /// XSD `SynchronizeAction`: `@masterEntityRef` and both `Position`
+    /// children (`TargetPositionMaster`, `TargetPosition`) are required with
+    /// no `default="…"`; `FinalSpeed`, `@targetToleranceMaster` and
+    /// `@targetTolerance` are all optional and default to `None` here.
+    pub fn new(
+        master_entity_ref: impl Into<String>,
+        target_position_master: Position,
+        target_position: Position,
+    ) -> Self {
         Self {
-            master_entity_ref: OSString::literal("DefaultEntity".to_string()),
-            target_position_master: Position::default(),
-            target_position: Position::default(),
+            master_entity_ref: OSString::literal(master_entity_ref.into()),
+            target_position_master,
+            target_position,
             final_speed: None,
             target_tolerance_master: None,
             target_tolerance: None,
@@ -1237,29 +1399,46 @@ impl Default for SynchronizeAction {
     }
 }
 
-impl Default for FinalSpeed {
-    fn default() -> Self {
+impl FinalSpeed {
+    /// Create a `FinalSpeed` with an absolute target speed.
+    pub fn absolute(speed: AbsoluteSpeed) -> Self {
         Self {
-            speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed::default()),
+            speed_choice: FinalSpeedChoice::AbsoluteSpeed(speed),
+        }
+    }
+
+    /// Create a `FinalSpeed` relative to the master entity.
+    pub fn relative(speed: RelativeSpeedToMaster) -> Self {
+        Self {
+            speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(speed),
         }
     }
 }
 
-impl Default for AbsoluteSpeed {
-    fn default() -> Self {
+impl AbsoluteSpeed {
+    /// Create a new `AbsoluteSpeed`.
+    ///
+    /// XSD `AbsoluteSpeed`: `@value` is `use="required"` with no
+    /// `default="…"`; the optional `SteadyState` choice defaults to absent.
+    pub fn new(value: f64) -> Self {
         Self {
-            value: Double::literal(10.0),
+            value: Double::literal(value),
             target_distance_steady_state: None,
             target_time_steady_state: None,
         }
     }
 }
 
-impl Default for RelativeSpeedToMaster {
-    fn default() -> Self {
+impl RelativeSpeedToMaster {
+    /// Create a new `RelativeSpeedToMaster`.
+    ///
+    /// XSD `RelativeSpeedToMaster`: `@speedTargetValueType` and `@value` are
+    /// `use="required"` with no `default="…"`; the optional `SteadyState`
+    /// choice defaults to absent.
+    pub fn new(speed_target_value_type: SpeedTargetValueType, value: f64) -> Self {
         Self {
-            speed_target_value_type: SpeedTargetValueType::Delta,
-            value: Double::literal(0.0),
+            speed_target_value_type: Value::Literal(speed_target_value_type),
+            value: Double::literal(value),
             target_distance_steady_state: None,
             target_time_steady_state: None,
         }
@@ -1274,15 +1453,18 @@ mod tests {
 
     #[test]
     fn test_lane_change_action_creation() {
-        let action = LaneChangeAction::default();
+        let action = LaneChangeAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            LaneChangeTarget::relative("Ego", -1),
+        );
         assert!(action.target_lane_offset.is_none());
         assert_eq!(
             action.lane_change_action_dynamics.dynamics_dimension,
-            DynamicsDimension::Time
+            Value::Literal(DynamicsDimension::Time)
         );
         assert_eq!(
             action.lane_change_action_dynamics.dynamics_shape,
-            DynamicsShape::Linear
+            Value::Literal(DynamicsShape::Linear)
         );
     }
 
@@ -1306,7 +1488,7 @@ mod tests {
 
     #[test]
     fn test_lane_change_action_with_helper_methods() {
-        let dynamics = TransitionDynamics::default();
+        let dynamics = TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0);
         let target = LaneChangeTarget::relative("Ego", -1);
         let action = LaneChangeAction::new(dynamics, target);
 
@@ -1315,7 +1497,7 @@ mod tests {
 
     #[test]
     fn test_lane_change_with_offset() {
-        let dynamics = TransitionDynamics::default();
+        let dynamics = TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0);
         let target = LaneChangeTarget::absolute("1");
         let action = LaneChangeAction::new(dynamics, target).with_offset(Double::literal(0.5));
 
@@ -1355,7 +1537,7 @@ mod tests {
     #[test]
     fn test_xml_serialization_lane_change() {
         let action = LaneChangeAction::new(
-            TransitionDynamics::default(),
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
             LaneChangeTarget::relative("Ego", -1),
         );
 
@@ -1369,7 +1551,7 @@ mod tests {
     #[test]
     fn test_xml_serialization_with_offset() {
         let action = LaneChangeAction::new(
-            TransitionDynamics::default(),
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
             LaneChangeTarget::absolute("1"),
         )
         .with_offset(Double::literal(0.5));
@@ -1412,8 +1594,8 @@ mod tests {
     fn test_xml_round_trip() {
         let original = LaneChangeAction::new(
             TransitionDynamics {
-                dynamics_dimension: DynamicsDimension::Time,
-                dynamics_shape: DynamicsShape::Linear,
+                dynamics_dimension: Value::Literal(DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(DynamicsShape::Linear),
                 following_mode: None,
                 value: Double::literal(2.0),
             },
@@ -1436,9 +1618,16 @@ mod tests {
 
     #[test]
     fn test_lane_offset_action_creation() {
-        let action = LaneOffsetAction::default();
+        let action = LaneOffsetAction::new(
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear),
+            LaneOffsetTarget::absolute(0.0),
+            false,
+        );
         assert_eq!(action.continuous.as_literal(), Some(&false));
-        assert_eq!(action.dynamics.dynamics_shape, DynamicsShape::Linear);
+        assert_eq!(
+            action.dynamics.dynamics_shape,
+            Value::Literal(DynamicsShape::Linear)
+        );
     }
 
     #[test]
@@ -1480,7 +1669,10 @@ mod tests {
 
     #[test]
     fn test_lateral_action_helpers() {
-        let lane_change = LaneChangeAction::default();
+        let lane_change = LaneChangeAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            LaneChangeTarget::relative("Ego", -1),
+        );
         let lateral_action = LateralAction::lane_change(lane_change);
 
         if let LateralActionChoice::LaneChangeAction(_) = lateral_action.lateral_choice {
@@ -1489,7 +1681,11 @@ mod tests {
             panic!("Expected LaneChangeAction");
         }
 
-        let lane_offset = LaneOffsetAction::default();
+        let lane_offset = LaneOffsetAction::new(
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear),
+            LaneOffsetTarget::absolute(0.0),
+            false,
+        );
         let lateral_action = LateralAction::lane_offset(lane_offset);
 
         if let LateralActionChoice::LaneOffsetAction(_) = lateral_action.lateral_choice {
@@ -1571,11 +1767,10 @@ mod tests {
     #[test]
     fn test_longitudinal_action_choices() {
         // Test with SpeedAction
-        let speed_action = LongitudinalAction {
-            longitudinal_action_choice: LongitudinalActionChoice::SpeedAction(
-                SpeedAction::default(),
-            ),
-        };
+        let speed_action = LongitudinalAction::speed(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        ));
 
         if let LongitudinalActionChoice::SpeedAction(_) = speed_action.longitudinal_action_choice {
             // Expected
@@ -1584,11 +1779,9 @@ mod tests {
         }
 
         // Test with LongitudinalDistanceAction
-        let distance_action = LongitudinalAction {
-            longitudinal_action_choice: LongitudinalActionChoice::LongitudinalDistanceAction(
-                LongitudinalDistanceAction::default(),
-            ),
-        };
+        let distance_action = LongitudinalAction::longitudinal_distance(
+            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+        );
 
         if let LongitudinalActionChoice::LongitudinalDistanceAction(dist) =
             distance_action.longitudinal_action_choice
@@ -1612,7 +1805,7 @@ mod tests {
 
         let action = SpeedProfileAction {
             entity_ref: Some(OSString::literal("RefEntity".to_string())),
-            following_mode: FollowingMode::Follow,
+            following_mode: Value::Literal(FollowingMode::Follow),
             dynamic_constraints: Some(DynamicConstraints {
                 max_acceleration: Some(Double::literal(1.5)),
                 max_speed: Some(Double::literal(30.0)),
@@ -1642,8 +1835,8 @@ mod tests {
     fn test_synchronize_action_creation() {
         let action = SynchronizeAction {
             master_entity_ref: OSString::literal("SyncTarget".to_string()),
-            target_position_master: Position::default(),
-            target_position: Position::default(),
+            target_position_master: Position::world_origin(),
+            target_position: Position::world_origin(),
             final_speed: Some(FinalSpeed {
                 speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
                     value: Double::literal(15.0),
@@ -1672,7 +1865,7 @@ mod tests {
     #[test]
     fn test_acquire_position_action_creation() {
         let action = AcquirePositionAction {
-            position: Position::default(),
+            position: Position::world_origin(),
         };
 
         // Just ensure it compiles and has the expected structure
@@ -1742,7 +1935,7 @@ mod tests {
         // Test relative speed to master
         let rel_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
-                speed_target_value_type: SpeedTargetValueType::Delta,
+                speed_target_value_type: Value::Literal(SpeedTargetValueType::Delta),
                 value: Double::literal(-5.0),
                 target_distance_steady_state: None,
                 target_time_steady_state: None,
@@ -1755,21 +1948,35 @@ mod tests {
     }
 
     #[test]
-    fn test_action_defaults() {
-        // Test that all new action types have working defaults
-        let lane_change = LaneChangeAction::default();
+    fn test_action_constructors() {
+        // No type in this file implements `Default` any more. Each action is
+        // built through its explicit constructor.
+        let lane_change = LaneChangeAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            LaneChangeTarget::relative("Ego", -1),
+        );
         assert!(lane_change.target_lane_offset.is_none());
 
-        let lane_offset = LaneOffsetAction::default();
+        let lane_offset = LaneOffsetAction::new(
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear),
+            LaneOffsetTarget::absolute(0.0),
+            false,
+        );
         assert_eq!(lane_offset.continuous.as_literal(), Some(&false));
 
-        let sync_action = SynchronizeAction::default();
+        let sync_action = SynchronizeAction::new(
+            "SyncTarget",
+            Position::world_origin(),
+            Position::world_origin(),
+        );
         assert_eq!(
             sync_action.master_entity_ref.as_literal(),
-            Some(&"DefaultEntity".to_string())
+            Some(&"SyncTarget".to_string())
         );
 
-        let acquire_action = AcquirePositionAction::default();
+        let acquire_action = AcquirePositionAction::new(Position::world(
+            crate::types::positions::WorldPosition::new(3.0, 4.0),
+        ));
         // Just verify it compiles and creates successfully
         let _ = acquire_action.position;
     }
@@ -1778,11 +1985,11 @@ mod tests {
     fn test_follow_trajectory_action_validation() {
         // Test valid action with direct trajectory
         let valid_trajectory = FollowTrajectoryAction {
-            trajectory: Some(Trajectory::default()),
+            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::empty())),
             catalog_reference: None,
-            time_reference: TimeReference::default(),
+            time_reference: TimeReference::none(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
         };
         assert!(valid_trajectory.validate().is_ok());
@@ -1794,9 +2001,9 @@ mod tests {
                 "catalog".to_string(),
                 "entry".to_string(),
             )),
-            time_reference: TimeReference::default(),
+            time_reference: TimeReference::none(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
         };
         assert!(valid_catalog.validate().is_ok());
@@ -1805,9 +2012,13 @@ mod tests {
         let valid_ref = FollowTrajectoryAction {
             trajectory: None,
             catalog_reference: None,
-            time_reference: TimeReference::default(),
-            trajectory_ref: Some(TrajectoryRef::default()),
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            time_reference: TimeReference::none(),
+            trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
+                "TestTrajectory",
+                false,
+                Shape::empty(),
+            ))),
+            trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
         };
         assert!(valid_ref.validate().is_ok());
@@ -1816,23 +2027,23 @@ mod tests {
         let valid_none = FollowTrajectoryAction {
             trajectory: None,
             catalog_reference: None,
-            time_reference: TimeReference::default(),
+            time_reference: TimeReference::none(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
         };
         assert!(valid_none.validate().is_ok());
 
         // Test invalid action with multiple trajectory sources
         let invalid_multiple = FollowTrajectoryAction {
-            trajectory: Some(Trajectory::default()),
+            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::empty())),
             catalog_reference: Some(CatalogReference::new(
                 "catalog".to_string(),
                 "entry".to_string(),
             )),
-            time_reference: TimeReference::default(),
+            time_reference: TimeReference::none(),
             trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode::default(),
+            trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
         };
         assert!(invalid_multiple.validate().is_err());
@@ -1846,7 +2057,10 @@ mod tests {
     fn test_transition_dynamics_following_mode_round_trip() {
         let xml = r#"<TransitionDynamics dynamicsDimension="time" dynamicsShape="linear" followingMode="position" value="2.0"/>"#;
         let dynamics: TransitionDynamics = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(dynamics.following_mode, Some(FollowingMode::Position));
+        assert_eq!(
+            dynamics.following_mode,
+            Some(Value::Literal(FollowingMode::Position))
+        );
 
         let serialized = quick_xml::se::to_string(&dynamics).unwrap();
         assert!(
@@ -1891,11 +2105,13 @@ mod tests {
         let action: LateralDistanceAction = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
             action.displacement,
-            Some(crate::types::enums::LateralDisplacement::LeftToReferencedEntity)
+            Some(Value::Literal(
+                crate::types::enums::LateralDisplacement::LeftToReferencedEntity
+            ))
         );
         assert_eq!(
             action.coordinate_system,
-            Some(crate::types::enums::CoordinateSystem::Road)
+            Some(Value::Literal(crate::types::enums::CoordinateSystem::Road))
         );
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
@@ -1939,6 +2155,3 @@ mod tests {
         assert_eq!(action, reparsed);
     }
 }
-
-// Add movement action validation
-// impl ValidateAction for SpeedAction, TeleportAction

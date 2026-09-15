@@ -1,13 +1,8 @@
-//! Story and Act types for scenario execution flow
+//! The story tree: `Story` → `Act` → `ManeuverGroup` → `Maneuver` → `Event`.
 //!
-//! This file contains:
-//! - Story definition with parameter scope and act sequences
-//! - Act organization with maneuver groups and execution triggers
-//! - ManeuverGroup for coordinating entity behaviors
-//! - Maneuver definitions with event sequences and timing
-//! - Actor selection and entity assignment to maneuvers
-//!
-use crate::types::basic::{OSString, UnsignedInt};
+//! Each level carries its own parameter scope and its own triggers. A `ManeuverGroup`
+//! binds maneuvers to actors; an `Act` starts and stops on triggers of its own.
+use crate::types::basic::{OSString, UnsignedInt, Value};
 use crate::types::enums::Priority;
 use serde::{Deserialize, Serialize};
 
@@ -59,7 +54,12 @@ pub struct StoryAction {
 /// `wrappers::GlobalAction`. As a named child element the choice has to sit
 /// behind a wrapper struct, the same shape `RoutePosition.RouteRefElement`
 /// uses.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+// `#[derive(Default)]` removed: it required
+// `wrappers::GlobalAction: Default`, which fabricated a choice branch
+// (`GlobalAction::TrafficAction`) for what XSD:1282-1293 declares a
+// `xsd:choice` with no default. `global_action` above is `Option<..>`, so
+// no `Default` is needed here.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "GlobalAction")]
 pub struct StoryGlobalAction {
     #[serde(flatten)]
@@ -226,7 +226,7 @@ pub struct Event {
 
     /// Priority of this event
     #[serde(rename = "@priority")]
-    pub priority: Priority,
+    pub priority: Value<Priority>,
 
     /// The actions to execute when this event triggers
     #[serde(rename = "Action")]
@@ -241,7 +241,14 @@ pub struct Event {
 ///
 /// Actors define which entities will participate in a ManeuverGroup
 /// and can optionally select from triggering entities.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`. XSD `Actors` (`Schema/OpenSCENARIO.xsd:723-728`) marks
+/// `@selectTriggeringEntities` `use="required"` with no schema `default="…"`, so the
+/// derived impl invented `false` — category 1, a fabricated required attribute. The
+/// `EntityRef` child *is* `minOccurs="0"`, so only the bool half was wrong; the
+/// constructors below keep the empty-`Vec` form available while forcing the caller to
+/// state the flag.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Actors {
     /// Whether to select entities that triggered the maneuver group
     #[serde(rename = "@selectTriggeringEntities")]
@@ -252,6 +259,26 @@ pub struct Actors {
     pub entity_refs: Vec<EntityRef>,
 }
 
+impl Actors {
+    /// Create an actor set, stating `@selectTriggeringEntities` explicitly.
+    pub fn new(select_triggering_entities: bool, entity_refs: Vec<EntityRef>) -> Self {
+        Self {
+            select_triggering_entities,
+            entity_refs,
+        }
+    }
+
+    /// Actors drawn from the triggering entities (`selectTriggeringEntities="true"`).
+    pub fn triggering() -> Self {
+        Self::new(true, Vec::new())
+    }
+
+    /// Actors named explicitly (`selectTriggeringEntities="false"`).
+    pub fn named(entity_refs: Vec<EntityRef>) -> Self {
+        Self::new(false, entity_refs)
+    }
+}
+
 /// Reference to an entity for actor assignment
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EntityRef {
@@ -260,22 +287,31 @@ pub struct EntityRef {
     pub entity_ref: OSString,
 }
 
-// Default implementations for all structs
-impl Default for StoryAction {
-    fn default() -> Self {
+// `Default` impls removed for both types below. `StoryAction`'s `@name`
+// is `use="required"` (XSD `Action`, :705-712) with no schema default, and its old impl
+// additionally fabricated a whole `PrivateAction` child nobody wrote. `StoryPrivateAction`
+// mirrors XSD `PrivateAction` (:1777-1791), a bare `xsd:choice` with no `minOccurs="0"`
+// override — the choice itself is required, so an all-`None` value is *also* not schema-valid
+// content ("it states nothing" is no defence when the schema demands a branch), on top of the
+// old impl's fabricated `SpeedAction` branch. Neither type gets a replacement `Default`; callers
+// build one branch explicitly via the constructors below.
+impl StoryAction {
+    /// Create a named `PrivateAction` (XSD `Action` choice member; `@name` is required and has
+    /// no schema default, so it must be supplied).
+    pub fn private(name: &str, private_action: StoryPrivateAction) -> Self {
         Self {
-            name: OSString::literal("DefaultAction".to_string()),
+            name: OSString::literal(name.to_string()),
             global_action: None,
             user_defined_action: None,
-            private_action: Some(StoryPrivateAction::default()),
+            private_action: Some(private_action),
         }
     }
 }
 
-impl Default for StoryPrivateAction {
-    fn default() -> Self {
+impl StoryPrivateAction {
+    fn empty() -> Self {
         Self {
-            longitudinal_action: Some(crate::types::scenario::init::LongitudinalAction::default()),
+            longitudinal_action: None,
             lateral_action: None,
             visibility_action: None,
             synchronize_action: None,
@@ -287,22 +323,48 @@ impl Default for StoryPrivateAction {
             trailer_action: None,
         }
     }
+
+    /// `PrivateAction` choosing the `LongitudinalAction` branch.
+    pub fn longitudinal(action: crate::types::scenario::init::LongitudinalAction) -> Self {
+        Self {
+            longitudinal_action: Some(action),
+            ..Self::empty()
+        }
+    }
+
+    /// `PrivateAction` choosing the `VisibilityAction` branch.
+    pub fn visibility(action: crate::types::actions::VisibilityAction) -> Self {
+        Self {
+            visibility_action: Some(action),
+            ..Self::empty()
+        }
+    }
+
+    /// `PrivateAction` choosing the `TeleportAction` branch.
+    pub fn teleport(action: crate::types::actions::movement::TeleportAction) -> Self {
+        Self {
+            teleport_action: Some(action),
+            ..Self::empty()
+        }
+    }
 }
 
-impl Default for ScenarioStory {
-    fn default() -> Self {
+impl ScenarioStory {
+    /// Create a new, empty story with the given name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: OSString::literal("DefaultStory".to_string()),
+            name: OSString::literal(name.into()),
             parameter_declarations: None,
             acts: Vec::new(),
         }
     }
 }
 
-impl Default for Act {
-    fn default() -> Self {
+impl Act {
+    /// Create a new, empty act with the given name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: OSString::literal("DefaultAct".to_string()),
+            name: OSString::literal(name.into()),
             maneuver_groups: Vec::new(),
             start_trigger: None,
             stop_trigger: None,
@@ -310,44 +372,62 @@ impl Default for Act {
     }
 }
 
-impl Default for ManeuverGroup {
-    fn default() -> Self {
+impl ManeuverGroup {
+    /// Create a new maneuver group with the given name, maximum execution count and
+    /// actors, and no catalog references or maneuvers.
+    ///
+    /// `@maximumExecutionCount` is `use="required"` in the XSD
+    /// (`Schema/OpenSCENARIO.xsd`: `<xsd:attribute name="maximumExecutionCount"
+    /// type="UnsignedInt" use="required"/>`) with no `default="…"`, so there is
+    /// no schema-backed value to assume here — the caller must supply one.
+    ///
+    /// `actors` likewise became a parameter: it used to be `Actors::default()`,
+    /// which fabricated `selectTriggeringEntities="false"` — an attribute the XSD marks
+    /// `use="required"` with no schema default. `Actors` is required here too
+    /// (`Schema/OpenSCENARIO.xsd` `ManeuverGroup`), so there is nothing to elide.
+    pub fn new(name: impl Into<String>, maximum_execution_count: u32, actors: Actors) -> Self {
         Self {
-            name: OSString::literal("DefaultManeuverGroup".to_string()),
-            maximum_execution_count: UnsignedInt::literal(1),
-            actors: Actors::default(),
+            name: OSString::literal(name.into()),
+            maximum_execution_count: UnsignedInt::literal(maximum_execution_count),
+            actors,
             catalog_reference: Vec::new(),
             maneuvers: Vec::new(),
         }
     }
 }
 
-impl Default for Maneuver {
-    fn default() -> Self {
+impl Maneuver {
+    /// Create a new, empty maneuver with the given name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: OSString::literal("DefaultManeuver".to_string()),
+            name: OSString::literal(name.into()),
             parameter_declarations: None,
             events: Vec::new(),
         }
     }
 }
 
-impl Default for Event {
-    fn default() -> Self {
+impl Event {
+    /// Create a new event with the given name, priority, and no actions.
+    ///
+    /// `@priority` is `use="required"` in the XSD with no `default="…"`, so it
+    /// must be supplied explicitly.
+    pub fn new(name: impl Into<String>, priority: Priority) -> Self {
         Self {
-            name: OSString::literal("DefaultEvent".to_string()),
+            name: OSString::literal(name.into()),
             maximum_execution_count: None,
-            priority: Priority::Overwrite,
-            actions: vec![StoryAction::default()],
+            priority: Value::Literal(priority),
+            actions: Vec::new(),
             start_trigger: None,
         }
     }
 }
 
-impl Default for EntityRef {
-    fn default() -> Self {
+impl EntityRef {
+    /// Create a new entity reference
+    pub fn new(entity_ref: impl Into<String>) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
+            entity_ref: OSString::literal(entity_ref.into()),
         }
     }
 }
@@ -362,19 +442,19 @@ mod tests {
         let story = ScenarioStory {
             name: Value::literal("TestStory".to_string()),
             parameter_declarations: None,
-            acts: vec![Act::default()],
+            acts: vec![Act::new("Act1")],
         };
 
         assert_eq!(story.name.as_literal().unwrap(), "TestStory");
         assert_eq!(story.acts.len(), 1);
-        assert_eq!(story.acts[0].name.as_literal().unwrap(), "DefaultAct");
+        assert_eq!(story.acts[0].name.as_literal().unwrap(), "Act1");
     }
 
     #[test]
     fn test_act_with_triggers() {
         let act = Act {
             name: Value::literal("TestAct".to_string()),
-            maneuver_groups: vec![ManeuverGroup::default()],
+            maneuver_groups: vec![ManeuverGroup::new("Group1", 1, Actors::named(Vec::new()))],
             start_trigger: None, // Will add proper trigger tests when Trigger is implemented
             stop_trigger: None,
         };
@@ -402,7 +482,7 @@ mod tests {
             maximum_execution_count: Value::literal(3),
             actors,
             catalog_reference: Vec::new(),
-            maneuvers: vec![Maneuver::default()],
+            maneuvers: vec![Maneuver::new("Maneuver1")],
         };
 
         assert_eq!(maneuver_group.name.as_literal().unwrap(), "TestGroup");
@@ -423,15 +503,25 @@ mod tests {
                 Event {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
-                    priority: Priority::Override,
-                    actions: vec![StoryAction::default()],
+                    priority: Value::Literal(Priority::Override),
+                    actions: vec![StoryAction::private(
+                        "TestAction",
+                        StoryPrivateAction::visibility(
+                            crate::types::actions::VisibilityAction::new(true, true, true),
+                        ),
+                    )],
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
-                    priority: Priority::Overwrite,
-                    actions: vec![StoryAction::default()],
+                    priority: Value::Literal(Priority::Overwrite),
+                    actions: vec![StoryAction::private(
+                        "TestAction",
+                        StoryPrivateAction::visibility(
+                            crate::types::actions::VisibilityAction::new(true, true, true),
+                        ),
+                    )],
                     start_trigger: None,
                 },
             ],
@@ -448,8 +538,13 @@ mod tests {
         let event = Event {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
-            priority: Priority::Parallel,
-            actions: vec![StoryAction::default()],
+            priority: Value::Literal(Priority::Parallel),
+            actions: vec![StoryAction::private(
+                "TestAction",
+                StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
+                    true, true, true,
+                )),
+            )],
             start_trigger: None,
         };
 
@@ -463,7 +558,7 @@ mod tests {
                 .unwrap(),
             &5
         );
-        assert_eq!(event.priority, Priority::Parallel);
+        assert_eq!(event.priority, Value::Literal(Priority::Parallel));
     }
 
     #[test]
@@ -485,9 +580,9 @@ mod tests {
 
     #[test]
     fn test_story_serialization() {
-        let story = ScenarioStory::default();
+        let story = ScenarioStory::new("TestStory");
         let serialized = quick_xml::se::to_string(&story).expect("Serialization should succeed");
-        assert!(serialized.contains("DefaultStory"));
+        assert!(serialized.contains("TestStory"));
     }
 
     #[test]
@@ -517,6 +612,6 @@ mod tests {
             "Event with @priority should parse: {:?}",
             result.err()
         );
-        assert_eq!(result.unwrap().priority, Priority::Override);
+        assert_eq!(result.unwrap().priority, Value::Literal(Priority::Override));
     }
 }

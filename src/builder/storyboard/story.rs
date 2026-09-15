@@ -128,7 +128,7 @@ impl StoryboardBuilder {
         let storyboard = Storyboard {
             init: self.init.unwrap_or_else(|| {
                 // Provide basic default with environment action if no init specified
-                InitActionBuilder::with_default_environment()
+                InitActionBuilder::with_default_environment("Environment")
                     .build()
                     .unwrap_or_default()
             }),
@@ -521,9 +521,12 @@ impl InitActionBuilderForStoryboard {
         }
     }
 
-    /// Add a global environment action with default environment
-    pub fn add_global_environment_action(mut self) -> Self {
-        self.init_builder = self.init_builder.add_global_environment_action();
+    /// Add a global environment action with a named environment
+    ///
+    /// `name` is required by XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`); there is
+    /// no schema default.
+    pub fn add_global_environment_action(mut self, name: &str) -> Self {
+        self.init_builder = self.init_builder.add_global_environment_action(name);
         self
     }
 

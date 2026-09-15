@@ -1,13 +1,8 @@
-//! Traffic management actions implementation
-//!
-//! This file contains:
-//! - Traffic source and sink actions for dynamic traffic generation
-//! - Traffic swarm actions for crowd simulation around entities
-//! - Traffic area actions for regional traffic density control
-//! - Traffic signal control actions for intersection management
-//! - Background traffic definition and distribution specifications
-//!
-use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt};
+//! Traffic actions: sources and sinks that add and remove background traffic, swarms
+//! that surround a central entity, area-based density control, and the signal actions
+//! that drive intersections. `TrafficDefinition` describes the population each draws
+//! from, as vehicle-category and controller distributions.
+use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::controllers::Controller;
 use crate::types::entities::{EntityDistribution, Properties};
@@ -15,17 +10,10 @@ use crate::types::enums::VehicleCategory;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-/// Traffic source action for traffic generation with rate and position
+/// Spawns traffic at a position, at a given rate, within a given radius.
 ///
-/// This action generates traffic vehicles at a specified position with a given rate.
-/// Used to create dynamic traffic scenarios where vehicles enter the simulation over time.
-///
-/// # Fields
-///
-/// * `rate` - Rate of vehicle generation (vehicles per minute)
-/// * `velocity` - Optional velocity for generated vehicles (meters/second)
-/// * `position` - Position where vehicles are generated
-/// * `traffic_definition` - Definition of traffic properties for generated vehicles
+/// XSD `TrafficSourceAction`: `radius` and `rate` are `use="required"`; `velocity`,
+/// `TrafficDefinition` and `TrafficDistribution` are optional.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSourceAction {
     #[serde(rename = "@radius")]
@@ -55,17 +43,10 @@ pub struct TrafficSourceAction {
     pub traffic_distribution: Option<TrafficDistribution>,
 }
 
-/// Traffic sink action for traffic removal with radius control
+/// Removes traffic that enters a radius around a position.
 ///
-/// This action removes vehicles that enter a specified radius around a position.
-/// Used to prevent traffic accumulation and manage vehicle lifecycle in simulations.
-///
-/// # Fields
-///
-/// * `rate` - Rate of vehicle removal (vehicles per minute)
-/// * `radius` - Radius around position for vehicle removal (meters)
-/// * `position` - Center position for removal area
-/// * `traffic_definition` - Optional traffic definition to filter which vehicles are removed
+/// XSD `TrafficSinkAction`: only `radius` is `use="required"`; `rate` and
+/// `TrafficDefinition` are optional.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSinkAction {
     #[serde(rename = "@rate", default, skip_serializing_if = "Option::is_none")]
@@ -82,24 +63,12 @@ pub struct TrafficSinkAction {
     pub traffic_definition: Option<TrafficDefinition>,
 }
 
-/// Traffic swarm action for swarm behavior around central object
+/// Maintains a swarm of vehicles in an elliptical band around a central entity.
 ///
-/// This action creates a swarm of vehicles positioned in an elliptical pattern
-/// around a central object. The swarm can be used to simulate traffic
-/// density and complex interaction scenarios.
-///
-/// # Fields
-///
-/// * `inner_radius` - Inner radius of the elliptical swarm area (meters)
-/// * `number_of_vehicles` - Number of vehicles to generate
-/// * `offset` - Offset from central object (meters)
-/// * `semi_major_axis` - Length of semi-major axis (meters)
-/// * `semi_minor_axis` - Length of semi-minor axis (meters)
-/// * `velocity` - Optional velocity for swarm vehicles
-/// * `central_object` - Reference to central object
-/// * `traffic_definition` - Optional traffic definition for generated vehicles
-///
-/// # Example
+/// The band runs between `inner_radius` and the ellipse given by `semi_major_axis`
+/// and `semi_minor_axis`, displaced from the central object by `offset`. XSD
+/// `TrafficSwarmAction` marks the five geometry attributes and `CentralObject`
+/// required; everything else is optional.
 ///
 /// ```rust
 /// use openscenario_rs::types::actions::{TrafficSwarmAction, CentralSwarmObject};
@@ -264,15 +233,11 @@ pub struct TrafficSignalGroupState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficStopAction {}
 
-/// Traffic definition for vehicle category and controller distribution
+/// The population a traffic source or swarm draws from: which vehicle categories
+/// appear and with what weight, and which controllers drive them.
 ///
-/// Defines the properties of traffic that should be generated, including
-/// vehicle types and their probabilities, as well as controller behavior profiles.
-///
-/// # Fields
-///
-/// * `vehicle_category_distribution` - Distribution of vehicle categories (cars, trucks, etc.)
-/// * `controller_distribution` - Distribution of controller behaviors
+/// XSD `TrafficDefinition` requires `name`, `VehicleCategoryDistribution` and
+/// `ControllerDistribution`; `VehicleRoleDistribution` is optional.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficDefinition {
     #[serde(rename = "@name")]
@@ -290,7 +255,7 @@ pub struct TrafficDefinition {
 }
 
 /// Vehicle role distribution for traffic composition
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleRoleDistribution {
     #[serde(rename = "VehicleRoleDistributionEntry", default)]
     pub entries: Vec<VehicleRoleDistributionEntry>,
@@ -302,7 +267,7 @@ pub struct VehicleRoleDistributionEntry {
     #[serde(rename = "@weight")]
     pub weight: Double,
     #[serde(rename = "@role")]
-    pub role: crate::types::enums::Role,
+    pub role: Value<crate::types::enums::Role>,
 }
 
 /// Vehicle category distribution for traffic composition
@@ -316,7 +281,7 @@ pub struct VehicleCategoryDistribution {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleCategoryDistributionEntry {
     #[serde(rename = "@category")]
-    pub category: VehicleCategory,
+    pub category: Value<VehicleCategory>,
     #[serde(rename = "@weight")]
     pub weight: Double,
 }
@@ -453,260 +418,26 @@ pub struct DirectionOfTravelDistribution {
     pub opposite: Double,
 }
 
-impl Default for TrafficSourceAction {
-    fn default() -> Self {
-        Self {
-            radius: Double::literal(10.0),         // 10 meter radius
-            rate: Double::literal(10.0),           // 10 vehicles per minute
-            velocity: Some(Double::literal(50.0)), // 50 km/h default velocity
-            speed: None,
-            position: Position::default(),
-            traffic_definition: Some(TrafficDefinition::default()),
-            traffic_distribution: None,
-        }
-    }
-}
-
-impl Default for TrafficSinkAction {
-    fn default() -> Self {
-        Self {
-            rate: Some(Double::literal(10.0)), // 10 vehicles per minute
-            radius: Double::literal(50.0),     // 50 meter radius
-            position: Position::default(),
-            traffic_definition: None,
-        }
-    }
-}
-
-impl Default for TrafficSwarmAction {
-    fn default() -> Self {
-        Self {
-            inner_radius: Double::literal(10.0),
-            number_of_vehicles: UnsignedInt::literal(20),
-            offset: Double::literal(0.0),
-            semi_major_axis: Double::literal(100.0),
-            semi_minor_axis: Double::literal(50.0),
-            velocity: None,
-            central_object: CentralSwarmObject::default(),
-            traffic_definition: Some(TrafficDefinition::default()),
-            traffic_distribution: None,
-            initial_speed_range: None,
-            direction_of_travel_distribution: None,
-        }
-    }
-}
-
-impl Default for TrafficSignalAction {
-    fn default() -> Self {
-        Self {
-            signal_action_choice: TrafficSignalActionChoice::TrafficSignalStateAction(
-                TrafficSignalStateAction::default(),
-            ),
-        }
-    }
-}
-
-impl Default for TrafficSignalStateAction {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultSignal".to_string()),
-            state: OSString::literal("green".to_string()),
-        }
-    }
-}
-
-impl Default for TrafficSignalControllerAction {
-    fn default() -> Self {
-        Self {
-            traffic_signal_controller_ref: OSString::literal("DefaultController".to_string()),
-            phase_ref: OSString::literal("Phase1".to_string()),
-        }
-    }
-}
-
-impl Default for TrafficSignalController {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultController".to_string()),
-            delay: None,
-            reference: None,
-            phases: Vec::new(),
-        }
-    }
-}
-
-impl Default for Phase {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultPhase".to_string()),
-            duration: Double::literal(30.0),
-            traffic_signal_states: Vec::new(),
-            traffic_signal_group_state: None,
-        }
-    }
-}
-
-impl Default for TrafficSignalState {
-    fn default() -> Self {
-        Self {
-            traffic_signal_id: OSString::literal("signal_1".to_string()),
-            state: OSString::literal("green".to_string()),
-        }
-    }
-}
-
-impl Default for TrafficSignalGroupState {
-    fn default() -> Self {
-        Self {
-            state: OSString::literal("green".to_string()),
-        }
-    }
-}
-
+// `impl Default` removed for every fabricating type in this
+// file: `TrafficSourceAction`, `TrafficSinkAction`, `TrafficSwarmAction`,
+// `TrafficSignalAction` (a choice — its old default silently picked the
+// `TrafficSignalStateAction` branch), `TrafficSignalStateAction`,
+// `TrafficSignalControllerAction`, `TrafficSignalController`, `Phase`,
+// `TrafficSignalState`, `TrafficSignalGroupState`, `TrafficDefinition`,
+// `VehicleCategoryDistribution`, `ControllerDistribution`,
+// `CentralSwarmObject`, `TrafficArea`, `Polygon`, `RoadRange`, `RoadCursor`,
+// `Lane`, `TrafficDistribution`, `TrafficDistributionEntry`,
+// `DirectionOfTravelDistribution`, `TrafficAreaAction`. Every attribute they
+// touched is `use="required"` with no `default="…"` in `Schema/OpenSCENARIO.xsd`
+// (checked: `TrafficSourceAction` :2300-2314, `TrafficSwarmAction` :2317-2334,
+// `TrafficSignalController`/`Phase`/`TrafficSignalState*` :1714-1723 and
+// :2258-2287, `TrafficDefinition` :2228-2235, `Lane` :1333-1335, `RoadCursor`
+// :1926-1932, `RoadRange` :1949-1954, `DirectionOfTravelDistribution`
+// :1063-1066, `TrafficAreaAction` :2220-2227). Use the named constructors
+// below instead.
 impl Default for TrafficStopAction {
     fn default() -> Self {
         Self {}
-    }
-}
-
-impl Default for TrafficDefinition {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultTrafficDefinition".to_string()),
-            vehicle_category_distribution: VehicleCategoryDistribution::default(),
-            vehicle_role_distribution: None,
-            controller_distribution: ControllerDistribution::default(),
-        }
-    }
-}
-
-impl Default for VehicleCategoryDistribution {
-    fn default() -> Self {
-        Self {
-            entries: vec![
-                VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Car,
-                    weight: Double::literal(0.7), // 70% cars
-                },
-                VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Truck,
-                    weight: Double::literal(0.2), // 20% trucks
-                },
-                VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Van,
-                    weight: Double::literal(0.1), // 10% vans
-                },
-            ],
-        }
-    }
-}
-
-impl Default for ControllerDistribution {
-    fn default() -> Self {
-        Self {
-            entries: vec![ControllerDistributionEntry {
-                weight: Double::literal(1.0),
-                controller: Some(Controller::new(
-                    "DefaultTrafficController".to_string(),
-                    crate::types::enums::ControllerType::Movement,
-                )),
-                catalog_reference: None,
-            }],
-        }
-    }
-}
-
-impl Default for CentralSwarmObject {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("SwarmCenter".to_string()),
-        }
-    }
-}
-
-impl Default for TrafficArea {
-    fn default() -> Self {
-        Self {
-            polygon: Some(Polygon::default()),
-            road_range: Vec::new(),
-        }
-    }
-}
-
-impl Default for Polygon {
-    fn default() -> Self {
-        Self {
-            position: vec![
-                Position::default(),
-                Position::default(),
-                Position::default(),
-            ],
-        }
-    }
-}
-
-impl Default for RoadRange {
-    fn default() -> Self {
-        Self {
-            length: None,
-            road_cursor: vec![RoadCursor::default(), RoadCursor::default()],
-        }
-    }
-}
-
-impl Default for RoadCursor {
-    fn default() -> Self {
-        Self {
-            road_id: OSString::literal("DefaultRoad".to_string()),
-            s: None,
-            lane: Vec::new(),
-        }
-    }
-}
-
-impl Default for Lane {
-    fn default() -> Self {
-        Self {
-            id: Int::literal(0),
-        }
-    }
-}
-
-impl Default for TrafficDistribution {
-    fn default() -> Self {
-        Self {
-            traffic_distribution_entry: vec![TrafficDistributionEntry::default()],
-        }
-    }
-}
-
-impl Default for TrafficDistributionEntry {
-    fn default() -> Self {
-        Self {
-            weight: Double::literal(1.0),
-            entity_distribution: EntityDistribution::default(),
-            properties: None,
-        }
-    }
-}
-
-impl Default for DirectionOfTravelDistribution {
-    fn default() -> Self {
-        Self {
-            same: Double::literal(1.0),
-            opposite: Double::literal(0.0),
-        }
-    }
-}
-
-impl Default for TrafficAreaAction {
-    fn default() -> Self {
-        Self {
-            number_of_entities: UnsignedInt::literal(1),
-            continuous: Boolean::literal(false),
-            traffic_distribution: TrafficDistribution::default(),
-            traffic_area: TrafficArea::default(),
-        }
     }
 }
 
@@ -1024,37 +755,36 @@ impl TrafficSignalControllerAction {
 }
 
 impl TrafficDefinition {
-    /// Create traffic definition with vehicle categories only
-    pub fn with_vehicles(distribution: VehicleCategoryDistribution) -> Self {
+    /// Create a traffic definition with the required name, vehicle category
+    /// distribution and controller distribution.
+    ///
+    /// XSD `TrafficDefinition` (`:2228-2235`) requires `@name` and both
+    /// `VehicleCategoryDistribution` and `ControllerDistribution` children
+    /// (`xsd:all`, no `minOccurs="0"`); `VehicleRoleDistribution` is the only
+    /// optional member.
+    pub fn new(
+        name: impl Into<String>,
+        vehicle_category_distribution: VehicleCategoryDistribution,
+        controller_distribution: ControllerDistribution,
+    ) -> Self {
         Self {
-            name: OSString::literal("DefaultTrafficDefinition".to_string()),
-            vehicle_category_distribution: distribution,
+            name: OSString::literal(name.into()),
+            vehicle_category_distribution,
             vehicle_role_distribution: None,
-            controller_distribution: ControllerDistribution::default(),
-        }
-    }
-
-    /// Create traffic definition with controllers only
-    pub fn with_controllers(distribution: ControllerDistribution) -> Self {
-        Self {
-            name: OSString::literal("DefaultTrafficDefinition".to_string()),
-            vehicle_category_distribution: VehicleCategoryDistribution::default(),
-            vehicle_role_distribution: None,
-            controller_distribution: distribution,
+            controller_distribution,
         }
     }
 
     /// Create traffic definition with both vehicles and controllers
+    ///
+    /// Kept for call-site compatibility; delegates to [`Self::new`] under a
+    /// caller-chosen name rather than inventing one.
     pub fn with_both(
+        name: impl Into<String>,
         vehicles: VehicleCategoryDistribution,
         controllers: ControllerDistribution,
     ) -> Self {
-        Self {
-            name: OSString::literal("DefaultTrafficDefinition".to_string()),
-            vehicle_category_distribution: vehicles,
-            vehicle_role_distribution: None,
-            controller_distribution: controllers,
-        }
+        Self::new(name, vehicles, controllers)
     }
 }
 
@@ -1063,7 +793,7 @@ impl VehicleCategoryDistribution {
     pub fn single_category(category: VehicleCategory, weight: f64) -> Self {
         Self {
             entries: vec![VehicleCategoryDistributionEntry {
-                category,
+                category: Value::Literal(category),
                 weight: Double::literal(weight),
             }],
         }
@@ -1071,7 +801,22 @@ impl VehicleCategoryDistribution {
 
     /// Create distribution for mixed traffic (cars, trucks, vans)
     pub fn mixed_traffic() -> Self {
-        Self::default()
+        Self {
+            entries: vec![
+                VehicleCategoryDistributionEntry {
+                    category: Value::Literal(VehicleCategory::Car),
+                    weight: Double::literal(0.7), // 70% cars
+                },
+                VehicleCategoryDistributionEntry {
+                    category: Value::Literal(VehicleCategory::Truck),
+                    weight: Double::literal(0.2), // 20% trucks
+                },
+                VehicleCategoryDistributionEntry {
+                    category: Value::Literal(VehicleCategory::Van),
+                    weight: Double::literal(0.1), // 10% vans
+                },
+            ],
+        }
     }
 
     /// Create distribution for urban traffic (mostly cars)
@@ -1079,15 +824,15 @@ impl VehicleCategoryDistribution {
         Self {
             entries: vec![
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Car,
+                    category: Value::Literal(VehicleCategory::Car),
                     weight: Double::literal(0.85),
                 },
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Bus,
+                    category: Value::Literal(VehicleCategory::Bus),
                     weight: Double::literal(0.1),
                 },
                 VehicleCategoryDistributionEntry {
-                    category: VehicleCategory::Van,
+                    category: Value::Literal(VehicleCategory::Van),
                     weight: Double::literal(0.05),
                 },
             ],
@@ -1151,6 +896,102 @@ impl TrafficArea {
     }
 }
 
+impl RoadCursor {
+    /// Create a road cursor at a given road id, with no lane restriction
+    ///
+    /// XSD `RoadCursor` (`:1926-1932`): required `@roadId`, optional `@s` and
+    /// `Lane` children.
+    pub fn new(road_id: impl Into<String>) -> Self {
+        Self {
+            road_id: OSString::literal(road_id.into()),
+            s: None,
+            lane: Vec::new(),
+        }
+    }
+
+    /// Set the `@s` coordinate along the road
+    pub fn with_s(mut self, s: f64) -> Self {
+        self.s = Some(Double::literal(s));
+        self
+    }
+
+    /// Restrict the cursor to a set of lanes
+    pub fn with_lanes(mut self, lanes: Vec<Lane>) -> Self {
+        self.lane = lanes;
+        self
+    }
+}
+
+impl Lane {
+    /// Create a lane reference by numeric id
+    ///
+    /// XSD `Lane` (`:1333-1335`): required `@id` (Int), no declared default.
+    pub fn new(id: i32) -> Self {
+        Self {
+            id: Int::literal(id),
+        }
+    }
+}
+
+impl RoadRange {
+    /// Create a road range from at least two road cursors
+    ///
+    /// XSD `RoadRange` (`:1949-1954`): sequence of `RoadCursor`,
+    /// `minOccurs="2"`; optional `@length`.
+    pub fn new(road_cursor: Vec<RoadCursor>) -> Self {
+        Self {
+            length: None,
+            road_cursor,
+        }
+    }
+
+    /// Set the `@length` attribute
+    pub fn with_length(mut self, length: f64) -> Self {
+        self.length = Some(Double::literal(length));
+        self
+    }
+}
+
+impl TrafficDistribution {
+    /// Create a traffic distribution from its weighted entries
+    ///
+    /// XSD `TrafficDistribution` (`:2236-2240`): sequence of
+    /// `TrafficDistributionEntry`, `maxOccurs="unbounded"` with the default
+    /// `minOccurs="1"` — at least one entry is required.
+    pub fn new(traffic_distribution_entry: Vec<TrafficDistributionEntry>) -> Self {
+        Self {
+            traffic_distribution_entry,
+        }
+    }
+}
+
+impl TrafficDistributionEntry {
+    /// Create a weighted traffic distribution entry
+    ///
+    /// XSD `TrafficDistributionEntry` (`:2241-2247`): required `@weight` and
+    /// `EntityDistribution`; `Properties` is the only optional member.
+    pub fn new(weight: f64, entity_distribution: EntityDistribution) -> Self {
+        Self {
+            weight: Double::literal(weight),
+            entity_distribution,
+            properties: None,
+        }
+    }
+}
+
+impl DirectionOfTravelDistribution {
+    /// Create a same/opposite direction-of-travel split
+    ///
+    /// XSD `DirectionOfTravelDistribution` (`:1063-1066`): both `@same` and
+    /// `@opposite` are `use="required"` with no declared default.
+    pub fn new(same: f64, opposite: f64) -> Self {
+        Self {
+            same: Double::literal(same),
+            opposite: Double::literal(opposite),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1183,8 +1024,12 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_creation() {
-        let source =
-            TrafficSourceAction::new(5.0, 15.0, Position::default(), TrafficDefinition::default());
+        let source = TrafficSourceAction::new(
+            5.0,
+            15.0,
+            Position::world_origin(),
+            sample_traffic_definition(),
+        );
 
         assert_eq!(source.radius.as_literal(), Some(&5.0));
         assert_eq!(source.rate.as_literal(), Some(&15.0));
@@ -1197,8 +1042,8 @@ mod tests {
             5.0,
             20.0,
             60.0,
-            Position::default(),
-            TrafficDefinition::default(),
+            Position::world_origin(),
+            sample_traffic_definition(),
         );
 
         assert_eq!(source.rate.as_literal(), Some(&20.0));
@@ -1210,7 +1055,7 @@ mod tests {
 
     #[test]
     fn test_traffic_sink_action_creation() {
-        let sink = TrafficSinkAction::new(10.0, 30.0, Position::default());
+        let sink = TrafficSinkAction::new(10.0, 30.0, Position::world_origin());
 
         assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
         assert_eq!(sink.radius.as_literal(), Some(&30.0));
@@ -1222,8 +1067,8 @@ mod tests {
         let sink = TrafficSinkAction::with_traffic_definition(
             12.0,
             40.0,
-            Position::default(),
-            TrafficDefinition::default(),
+            Position::world_origin(),
+            sample_traffic_definition(),
         );
 
         assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&12.0));
@@ -1235,7 +1080,7 @@ mod tests {
     fn test_traffic_swarm_action_creation() {
         let swarm = TrafficSwarmAction::new("LeadVehicle", 100.0, 50.0, 15)
             .with_inner_radius(5.0)
-            .with_traffic_definition(TrafficDefinition::default());
+            .with_traffic_definition(sample_traffic_definition());
 
         assert_eq!(
             swarm.central_object.entity_ref.as_literal(),
@@ -1251,7 +1096,15 @@ mod tests {
     fn test_traffic_area_action_creation() {
         let traffic_area = TrafficArea::rectangle(0.0, 0.0, 50.0, 50.0);
 
-        let area = TrafficAreaAction::new(3, true, TrafficDistribution::default(), traffic_area);
+        let area = TrafficAreaAction::new(
+            3,
+            true,
+            TrafficDistribution::new(vec![TrafficDistributionEntry::new(
+                1.0,
+                sample_entity_distribution(),
+            )]),
+            traffic_area,
+        );
 
         assert_eq!(area.number_of_entities.as_literal(), Some(&3));
         assert_eq!(area.continuous.as_literal(), Some(&true));
@@ -1316,7 +1169,7 @@ mod tests {
         assert!(mixed
             .entries
             .iter()
-            .any(|e| matches!(e.category, VehicleCategory::Car)));
+            .any(|e| matches!(e.category, Value::Literal(VehicleCategory::Car))));
 
         let urban = VehicleCategoryDistribution::urban_traffic();
         assert_eq!(urban.entries.len(), 3);
@@ -1328,7 +1181,7 @@ mod tests {
         let vehicles = VehicleCategoryDistribution::urban_traffic();
         let controllers = ControllerDistribution::single_controller("AI1".to_string(), 1.0);
 
-        let definition = TrafficDefinition::with_both(vehicles, controllers);
+        let definition = TrafficDefinition::with_both("UrbanTraffic", vehicles, controllers);
 
         assert!(!definition.vehicle_category_distribution.entries.is_empty());
         assert!(!definition.controller_distribution.entries.is_empty());
@@ -1363,15 +1216,15 @@ mod tests {
 
         // Test that enum variants exist and can be used
         let entry1 = VehicleCategoryDistributionEntry {
-            category: car,
+            category: Value::Literal(car),
             weight: Double::literal(0.6),
         };
         let entry2 = VehicleCategoryDistributionEntry {
-            category: truck,
+            category: Value::Literal(truck),
             weight: Double::literal(0.3),
         };
         let entry3 = VehicleCategoryDistributionEntry {
-            category: bike,
+            category: Value::Literal(bike),
             weight: Double::literal(0.1),
         };
 
@@ -1381,24 +1234,36 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_action_defaults() {
-        let source = TrafficSourceAction::default();
+    fn test_traffic_action_construction() {
+        // `TrafficSourceAction`/`TrafficSinkAction`/
+        // `TrafficSwarmAction` no longer implement `Default` — every field
+        // they fabricated was `use="required"` in the XSD. Exercise the
+        // explicit constructors instead.
+        let source = TrafficSourceAction::with_velocity(
+            5.0,
+            10.0,
+            50.0,
+            Position::world_origin(),
+            sample_traffic_definition(),
+        );
         assert_eq!(source.rate.as_literal(), Some(&10.0));
         assert_eq!(
             source.velocity.as_ref().and_then(|v| v.as_literal()),
             Some(&50.0)
         );
 
-        let sink = TrafficSinkAction::default();
+        let sink = TrafficSinkAction::new(10.0, 50.0, Position::world_origin());
         assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
         assert_eq!(sink.radius.as_literal(), Some(&50.0));
 
-        let swarm = TrafficSwarmAction::default();
+        let swarm = TrafficSwarmAction::new("SwarmCenter", 100.0, 50.0, 20).with_inner_radius(10.0);
         assert_eq!(swarm.number_of_vehicles.as_literal(), Some(&20));
         assert_eq!(swarm.inner_radius.as_literal(), Some(&10.0));
         assert_eq!(swarm.semi_major_axis.as_literal(), Some(&100.0));
         assert_eq!(swarm.semi_minor_axis.as_literal(), Some(&50.0));
 
+        // `TrafficStopAction` is an empty complexType — `Default` states
+        // nothing here and is kept.
         let stop = TrafficStopAction::default();
         assert_eq!(stop, TrafficStopAction {});
     }
@@ -1538,43 +1403,47 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_signal_defaults() {
-        let controller = TrafficSignalController::default();
+    fn test_traffic_signal_construction() {
+        // None of these types implement `Default` anymore
+        // — every fabricated field (`name`, `duration`, ids, `state`) was
+        // `use="required"` in the XSD with no declared default. Exercise the
+        // explicit constructors instead.
+        let controller = TrafficSignalController::new("TestController");
         assert_eq!(
             controller.name.as_literal(),
-            Some(&"DefaultController".to_string())
+            Some(&"TestController".to_string())
         );
         assert!(controller.delay.is_none());
         assert!(controller.reference.is_none());
         assert_eq!(controller.phases.len(), 0);
 
-        let phase = Phase::default();
-        assert_eq!(phase.name.as_literal(), Some(&"DefaultPhase".to_string()));
+        let phase = Phase::new("TestPhase", 30.0);
+        assert_eq!(phase.name.as_literal(), Some(&"TestPhase".to_string()));
         assert_eq!(phase.duration.as_literal(), Some(&30.0));
         assert_eq!(phase.traffic_signal_states.len(), 0);
         assert!(phase.traffic_signal_group_state.is_none());
 
-        let state = TrafficSignalState::default();
+        let state = TrafficSignalState::new("signal_1", "green");
         assert_eq!(
             state.traffic_signal_id.as_literal(),
             Some(&"signal_1".to_string())
         );
         assert_eq!(state.state.as_literal(), Some(&"green".to_string()));
 
-        let group_state = TrafficSignalGroupState::default();
+        let group_state = TrafficSignalGroupState::new("green");
         assert_eq!(group_state.state.as_literal(), Some(&"green".to_string()));
 
-        let state_action = TrafficSignalStateAction::default();
+        let state_action = TrafficSignalStateAction::new("TestSignal", "green");
         assert_eq!(
             state_action.name.as_literal(),
-            Some(&"DefaultSignal".to_string())
+            Some(&"TestSignal".to_string())
         );
         assert_eq!(state_action.state.as_literal(), Some(&"green".to_string()));
 
-        let controller_action = TrafficSignalControllerAction::default();
+        let controller_action = TrafficSignalControllerAction::new("TestController", "Phase1");
         assert_eq!(
             controller_action.traffic_signal_controller_ref.as_literal(),
-            Some(&"DefaultController".to_string())
+            Some(&"TestController".to_string())
         );
         assert_eq!(
             controller_action.phase_ref.as_literal(),
@@ -1715,9 +1584,11 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_swarm_defaults() {
-        let swarm = TrafficSwarmAction::default();
-        // Test that defaults are reasonable
+    fn test_traffic_swarm_construction_is_complete() {
+        // `TrafficSwarmAction` no longer implements `Default`; every field
+        // it used to fabricate is required, so the constructor alone
+        // guarantees each is populated.
+        let swarm = TrafficSwarmAction::new("SwarmCenter", 100.0, 50.0, 20);
         assert!(swarm.central_object.entity_ref.as_literal().is_some());
         assert!(swarm.semi_major_axis.as_literal().is_some());
         assert!(swarm.semi_minor_axis.as_literal().is_some());
@@ -1781,7 +1652,7 @@ mod tests {
             .with_inner_radius(25.0)
             .with_offset(15.0)
             .with_velocity(55.0)
-            .with_traffic_definition(TrafficDefinition::default())
+            .with_traffic_definition(sample_traffic_definition())
             .with_central_swarm_object("NewCentralEntity");
 
         assert_eq!(swarm.inner_radius.as_literal().unwrap(), &25.0);
@@ -1819,10 +1690,20 @@ mod tests {
 
         EntityDistribution {
             entries: vec![crate::types::entities::EntityDistributionEntry::new(
-                ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+                ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
                 1.0,
             )],
         }
+    }
+
+    /// A concrete `TrafficDefinition` for tests that need one but do not
+    /// care about its contents, replacing the removed `Default` impl.
+    fn sample_traffic_definition() -> TrafficDefinition {
+        TrafficDefinition::new(
+            "TestTrafficDefinition",
+            VehicleCategoryDistribution::mixed_traffic(),
+            ControllerDistribution::single_controller("TestController".to_string(), 1.0),
+        )
     }
 
     #[test]
@@ -1951,7 +1832,7 @@ mod tests {
                 world_position: Some(crate::types::positions::WorldPosition::new(1.0, 2.0)),
                 ..Position::empty()
             },
-            TrafficDefinition::default(),
+            sample_traffic_definition(),
         )
         .with_traffic_distribution(TrafficDistribution {
             traffic_distribution_entry: vec![TrafficDistributionEntry {

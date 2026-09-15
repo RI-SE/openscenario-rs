@@ -1,12 +1,6 @@
-//! Position type module for all spatial positioning systems
-//!
-//! This file contains:
-//! - Base position traits and common positioning behaviors
-//! - Position conversion utilities between coordinate systems
-//! - Orientation handling and coordinate system transformations
-//! - Position validation and constraint checking
-//! - Spatial relationship calculations and utilities
-//!
+//! Position types. `Position` is the XSD choice: exactly one of world, relative,
+//! road, lane, trajectory or route coordinates. Its constructors each select one
+//! branch, since a `Position` with no branch set is not schema-valid.
 use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 
@@ -25,11 +19,11 @@ pub use route::{
     InRoutePosition, PositionInLaneCoordinates, PositionInRoadCoordinates, PositionOfCurrentEntity,
     RoutePosition, RouteRefElement,
 };
-pub use trajectory::{Trajectory, TrajectoryPosition};
+pub use trajectory::TrajectoryPosition;
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Position {
     #[serde(rename = "WorldPosition", skip_serializing_if = "Option::is_none")]
     pub world_position: Option<WorldPosition>,
@@ -87,12 +81,13 @@ pub struct RelativeWorldPosition {
     pub orientation: Option<Orientation>,
 }
 
-impl Default for RelativeWorldPosition {
-    fn default() -> Self {
+impl RelativeWorldPosition {
+    /// Create a new relative world position (required `entityRef`, `dx`, `dy`; XSD:1910-1922)
+    pub fn new(entity_ref: &str, dx: f64, dy: f64) -> Self {
         Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            dx: Double::literal(0.0),
-            dy: Double::literal(0.0),
+            entity_ref: OSString::literal(entity_ref.to_string()),
+            dx: Double::literal(dx),
+            dy: Double::literal(dy),
             dz: None,
             orientation: None,
         }
@@ -101,7 +96,24 @@ impl Default for RelativeWorldPosition {
 
 // Convenience constructors for Position
 impl Position {
-    /// Create an empty Position with all fields set to None
+    /// A `WorldPosition` at the origin — an explicit, schema-valid placeholder.
+    ///
+    /// For call sites that need *a* position but do not care which: tests, doc examples,
+    /// and fixtures asserting something other than the position itself. It is named for
+    /// what it is. It replaced `Position::world_origin()`, which produced an all-`None` choice
+    /// — schema-invalid (XSD `Position`, `Schema/OpenSCENARIO.xsd:1738-1751`, is a bare
+    /// `xsd:choice`) while reading like a neutral value. Never reach for this in code that
+    /// describes a real scenario: a position at (0, 0, 0) is content, and inventing it is
+    /// category 1 of the `Default` policy.
+    pub fn world_origin() -> Self {
+        Self::world(WorldPosition::new(0.0, 0.0))
+    }
+
+    /// No branch selected — every choice field `None`.
+    ///
+    /// **Not schema-valid on its own**, for the reason given on
+    /// [`Position::world_origin`]. It is the base for building a position one branch at a
+    /// time; anything that serializes needs a branch filled in first.
     pub fn empty() -> Self {
         Self {
             world_position: None,
@@ -114,6 +126,14 @@ impl Position {
             trajectory_position: None,
             geographic_position: None,
             relative_object_position: None,
+        }
+    }
+    /// Create a Position with WorldPosition (the `WorldPosition` branch of the
+    /// XSD `Position` choice, `Schema/OpenSCENARIO.xsd:1738-1751`).
+    pub fn world(world_position: WorldPosition) -> Self {
+        Self {
+            world_position: Some(world_position),
+            ..Self::empty()
         }
     }
     /// Create a Position with RelativeRoadPosition
@@ -160,14 +180,23 @@ impl Position {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::basic::Value;
 
+    /// Replaces `test_position_default_is_all_none`, whose subject — the derived
+    /// `Default` — has been removed. `world_origin` is the honest replacement, and its
+    /// contract is the opposite one: it *does* select a branch, which is the whole point.
     #[test]
-    fn test_position_default_is_all_none() {
-        let pos = Position::default();
-        assert!(pos.world_position.is_none());
+    fn test_position_world_origin_selects_the_world_branch() {
+        let pos = Position::world_origin();
+        let world = pos
+            .world_position
+            .as_ref()
+            .expect("world_origin must select the WorldPosition branch");
+        assert_eq!(world.x, Value::Literal(0.0));
+        assert_eq!(world.y, Value::Literal(0.0));
         assert!(pos.lane_position.is_none());
         assert!(pos.road_position.is_none());
-        assert_eq!(pos, Position::empty());
+        assert_ne!(pos, Position::empty());
     }
 
     #[test]
@@ -184,7 +213,14 @@ mod tests {
 
     #[test]
     fn test_position_trajectory_constructor() {
-        let tp = TrajectoryPosition::new(10.0, TrajectoryRef::default());
+        let tp = TrajectoryPosition::new(
+            10.0,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                crate::types::geometry::shapes::Shape::empty(),
+            )),
+        );
         let pos = Position::trajectory(tp.clone());
         assert!(pos.trajectory_position.is_some());
         assert!(pos.world_position.is_none());
@@ -199,10 +235,12 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_world_position_default() {
-        let rwp = RelativeWorldPosition::default();
-        assert_eq!(rwp.entity_ref.as_literal().unwrap(), "DefaultEntity");
-        assert_eq!(rwp.dx.as_literal().unwrap(), &0.0);
+    fn test_relative_world_position_new() {
+        // `RelativeWorldPosition` no longer has a fabricating `Default`
+        // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
+        let rwp = RelativeWorldPosition::new("Ego", 1.0, 2.0);
+        assert_eq!(rwp.entity_ref.as_literal().unwrap(), "Ego");
+        assert_eq!(rwp.dx.as_literal().unwrap(), &1.0);
         assert!(rwp.dz.is_none());
     }
 
@@ -215,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_relative_world_position_serialize_none_dz_omitted() {
-        let pos = RelativeWorldPosition::default();
+        let pos = RelativeWorldPosition::new("Ego", 1.0, 2.0);
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(!xml.contains("dz="), "serialized: {xml}");
     }
@@ -246,7 +284,9 @@ mod tests {
                 h: Some(Double::literal(1.57)),
                 p: None,
                 r: None,
-                reference_context: Some(crate::types::enums::ReferenceContext::Relative),
+                reference_context: Some(Value::Literal(
+                    crate::types::enums::ReferenceContext::Relative,
+                )),
             }),
         };
 

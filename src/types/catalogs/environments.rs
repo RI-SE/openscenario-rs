@@ -1,7 +1,5 @@
-//! Environment catalog types for OpenSCENARIO reusable environment definitions
-//!
-//! This module contains catalog-specific environment types that enable reuse of
-//! environment configurations across multiple scenarios with parameter substitution.
+//! `CatalogEnvironment`: an environment in its catalog-file form. Weather, time of day
+//! and road condition become reusable across scenarios through it.
 
 use crate::types::basic::{Boolean, Double, OSString, ParameterDeclarations, Value};
 use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType, Wetness};
@@ -58,15 +56,6 @@ pub struct CatalogTimeOfDay {
     pub date_time: OSString,
 }
 
-impl Default for CatalogTimeOfDay {
-    fn default() -> Self {
-        Self {
-            animation: Value::Literal(false),
-            date_time: Value::Literal("2021-01-01T12:00:00".to_string()),
-        }
-    }
-}
-
 /// Weather conditions with parameterizable atmospheric properties
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename = "Weather")]
@@ -78,7 +67,7 @@ pub struct CatalogWeather {
         skip_serializing_if = "Option::is_none"
     )]
     #[allow(deprecated)]
-    pub cloud_state: Option<CloudState>,
+    pub cloud_state: Option<Value<CloudState>>,
 
     /// Atmospheric pressure in hPa (optional, can be parameterized)
     #[serde(
@@ -102,7 +91,7 @@ pub struct CatalogWeather {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub fractional_cloud_cover: Option<FractionalCloudCover>,
+    pub fractional_cloud_cover: Option<Value<FractionalCloudCover>>,
 
     /// Sun lighting conditions
     #[serde(rename = "Sun", default, skip_serializing_if = "Option::is_none")]
@@ -171,10 +160,16 @@ pub struct CatalogFog {
     pub bounding_box: Option<crate::types::geometry::BoundingBox>,
 }
 
-impl Default for CatalogFog {
-    fn default() -> Self {
+impl CatalogFog {
+    /// Create a new `CatalogFog`. XSD `Fog` (:2601-2606): `@visualRange` is
+    /// `use="required"` with no `default="…"`; `BoundingBox` is optional and
+    /// left unset here.
+    ///
+    /// There used to be a `Default` impl inventing a 100km "clear visibility"
+    /// `visualRange`. Removed — that number was never in the source XML.
+    pub fn new(visual_range: f64) -> Self {
         Self {
-            visual_range: Value::Literal(100000.0), // 100km clear visibility
+            visual_range: Value::Literal(visual_range),
             bounding_box: None,
         }
     }
@@ -186,7 +181,7 @@ impl Default for CatalogFog {
 pub struct CatalogPrecipitation {
     /// Type of precipitation
     #[serde(rename = "@precipitationType")]
-    pub precipitation_type: PrecipitationType,
+    pub precipitation_type: Value<PrecipitationType>,
 
     /// Precipitation intensity (0.0-1.0, can be parameterized) — deprecated per XSD
     #[serde(
@@ -215,7 +210,7 @@ pub struct CatalogRoadCondition {
 
     /// Optional wetness factor (can be parameterized)
     #[serde(rename = "@wetness", skip_serializing_if = "Option::is_none")]
-    pub wetness: Option<Wetness>,
+    pub wetness: Option<Value<Wetness>>,
 
     /// Optional properties
     #[serde(
@@ -373,7 +368,7 @@ impl CatalogWeather {
     #[allow(deprecated)]
     pub fn new(cloud_state: CloudState) -> Self {
         Self {
-            cloud_state: Some(cloud_state),
+            cloud_state: Some(Value::Literal(cloud_state)),
             atmospheric_pressure: None,
             temperature: None,
             fractional_cloud_cover: None,
@@ -383,9 +378,9 @@ impl CatalogWeather {
                 elevation: Value::Literal(1.571),
                 illuminance: None,
             }),
-            fog: Some(CatalogFog::default()),
+            fog: Some(CatalogFog::new(100000.0)), // 100km clear visibility, explicit in this preset
             precipitation: Some(CatalogPrecipitation {
-                precipitation_type: PrecipitationType::Dry,
+                precipitation_type: Value::Literal(PrecipitationType::Dry),
                 intensity: Some(Value::Literal(0.0)),
                 precipitation_intensity: None,
             }),
@@ -398,7 +393,7 @@ impl CatalogWeather {
     #[allow(deprecated)]
     pub fn sunny() -> Self {
         Self {
-            cloud_state: Some(CloudState::Free),
+            cloud_state: Some(Value::Literal(CloudState::Free)),
             atmospheric_pressure: None,
             temperature: None,
             fractional_cloud_cover: None,
@@ -413,7 +408,7 @@ impl CatalogWeather {
                 bounding_box: None,
             }),
             precipitation: Some(CatalogPrecipitation {
-                precipitation_type: PrecipitationType::Dry,
+                precipitation_type: Value::Literal(PrecipitationType::Dry),
                 intensity: Some(Value::Literal(0.0)),
                 precipitation_intensity: None,
             }),
@@ -426,7 +421,7 @@ impl CatalogWeather {
     #[allow(deprecated)]
     pub fn rainy(intensity: Double) -> Self {
         Self {
-            cloud_state: Some(CloudState::Rainy),
+            cloud_state: Some(Value::Literal(CloudState::Rainy)),
             atmospheric_pressure: None,
             temperature: None,
             fractional_cloud_cover: None,
@@ -441,7 +436,7 @@ impl CatalogWeather {
                 bounding_box: None,
             }),
             precipitation: Some(CatalogPrecipitation {
-                precipitation_type: PrecipitationType::Rain,
+                precipitation_type: Value::Literal(PrecipitationType::Rain),
                 intensity: Some(intensity),
                 precipitation_intensity: None,
             }),
@@ -511,7 +506,7 @@ mod tests {
         let sunny = CatalogWeather::sunny();
         let rainy = CatalogWeather::rainy(Value::Literal(0.8));
 
-        assert_eq!(sunny.cloud_state, Some(CloudState::Free));
+        assert_eq!(sunny.cloud_state, Some(Value::Literal(CloudState::Free)));
         assert_eq!(
             sunny
                 .sun
@@ -526,13 +521,13 @@ mod tests {
         );
         assert_eq!(
             sunny.precipitation.as_ref().unwrap().precipitation_type,
-            PrecipitationType::Dry
+            Value::Literal(PrecipitationType::Dry)
         );
 
-        assert_eq!(rainy.cloud_state, Some(CloudState::Rainy));
+        assert_eq!(rainy.cloud_state, Some(Value::Literal(CloudState::Rainy)));
         assert_eq!(
             rainy.precipitation.as_ref().unwrap().precipitation_type,
-            PrecipitationType::Rain
+            Value::Literal(PrecipitationType::Rain)
         );
         assert_eq!(
             rainy
@@ -568,7 +563,7 @@ mod tests {
         let param_decl = ParameterDeclarations {
             parameter_declarations: vec![ParameterDeclaration {
                 name: OSString::literal("visibility".to_string()),
-                parameter_type: ParameterType::Double,
+                parameter_type: Value::Literal(ParameterType::Double),
                 value: OSString::literal("10000.0".to_string()),
                 constraint_groups: Vec::new(),
             }],
@@ -605,7 +600,7 @@ mod tests {
     fn test_road_condition_parameters() {
         let road_condition = CatalogRoadCondition {
             friction_scale_factor: Value::Parameter("frictionFactor".to_string()),
-            wetness: Some(Wetness::Moist),
+            wetness: Some(Value::Literal(Wetness::Moist)),
             properties: None,
         };
 
@@ -613,7 +608,7 @@ mod tests {
             road_condition.friction_scale_factor,
             Value::Parameter(_)
         ));
-        assert_eq!(road_condition.wetness, Some(Wetness::Moist));
+        assert_eq!(road_condition.wetness, Some(Value::Literal(Wetness::Moist)));
     }
 
     #[test]
@@ -637,7 +632,7 @@ mod tests {
         );
         assert_eq!(
             scenario_env.weather.as_ref().unwrap().cloud_state,
-            Some(CloudState::Free)
+            Some(Value::Literal(CloudState::Free))
         );
         assert_eq!(
             scenario_env
@@ -668,7 +663,7 @@ mod tests {
         )));
         catalog_env.set_road_condition(CatalogRoadCondition {
             friction_scale_factor: Value::Parameter("friction".to_string()),
-            wetness: Some(Wetness::Moist),
+            wetness: Some(Value::Literal(Wetness::Moist)),
             properties: None,
         });
 
@@ -681,7 +676,7 @@ mod tests {
         let weather = resolved.weather.as_ref().unwrap();
         assert_eq!(
             weather.precipitation.as_ref().unwrap().precipitation_type,
-            crate::types::enums::PrecipitationType::Rain
+            Value::Literal(crate::types::enums::PrecipitationType::Rain)
         );
         assert_eq!(
             weather.fog.as_ref().unwrap().visual_range,
@@ -693,7 +688,7 @@ mod tests {
             road_condition.friction_scale_factor.as_literal().unwrap(),
             &0.6
         );
-        assert_eq!(road_condition.wetness, Some(Wetness::Moist));
+        assert_eq!(road_condition.wetness, Some(Value::Literal(Wetness::Moist)));
     }
 
     #[test]
@@ -721,7 +716,7 @@ mod tests {
         let weather: CatalogWeather = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
             weather.fractional_cloud_cover,
-            Some(FractionalCloudCover::ThreeOktas)
+            Some(Value::Literal(FractionalCloudCover::ThreeOktas))
         );
         assert!(weather.wind.is_some());
         assert!(weather.dome_image.is_some());

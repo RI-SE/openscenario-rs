@@ -1,15 +1,7 @@
-//! Init action builders for scenario initialization
+//! Builders for the `Init` block: entity and environment state before the story runs.
 //!
-//! This module provides builders for creating OpenSCENARIO initialization actions
-//! that set up entities and environment before scenario execution begins.
-//!
-//! # Architecture
-//!
-//! - **InitActionBuilder**: Main builder for complete Init structure
-//! - **PrivateActionBuilder**: Builder for entity-specific initialization
-//! - **GlobalActionBuilder**: Builder for environment and infrastructure setup
-//!
-//! # Usage
+//! [`InitActionBuilder`] assembles the whole block; `PrivateActionBuilder` covers
+//! per-entity setup and `GlobalActionBuilder` the environment and infrastructure.
 //!
 //! ```rust
 //! use openscenario_rs::builder::init::InitActionBuilder;
@@ -36,20 +28,24 @@ pub use private::{GlobalActionBuilder, PrivateActionBuilder};
 /// Convenience functions for common initialization patterns
 impl InitActionBuilder {
     /// Create a basic initialization with environment setup
-    pub fn with_default_environment() -> Self {
-        Self::new().add_global_environment_action()
+    ///
+    /// `environment_name` is required by XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`,
+    /// `@name` `use="required"`, no schema default) — it used to be silently invented as
+    /// `"DefaultEnvironment"` here; callers now state it.
+    pub fn with_default_environment(environment_name: &str) -> Self {
+        Self::new().add_global_environment_action(environment_name)
     }
 
     /// Create initialization for a single vehicle scenario
-    pub fn for_single_vehicle(entity_ref: &str) -> Self {
+    pub fn for_single_vehicle(entity_ref: &str, environment_name: &str) -> Self {
         Self::new()
-            .add_global_environment_action()
+            .add_global_environment_action(environment_name)
             .add_private_action(entity_ref)
     }
 
     /// Create initialization for multi-vehicle scenario
-    pub fn for_multiple_vehicles(entity_refs: &[&str]) -> Self {
-        let mut builder = Self::new().add_global_environment_action();
+    pub fn for_multiple_vehicles(entity_refs: &[&str], environment_name: &str) -> Self {
+        let mut builder = Self::new().add_global_environment_action(environment_name);
 
         for entity_ref in entity_refs {
             builder = builder.add_private_action(entity_ref);
@@ -75,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_init_builder_with_environment() {
-        let init = InitActionBuilder::with_default_environment()
+        let init = InitActionBuilder::with_default_environment("TestEnvironment")
             .build()
             .unwrap();
 
@@ -85,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_init_builder_single_vehicle() {
-        let init = InitActionBuilder::for_single_vehicle("ego")
+        let init = InitActionBuilder::for_single_vehicle("ego", "TestEnvironment")
             .build()
             .unwrap();
 
@@ -103,7 +99,7 @@ mod tests {
     #[test]
     fn test_init_builder_multiple_vehicles() {
         let vehicles = ["ego", "target", "obstacle"];
-        let init = InitActionBuilder::for_multiple_vehicles(&vehicles)
+        let init = InitActionBuilder::for_multiple_vehicles(&vehicles, "TestEnvironment")
             .build()
             .unwrap();
 

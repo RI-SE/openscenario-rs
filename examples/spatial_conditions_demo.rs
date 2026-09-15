@@ -47,7 +47,7 @@ fn main() {
     println!("2. Distance Condition - Intersection Approach");
     println!("---------------------------------------------");
 
-    let intersection_pos = Position::default(); // Would be set to intersection coordinates
+    let intersection_pos = Position::world_origin(); // Would be set to intersection coordinates
     let intersection_condition = DistanceCondition::less_than(intersection_pos, 50.0, true)
         .with_coordinate_system(CoordinateSystem::Road)
         .with_distance_type(RelativeDistanceType::Cartesian);
@@ -163,7 +163,7 @@ mod tests {
     fn test_demo_conditions_compile() {
         // Verify all demo conditions can be created without panics
         let _waypoint = ReachPositionCondition::at_world_position(1250.0, 850.0, 0.0, 1.57, 2.0);
-        let _intersection = DistanceCondition::less_than(Position::default(), 50.0, true);
+        let _intersection = DistanceCondition::less_than(Position::world_origin(), 50.0, true);
         let _following = RelativeDistanceCondition::longitudinal(
             OSString::literal("lead".to_string()),
             20.0,

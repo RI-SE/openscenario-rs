@@ -1,7 +1,5 @@
-//! Controller system types for OpenSCENARIO.
-//!
-//! This module provides comprehensive controller functionality for entity behavior management,
-//! including controller definitions, activation actions, and parameter management.
+//! Controller definitions and the properties that configure them. The actions that
+//! assign and activate a controller live in [`crate::types::actions::control`].
 
 use crate::types::basic::{Directory, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
@@ -26,7 +24,7 @@ pub struct Controller {
 
     /// Type of controller (interactive, external, etc.)
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
-    pub controller_type: Option<ControllerType>,
+    pub controller_type: Option<Value<ControllerType>>,
 
     /// Parameter declarations for the controller
     #[serde(
@@ -143,15 +141,16 @@ impl<'de> Deserialize<'de> for ObjectController {
     }
 }
 
-impl Default for ObjectController {
-    fn default() -> Self {
-        Self {
-            name: None,
-            controller: None,
-            catalog_reference: None,
-        }
-    }
-}
+// `Default` removed. XSD `ObjectController`
+// (`Schema/OpenSCENARIO.xsd:1522-1528`) is a bare `xsd:choice` of `CatalogReference |
+// Controller`, neither carrying `minOccurs="0"`, so exactly one must be present. The
+// all-`None` default emitted `<ObjectController />`, which libxml2 rejects with
+// *"Missing child element(s). Expected is one of ( CatalogReference, Controller )"* —
+// category 3, schema-invalid empty. Use `with_controller` / `with_catalog_reference`
+// (or their `with_named_*` forms) below.
+//
+// This one was found by neither of the campaign's two greps nor by the derive sweep:
+// every field is `Option`, so detector 3 cannot see it either. See the report.
 
 /// Collection of controller-specific properties.
 ///
@@ -168,9 +167,13 @@ pub struct ControllerProperties {
 /// Catalog location for controller definitions.
 ///
 /// Specifies where controller catalog files can be found.
+///
+/// `#[derive(Default)]` removed — `Directory`'s `Default` fabricated an
+/// empty `@path` (`Schema/OpenSCENARIO.xsd:1067-1069` declares `@path` `use="required"`
+/// with no schema default). This type has no constructor or call site of its own; it
+/// appears to be an unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[derive(Default)]
 pub struct ControllerCatalogLocation {
     /// Directory containing controller catalog files
     #[serde(rename = "Directory")]
@@ -184,7 +187,7 @@ impl Controller {
     pub fn new(name: String, controller_type: ControllerType) -> Self {
         Self {
             name: Value::Literal(name),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
         }
@@ -198,7 +201,7 @@ impl Controller {
     ) -> Self {
         Self {
             name: Value::Literal(name),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: Some(parameters),
             properties: None,
         }
@@ -212,7 +215,7 @@ impl Controller {
     ) -> Self {
         Self {
             name: Value::Literal(name),
-            controller_type: Some(controller_type),
+            controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: Some(properties),
         }
@@ -288,7 +291,10 @@ mod tests {
         let controller = Controller::new("TestController".to_string(), ControllerType::Movement);
 
         assert_eq!(controller.name.as_literal().unwrap(), "TestController");
-        assert_eq!(controller.controller_type, Some(ControllerType::Movement));
+        assert_eq!(
+            controller.controller_type,
+            Some(Value::Literal(ControllerType::Movement))
+        );
     }
 
     #[test]
@@ -329,12 +335,19 @@ mod tests {
 
     #[test]
     fn test_controller_defaults() {
-        let object_controller = ObjectController::default();
+        // `ObjectController` no longer has a `Default`: its XSD choice
+        // (`:1522-1528`) requires a branch, so the all-`None` form was schema-invalid.
+        // A controller built via a branch constructor leaves the *other* branch `None`,
+        // which is what this test is actually about.
+        let object_controller =
+            ObjectController::with_catalog_reference(ControllerCatalogReference::new(
+                "ControllerCatalog".to_string(),
+                "TestController".to_string(),
+            ));
         let properties = ControllerProperties::default();
 
-        // All defaults should be valid
         assert!(object_controller.controller.is_none());
-        assert!(object_controller.catalog_reference.is_none());
+        assert!(object_controller.catalog_reference.is_some());
         assert!(properties.properties.is_empty());
     }
 

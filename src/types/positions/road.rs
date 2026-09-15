@@ -1,13 +1,7 @@
-//! Road-based position types for highway and street positioning
-//!
-//! This file contains:
-//! - RoadPosition for road-relative coordinates (road ID, s, t)
-//! - RelativeRoadPosition for entity-relative road positioning
-//! - LanePosition for lane-specific positioning with offsets
-//! - RelativeLanePosition for lane-relative positioning
-//! - Road network integration and coordinate validation
-//!
-use crate::types::basic::{Double, Int, OSString};
+//! Positions expressed against the road network, not the world frame:
+//! `RoadPosition` (road id plus s/t), `LanePosition` (road, lane, s plus offset),
+//! and the `Relative*` forms of each, which are measured from another entity.
+use crate::types::basic::{Double, Int, OSString, Value};
 use crate::types::enums::ReferenceContext;
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +22,7 @@ pub struct Orientation {
 
     /// Whether the orientation is relative or absolute
     #[serde(rename = "@type", default, skip_serializing_if = "Option::is_none")]
-    pub reference_context: Option<ReferenceContext>,
+    pub reference_context: Option<Value<ReferenceContext>>,
 }
 
 /// Road-based position definition
@@ -256,30 +250,6 @@ impl Orientation {
     }
 }
 
-impl Default for RelativeRoadPosition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            ds: Double::literal(0.0),
-            dt: Double::literal(0.0),
-            orientation: None,
-        }
-    }
-}
-
-impl Default for RelativeLanePosition {
-    fn default() -> Self {
-        Self {
-            entity_ref: OSString::literal("DefaultEntity".to_string()),
-            d_lane: Int::literal(0),
-            ds: Some(Double::literal(0.0)),
-            offset: Some(Double::literal(0.0)),
-            ds_lane: None,
-            orientation: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,14 +394,14 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_position_defaults() {
-        let rel_road = RelativeRoadPosition::default();
-        assert_eq!(rel_road.entity_ref.as_literal().unwrap(), "DefaultEntity");
+    fn test_relative_position_construction() {
+        let rel_road = RelativeRoadPosition::new("Ego".to_string(), 0.0, 0.0);
+        assert_eq!(rel_road.entity_ref.as_literal().unwrap(), "Ego");
         assert_eq!(rel_road.ds.as_literal().unwrap(), &0.0);
         assert_eq!(rel_road.dt.as_literal().unwrap(), &0.0);
 
-        let rel_lane = RelativeLanePosition::default();
-        assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "DefaultEntity");
+        let rel_lane = RelativeLanePosition::new("Ego".to_string(), 0, 0.0, 0.0);
+        assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "Ego");
         assert_eq!(rel_lane.d_lane, Int::literal(0));
         assert_eq!(rel_lane.ds.unwrap().as_literal().unwrap(), &0.0);
         assert_eq!(rel_lane.offset.unwrap().as_literal().unwrap(), &0.0);
@@ -480,7 +450,9 @@ mod tests {
         let orientation: Orientation = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
             orientation.reference_context,
-            Some(crate::types::enums::ReferenceContext::Relative)
+            Some(Value::Literal(
+                crate::types::enums::ReferenceContext::Relative
+            ))
         );
 
         let serialized = quick_xml::se::to_string(&orientation).unwrap();

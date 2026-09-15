@@ -1,12 +1,9 @@
-//! Basic data types with expression and parameter support
+//! The scalar types every attribute is built from, and [`Value<T>`] – the wrapper that
+//! lets an attribute hold a literal, a `$parameter` reference, or a `${expression}`.
 //!
-//! This file contains:
-//! - Value<T> enum for literals, parameters, and expressions (${param}, ${expr})
-//! - Implementation of all basic OpenSCENARIO types (String, Double, Boolean, etc.)
-//! - Parameter resolution logic and expression evaluation
-//! - Serde serialization/deserialization for XML attributes
-//! - Validation helpers for parameter names and expression syntax
-//!
+//! [`Value<T>`] serializes through `Display`, not through its derived `Serialize`, so
+//! a parameter round-trips as the reference it was rather than as the value it
+//! resolved to. `OSString`, `Double`, `Boolean` and the rest are aliases over it.
 use crate::error::{Error, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
@@ -185,6 +182,15 @@ where
     }
 }
 
+/// Forwards `T`'s default, so a container whose enum-typed field became `Value<E>` keeps
+/// exactly the default it had before: `Value::Literal(E::default())`. This states nothing
+/// that `E::default()` did not already state -- it is not a new invented value.
+impl<T: Default> Default for Value<T> {
+    fn default() -> Self {
+        Value::Literal(T::default())
+    }
+}
+
 impl<T> Serialize for Value<T>
 where
     T: Serialize + fmt::Display,
@@ -195,7 +201,14 @@ where
     {
         match self {
             Value::Literal(value) => value.to_string().serialize(serializer),
-            Value::Parameter(name) => format!("${{{}}}", name).serialize(serializer),
+            // The schema's `parameter` production is `[$][A-Za-z_][A-Za-z0-9_]*` --
+            // unbraced (`Schema/OpenSCENARIO.xsd:4-8`). The braced spelling is the separate
+            // `expression` production, and while every *scalar* union lists both members,
+            // all 37 *enumeration* unions list `parameter` alone. Emitting `${name}` for a
+            // parameter reference therefore produces schema-invalid XML on any enum-typed
+            // attribute, while `$name` is valid on every union in the schema. Deserialize
+            // stays permissive and accepts either spelling.
+            Value::Parameter(name) => format!("${}", name).serialize(serializer),
             Value::Expression(expr) => format!("${{{}}}", expr).serialize(serializer),
         }
     }
@@ -209,7 +222,9 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Literal(value) => write!(f, "{}", value),
-            Value::Parameter(name) => write!(f, "${{{}}}", name),
+            // Same reasoning as `Serialize` above: `$name` is the schema's `parameter`
+            // production and is valid on every union; `${...}` is `expression`.
+            Value::Parameter(name) => write!(f, "${}", name),
             Value::Expression(expr) => write!(f, "${{{}}}", expr),
         }
     }
@@ -224,6 +239,58 @@ pub type UnsignedShort = Value<u16>;
 pub type Boolean = Value<bool>;
 
 pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
+
+// Enumeration type aliases.
+//
+// All 37 enumeration `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose second
+// member is `<xsd:restriction base="parameter"/>`, so every enum-typed attribute may carry a
+// parameter reference in place of a literal. These aliases name that union type the same way
+// `OSString`/`Double` name the scalar ones.
+//
+// The struct fields themselves spell `Value<E>` rather than the alias, so that the parameter
+// mechanism is visible at the point of declaration and `Option<Value<E>>` reads unambiguously;
+// the aliases exist for user-facing signatures.
+
+pub type AngleTypeValue = Value<crate::types::enums::AngleType>;
+pub type AutomaticGearTypeValue = Value<crate::types::enums::AutomaticGearType>;
+#[allow(deprecated)]
+pub type CloudStateValue = Value<crate::types::enums::CloudState>;
+pub type ColorTypeValue = Value<crate::types::enums::ColorType>;
+pub type ConditionEdgeValue = Value<crate::types::enums::ConditionEdge>;
+pub type ControllerTypeValue = Value<crate::types::enums::ControllerType>;
+pub type CoordinateSystemValue = Value<crate::types::enums::CoordinateSystem>;
+pub type DirectionalDimensionValue = Value<crate::types::enums::DirectionalDimension>;
+pub type DynamicsDimensionValue = Value<crate::types::enums::DynamicsDimension>;
+pub type DynamicsShapeValue = Value<crate::types::enums::DynamicsShape>;
+pub type FollowingModeValue = Value<crate::types::enums::FollowingMode>;
+pub type FractionalCloudCoverValue = Value<crate::types::enums::FractionalCloudCover>;
+#[allow(deprecated)]
+pub type LateralDisplacementValue = Value<crate::types::enums::LateralDisplacement>;
+pub type LightModeValue = Value<crate::types::enums::LightMode>;
+#[allow(deprecated)]
+pub type LongitudinalDisplacementValue = Value<crate::types::enums::LongitudinalDisplacement>;
+pub type MiscObjectCategoryValue = Value<crate::types::enums::MiscObjectCategory>;
+pub type ObjectTypeValue = Value<crate::types::enums::ObjectType>;
+pub type ParameterTypeValue = Value<crate::types::enums::ParameterType>;
+pub type PedestrianCategoryValue = Value<crate::types::enums::PedestrianCategory>;
+pub type PedestrianGestureTypeValue = Value<crate::types::enums::PedestrianGestureType>;
+pub type PedestrianMotionTypeValue = Value<crate::types::enums::PedestrianMotionType>;
+pub type PrecipitationTypeValue = Value<crate::types::enums::PrecipitationType>;
+pub type PriorityValue = Value<crate::types::enums::Priority>;
+pub type ReferenceContextValue = Value<crate::types::enums::ReferenceContext>;
+pub type RelativeDistanceTypeValue = Value<crate::types::enums::RelativeDistanceType>;
+pub type RoleValue = Value<crate::types::enums::Role>;
+pub type RouteStrategyValue = Value<crate::types::enums::RouteStrategy>;
+pub type RoutingAlgorithmValue = Value<crate::types::enums::RoutingAlgorithm>;
+pub type RuleValue = Value<crate::types::enums::Rule>;
+pub type SpeedTargetValueTypeValue = Value<crate::types::enums::SpeedTargetValueType>;
+pub type StoryboardElementStateValue = Value<crate::types::enums::StoryboardElementState>;
+pub type StoryboardElementTypeValue = Value<crate::types::enums::StoryboardElementType>;
+pub type TriggeringEntitiesRuleValue = Value<crate::types::enums::TriggeringEntitiesRule>;
+pub type VehicleCategoryValue = Value<crate::types::enums::VehicleCategory>;
+pub type VehicleComponentTypeValue = Value<crate::types::enums::VehicleComponentType>;
+pub type VehicleLightTypeValue = Value<crate::types::enums::VehicleLightType>;
+pub type WetnessValue = Value<crate::types::enums::Wetness>;
 
 /// Parse a parameter reference from a string
 ///
@@ -247,13 +314,30 @@ pub fn is_expression(s: &str) -> bool {
     s.contains(|c| "+-*/%()".contains(c))
 }
 
-// Check if a parameter name is valid
-//
-// Valid parameter names contain only alphanumeric characters and underscores
+/// Check if a string is a valid parameter name, i.e. the part after the `$` sigil.
+///
+/// This is the XSD `parameter` production verbatim, `Schema/OpenSCENARIO.xsd:6`:
+///
+/// ```text
+/// <xsd:pattern value="[$][A-Za-z_][A-Za-z0-9_]*"/>
+/// ```
+///
+/// The check used to be `char::is_alphanumeric`, which is **Unicode**
+/// alphanumeric, so the crate accepted `$café` where the schema does not. The pattern
+/// is ASCII-only: first character `[A-Za-z_]`, the rest `[A-Za-z0-9_]`. Note this
+/// governs the *parameter* production only — the `expression` production
+/// (`Schema/OpenSCENARIO.xsd:11`) has its own, different character class and is not
+/// affected.
 pub fn is_valid_parameter_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
-        && !name.chars().next().unwrap().is_ascii_digit() // Can't start with digit
+    let mut chars = name.chars();
+    match chars.next() {
+        // `[A-Za-z_]`
+        Some(first) if first.is_ascii_alphabetic() || first == '_' => {}
+        // Empty, a leading digit, or any non-ASCII character.
+        _ => return false,
+    }
+    // `[A-Za-z0-9_]*`
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 /// Resolve a mathematical expression by parsing and evaluating it
@@ -305,12 +389,57 @@ mod tests {
 
     #[test]
     fn test_parameter_name_validation() {
+        // XSD `parameter`, Schema/OpenSCENARIO.xsd:6 — `[$][A-Za-z_][A-Za-z0-9_]*`
+        // (this function validates the part after the `$`).
         assert!(is_valid_parameter_name("speed"));
         assert!(is_valid_parameter_name("vehicle_speed"));
         assert!(is_valid_parameter_name("speed123"));
+        assert!(is_valid_parameter_name("_leading_underscore")); // `_` is in `[A-Za-z_]`
+        assert!(is_valid_parameter_name("A")); // single ASCII letter
         assert!(!is_valid_parameter_name("123speed")); // Can't start with digit
         assert!(!is_valid_parameter_name("")); // Can't be empty
         assert!(!is_valid_parameter_name("speed-limit")); // No hyphens
+
+        // Non-ASCII is rejected: the XSD character classes are `[A-Za-z_]` and
+        // `[A-Za-z0-9_]`, not Unicode alphanumeric. `char::is_alphanumeric` accepted all
+        // of these.
+        assert!(!is_valid_parameter_name("café")); // non-ASCII in the tail
+        assert!(!is_valid_parameter_name("évitement")); // non-ASCII leading letter
+        assert!(!is_valid_parameter_name("速度")); // non-Latin script
+        assert!(!is_valid_parameter_name("spe\u{0435}d")); // Cyrillic 'е' homoglyph
+        assert!(!is_valid_parameter_name("param\u{00B2}")); // superscript two: Unicode alphanumeric
+        assert!(!is_valid_parameter_name("\u{FF41}bc")); // fullwidth 'a'
+    }
+
+    /// Tightening the `parameter` production to ASCII must not tighten the
+    /// `expression` production, which has its own character class
+    /// (`Schema/OpenSCENARIO.xsd:11`) and is deliberately left alone.
+    #[test]
+    fn ascii_parameter_rule_leaves_the_expression_production_alone() {
+        // A `${…}` body that is not a plain parameter name is an expression, before and after.
+        let expr: Value<f64> = quick_xml::de::from_str(r#"<v>${speed + 10}</v>"#).unwrap();
+        assert!(matches!(expr, Value::Expression(ref e) if e == "speed + 10"));
+
+        // A plain ASCII name inside `${…}` is still recognised as a parameter.
+        let param: Value<f64> = quick_xml::de::from_str(r#"<v>${speed}</v>"#).unwrap();
+        assert!(matches!(param, Value::Parameter(ref p) if p == "speed"));
+
+        // A non-ASCII `${…}` body is no longer a *parameter*, but it is still carried through
+        // as an expression rather than being dropped or rejected — the expression production
+        // is not what this change tightened, and the text survives a round-trip.
+        let unicode: Value<f64> = quick_xml::de::from_str(r#"<v>${café}</v>"#).unwrap();
+        assert!(matches!(unicode, Value::Expression(ref e) if e == "café"));
+        assert_eq!(unicode.to_string(), "${café}");
+
+        // The bare-sigil `$café` spelling matches neither XSD production, so it is not a
+        // parameter reference; it falls through to a literal parse, which fails for f64.
+        assert!(quick_xml::de::from_str::<Value<f64>>(r#"<v>$café</v>"#).is_err());
+
+        // `$speed` (the schema's `parameter` production) still deserializes as a
+        // parameter and re-serializes with the bare sigil.
+        let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$speed</v>"#).unwrap();
+        assert!(matches!(bare, Value::Parameter(ref p) if p == "speed"));
+        assert_eq!(bare.to_string(), "$speed");
     }
 
     #[test]
@@ -354,7 +483,7 @@ mod tests {
         );
 
         assert_eq!(param.name.as_literal().unwrap(), "MaxSpeed");
-        assert_eq!(param.parameter_type, ParameterType::Double);
+        assert_eq!(param.parameter_type, Value::Literal(ParameterType::Double));
         assert_eq!(param.value.as_literal().unwrap(), "60.0");
         assert!(!param.has_constraints());
     }
@@ -378,9 +507,12 @@ mod tests {
         assert_eq!(constraint_group.value_constraints.len(), 2);
         assert_eq!(
             constraint_group.value_constraints[0].rule,
-            Rule::GreaterThan
+            Value::Literal(Rule::GreaterThan)
         );
-        assert_eq!(constraint_group.value_constraints[1].rule, Rule::LessThan);
+        assert_eq!(
+            constraint_group.value_constraints[1].rule,
+            Value::Literal(Rule::LessThan)
+        );
     }
 
     #[test]
@@ -405,14 +537,14 @@ mod tests {
     #[test]
     fn test_value_constraint_helpers() {
         let eq_constraint = ValueConstraint::equal_to("test".to_string());
-        assert_eq!(eq_constraint.rule, Rule::EqualTo);
+        assert_eq!(eq_constraint.rule, Value::Literal(Rule::EqualTo));
         assert_eq!(eq_constraint.value.as_literal().unwrap(), "test");
 
         let gt_constraint = ValueConstraint::greater_than("10".to_string());
-        assert_eq!(gt_constraint.rule, Rule::GreaterThan);
+        assert_eq!(gt_constraint.rule, Value::Literal(Rule::GreaterThan));
 
         let lt_constraint = ValueConstraint::less_than("50".to_string());
-        assert_eq!(lt_constraint.rule, Rule::LessThan);
+        assert_eq!(lt_constraint.rule, Value::Literal(Rule::LessThan));
     }
 
     #[test]
@@ -421,7 +553,7 @@ mod tests {
         assert_eq!(range.lower_limit.as_literal().unwrap(), &0.0);
         assert_eq!(range.upper_limit.as_literal().unwrap(), &100.0);
 
-        let default_range = Range::default();
+        let default_range = Range::new(0.0, 100.0);
         assert_eq!(default_range.lower_limit.as_literal().unwrap(), &0.0);
         assert_eq!(default_range.upper_limit.as_literal().unwrap(), &100.0);
     }
@@ -450,11 +582,11 @@ mod tests {
         assert_eq!(declarations.parameter_declarations.len(), 2);
         assert_eq!(
             declarations.parameter_declarations[0].parameter_type,
-            ParameterType::Double
+            Value::Literal(ParameterType::Double)
         );
         assert_eq!(
             declarations.parameter_declarations[1].parameter_type,
-            ParameterType::String
+            Value::Literal(ParameterType::String)
         );
     }
 
@@ -468,8 +600,9 @@ mod tests {
         let param_dir = Directory::from_parameter("CatalogPath".to_string());
         assert_eq!(param_dir.path.as_parameter().unwrap(), "CatalogPath");
 
-        // Test default
-        let default_dir = Directory::default();
+        // Test construction via ::new (no `Directory::default()`: `@path` is
+        // `use="required"` with no schema default — Schema/OpenSCENARIO.xsd:1067-1069)
+        let default_dir = Directory::new(String::new());
         assert_eq!(default_dir.path.as_literal().unwrap(), "");
     }
 
@@ -596,7 +729,7 @@ mod tests {
         assert_eq!(param.constraint_groups[0].value_constraints.len(), 1);
         assert_eq!(
             param.constraint_groups[0].value_constraints[0].rule,
-            Rule::EqualTo
+            Value::Literal(Rule::EqualTo)
         );
         assert_eq!(
             param.constraint_groups[0].value_constraints[0]
@@ -610,7 +743,7 @@ mod tests {
         assert_eq!(param.constraint_groups[1].value_constraints.len(), 1);
         assert_eq!(
             param.constraint_groups[1].value_constraints[0].rule,
-            Rule::EqualTo
+            Value::Literal(Rule::EqualTo)
         );
         assert_eq!(
             param.constraint_groups[1].value_constraints[0]
@@ -648,7 +781,7 @@ mod tests {
             param.name.as_literal().unwrap(),
             "SideVehicle_InitPosition_RelativeLaneId"
         );
-        assert_eq!(param.parameter_type, ParameterType::Int);
+        assert_eq!(param.parameter_type, Value::Literal(ParameterType::Int));
         assert_eq!(param.value.as_literal().unwrap(), "1");
         assert_eq!(param.constraint_groups.len(), 2);
     }
@@ -660,8 +793,11 @@ mod tests {
         let literal_value = Value::<f64>::literal(42.5);
         assert_eq!(format!("{}", literal_value), "42.5");
 
+        // `$speed`, not `${speed}`: the schema's `parameter` production is unbraced
+        // (`Schema/OpenSCENARIO.xsd:4-8`), and it is the only spelling the 37 enumeration
+        // unions accept. The braced form belongs to `expression`, tested just below.
         let parameter_value = Value::<String>::parameter("speed".to_string());
-        assert_eq!(format!("{}", parameter_value), "${speed}");
+        assert_eq!(format!("{}", parameter_value), "$speed");
 
         let expression_value = Value::<String>::expression("speed * 2".to_string());
         assert_eq!(format!("{}", expression_value), "${speed * 2}");
@@ -678,7 +814,7 @@ mod tests {
         assert_eq!(format!("{}", double_value), "3.14");
 
         let os_string_param = OSString::parameter("vehicle_name".to_string());
-        assert_eq!(format!("{}", os_string_param), "${vehicle_name}");
+        assert_eq!(format!("{}", os_string_param), "$vehicle_name");
 
         let boolean_expr = Boolean::expression("speed > 30".to_string());
         assert_eq!(format!("{}", boolean_expr), "${speed > 30}");
@@ -702,7 +838,7 @@ pub struct ParameterDeclaration {
     #[serde(rename = "@name")]
     pub name: OSString,
     #[serde(rename = "@parameterType")]
-    pub parameter_type: ParameterType,
+    pub parameter_type: Value<ParameterType>,
     #[serde(rename = "@value")]
     pub value: OSString,
     #[serde(
@@ -713,19 +849,8 @@ pub struct ParameterDeclaration {
     pub constraint_groups: Vec<ValueConstraintGroup>,
 }
 
-impl Default for ParameterDeclaration {
-    fn default() -> Self {
-        Self {
-            name: OSString::literal("DefaultParameter".to_string()),
-            parameter_type: ParameterType::String,
-            value: OSString::literal("".to_string()),
-            constraint_groups: Vec::new(),
-        }
-    }
-}
-
 /// Parameter constraints container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ValueConstraintGroup {
     #[serde(rename = "ValueConstraint")]
     pub value_constraints: Vec<ValueConstraint>,
@@ -735,7 +860,7 @@ pub struct ValueConstraintGroup {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ValueConstraint {
     #[serde(rename = "@rule")]
-    pub rule: Rule,
+    pub rule: Value<Rule>,
     #[serde(rename = "@value")]
     pub value: OSString,
 }
@@ -749,31 +874,13 @@ pub struct Range {
     pub upper_limit: Double,
 }
 
-impl Default for ValueConstraint {
-    fn default() -> Self {
-        Self {
-            rule: Rule::EqualTo,
-            value: OSString::literal("0".to_string()),
-        }
-    }
-}
-
-impl Default for Range {
-    fn default() -> Self {
-        Self {
-            lower_limit: Double::literal(0.0),
-            upper_limit: Double::literal(100.0),
-        }
-    }
-}
-
 // Helper methods for ParameterDeclaration
 impl ParameterDeclaration {
     /// Create a new parameter declaration with the given name, type, and value
     pub fn new(name: String, parameter_type: ParameterType, value: String) -> Self {
         Self {
             name: OSString::literal(name),
-            parameter_type,
+            parameter_type: Value::Literal(parameter_type),
             value: OSString::literal(value),
             constraint_groups: Vec::new(),
         }
@@ -788,7 +895,7 @@ impl ParameterDeclaration {
     ) -> Self {
         Self {
             name: OSString::literal(name),
-            parameter_type,
+            parameter_type: Value::Literal(parameter_type),
             value: OSString::literal(value),
             constraint_groups: constraints,
         }
@@ -855,12 +962,6 @@ impl Directory {
     }
 }
 
-impl Default for Directory {
-    fn default() -> Self {
-        Self::new(String::new())
-    }
-}
-
 // Helper methods for ValueConstraintGroup
 impl ValueConstraintGroup {
     /// Create a new value constraint group with the given constraints
@@ -881,7 +982,7 @@ impl ValueConstraint {
     /// Create a new value constraint
     pub fn new(rule: Rule, value: String) -> Self {
         Self {
-            rule,
+            rule: Value::Literal(rule),
             value: OSString::literal(value),
         }
     }

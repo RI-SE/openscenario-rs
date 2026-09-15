@@ -192,9 +192,10 @@ fn test_parameter_support() {
     let xml = quick_xml::se::to_string(&rel_road).expect("Failed to serialize");
     println!("RelativeRoadPosition with parameters XML: {}", xml);
 
-    // Verify parameter syntax is preserved
-    assert!(xml.contains("entityRef=\"${TargetEntity}\""));
-    assert!(xml.contains("ds=\"${RelativeDistance}\""));
+    // Verify parameter syntax is preserved. `$name` is the schema's `parameter`
+    // production (`Schema/OpenSCENARIO.xsd:4-8`); the braced spelling is `expression`.
+    assert!(xml.contains("entityRef=\"$TargetEntity\""));
+    assert!(xml.contains("ds=\"$RelativeDistance\""));
     assert!(xml.contains("dt=\"-1.5\""));
 
     // Deserialize back
@@ -212,20 +213,14 @@ fn test_parameter_support() {
 
 #[test]
 fn test_default_implementations() {
-    let rel_road_default = RelativeRoadPosition::default();
-    assert_eq!(
-        rel_road_default.entity_ref.as_literal().unwrap(),
-        "DefaultEntity"
-    );
+    let rel_road_default = RelativeRoadPosition::new("Ego".to_string(), 0.0, 0.0);
+    assert_eq!(rel_road_default.entity_ref.as_literal().unwrap(), "Ego");
     assert_eq!(rel_road_default.ds.as_literal().unwrap(), &0.0);
     assert_eq!(rel_road_default.dt.as_literal().unwrap(), &0.0);
     assert!(rel_road_default.orientation.is_none());
 
-    let rel_lane_default = RelativeLanePosition::default();
-    assert_eq!(
-        rel_lane_default.entity_ref.as_literal().unwrap(),
-        "DefaultEntity"
-    );
+    let rel_lane_default = RelativeLanePosition::new("Ego".to_string(), 0, 0.0, 0.0);
+    assert_eq!(rel_lane_default.entity_ref.as_literal().unwrap(), "Ego");
     assert_eq!(rel_lane_default.d_lane.as_literal().unwrap(), &0);
     assert_eq!(
         rel_lane_default.ds.as_ref().unwrap().as_literal().unwrap(),

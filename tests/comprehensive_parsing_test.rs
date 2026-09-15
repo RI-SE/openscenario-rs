@@ -326,7 +326,7 @@ mod tests {
             .add_vehicle("ego", |vehicle| vehicle.car())
             .create_storyboard()
             .create_init_actions()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .add_teleport_action(
                 "ego",
                 Position {

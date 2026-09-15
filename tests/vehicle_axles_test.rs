@@ -27,6 +27,6 @@ fn test_vehicle_with_axles() {
     // Test that Vehicle can use the new axles system
     use openscenario_rs::types::Vehicle;
 
-    let vehicle = Vehicle::default();
+    let vehicle = Vehicle::new_car("TestVehicle".to_string());
     assert_eq!(vehicle.axle_count(), 2);
 }

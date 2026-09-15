@@ -1,7 +1,7 @@
 //! Miscellaneous object entity definition
 
 use super::vehicle::Properties;
-use crate::types::basic::{Double, OSString, ParameterDeclarations};
+use crate::types::basic::{Double, OSString, ParameterDeclarations, Value};
 use crate::types::enums::MiscObjectCategory;
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct MiscObject {
 
     /// Category of the miscellaneous object
     #[serde(rename = "@miscObjectCategory")]
-    pub misc_object_category: MiscObjectCategory,
+    pub misc_object_category: Value<MiscObjectCategory>,
 
     /// Name of the miscellaneous object
     #[serde(rename = "@name")]
@@ -51,11 +51,14 @@ impl MiscObject {
     pub fn new(name: String, mass: f64, category: MiscObjectCategory) -> Self {
         Self {
             mass: Double::literal(mass),
-            misc_object_category: category,
+            misc_object_category: Value::Literal(category),
             name: crate::types::basic::Value::literal(name),
             model3d: None,
             parameter_declarations: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
         }
     }
@@ -71,7 +74,10 @@ mod tests {
 
         assert_eq!(obj.name.as_literal().unwrap(), "Barrier1");
         assert_eq!(obj.mass.as_literal().unwrap(), &100.0);
-        assert_eq!(obj.misc_object_category, MiscObjectCategory::Barrier);
+        assert_eq!(
+            obj.misc_object_category,
+            Value::Literal(MiscObjectCategory::Barrier)
+        );
         assert!(obj.model3d.is_none());
         assert!(obj.properties.is_none());
     }
@@ -91,7 +97,7 @@ mod tests {
         assert_eq!(deserialized.mass.as_literal().unwrap(), &50.0);
         assert_eq!(
             deserialized.misc_object_category,
-            MiscObjectCategory::Obstacle
+            Value::Literal(MiscObjectCategory::Obstacle)
         );
     }
 

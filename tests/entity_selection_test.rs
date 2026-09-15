@@ -10,6 +10,7 @@
 //! - ByObjectType
 //! - ByType
 
+use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     entities::{
@@ -63,7 +64,10 @@ fn test_entity_selection_xml_parsing_by_type() {
     let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
     assert!(selection.members.entity_refs.is_empty());
     assert_eq!(selection.members.by_type.len(), 1);
-    assert_eq!(selection.members.by_type[0].type_spec, ObjectType::Vehicle);
+    assert_eq!(
+        selection.members.by_type[0].type_spec,
+        Value::Literal(ObjectType::Vehicle)
+    );
 }
 
 #[test]
@@ -117,15 +121,21 @@ fn test_selected_entities_xml_parsing() {
 #[test]
 fn test_entity_distribution_creation() {
     let mut distribution = EntityDistribution::new();
-    distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.6);
-    distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.4);
+    distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.6,
+    );
+    distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.4,
+    );
 
     assert_eq!(distribution.entries.len(), 2);
     assert_eq!(distribution.total_weight(), 1.0);
 
     // Test uniform distribution
     let templates: Vec<ScenarioObjectTemplate> = (0..4)
-        .map(|_| ScenarioObjectTemplate::new_vehicle(Vehicle::default()))
+        .map(|_| ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())))
         .collect();
     let uniform_dist = EntityDistribution::uniform(templates);
     assert_eq!(uniform_dist.entries.len(), 4);
@@ -140,8 +150,8 @@ fn test_entity_distribution_creation() {
 #[test]
 fn test_entity_distribution_xml_serialization() {
     let templates = vec![
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
     ];
     let distribution = EntityDistribution::uniform(templates);
     let xml = quick_xml::se::to_string(&distribution).unwrap();
@@ -196,20 +206,23 @@ fn test_entity_distribution_xml_parsing() {
 
 #[test]
 fn test_entity_distribution_entry() {
-    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
     let entry = EntityDistributionEntry::new(template, 0.75);
     assert!(entry.scenario_object_template.vehicle.is_some());
     assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
 
-    // Test default
-    let default_entry = EntityDistributionEntry::default();
+    // Test construction via ::new
+    let default_entry = EntityDistributionEntry::new(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        1.0,
+    );
     assert!(default_entry.scenario_object_template.vehicle.is_some());
     assert_eq!(default_entry.weight.as_literal().unwrap(), &1.0);
 }
 
 #[test]
 fn test_scenario_object_template_basic() {
-    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let template = ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
     assert!(template.vehicle.is_some());
     assert!(template.pedestrian.is_none());
     assert!(template.external_object_reference.is_none());
@@ -250,9 +263,9 @@ fn test_external_object_reference() {
     let ext_ref = ExternalObjectReference::new("Sedan");
     assert_eq!(ext_ref.name.as_literal().unwrap(), "Sedan");
 
-    // Test default
-    let default_ref = ExternalObjectReference::default();
-    assert_eq!(default_ref.name.as_literal().unwrap(), "DefaultObject");
+    // Test construction via ::new
+    let default_ref = ExternalObjectReference::new("Sedan");
+    assert_eq!(default_ref.name.as_literal().unwrap(), "Sedan");
 }
 
 #[test]
@@ -268,17 +281,29 @@ fn test_external_object_reference_xml_parsing() {
 #[test]
 fn test_by_object_type() {
     let vehicle_selector = ByObjectType::vehicle();
-    assert_eq!(vehicle_selector.object_type, ObjectType::Vehicle);
+    assert_eq!(
+        vehicle_selector.object_type,
+        Value::Literal(ObjectType::Vehicle)
+    );
 
     let pedestrian_selector = ByObjectType::pedestrian();
-    assert_eq!(pedestrian_selector.object_type, ObjectType::Pedestrian);
+    assert_eq!(
+        pedestrian_selector.object_type,
+        Value::Literal(ObjectType::Pedestrian)
+    );
 
     let misc_selector = ByObjectType::miscellaneous_object();
-    assert_eq!(misc_selector.object_type, ObjectType::MiscellaneousObject);
+    assert_eq!(
+        misc_selector.object_type,
+        Value::Literal(ObjectType::MiscellaneousObject)
+    );
 
     // Test custom creation
     let custom_selector = ByObjectType::new(ObjectType::Vehicle);
-    assert_eq!(custom_selector.object_type, ObjectType::Vehicle);
+    assert_eq!(
+        custom_selector.object_type,
+        Value::Literal(ObjectType::Vehicle)
+    );
 }
 
 #[test]
@@ -286,17 +311,23 @@ fn test_by_object_type_xml_parsing() {
     // XSD: ByObjectType has attribute `type`.
     let xml = r#"<ByObjectType type="pedestrian"/>"#;
     let selector: ByObjectType = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(selector.object_type, ObjectType::Pedestrian);
+    assert_eq!(selector.object_type, Value::Literal(ObjectType::Pedestrian));
 }
 
 #[test]
 fn test_by_type() {
     let type_selector = ByType::new(ObjectType::MiscellaneousObject);
-    assert_eq!(type_selector.type_spec, ObjectType::MiscellaneousObject);
+    assert_eq!(
+        type_selector.type_spec,
+        Value::Literal(ObjectType::MiscellaneousObject)
+    );
 
-    // Test default
-    let default_selector = ByType::default();
-    assert_eq!(default_selector.type_spec, ObjectType::Vehicle);
+    // Test construction via ::new
+    let default_selector = ByType::new(ObjectType::Vehicle);
+    assert_eq!(
+        default_selector.type_spec,
+        Value::Literal(ObjectType::Vehicle)
+    );
 }
 
 #[test]
@@ -304,7 +335,7 @@ fn test_by_type_xml_parsing() {
     // XSD: ByType has attribute `objectType`.
     let xml = r#"<ByType objectType="pedestrian"/>"#;
     let selector: ByType = quick_xml::de::from_str(xml).unwrap();
-    assert_eq!(selector.type_spec, ObjectType::Pedestrian);
+    assert_eq!(selector.type_spec, Value::Literal(ObjectType::Pedestrian));
 }
 
 #[test]
@@ -318,11 +349,21 @@ fn test_complex_entity_selection_scenario() {
     let selected_pedestrians = SelectedEntities::from_names(vec!["Walker1", "Walker2"]);
 
     let mut vehicle_distribution = EntityDistribution::new();
-    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.5);
-    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.3);
-    vehicle_distribution.add_entry(ScenarioObjectTemplate::new_vehicle(Vehicle::default()), 0.2);
+    vehicle_distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.5,
+    );
+    vehicle_distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.3,
+    );
+    vehicle_distribution.add_entry(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        0.2,
+    );
 
-    let vehicle_template = ScenarioObjectTemplate::new_vehicle(Vehicle::default());
+    let vehicle_template =
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
 
     // Verify all components work together
     assert_eq!(vehicle_selection.members.by_type.len(), 1);
@@ -365,17 +406,23 @@ fn test_parameter_support_in_entity_selection() {
 
 #[test]
 fn test_all_defaults() {
-    // Test that all types have working defaults
-    let _entity_selection = EntitySelection::default();
-    let _selected_entities = SelectedEntities::default();
-    let _entity_distribution = EntityDistribution::default();
-    let _entity_distribution_entry = EntityDistributionEntry::default();
-    let _scenario_object_template = ScenarioObjectTemplate::default();
-    let _external_object_reference = ExternalObjectReference::default();
-    let _by_object_type = ByObjectType::default();
-    let _by_type = ByType::default();
+    // these types no longer fabricate content via `Default` — each
+    // requires an explicit, stated value instead. `SelectedEntities` and `EntityDistribution` now offer explicit `new()` constructors instead of a derived `Default`: the
+    // schema requires at least one child of each, so an empty value is category 3.
+    let _entity_selection = EntitySelection::new("Selection1", SelectedEntities::new());
+    let _selected_entities = SelectedEntities::new();
+    let _entity_distribution = EntityDistribution::new();
+    let _entity_distribution_entry = EntityDistributionEntry::new(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        1.0,
+    );
+    let _scenario_object_template =
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
+    let _external_object_reference = ExternalObjectReference::new("Sedan");
+    let _by_object_type = ByObjectType::vehicle();
+    let _by_type = ByType::new(ObjectType::Vehicle);
 
-    // All defaults should be created without panicking
+    // All values should be created without panicking
     assert!(true);
 }
 
@@ -395,8 +442,8 @@ fn test_serialization_roundtrip() {
     assert_eq!(original_entities, parsed_entities);
 
     let templates = vec![
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
-        ScenarioObjectTemplate::new_vehicle(Vehicle::default()),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
     ];
     let original_distribution = EntityDistribution::uniform(templates);
     let xml = quick_xml::se::to_string(&original_distribution).unwrap();

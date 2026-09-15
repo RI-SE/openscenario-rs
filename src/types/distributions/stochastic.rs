@@ -122,11 +122,22 @@ pub struct Range {
     pub upper_limit: OSString,
 }
 
-impl Default for Stochastic {
-    fn default() -> Self {
+// No Default for Stochastic: `numberOfTestRuns` is `use="required"` in the XSD with no
+// `default="…"` (confirmed against `Schema/OpenSCENARIO.xsd` — this project has found no genuine
+// attribute default across ~131 checked so far), and `StochasticDistribution` has
+// `maxOccurs="unbounded"` with no `minOccurs="0"`, so an empty `distributions` Vec is not
+// schema-valid either. The previous impl fabricated `numberOfTestRuns: 1`. Use `new()`.
+impl Stochastic {
+    pub fn new(
+        number_of_test_runs: UnsignedInt,
+        first: StochasticDistribution,
+        rest: Vec<StochasticDistribution>,
+    ) -> Self {
+        let mut distributions = vec![first];
+        distributions.extend(rest);
         Self {
-            distributions: Vec::new(),
-            number_of_test_runs: Value::Literal(1),
+            distributions,
+            number_of_test_runs,
             random_seed: None,
         }
     }

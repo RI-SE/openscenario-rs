@@ -1,7 +1,7 @@
 //! Pedestrian entity definition
 
 use super::vehicle::Properties;
-use crate::types::basic::{Double, OSString, ParameterDeclarations};
+use crate::types::basic::{Double, OSString, ParameterDeclarations, Value};
 use crate::types::enums::{PedestrianCategory, Role};
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct Pedestrian {
 
     /// Category of the pedestrian (pedestrian, wheelchair, animal)
     #[serde(rename = "@pedestrianCategory")]
-    pub pedestrian_category: PedestrianCategory,
+    pub pedestrian_category: Value<PedestrianCategory>,
 
     /// Mass of the pedestrian in kg (REQUIRED by XSD)
     #[serde(rename = "@mass")]
@@ -23,7 +23,7 @@ pub struct Pedestrian {
 
     /// Role of the pedestrian (civil, police, ambulance, etc.)
     #[serde(rename = "@role", skip_serializing_if = "Option::is_none")]
-    pub role: Option<Role>,
+    pub role: Option<Value<Role>>,
 
     /// Deprecated model reference; prefer `model3d`.
     #[serde(rename = "@model", default, skip_serializing_if = "Option::is_none")]
@@ -53,13 +53,13 @@ impl Pedestrian {
     pub fn new_pedestrian(name: String) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            pedestrian_category: PedestrianCategory::Pedestrian,
+            pedestrian_category: Value::Literal(PedestrianCategory::Pedestrian),
             mass: Double::literal(75.0),
-            role: Some(Role::None),
+            role: Some(Value::Literal(Role::None)),
             model: None,
             model3d: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions {
                     width: Double::literal(0.6),
                     length: Double::literal(0.6),
@@ -74,13 +74,13 @@ impl Pedestrian {
     pub fn new_wheelchair(name: String) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            pedestrian_category: PedestrianCategory::Wheelchair,
+            pedestrian_category: Value::Literal(PedestrianCategory::Wheelchair),
             mass: Double::literal(85.0),
-            role: Some(Role::Civil),
+            role: Some(Value::Literal(Role::Civil)),
             model: None,
             model3d: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions {
                     width: Double::literal(0.8),
                     length: Double::literal(1.0),
@@ -95,13 +95,13 @@ impl Pedestrian {
     pub fn new_animal(name: String) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            pedestrian_category: PedestrianCategory::Animal,
+            pedestrian_category: Value::Literal(PedestrianCategory::Animal),
             mass: Double::literal(50.0),
-            role: Some(Role::None),
+            role: Some(Value::Literal(Role::None)),
             model: None,
             model3d: None,
             bounding_box: BoundingBox {
-                center: crate::types::geometry::Center::default(),
+                center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
                 dimensions: crate::types::geometry::Dimensions {
                     width: Double::literal(0.5),
                     length: Double::literal(0.5),
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(pedestrian.name.as_literal().unwrap(), "DefaultPedestrian");
         assert_eq!(
             pedestrian.pedestrian_category,
-            PedestrianCategory::Pedestrian
+            Value::Literal(PedestrianCategory::Pedestrian)
         );
 
         // Should have pedestrian-appropriate dimensions
@@ -153,12 +153,15 @@ mod tests {
     fn test_pedestrian_creation() {
         let pedestrian = Pedestrian {
             name: crate::types::basic::Value::literal("TestPedestrian".to_string()),
-            pedestrian_category: PedestrianCategory::Wheelchair,
+            pedestrian_category: Value::Literal(PedestrianCategory::Wheelchair),
             mass: Double::literal(85.0),
-            role: Some(Role::Civil),
+            role: Some(Value::Literal(Role::Civil)),
             model: None,
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -166,7 +169,7 @@ mod tests {
         assert_eq!(pedestrian.name.as_literal().unwrap(), "TestPedestrian");
         assert_eq!(
             pedestrian.pedestrian_category,
-            PedestrianCategory::Wheelchair
+            Value::Literal(PedestrianCategory::Wheelchair)
         );
     }
 
@@ -189,10 +192,10 @@ mod tests {
         assert_eq!(pedestrian.name.as_literal().unwrap(), "Ped1");
         assert_eq!(
             pedestrian.pedestrian_category,
-            PedestrianCategory::Pedestrian
+            Value::Literal(PedestrianCategory::Pedestrian)
         );
         assert_eq!(pedestrian.mass.as_literal().unwrap(), &75.0);
-        assert_eq!(pedestrian.role.unwrap(), Role::None);
+        assert_eq!(pedestrian.role.unwrap(), Value::Literal(Role::None));
     }
 
     #[test]
@@ -202,10 +205,10 @@ mod tests {
         assert_eq!(pedestrian.name.as_literal().unwrap(), "Wheel1");
         assert_eq!(
             pedestrian.pedestrian_category,
-            PedestrianCategory::Wheelchair
+            Value::Literal(PedestrianCategory::Wheelchair)
         );
         assert_eq!(pedestrian.mass.as_literal().unwrap(), &85.0);
-        assert_eq!(pedestrian.role.unwrap(), Role::Civil);
+        assert_eq!(pedestrian.role.unwrap(), Value::Literal(Role::Civil));
     }
 
     #[test]
@@ -213,9 +216,12 @@ mod tests {
         let pedestrian = Pedestrian::new_animal("Dog1".to_string());
 
         assert_eq!(pedestrian.name.as_literal().unwrap(), "Dog1");
-        assert_eq!(pedestrian.pedestrian_category, PedestrianCategory::Animal);
+        assert_eq!(
+            pedestrian.pedestrian_category,
+            Value::Literal(PedestrianCategory::Animal)
+        );
         assert_eq!(pedestrian.mass.as_literal().unwrap(), &50.0);
-        assert_eq!(pedestrian.role.unwrap(), Role::None);
+        assert_eq!(pedestrian.role.unwrap(), Value::Literal(Role::None));
     }
 
     #[test]

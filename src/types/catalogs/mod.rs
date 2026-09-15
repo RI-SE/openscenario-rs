@@ -1,12 +1,5 @@
-//! Catalog system module for reusable scenario components
-//!
-//! This file contains:
-//! - Base catalog traits and catalog management utilities
-//! - Catalog reference resolution and dependency tracking
-//! - Catalog validation and consistency checking
-//! - Cross-catalog reference handling and circular dependency detection
-//! - Catalog versioning and compatibility management
-//!
+//! Catalog content types: the entries a catalog file holds, and the `CatalogReference`
+//! a scenario uses to name one. Loading and resolution live in [`crate::catalog`].
 pub mod controllers;
 pub mod entities;
 pub mod environments;
@@ -57,14 +50,23 @@ pub use references::{
 use serde::{Deserialize, Serialize};
 
 /// Catalog type - container for all catalog entities
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`: `CatalogContent::@name` is `use="required"` with no XSD
+/// `default="…"`. The derive here used to piggy-back on `CatalogContent`'s own
+/// (now-removed) fabricating `Default`, which minted `"DefaultCatalog"`. Use
+/// `Catalog::new` / `Catalog::from_content`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Catalog {
     #[serde(flatten)]
     pub content: CatalogContent,
 }
 
 /// CatalogDefinition group - XSD group wrapper for catalog sequence
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+///
+/// No `Default`, for the same reason as `Catalog` above — it would otherwise
+/// transitively fabricate `Catalog`'s required `@name`. Use `CatalogDefinition::new`
+/// / `::with_name` / `::from_content`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogDefinition {
     #[serde(rename = "Catalog")]
     pub catalog: Catalog,

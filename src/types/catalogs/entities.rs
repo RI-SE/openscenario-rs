@@ -1,7 +1,5 @@
-//! Catalog entity types for reference resolution
-//!
-//! This module contains catalog-specific entity types that can be loaded from
-//! catalog files and resolved into scenario entities with parameter substitution.
+//! Catalog-file forms of the three entity kinds: vehicle, pedestrian, and misc
+//! object. Each adds parameter declarations to the scenario type it mirrors.
 
 use crate::error::Result;
 use crate::types::basic::{Double, OSString, Value};
@@ -79,11 +77,11 @@ pub struct CatalogVehicle {
 
     /// Vehicle category
     #[serde(rename = "@vehicleCategory")]
-    pub vehicle_category: VehicleCategory,
+    pub vehicle_category: Value<VehicleCategory>,
 
     /// Role of the vehicle (e.g. ambulance, police)
     #[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
-    pub role: Option<Role>,
+    pub role: Option<Value<Role>>,
 
     /// Mass of the vehicle in kg (can be parameterized)
     #[serde(rename = "@mass", default, skip_serializing_if = "Option::is_none")]
@@ -377,7 +375,7 @@ pub struct CatalogController {
 
     /// Type of controller
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
-    pub controller_type: Option<ControllerType>,
+    pub controller_type: Option<Value<ControllerType>>,
 
     /// Parameter declarations for this catalog controller
     #[serde(
@@ -401,7 +399,10 @@ impl CatalogEntity for CatalogController {
     ) -> Result<Self::ResolvedType> {
         let resolved_controller = Controller {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
-            controller_type: Some(self.controller_type.unwrap_or(ControllerType::Movement)), // Default to Movement when not specified
+            controller_type: Some(
+                self.controller_type
+                    .unwrap_or(Value::Literal(ControllerType::Movement)),
+            ), // Default to Movement when not specified
             parameter_declarations: None,
             properties: self.properties,
         };
@@ -434,7 +435,7 @@ pub struct CatalogPedestrian {
 
     /// Category of pedestrian
     #[serde(rename = "@pedestrianCategory")]
-    pub pedestrian_category: PedestrianCategory,
+    pub pedestrian_category: Value<PedestrianCategory>,
 
     /// Mass in kg (can be parameterized) - REQUIRED by XSD
     #[serde(rename = "@mass")]
@@ -442,7 +443,7 @@ pub struct CatalogPedestrian {
 
     /// Role
     #[serde(rename = "@role", skip_serializing_if = "Option::is_none")]
-    pub role: Option<Role>,
+    pub role: Option<Value<Role>>,
 
     /// 3D model path (can be parameterized)
     #[serde(rename = "@model3d", skip_serializing_if = "Option::is_none")]
@@ -537,7 +538,7 @@ pub struct CatalogMiscObject {
 
     /// Category of the object — XSD attribute `miscObjectCategory`, `use="required"`
     #[serde(rename = "@miscObjectCategory")]
-    pub misc_object_category: MiscObjectCategory,
+    pub misc_object_category: Value<MiscObjectCategory>,
 
     /// Optional reference to a 3D model — XSD attribute `model3d`
     #[serde(rename = "@model3d", default, skip_serializing_if = "Option::is_none")]
@@ -726,11 +727,14 @@ mod tests {
     fn test_catalog_vehicle_entity_name() {
         let catalog_vehicle = CatalogVehicle {
             name: "SportsCar".to_string(),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: CatalogPerformance {
                 max_speed: Value::Literal(250.0),
                 max_acceleration: Value::Literal(15.0),
@@ -769,11 +773,14 @@ mod tests {
     fn test_catalog_vehicle_resolution() {
         let catalog_vehicle = CatalogVehicle {
             name: "TestVehicle".to_string(),
-            vehicle_category: VehicleCategory::Car,
+            vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             performance: CatalogPerformance {
                 max_speed: Value::Parameter("MaxSpeedParam".to_string()),
                 max_acceleration: Value::Literal(10.0),
@@ -830,7 +837,7 @@ mod tests {
     fn test_catalog_controller_entity_name() {
         let catalog_controller = CatalogController {
             name: "AIDriver".to_string(),
-            controller_type: Some(ControllerType::Movement),
+            controller_type: Some(Value::Literal(ControllerType::Movement)),
             parameter_declarations: None,
             properties: None,
         };
@@ -842,7 +849,7 @@ mod tests {
     fn test_catalog_controller_resolution() {
         let catalog_controller = CatalogController {
             name: "TestController".to_string(),
-            controller_type: Some(ControllerType::Lateral),
+            controller_type: Some(Value::Literal(ControllerType::Lateral)),
             parameter_declarations: None,
             properties: None,
         };
@@ -850,7 +857,10 @@ mod tests {
         let resolved = catalog_controller
             .into_scenario_entity(HashMap::new())
             .unwrap();
-        assert_eq!(resolved.controller_type.unwrap(), ControllerType::Lateral);
+        assert_eq!(
+            resolved.controller_type.unwrap(),
+            Value::Literal(ControllerType::Lateral)
+        );
         assert_eq!(resolved.name.as_literal().unwrap(), "TestController");
     }
 
@@ -858,7 +868,7 @@ mod tests {
     fn test_catalog_controller_type_resolution() {
         let catalog_controller = CatalogController {
             name: "FlexController".to_string(),
-            controller_type: Some(ControllerType::Longitudinal),
+            controller_type: Some(Value::Literal(ControllerType::Longitudinal)),
             parameter_declarations: None,
             properties: None,
         };
@@ -867,7 +877,7 @@ mod tests {
         let resolved = catalog_controller.into_scenario_entity(parameters).unwrap();
         assert_eq!(
             resolved.controller_type.unwrap(),
-            ControllerType::Longitudinal
+            Value::Literal(ControllerType::Longitudinal)
         );
     }
 
@@ -912,11 +922,14 @@ mod tests {
     fn test_catalog_pedestrian_entity_name() {
         let catalog_pedestrian = CatalogPedestrian {
             name: "WalkingPerson".to_string(),
-            pedestrian_category: PedestrianCategory::Pedestrian,
+            pedestrian_category: Value::Literal(PedestrianCategory::Pedestrian),
             mass: Value::Literal("75.0".to_string()),
-            role: Some(crate::types::enums::Role::None),
+            role: Some(Value::Literal(crate::types::enums::Role::None)),
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -928,11 +941,14 @@ mod tests {
     fn test_catalog_pedestrian_resolution() {
         let catalog_pedestrian = CatalogPedestrian {
             name: "TestPedestrian".to_string(),
-            pedestrian_category: PedestrianCategory::Wheelchair,
+            pedestrian_category: Value::Literal(PedestrianCategory::Wheelchair),
             mass: Value::Literal("75.0".to_string()),
-            role: Some(crate::types::enums::Role::Civil),
+            role: Some(Value::Literal(crate::types::enums::Role::Civil)),
             model3d: None,
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -940,9 +956,15 @@ mod tests {
         let resolved = catalog_pedestrian
             .into_scenario_entity(HashMap::new())
             .unwrap();
-        assert_eq!(resolved.pedestrian_category, PedestrianCategory::Wheelchair);
+        assert_eq!(
+            resolved.pedestrian_category,
+            Value::Literal(PedestrianCategory::Wheelchair)
+        );
         assert_eq!(resolved.name.as_literal().unwrap(), "TestPedestrian");
-        assert_eq!(resolved.role.unwrap(), crate::types::enums::Role::Civil);
+        assert_eq!(
+            resolved.role.unwrap(),
+            Value::Literal(crate::types::enums::Role::Civil)
+        );
     }
 
     /// Schema-validity guard: `pedestrianCategory` is an XSD enumeration
@@ -968,9 +990,12 @@ mod tests {
         let catalog_misc_object = CatalogMiscObject {
             name: "TrafficCone".to_string(),
             mass: Value::Parameter("ConeMass".to_string()),
-            misc_object_category: MiscObjectCategory::Obstacle,
+            misc_object_category: Value::Literal(MiscObjectCategory::Obstacle),
             model3d: Some(Value::Literal("cone.obj".to_string())),
-            bounding_box: BoundingBox::default(),
+            bounding_box: BoundingBox::new(
+                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
+                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+            ),
             properties: None,
             parameter_declarations: None,
         };
@@ -985,7 +1010,10 @@ mod tests {
             .unwrap();
         assert_eq!(resolved.name.as_literal().unwrap(), "TrafficCone");
         assert_eq!(resolved.mass.as_literal().unwrap(), &5.0);
-        assert_eq!(resolved.misc_object_category, MiscObjectCategory::Obstacle);
+        assert_eq!(
+            resolved.misc_object_category,
+            Value::Literal(MiscObjectCategory::Obstacle)
+        );
         assert_eq!(
             resolved.model3d.as_ref().unwrap().as_literal().unwrap(),
             "cone.obj"
@@ -1049,7 +1077,7 @@ mod tests {
         assert_eq!(misc_object.mass.as_literal().unwrap(), &70.0);
         assert_eq!(
             misc_object.misc_object_category,
-            MiscObjectCategory::Obstacle
+            Value::Literal(MiscObjectCategory::Obstacle)
         );
         assert!(misc_object.properties.is_some());
 
@@ -1177,7 +1205,7 @@ mod tests {
             .expect("MaxDeceleration declaration must be present");
         assert_eq!(
             max_decel.parameter_type,
-            crate::types::enums::ParameterType::Double
+            Value::Literal(crate::types::enums::ParameterType::Double)
         );
         assert_eq!(
             max_decel.value.as_literal().map(String::as_str),
@@ -1192,7 +1220,7 @@ mod tests {
             .expect("MaxSpeed declaration must be present");
         assert_eq!(
             max_speed.parameter_type,
-            crate::types::enums::ParameterType::Double
+            Value::Literal(crate::types::enums::ParameterType::Double)
         );
         assert_eq!(
             max_speed.value.as_literal().map(String::as_str),
@@ -1234,7 +1262,7 @@ mod tests {
             assert_eq!(decl.name.as_literal().map(String::as_str), Some("x"));
             assert_eq!(
                 decl.parameter_type,
-                crate::types::enums::ParameterType::Double
+                Value::Literal(crate::types::enums::ParameterType::Double)
             );
             assert_eq!(decl.value.as_literal().map(String::as_str), Some("1.0"));
             assert_eq!(
@@ -1244,7 +1272,10 @@ mod tests {
             );
             let constraints = &decl.constraint_groups[0].value_constraints;
             assert_eq!(constraints.len(), 1);
-            assert_eq!(constraints[0].rule, crate::types::enums::Rule::GreaterThan);
+            assert_eq!(
+                constraints[0].rule,
+                Value::Literal(crate::types::enums::Rule::GreaterThan)
+            );
             assert_eq!(
                 constraints[0].value.as_literal().map(String::as_str),
                 Some("0")
@@ -1319,7 +1350,10 @@ mod tests {
 </Vehicle>"#;
 
         let vehicle: CatalogVehicle = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(vehicle.role, Some(crate::types::enums::Role::Police));
+        assert_eq!(
+            vehicle.role,
+            Some(Value::Literal(crate::types::enums::Role::Police))
+        );
         assert_eq!(vehicle.mass.clone().unwrap().as_literal(), Some(&1500.0));
         assert_eq!(
             vehicle.model3d.clone().unwrap().as_literal(),
@@ -1333,7 +1367,10 @@ mod tests {
         assert_eq!(vehicle, reparsed);
 
         let resolved = vehicle.into_scenario_entity(HashMap::new()).unwrap();
-        assert_eq!(resolved.role, Some(crate::types::enums::Role::Police));
+        assert_eq!(
+            resolved.role,
+            Some(Value::Literal(crate::types::enums::Role::Police))
+        );
         assert_eq!(resolved.mass.unwrap().as_literal(), Some(&1500.0));
         assert!(resolved.trailer_hitch.is_some());
         assert!(resolved.trailer_coupler.is_some());

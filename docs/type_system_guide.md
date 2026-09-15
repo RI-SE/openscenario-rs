@@ -201,21 +201,530 @@ Variant-level drift against the schema is common and cheap to check; method 5 in
 [xsd_gaps.md](xsd_gaps.md) describes the sweep. As of pass 4 all 37 match exactly in both
 directions.
 
-One structural gap remains open. Each of those 37 enumerations is an `xsd:union` carrying a
-`parameter` member, which makes `vehicleCategory="${cat}"` schema-valid across 75 attributes.
-A bare Rust enum cannot represent that, so parameterized enumeration attributes are currently
-rejected. The analysis is in [xsd_gaps.md](xsd_gaps.md).
+Each of those 37 enumerations is an `xsd:union` carrying a `parameter` member, which makes
+`vehicleCategory="$cat"` schema-valid across 75 attributes. A bare Rust enum cannot represent
+that, so every enum-typed attribute is wrapped: **90 fields across 25 files** hold `Value<E>`
+(54 required) or `Option<Value<E>>` (36 optional — absent and present-but-parameterized are
+different states and are not collapsed).
+
+```rust
+#[serde(rename = "@vehicleCategory")]
+pub vehicle_category: Value<VehicleCategory>,     // required
+
+#[serde(rename = "@role", default, skip_serializing_if = "Option::is_none")]
+pub role: Option<Value<Role>>,                    // optional
+```
+
+This is not a stringly-typed escape hatch. `Value`'s `Deserialize` falls through to
+`s.parse::<T>()` for anything without a `$` sigil, so `vehicleCategory="spaceship"` is still a
+hard parse error.
+
+**Mind the sigil.** The schema defines two productions (`Schema/OpenSCENARIO.xsd:4-13`):
+`parameter` is `[$][A-Za-z_][A-Za-z0-9_]*` — unbraced — and `expression` is `[$][{]…[\}]`.
+Every scalar union (`Double`, `Int`, `Boolean`, …) lists both members, so both spellings
+validate there; **all 37 enumeration unions list `parameter` alone**. `vehicleCategory="${cat}"`
+is therefore schema-invalid. `Value::Parameter` serializes as `$name` accordingly — valid on
+every union in the schema — while `Value::Expression` keeps `${…}`. Deserialization accepts
+either spelling, so documents written the other way still parse.
+
+Builder setters keep taking the bare enum and wrap internally, so the common case needs no
+migration; each has a parallel `*_param(&str)` for the parameter form:
+
+```rust
+vehicle.with_category(VehicleCategory::Truck)   // vehicleCategory="truck"
+vehicle.with_category_param("cat")              // vehicleCategory="$cat"
+```
+
+The analysis is in [xsd_gaps.md](xsd_gaps.md).
 
 ## The `Default` policy
 
-`Default` is implemented only where a default states nothing. Container and choice structs
-that default to all-`None` or empty (`Actions`, `GlobalAction`, `PrivateAction`,
-`EnvironmentAction`, `ParameterDeclarations`) keep theirs.
+`Default` sorts into **three** categories, not two. The first two were written down from the
+start; the third was discovered six times in the field before it was named here, and once it was
+*created* by a cleanup pass that was removing instances of it.
 
-Impls that would fabricate scenario content were removed deliberately. A `TeleportAction`
-whose `Default` invents a world position at the origin produces a document that parses
-cleanly and describes something nobody wrote, which is worse than a compile error. If a type
-needs every field to say anything at all, it should require every field.
+**1. Fabricates content — remove.** A `TeleportAction` whose `Default` invents a world position
+at the origin produces a document that parses cleanly and describes something nobody wrote, which
+is worse than a compile error. If a type needs every field to say anything at all, it should
+require every field. Give it an explicit `::new` (or per-branch constructors, for a choice) and
+let the compiler point at every call site that was relying on the invented value.
+
+**2. States nothing, and the schema permits that — keep.** A container or choice struct whose
+`Default` is all-`None` or an empty `Vec`, *where the schema allows the empty form to appear*.
+`ParameterDeclarations` is the model case: its only child is `minOccurs="0"`
+(`Schema/OpenSCENARIO.xsd:1642-1646`), so `ParameterDeclarations::default()` serializes to XML
+that validates. Nothing is invented and nothing is claimed.
+
+**3. Schema-invalid empty — do not keep silently.** An empty `Vec` or an all-`None` choice invents
+nothing, but that does not make it benign. It is only benign when the schema permits the empty
+form. When it does not, `T::default()` constructs a value that *cannot* be serialized into
+schema-valid XML — a different defect from category 1, and one no round-trip test will catch,
+because nothing in the corpus constructs such a value and serializes it.
+
+```xml
+<xsd:complexType name="ConditionGroup">
+  <xsd:sequence><xsd:element name="Condition" type="Condition" maxOccurs="unbounded"/></xsd:sequence>
+</xsd:complexType>          <!-- no minOccurs ⇒ minOccurs=1: at least one Condition required -->
+
+<xsd:complexType name="Polyline">
+  <xsd:sequence><xsd:element name="Vertex" type="Vertex" minOccurs="2" maxOccurs="unbounded"/></xsd:sequence>
+</xsd:complexType>          <!-- at least TWO vertices required -->
+```
+
+**The check to run, before deriving or keeping a `Default` on any container or choice type:**
+
+1. Open `Schema/OpenSCENARIO.xsd` and find the type's declaration.
+2. For each child element, read its `minOccurs`. **An absent `minOccurs` means `1`, not `0`** —
+   that is the trap, and it is how every instance of this category got in.
+3. Empty is schema-valid only if *every* child is `minOccurs="0"`. If any child is required, the
+   type belongs in category 3: no `Default` — give it a constructor that takes the required
+   children.
+4. For an `xsd:choice`, the same rule applies to the choice particle itself. A choice without
+   `minOccurs="0"` must select a branch, so an all-`None` value is invalid however many `Option`
+   fields it has. `PrivateAction` (`Schema/OpenSCENARIO.xsd:1777-1791`) is a bare `xsd:choice`
+   with no `minOccurs="0"` override, so a Rust struct mirroring it gets per-branch constructors,
+   not a derived `Default`.
+5. `#[derive(Default)]` counts. A derive on a struct with a required non-`Option`, non-`Vec` field
+   fabricates that field's own `Default` silently — see the third detector below.
+
+"It states nothing" is a claim about the schema, not about the Rust struct. Verify it against the
+schema or do not make it.
+
+### Detecting violations
+
+**Run the test, not the greps:**
+
+```
+cargo test --features builder,validation --test default_schema_validity_test
+```
+
+`tests/default_schema_validity_test.rs` constructs `T::default()` for every XSD-backed type in
+the crate that implements `Default`, serializes it, and validates the result against
+`Schema/OpenSCENARIO.xsd`. That is the policy itself, executed — not a proxy for it. A type
+whose default cannot be written as valid OpenSCENARIO fails the test by name, with libxml's
+message and the offending XML in the output.
+
+How it validates a bare type: the schema declares exactly one global element, `OpenSCENARIO`,
+so the test splices a global `<xsd:element name="Probe_T" type="T"/>` into an in-memory copy of
+the bundled schema for each registered type and serializes `T::default()` under that root tag.
+The content model checked is the shipped one.
+
+Its registry of types is **hand-maintained**, and that is stated in the file. What keeps it from
+becoming a fourth proxy is the companion test `every_default_in_src_is_classified`: it scans
+`src/` for every `#[derive(..., Default, ...)]` and `impl Default for`, and fails unless each
+type found is either probed by the registry, declared under `src/builder/` (builder scaffolding
+is never serialized), or listed in `NOT_XSD_BACKED` with a reason. The registry size is asserted
+against a constant, the way `tests/enum_wire_names_test.rs` guards the 37 enum tables, so a
+removal is as loud as an addition. Adding a `Default` anywhere in `src/` fails the suite until
+it has been classified.
+
+#### The three greps it replaced
+
+They are kept below only as history and as cheap pre-checks while editing; **none of them is
+evidence**, and a sweep that ran all three still missed instances the test finds in one pass.
+
+| # | detector | finds | blind to |
+|---|---|---|---|
+| 1 | `grep -rn "^impl Default for" src/` | hand-written impls | derives; says nothing about validity |
+| 2 | `grep -rn 'literal("Default' src/` | fabricated name strings (`"DefaultVehicle"`, …) | every non-name fabrication |
+| 3 | `#[derive(Default)]` on a struct with a required (non-`Option`, non-`Vec`) field | derives that fabricate a field silently | structs whose fields are all `Option` but whose XSD particle is a choice requiring a branch |
+
+Detector 3 is not a grep; it needs the struct body. It was added late, after a long series of
+passes had run only the two textual ones, and it immediately found a class neither could see —
+including one instance the cleanup itself had just introduced. Then `ObjectController` and `Position` showed
+that detector 3 has a blind spot of its own: every field `Option`, so the sweep passes over
+them, while the XSD particle is a bare `xsd:choice` that requires a branch. Both were found by
+reading, not by tooling.
+
+**The lesson, at its third recurrence:** a detector finds only the shape it encodes. Before
+calling a sweep complete, the question is not "did we search everywhere" but "what shape can our
+search not represent" — and the answer here was to stop encoding shapes and run the rule.
+
+### Enforcement history
+
+**The policy is stated and not yet fully enforced.** A sweep found roughly 124 hand-written
+`Default` impls across the crate that fabricate content (a name, a coordinate, a whole nested
+action) rather than stating nothing. A first, verified-small tier removed twelve
+call sites across `GeographicPosition`, `EntityRef`, `Story`/`Act`/`ManeuverGroup`/`Maneuver`,
+`Event`, and `CatalogTimeOfDay` — replacing each with an explicit `::new`/constructor that
+requires the caller to say what they mean instead of inheriting an invented value. `Route`,
+`Waypoint` and `RouteRef` were scoped for the same pass but left in place: removing
+`RouteRef::default()` breaks `#[derive(Default)]` on `AssignRouteAction`
+(`src/types/actions/movement.rs`) and `RouteRefElement` (`src/types/positions/route.rs`),
+neither of which that pass touched.
+
+The next pass (`src/types/actions/movement.rs`, `src/types/positions/route.rs`,
+`src/types/routing/mod.rs`) resolved that carve-out and removed 21 further fabricating impls
+in those three files (`Route`, `Waypoint`, `RouteRef`; `PositionOfCurrentEntity`,
+`PositionInRoadCoordinates`, `PositionInLaneCoordinates`; and 15 in `movement.rs` including
+`FollowTrajectoryAction`, `SynchronizeAction`, `FinalSpeed`/`AbsoluteSpeed`/
+`RelativeSpeedToMaster`, and the `LaneOffset*` family), giving each an explicit constructor.
+A further 13 fabricating impls in `movement.rs` (`TransitionDynamics`, `SpeedActionTarget`,
+`AbsoluteTargetSpeed`, `Trajectory`, `TrajectoryFollowingMode`, `TrajectoryRef`,
+`LaneChangeTarget`, `RelativeTargetLane`, `LateralAction`, `LongitudinalAction`,
+`LongitudinalDistanceAction`, `SpeedProfileAction`, `SpeedProfileEntry`) could not be removed
+while the pass stayed inside those three files: their `Default`/`#[derive(Default)]` was
+required by call sites in `src/types/scenario/init.rs`, `src/types/actions/wrappers.rs`, and
+shared top-level `tests/*.rs` files.
+
+A follow-up pass, free to fix call sites wherever the compiler pointed, removed all 13.
+Each now has an explicit constructor instead: `TransitionDynamics::new`,
+`SpeedActionTarget::absolute`/`::relative`, `AbsoluteTargetSpeed::new`, `Trajectory::new`,
+`TrajectoryFollowingMode::new`, `TrajectoryRef::with_trajectory`/`::with_catalog_reference`/
+`::from_catalog`, `LaneChangeTarget::relative`/`::absolute`, `RelativeTargetLane::new`,
+`LateralAction::lane_change`/`::lane_offset`/`::lateral_distance`,
+`LongitudinalAction::speed`/`::longitudinal_distance`/`::speed_profile`,
+`LongitudinalDistanceAction::new`, `SpeedProfileAction::new`, and `SpeedProfileEntry::new`. The
+`#[derive(Default)]` on `SpeedAction` and `LaneChangeAction` — which depended on these — was
+also removed, each gaining an explicit `::new`. Call sites were fixed in
+`src/types/scenario/init.rs`, `src/types/positions/mod.rs`, `src/types/positions/trajectory.rs`,
+`examples/action_wrappers_demo.rs`, and `tests/xsd_validation_test.rs`,
+`tests/advanced_positions_test.rs`, `tests/actions_serialization_test.rs`.
+
+The pass over `src/types/actions/traffic.rs` removed all 18 fabricating impls in that file,
+leaving only the benign `TrafficStopAction` (an empty XSD complexType). Removed:
+`TrafficSourceAction`, `TrafficSinkAction`, `TrafficSwarmAction` (each fabricated a whole-child
+`Position`/`TrafficDefinition`), `TrafficSignalAction` (a choice — silently picked the
+`TrafficSignalStateAction` branch), `TrafficSignalStateAction`, `TrafficSignalControllerAction`,
+`TrafficSignalController`, `Phase`, `TrafficSignalState`, `TrafficSignalGroupState` (each
+invented a name/id/state string), `TrafficDefinition`, `VehicleCategoryDistribution`,
+`ControllerDistribution` (each fabricated a whole-child distribution or nested `Controller`),
+`CentralSwarmObject`, `TrafficArea`/`Polygon` (a whole-child rectangle), `RoadRange`/
+`RoadCursor`, `Lane`, `TrafficDistribution`/`TrafficDistributionEntry`,
+`DirectionOfTravelDistribution`, `TrafficAreaAction`. Each gained an explicit constructor
+(`::new` or a named-branch constructor for the choice); `InfrastructureAction`
+(`src/types/actions/wrappers.rs`) lost its `#[derive(Default)]`, which had transitively
+required the removed `TrafficSignalAction: Default`, and gained `InfrastructureAction::new`.
+
+The pass over `src/types/conditions/{entity,value,spatial}.rs` removed all 26 fabricating
+impls across those three files. In `entity.rs`: `SpeedCondition`, `AccelerationCondition`,
+`StandStillCondition`, `CollisionTarget`, `OffroadCondition`, `EndOfRoadCondition`,
+`TimeHeadwayCondition`, `TimeToCollisionCondition`, `TimeToCollisionTarget` (a choice —
+silently picked the `EntityRef` branch), `AngleCondition`, `RelativeSpeedCondition`,
+`RelativeLaneRange`, `RelativeClearanceCondition`, `RelativeAngleCondition`,
+`TraveledDistanceCondition`, and `EntityCondition` (the `EntityCondition` XSD choice group —
+silently picked the `Speed` branch). `ByEntityCondition` lost its `#[derive(Default)]`, since
+both of its fields are XSD-required and one (`EntityCondition`) is itself a choice with no
+"nothing" state; it gained `ByEntityCondition::new` plus the pre-existing named condition
+constructors. In `value.rs`: `SimulationTimeCondition`, `ParameterCondition`,
+`TimeOfDayCondition`, `StoryboardElementStateCondition`, `UserDefinedValueCondition`,
+`TrafficSignalCondition`, `TrafficSignalControllerCondition`, `VariableCondition`, and
+`ByValueCondition` (the `ByValueCondition` XSD choice group — silently picked the
+`SimulationTimeCondition` branch). `ByValueCondition` gained per-branch constructors
+(`::parameter`, `::time_of_day`, `::simulation_time`, `::storyboard_element_state`,
+`::user_defined_value`, `::traffic_signal`, `::traffic_signal_controller`, `::variable`),
+following `RouteRef::direct`/`::catalog` and `SpeedActionTarget::absolute`/`::relative`. In
+`spatial.rs`: `ReachPositionCondition`, `DistanceCondition`, `RelativeDistanceCondition` — each
+already had an explicit `::new`/builder constructor, so only the fabricating `Default` impls
+were removed. Two call sites in `src/types/scenario/triggers.rs` needed fixing alongside them:
+`Condition::default()` and `ConditionType::default()` both called `ByValueCondition::default()`,
+and both were updated to call
+`ByValueCondition::simulation_time(SimulationTimeCondition::new(10.0, Rule::GreaterThan))`
+explicitly instead — the same fabricated `SimulationTimeCondition` content as before, now named
+rather than defaulted. The remaining `Default` impls in that file were dealt with later, below.
+
+The pass over `src/types/actions/{wrappers,appearance,control,trailer}.rs` removed all 31
+fabricating impls across those four files. In `wrappers.rs` (19): `Action`, `GlobalAction`,
+`PrivateAction` (each a bare `xsd:choice` enum — `Default` silently picked one branch; the enum
+variants are themselves the constructors, no replacement method needed), `EntityAction`
+(gained `::add`/`::delete`), `TrafficAction` (gained `::new`/`::with_name`), `NamedAction`
+(serialization was known-broken at the time — removed, no replacement), `SetMonitorAction`,
+`VariableAction`, `VariableSetAction`, `VariableAddValueRule`, `VariableMultiplyByValueRule`,
+`ParameterAction`, `ParameterSetAction`, `ParameterAddValueRule`,
+`ParameterMultiplyByValueRule` (each invented a name/ref/value — gained `::new`),
+`VariableModifyAction`/`ParameterModifyAction` (fabricated a whole-child `Rule` — gained
+`::new`, plus `VariableModifyRule::add_value`/`::multiply_by_value` and
+`ModifyRule::add_value`/`::multiply_by_value` for the nested choice), `UserDefinedAction`
+(fabricated a whole-child `CustomCommandAction`), `CustomCommandAction` (invented `"default"`
+for `@type`). In `appearance.rs` (5): `VisibilityAction`, `LightStateAction`, `LightState`,
+`AnimationState`, `SensorReference` — each gained `::new`. In `control.rs` (6):
+`ActivateControllerAction` (none of its attributes is `use="required"` or has a
+`default="…"`, so the fabricated `true`/`false` values were wrong even for a `Default` — it
+is now `#[derive(Default)]`, all-`None`, and the values live in the pre-existing
+`all_domains`/`movement_only` constructors), `ManualGear`, `AutomaticGear`, `Brake`,
+`BrakeInput`, `Gear` — all five already had explicit constructors from an earlier pass. In
+`trailer.rs` (1): `ConnectTrailerAction` (invented `"DefaultTrailer"` — gained `::new`).
+`StoryGlobalAction` (`src/types/scenario/story.rs`) lost its `#[derive(Default)]`, which had
+transitively required the removed `wrappers::GlobalAction: Default`; the field it wraps is
+already `Option<StoryGlobalAction>`, so no default was needed.
+
+The pass over `entities/selection.rs`, `positions/road.rs`, `geometry/shapes.rs`,
+`scenario/triggers.rs`, `basic.rs` and `scenario/init.rs` removed all 25 fabricating impls in
+those six files. `entities/selection.rs`: `EntitySelection`, `EntityDistributionEntry`,
+`ScenarioObjectTemplate`, `ExternalObjectReference`, `ByObjectType`, `ByType` removed with no
+replacement (each already had, or gained, an explicit `::new`-style constructor);
+`EntityDistribution`'s fabricating impl (a whole-child `EntityDistributionEntry`) was replaced
+with `#[derive(Default)]` — its `Vec` field has no `minOccurs="0"` so the empty result is not
+schema-valid content alone, but it states nothing invented. `geometry/shapes.rs`: `Center`/
+`Dimensions` removed (`Center` gained `::new`); the `#[derive(Default)]` on `BoundingBox` that
+depended on them was removed too, replaced with `BoundingBox::new(center, dimensions)`.
+`Vertex` (fabricated a whole-child `Position`) removed, gained `::new`/`::with_time`. `Shape`'s
+and `Polyline`'s fabricating impls were replaced with `#[derive(Default)]` (all-`None`/empty
+`Vec`, matching `Position`'s existing treatment elsewhere). `scenario/triggers.rs`:
+`Condition`/`ConditionType` — the whole-child fabrication the conditions pass flagged but could
+not remove — deleted with no replacement. `TriggeringEntities` removed (already had `::new`/
+`::any`/`::all`). `Trigger`'s and `ConditionGroup`'s fabricating impls (each invented a
+whole-child) were replaced with `#[derive(Default)]`, consistent with the container/choice
+policy. `basic.rs`: `ParameterDeclaration`, `ValueConstraint`, `Range`, `Directory` removed
+(all four already had `::new`-style constructors); `Value<T>`'s serde impls untouched — the
+parameter-sigil change is a separate matter.
+`positions/road.rs`: `RelativeRoadPosition`/`RelativeLanePosition` removed (both already had
+`::new`). `scenario/init.rs`: `Private` removed (already had `::new`); `LongitudinalAction`'s
+fabricating impl was replaced with `#[derive(Default)]`, matching the sibling `PrivateAction`/
+`GlobalAction` choice groups in the same file. One collateral `#[derive(Default)]` removal
+outside that file list: `ControllerCatalogLocation` (`src/types/controllers/mod.rs`),
+an apparently-unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
+
+A further pass (`entities/vehicle.rs`, `scenario/{monitors,variables,story}.rs`,
+`positions/{relative,mod}.rs`, `builder/**` outside `builder/conditions/*`) closed the coverage
+gap the previous file set left. `Vehicle::default()` (invented name `"DefaultVehicle"`, a full
+bounding box and performance figures), `MonitorDeclaration::default()` (`"DefaultMonitor"`),
+`VariableDeclaration::default()` (`"DefaultVariable"`), `RelativeObjectPosition::default()` and
+`positions::mod::RelativeWorldPosition::default()` (both `"DefaultEntity"`) were removed with no
+replacement; each type already had, or gained, an explicit `::new`-style constructor.
+`StoryAction`/`StoryPrivateAction` (`scenario/story.rs`) — the whole-child fabricators the first
+tier deliberately deferred — were also removed with no replacement `Default`: `StoryAction`'s
+`@name` is `use="required"` with no schema default, and `StoryPrivateAction` mirrors XSD
+`PrivateAction` (`:1777-1791`), a bare `xsd:choice` with no `minOccurs="0"` override, so an
+all-`None` value is *also* not schema-valid — the schema-invalid-empty trap, avoided here by
+giving both types
+explicit per-branch constructors (`StoryAction::private`, `StoryPrivateAction::{longitudinal,
+visibility, teleport}`) instead of a container-style derived default. In `src/builder/`:
+`VisibilityActionBuilder`'s `Default` (fabricating "fully visible" for three XSD-required,
+schema-default-less attributes) was removed and inlined into its own `new()`, silencing the
+resulting `clippy::new_without_default` rather than reintroducing the impl.
+`add_global_environment_action`/`add_default_environment_action` (`builder/init/{actions,
+private}.rs`), which invented `Environment::name = "DefaultEnvironment"` on every call, now take
+an explicit `name: &str`, threaded up through `InitActionBuilder::{with_default_environment,
+for_single_vehicle, for_multiple_vehicles}` and `InitActionBuilderForStoryboard`.
+`CatalogEntityBuilder`'s and `ScenarioBuilder<Empty>`'s `Default` impls (`builder/catalog.rs`,
+`builder/scenario.rs`) were left in place — both simply delegate to their own `::new()` and
+invent nothing.
+
+A last pass in that tier closed its remaining item: the seven builder `Default`
+impls in `src/builder/conditions/{entity,value,spatial}.rs`
+(`AccelerationConditionBuilder`, `EnhancedSpeedConditionBuilder`,
+`TraveledDistanceConditionBuilder`; `SpeedConditionBuilder`, `ParameterConditionBuilder`,
+`VariableConditionBuilder`; `RelativeDistanceConditionBuilder`) each fabricated a `Rule` (or, for
+`RelativeDistanceConditionBuilder`, also a `freespace` bool and a `RelativeDistanceType`) that
+the XSD marks `use="required"` with no `default="…"` — confirmed by reading
+`Schema/OpenSCENARIO.xsd:1843-1851` for the latter. All seven `rule`/`freespace`/
+`relative_distance_type` fields became `Option<…>`, set together with the value in every
+existing setter (`*_above`/`*_below`/`*_equals`, `closer_than`/`farther_than`,
+`longitudinal`/`lateral`), with `build()` erroring if a setter was never called.
+`TraveledDistanceConditionBuilder`'s `rule` field was dropped outright — `TraveledDistanceCondition`
+(`Schema/OpenSCENARIO.xsd`) carries only `@value`; the field was never read by `build()`, so its
+fabricated default was dead code, not just an unused constructor argument. All seven structs now
+derive `Default` (every field `Option`, so the derived impl states nothing) instead of hand-writing
+one — that keeps `new()` `clippy::new_without_default`-clean without an `#[allow]`. `src/builder/
+conditions/*` has zero fabricating `Default` impls as of this change.
+
+**The Default policy stated above is *not* fully enforced.** `grep -rn "^impl Default for" src/`
+found 44 hand-written impls at that point (down from 51 before the seven builder impls above were
+removed — no pass so far had claimed to cover every file in `src/`). Manual review of all 44 sorted them
+into 15 legitimately benign and 29 that fabricate content the policy forbids.
+
+**The next pass removed all 18 of those 29 that live in `src/types/distributions/{deterministic,
+mod,stochastic}.rs` and `src/types/entities/axles.rs`** — the two directories the original sweep
+missed entirely. `grep -rn "^impl Default for" src/` now finds **26**. What was removed and why,
+per the classification method above:
+
+- `deterministic.rs` (9 impls, all removed): `DeterministicParameterDistribution` and
+  `DeterministicSingleParameterDistributionType` are xsd:choice groups whose every variant
+  requires real content — no member "states nothing". `DeterministicSingleParameterDistribution`,
+  `DistributionSet`, `DistributionSetElement`, `DistributionRange`, `ValueSetDistribution`,
+  `ParameterValueSet`, and `ParameterAssignment` all either fabricated a required attribute value
+  (a parameter name, a step width, a distribution value) or an empty/single-element `Vec` that
+  isn't schema-valid either — `Schema/OpenSCENARIO.xsd` gives `DistributionSet.Element`,
+  `ValueSetDistribution.ParameterValueSet`, and `ParameterValueSet.ParameterAssignment` no
+  `minOccurs="0"` (all `maxOccurs="unbounded"` with implicit `minOccurs="1"`), so this is the
+  schema-invalid-empty trap, not the benign case. Each now has an explicit `::new()` requiring the caller to supply
+  real content.
+- `mod.rs` (6 impls, all removed): `ParameterValueDistribution::default()` fabricated a whole
+  nested `Deterministic` distribution tree plus a fake `"default.xosc"` scenario file — the
+  "fabricating a whole child" case with no defensible replacement (`new_deterministic`/
+  `new_stochastic` already existed). `DistributionDefinition`,
+  `DistributionDefinitionGroup`, `DeterministicParameterDistributionGroup`, and
+  `DeterministicSingleParameterDistributionTypeGroup` are xsd:choice wrappers with the same
+  no-empty-variant problem as above. `UserDefinedDistribution::default()` invented
+  `content`/`type` literal `"default"` for two fields both `use="required"`; it now has a
+  `::new(content, distribution_type)`. Two structs (`DeterministicMultiParameterDistributionTypeGroup`,
+  `ParameterValueDistributionDefinitionGroup`) also lost a *derived* `Default` (not counted in the
+  44/26, since the grep is for hand-written `impl Default for`) once their single required field's
+  type stopped implementing it.
+- `stochastic.rs` (1 impl, removed): `Stochastic::default()` fabricated `numberOfTestRuns: 1`
+  where `Schema/OpenSCENARIO.xsd:2085` marks the attribute `use="required"` with no schema
+  default, and defaulted `distributions` to an empty `Vec` where `StochasticDistribution` also
+  has no `minOccurs="0"` — schema-invalid empty again. Replaced with `::new(number_of_test_runs, first,
+  rest)`.
+- `entities/axles.rs` (2 impls, removed): `Axles`/`Axle::default()` returned `Self::car()`/
+  `Self::rear_car()` — fixed vehicle geometry nobody specified, invented from five separately
+  `use="required"` attributes with no schema default. The named presets (`car()`, `truck()`,
+  `trailer()`, `motorcycle()`, `front_car()`, `rear_car()`, …) remain as explicit constructors;
+  only the silent `Default`/`::default()` path was removed.
+
+**A final pass closed the two stragglers and the rest of the catalog subtree.**
+`src/types/conditions/entity.rs:613` (`SpeedCondition::default()`, inventing `value: 10.0, rule:
+GreaterThan`) and `src/types/positions/trajectory.rs` (`Trajectory::default()`, whose `Polyline`
+defaulted to zero vertices: `Schema/OpenSCENARIO.xsd`'s `Polyline` requires `minOccurs="2"`,
+so that value could never serialize to schema-valid XML) were both removed with an explicit
+`::new()` in their place; `SpeedCondition::new` already existed, `Trajectory::new` was added to
+mirror the identical constructor on the sibling `actions::movement::Trajectory`. That sibling is
+why `positions::trajectory::Trajectory` was later deleted outright: it was a duplicate of the
+`movement` type with no consumers, and its `closed` field was a plain `bool` where the XSD
+declares `type="Boolean" use="required"`. `actions::movement::Trajectory` is now the only
+`Trajectory`.
+
+The catalog subtree contributed nine more removals, all fabricating a required field with no
+XSD `default="…"`, each replaced with an explicit constructor: `CatalogRoute`/`RouteWaypoint`
+(`types/catalogs/routes.rs` — name `"DefaultCatalogRoute"` and a fabricated origin waypoint with
+`RouteStrategy::Fastest`), `CatalogController`/`ControllerProperty`
+(`types/catalogs/controllers.rs` — name/type and a fake `"defaultProperty"`/`"defaultValue"`
+pair; `ControllerProperties`'s own `#[derive(Default)]` stays, since XSD `Properties` has every
+child at `minOccurs="0"`), `CatalogFog` (`types/catalogs/environments.rs` — a fabricated 100km
+`visualRange`; `CatalogFog::new(visual_range)` replaces it, `CatalogWeather`'s own
+`#[derive(Default)]` stays as all-`Option`), `CatalogFile`/`CatalogContent`
+(`types/catalogs/files.rs` — the `literal("Default` grep's namesake offender, `"DefaultCatalog"`/
+`"openscenario-rs"`), `ParameterAssignment` (`types/catalogs/references.rs` — fabricated
+`"defaultParam"`/`"defaultValue"`; sibling `ParameterAssignments`' `#[derive(Default)]` stays,
+XSD `minOccurs="0"`), and `CatalogTrajectory` (`types/catalogs/trajectories.rs` — the same
+double fabrication as `positions::trajectory::Trajectory`: an invented name *and* an
+schema-invalid zero-vertex `Polyline`).
+
+Removing `CatalogContent`'s `Default` surfaced two **derived** defaults (not counted by
+`grep -rn "^impl Default for"`, which only sees hand-written impls) that had been silently
+piggy-backing on it: `catalogs::mod::Catalog`/`CatalogDefinition` and
+`scenario::storyboard::CatalogDefinition` each wrapped a required `CatalogContent` field and
+would otherwise still fabricate `"DefaultCatalog"` through the derive even with the hand-written
+impl gone. Both lost their `#[derive(Default)]`; the storyboard one gained a `::new()` it never
+had.
+
+`src/catalog/{mod,loader,resolver,parameters}.rs`, `src/parser/{validation,choice_groups}.rs`,
+`src/builder/{scenario,catalog}.rs`, and `src/types/controllers/mod.rs` were all **verified, not
+assumed**: every remaining impl there was read against its type's shape, not just its file's
+prior "done" status.
+
+**`grep -rn "^impl Default for" src/` now finds 15 — every one reviewed individually, none
+fabricating:**
+
+- `catalog/loader.rs` `CatalogLoader`, `catalog/mod.rs` `CatalogManager`, `catalog/resolver.rs`
+  `CatalogManager`/`CatalogResolver`, `catalog/parameters.rs` `ParameterSubstitutionEngine`,
+  `builder/catalog.rs` `CatalogEntityBuilder`, `builder/scenario.rs`
+  `ScenarioBuilder<Empty>` — all pure delegations to a non-fabricating `::new()`; no field is
+  invented, only empty collections/`None`/a fixed regex pattern used purely as an implementation
+  detail (`ParameterSubstitutionEngine`'s parameter-placeholder regex), not scenario content.
+- `parser/validation.rs` `ValidationConfig`/`ScenarioValidator`/`ValidationResult`,
+  `parser/choice_groups.rs` `ChoiceGroupRegistry` — non-XSD tooling types (validation feature
+  toggles, a zero-field parser registry, an empty validation-run result). These describe the
+  crate's own machinery, not `.xosc` content, so the policy's rationale (a default that
+  "describes something nobody wrote" in a *scenario*) does not apply to them.
+- `types/catalogs/locations.rs` `CatalogLocations` — delegates to `::new()`, all eight catalog
+  slots `None`; XSD's `CatalogLocations` model group has every child `minOccurs="0"`.
+- `types/controllers/mod.rs` `ObjectController` — all-`None` (`name`/`controller`/
+  `catalog_reference`); XSD `ObjectController` makes `@name` optional and its `xsd:choice` body
+  has no required branch, so all-`None` is a schema-valid "nothing selected" choice container.
+- `types/actions/traffic.rs` `TrafficStopAction` — a zero-field struct (`Self {}`); confirmed
+  benign survivor from the `traffic.rs` pass.
+- `types/actions/control.rs` `AssignControllerAction` — all seven fields `Option`, a `xsd:choice`
+  plus independently-optional activation flags; confirmed benign survivor from the `control.rs` pass.
+
+**A textual grep still undercounts.** A manual sweep for `#[derive(Default)]` on structs with a
+required (non-`Option`, non-`Vec`) field — the same shape `grep -rn "^impl Default for"` cannot
+see — turned up one more confirmed live fabrication, **outside every file the passes so far had
+covered**: `src/types/scenario/story.rs:249` derives `Default` for `Actors`, whose
+`@selectTriggeringEntities` is `use="required"` in `Schema/OpenSCENARIO.xsd` (`:727`) with no
+schema `default="…"`. The derive fabricates `false`, and it is not dead code —
+`src/types/scenario/story.rs:365` calls `Actors::default()` live. Every other struct the same
+sweep flagged (`TeleportAction`, `AcquirePositionAction`, `AddEntityAction` — each wrapping a
+`Position`, itself an all-`None` choice; `ScenarioDefinition` in both `types/scenario/mod.rs` and
+`types/scenario/storyboard.rs`, `Init`, `Storyboard` — each a required child whose own `Default`
+bottoms out in all-`None`/empty-and-schema-valid state; `ValidationContext`, non-XSD tooling) was
+individually checked and is benign for the reason given.
+
+**The honest claim: the policy is enforced everywhere this campaign has looked, and it has now
+looked everywhere in `src/` — but "everywhere" surfaced one more fabricating derive the day the
+last hand-written impl was checked off, in a file no pass had covered.** The passes above removed
+174 fabricating impls (hand-written and derived) with zero harness regressions; the crate's
+`Default` policy is real and it holds for every impl listed here. It is not, today, true that
+*no* fabricating `Default` remains — `Actors::default()` is one, named above, unfixed, because
+`types/scenario/story.rs` was never in any of those file lists. The lesson held once more: state
+the count you verified, not the count you assume, and do not write "and N others."
+
+**A later pass closed that out, and settled the category-3 cases the earlier ones had deferred.**
+`Actors` (`types/scenario/story.rs`) lost its derive — XSD `Actors` (`:723-728`) marks
+`@selectTriggeringEntities` `use="required"` with no schema default, so the derive invented
+`false`; it gained `Actors::new`/`::triggering`/`::named`, and `ManeuverGroup::new` now takes the
+actors rather than defaulting them. `AnimationAction` and `AnimationType`
+(`types/actions/appearance.rs`) lost theirs — XSD `AnimationAction` (`:740-747`) requires the
+`AnimationType` child and `AnimationType` (`:757-764`) is a bare `xsd:choice`, so the derive the
+`appearance.rs` pass had added in good faith emitted `<AnimationType/>`, which validates against
+nothing;
+`ComponentAnimation` (`:947-952`) is the same choice one level down and was fixed with it.
+`TeleportAction` and `AcquirePositionAction` (`types/actions/movement.rs`), kept by an earlier
+pass on the "`Position` states nothing" reasoning, lost theirs too: XSD `Position` (`:1738-1751`) is a
+bare `xsd:choice`. Re-running the derive sweep found a tenth struct the earlier table had missed,
+`AddEntityAction` (`types/actions/wrappers.rs`), with the same required `Position`; and a manual
+read of the surviving hand-written impls found an eleventh case **no detector can see** —
+`ObjectController` (`types/controllers/mod.rs`), whose fields are all `Option` (so the derive sweep
+is blind to it) and whose XSD choice (`:1522-1528`) still requires a branch. Each gained, or
+already had, per-branch constructors.
+
+**The four structural containers keep their `Default`, under category 2, and there is now a test
+that says why.** `ScenarioDefinition` (both copies — `types/scenario/mod.rs` and
+`types/scenario/storyboard.rs`; duplicates, deliberately not consolidated here),
+`Storyboard` and `Init` each hold XSD-required children, which is what put them on the sweep. But
+required-child is not the test; *schema-invalid empty* is. Every one of those children is a
+non-`Option` Rust field and is therefore always emitted, and every child of `CatalogLocations`
+(`:867-878`), `RoadNetwork` (`:1933-1940`), `Entities` (`:1122-1127`) and `InitActions`
+(`:1316-1322`) carries `minOccurs="0"`. The empty spine is a document the schema accepts.
+
+**The last pass replaced the greps with the test above, ran it, and cleared what it found.** The first
+run flagged **23 of 54** `Default`-implementing XSD-backed types as producing schema-invalid XML.
+None was a false positive. Fifteen were bare `xsd:choice` particles serializing to an empty
+element — `AppearanceAction`, `LightType`, `ControllerAction`, `RoutingAction`, `TrailerAction`,
+`EnvironmentAction` (both copies), `CollisionCondition`, `SelectedEntities`, `Shape`,
+`InRoutePosition`, `GlobalAction`, `PrivateAction`, `LongitudinalAction`, and `Position`. Eight were
+required-child sequences serializing to an empty container — `SensorReferenceSet`,
+`VehicleRoleDistribution`, `ValueConstraintGroup`, `EntityDistribution`, `ClothoidSpline`,
+`Polyline`, `UsedArea`, `ConditionGroup`. Three of those — `ConditionGroup`, `Polyline`,
+`EntityDistribution` — are the original schema-invalid-empty instances, and three more carried a
+code comment
+conceding they were not schema-valid while keeping the `Default` anyway. All 23 lost it.
+
+Choice structs that need an all-`None` base for their own per-branch constructors gained a
+`pub fn empty()` instead, documented as not schema-valid on its own. That is not a rename of the
+problem: `Default` is reachable implicitly — through `..Default::default()` and, worse, through
+`#[derive(Default)]` on any enclosing struct — whereas `empty()` must be typed out, is greppable,
+and cannot propagate. Types whose schema requires children got explicit constructors
+(`SelectedEntities::new`, `EntityDistribution::new`) or none at all.
+
+**`Position` was removed, and the call-site count was not the deciding factor.** Its 90 call sites
+were the largest single removal in the campaign, but 79 of them are tests, doc examples or
+fixtures, and of the 11 in production code 10 were `let mut p = Position::default(); p.branch =
+Some(…)` — now `Position::empty()`, which says the same thing honestly. The real cost of keeping
+it was never the direct calls: `Position: Default` is the mechanism by which any struct holding a
+required `Position` could derive `Default` and inherit the invalidity silently, which is exactly
+how `TeleportAction` and `AcquirePositionAction` acquired theirs. Two constructors replace it:
+`Position::empty()` for building a position one branch at a time, and `Position::world_origin()`
+— a `WorldPosition` at (0, 0), schema-**valid**, for the many tests that need *a* position and do
+not care which. `world_origin` is a placeholder that admits it, and its doc comment says not to
+reach for it in code describing a real scenario, where inventing a position is category 1. The
+eleventh production site, `CatalogClothoid::new`, was doing exactly that — XSD `Clothoid`
+(`:894-897`) requires its `Position` child — and now takes the start position as a parameter.
+
+**The 31 XSD-backed `Default` impls that survive are not surviving on an argument.** Each one is
+constructed, serialized and validated on every `cargo test --features builder,validation` run.
+`tests/default_schema_validity_test.rs` proves it by serializing a fully defaulted spine and
+handing it to libxml2 (0 errors), and proves the contrast in the same file by showing the
+defaulted `Position` choice being rejected. That test is the first thing in the crate to
+construct a `Default` value and validate it — the blind spot that named the schema-invalid-empty
+category, since the round-trip
+harness only ever sees documents that came from a file.
+
+The temptation was to remove them because removal was the right answer everywhere else. It is not
+the right answer here: an empty `Storyboard` is a legal OpenSCENARIO document, and requiring four
+arguments to build a type the schema is happy to see empty would trade a real defect for
+ceremony. `ScenarioDefinition::new` already exists for callers who have the children.
 
 ## A trap: unknown fields are silent
 
@@ -273,7 +782,13 @@ pub trait Resolve<T> {
    applying the optionality rules above.
 3. If it is a choice, pick the idiom that matches how the choice appears, and name flattened
    variants for their **elements**.
-4. Add a round-trip test. If the type is a flattened choice, add it to
+4. Before writing `#[derive(Default)]` or `impl Default`, run the three-category check in
+   [The `Default` policy](#the-default-policy). Then run the check that actually decides it:
+   `cargo test --features builder,validation --test default_schema_validity_test`. If the new
+   type implements `Default` and has an XSD `complexType`, add it to that file's registry — the
+   suite will fail until it is classified there or in `NOT_XSD_BACKED`, and the failure message
+   says which.
+5. Add a round-trip test. If the type is a flattened choice, add it to
    `tests/choice_flatten_roundtrip_test.rs`.
-5. Run the conformance gates. Their locations and what each one catches are in
+6. Run the conformance gates. Their locations and what each one catches are in
    [xsd_gaps.md](xsd_gaps.md).

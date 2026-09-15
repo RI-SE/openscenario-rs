@@ -1,16 +1,4 @@
-//! Value-based condition builders (time, speed, etc.)
-//!
-//! This module provides builders for creating value-based conditions that trigger
-//! based on simulation time, parameters, variables, and other non-entity values.
-//!
-//! # Supported Conditions
-//!
-//! - **SimulationTimeCondition**: Triggers at specific simulation times
-//! - **SpeedCondition**: Triggers when entity speed meets criteria
-//! - **ParameterCondition**: Triggers based on parameter values
-//! - **VariableCondition**: Triggers based on variable state changes
-//!
-//! # Usage
+//! Condition builders for simulation time, parameters, variables, and entity speed.
 //!
 //! ```rust
 //! use openscenario_rs::builder::conditions::TimeConditionBuilder;
@@ -22,6 +10,7 @@
 //! ```
 
 use crate::builder::{BuilderError, BuilderResult};
+use crate::types::basic::Value;
 use crate::types::{
     basic::{Double, OSString},
     conditions::entity::{
@@ -44,7 +33,7 @@ use crate::types::{
 #[derive(Debug)]
 pub struct TimeConditionBuilder {
     time: Option<f64>,
-    rule: Rule,
+    rule: Value<Rule>,
 }
 
 impl TimeConditionBuilder {
@@ -52,21 +41,27 @@ impl TimeConditionBuilder {
     pub fn new() -> Self {
         Self {
             time: None,
-            rule: Rule::GreaterThan,
+            rule: Value::Literal(Rule::GreaterThan),
         }
     }
 
     /// Set target time (triggers when simulation time > target)
     pub fn at_time(mut self, time: f64) -> Self {
         self.time = Some(time);
-        self.rule = Rule::GreaterThan;
+        self.rule = Value::Literal(Rule::GreaterThan);
         self
     }
 
     /// Set time with custom rule
     pub fn time_rule(mut self, time: f64, rule: Rule) -> Self {
         self.time = Some(time);
-        self.rule = rule;
+        self.rule = Value::Literal(rule);
+        self
+    }
+
+    /// Set `rule` to a parameter reference (`rule="$name"`) -- the attribute's `xsd:union` admits a `parameter` member alongside the enumeration, so `$name` is schema-valid here; `name` omits the `$`.
+    pub fn rule_param(mut self, name: &str) -> Self {
+        self.rule = Value::Parameter(name.to_string());
         self
     }
 
@@ -78,7 +73,7 @@ impl TimeConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("TimeCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
@@ -103,31 +98,17 @@ impl TimeConditionBuilder {
 /// Creates conditions that trigger when an entity's speed meets certain criteria.
 /// This is technically an entity condition but is commonly used, so it's included
 /// in the value conditions module for convenience.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SpeedConditionBuilder {
     entity_ref: Option<String>,
     speed: Option<f64>,
-    rule: Rule,
-}
-
-impl Default for SpeedConditionBuilder {
-    fn default() -> Self {
-        Self {
-            entity_ref: None,
-            speed: None,
-            rule: Rule::GreaterThan,
-        }
-    }
+    rule: Option<Value<Rule>>,
 }
 
 impl SpeedConditionBuilder {
     /// Create a new speed condition builder
     pub fn new() -> Self {
-        Self {
-            entity_ref: None,
-            speed: None,
-            rule: Rule::GreaterThan,
-        }
+        Self::default()
     }
 
     /// Set target entity
@@ -139,21 +120,27 @@ impl SpeedConditionBuilder {
     /// Set speed threshold (triggers when speed > threshold)
     pub fn speed_above(mut self, speed: f64) -> Self {
         self.speed = Some(speed);
-        self.rule = Rule::GreaterThan;
+        self.rule = Some(Value::Literal(Rule::GreaterThan));
         self
     }
 
     /// Set speed threshold (triggers when speed < threshold)
     pub fn speed_below(mut self, speed: f64) -> Self {
         self.speed = Some(speed);
-        self.rule = Rule::LessThan;
+        self.rule = Some(Value::Literal(Rule::LessThan));
         self
     }
 
     /// Set speed with custom rule
     pub fn speed_rule(mut self, speed: f64, rule: Rule) -> Self {
         self.speed = Some(speed);
-        self.rule = rule;
+        self.rule = Some(Value::Literal(rule));
+        self
+    }
+
+    /// Set `rule` to a parameter reference (`rule="$name"`) -- the attribute's `xsd:union` admits a `parameter` member alongside the enumeration, so `$name` is schema-valid here; `name` omits the `$`.
+    pub fn rule_param(mut self, name: &str) -> Self {
+        self.rule = Some(Value::Parameter(name.to_string()));
         self
     }
 
@@ -167,24 +154,27 @@ impl SpeedConditionBuilder {
         if self.speed.is_none() {
             return Err(BuilderError::validation_error("Speed value is required"));
         }
+        let rule = self
+            .rule
+            .ok_or_else(|| BuilderError::validation_error("Rule is required"))?;
 
         let entity_ref = self.entity_ref.unwrap();
 
         Ok(Condition {
             name: OSString::literal("SpeedCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: None,
             by_entity_condition: Some(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
-                    triggering_entities_rule: TriggeringEntitiesRule::Any,
+                    triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                     entity_refs: vec![EntityRef {
                         entity_ref: OSString::literal(entity_ref.clone()),
                     }],
                 },
                 entity_condition: EntityCondition::Speed(EntitySpeedCondition {
                     value: Double::literal(self.speed.unwrap()),
-                    rule: self.rule,
+                    rule,
                     direction: None,
                 }),
             }),
@@ -193,21 +183,11 @@ impl SpeedConditionBuilder {
 }
 
 /// Builder for parameter conditions
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParameterConditionBuilder {
     parameter_ref: Option<String>,
     value: Option<f64>,
-    rule: Rule,
-}
-
-impl Default for ParameterConditionBuilder {
-    fn default() -> Self {
-        Self {
-            parameter_ref: None,
-            value: None,
-            rule: Rule::EqualTo,
-        }
-    }
+    rule: Option<Value<Rule>>,
 }
 
 impl ParameterConditionBuilder {
@@ -225,21 +205,21 @@ impl ParameterConditionBuilder {
     /// Set parameter value threshold (above)
     pub fn value_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::GreaterThan;
+        self.rule = Some(Value::Literal(Rule::GreaterThan));
         self
     }
 
     /// Set parameter value threshold (below)
     pub fn value_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::LessThan;
+        self.rule = Some(Value::Literal(Rule::LessThan));
         self
     }
 
     /// Set exact parameter value
     pub fn value_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::EqualTo;
+        self.rule = Some(Value::Literal(Rule::EqualTo));
         self
     }
 
@@ -255,16 +235,19 @@ impl ParameterConditionBuilder {
                 "Parameter value is required",
             ));
         }
+        let rule = self
+            .rule
+            .ok_or_else(|| BuilderError::validation_error("Rule is required"))?;
 
         Ok(Condition {
             name: OSString::literal("ParameterCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: Some(ParameterCondition {
                     parameter_ref: OSString::literal(self.parameter_ref.unwrap()),
                     value: OSString::literal(self.value.unwrap().to_string()),
-                    rule: self.rule,
+                    rule,
                 }),
                 time_of_day_condition: None,
                 simulation_time_condition: None,
@@ -280,21 +263,11 @@ impl ParameterConditionBuilder {
 }
 
 /// Builder for variable conditions
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VariableConditionBuilder {
     variable_ref: Option<String>,
     value: Option<f64>,
-    rule: Rule,
-}
-
-impl Default for VariableConditionBuilder {
-    fn default() -> Self {
-        Self {
-            variable_ref: None,
-            value: None,
-            rule: Rule::EqualTo,
-        }
-    }
+    rule: Option<Value<Rule>>,
 }
 
 impl VariableConditionBuilder {
@@ -312,21 +285,21 @@ impl VariableConditionBuilder {
     /// Set variable value threshold (above)
     pub fn value_above(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::GreaterThan;
+        self.rule = Some(Value::Literal(Rule::GreaterThan));
         self
     }
 
     /// Set variable value threshold (below)
     pub fn value_below(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::LessThan;
+        self.rule = Some(Value::Literal(Rule::LessThan));
         self
     }
 
     /// Set exact variable value
     pub fn value_equals(mut self, value: f64) -> Self {
         self.value = Some(value);
-        self.rule = Rule::EqualTo;
+        self.rule = Some(Value::Literal(Rule::EqualTo));
         self
     }
 
@@ -340,10 +313,13 @@ impl VariableConditionBuilder {
         if self.value.is_none() {
             return Err(BuilderError::validation_error("Variable value is required"));
         }
+        let rule = self
+            .rule
+            .ok_or_else(|| BuilderError::validation_error("Rule is required"))?;
 
         Ok(Condition {
             name: OSString::literal("VariableCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
@@ -356,7 +332,7 @@ impl VariableConditionBuilder {
                 variable_condition: Some(VariableCondition {
                     variable_ref: OSString::literal(self.variable_ref.unwrap()),
                     value: OSString::literal(self.value.unwrap().to_string()),
-                    rule: self.rule,
+                    rule,
                 }),
             }),
             by_entity_condition: None,
@@ -367,9 +343,9 @@ impl VariableConditionBuilder {
 /// Builder for storyboard element state conditions
 #[derive(Debug, Default)]
 pub struct StoryboardElementStateConditionBuilder {
-    storyboard_element_type: Option<StoryboardElementType>,
+    storyboard_element_type: Option<Value<StoryboardElementType>>,
     storyboard_element_ref: Option<String>,
-    state: Option<StoryboardElementState>,
+    state: Option<Value<StoryboardElementState>>,
 }
 
 impl StoryboardElementStateConditionBuilder {
@@ -380,40 +356,40 @@ impl StoryboardElementStateConditionBuilder {
 
     /// Set story element
     pub fn story(mut self, story_ref: &str) -> Self {
-        self.storyboard_element_type = Some(StoryboardElementType::Story);
+        self.storyboard_element_type = Some(Value::Literal(StoryboardElementType::Story));
         self.storyboard_element_ref = Some(story_ref.to_string());
         self
     }
 
     /// Set act element
     pub fn act(mut self, act_ref: &str) -> Self {
-        self.storyboard_element_type = Some(StoryboardElementType::Act);
+        self.storyboard_element_type = Some(Value::Literal(StoryboardElementType::Act));
         self.storyboard_element_ref = Some(act_ref.to_string());
         self
     }
 
     /// Set event element
     pub fn event(mut self, event_ref: &str) -> Self {
-        self.storyboard_element_type = Some(StoryboardElementType::Event);
+        self.storyboard_element_type = Some(Value::Literal(StoryboardElementType::Event));
         self.storyboard_element_ref = Some(event_ref.to_string());
         self
     }
 
     /// Set state to complete
     pub fn complete(mut self) -> Self {
-        self.state = Some(StoryboardElementState::CompleteState);
+        self.state = Some(Value::Literal(StoryboardElementState::CompleteState));
         self
     }
 
     /// Set state to running
     pub fn running(mut self) -> Self {
-        self.state = Some(StoryboardElementState::RunningState);
+        self.state = Some(Value::Literal(StoryboardElementState::RunningState));
         self
     }
 
     /// Set state to standby
     pub fn standby(mut self) -> Self {
-        self.state = Some(StoryboardElementState::StandbyState);
+        self.state = Some(Value::Literal(StoryboardElementState::StandbyState));
         self
     }
 
@@ -435,7 +411,7 @@ impl StoryboardElementStateConditionBuilder {
 
         Ok(Condition {
             name: OSString::literal("StoryboardElementStateCondition".to_string()),
-            condition_edge: ConditionEdge::Rising,
+            condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             by_value_condition: Some(ByValueCondition {
                 parameter_condition: None,
@@ -471,7 +447,7 @@ mod tests {
 
         let time_condition = by_value.simulation_time_condition.unwrap();
         assert_eq!(time_condition.value.as_literal().unwrap(), &5.0);
-        assert_eq!(time_condition.rule, Rule::GreaterThan);
+        assert_eq!(time_condition.rule, Value::Literal(Rule::GreaterThan));
     }
 
     #[test]
@@ -484,7 +460,7 @@ mod tests {
         let by_value = condition.by_value_condition.unwrap();
         let time_condition = by_value.simulation_time_condition.unwrap();
         assert_eq!(time_condition.value.as_literal().unwrap(), &10.0);
-        assert_eq!(time_condition.rule, Rule::LessThan);
+        assert_eq!(time_condition.rule, Value::Literal(Rule::LessThan));
     }
 
     #[test]
@@ -509,7 +485,7 @@ mod tests {
         match by_entity.entity_condition {
             EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &30.0);
-                assert_eq!(speed_condition.rule, Rule::GreaterThan);
+                assert_eq!(speed_condition.rule, Value::Literal(Rule::GreaterThan));
             }
             _ => panic!("Expected Speed condition"),
         }
@@ -527,7 +503,7 @@ mod tests {
         match by_entity.entity_condition {
             EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &15.0);
-                assert_eq!(speed_condition.rule, Rule::LessThan);
+                assert_eq!(speed_condition.rule, Value::Literal(Rule::LessThan));
             }
             _ => panic!("Expected Speed condition"),
         }

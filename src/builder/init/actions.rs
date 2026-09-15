@@ -2,6 +2,7 @@
 
 use super::private::{GlobalActionBuilder, PrivateActionBuilder};
 use crate::builder::BuilderResult;
+use crate::types::basic::Value;
 use crate::types::{
     environment::Environment,
     positions::Position,
@@ -21,20 +22,18 @@ impl InitActionBuilder {
         Self::default()
     }
 
-    /// Add a global environment action with default environment
-    pub fn add_global_environment_action(mut self) -> Self {
+    /// Add a global environment action with a named environment
+    ///
+    /// XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`) requires `@name`; there is no
+    /// schema default, so the caller supplies it rather than getting a silently invented
+    /// `"DefaultEnvironment"`.
+    pub fn add_global_environment_action(mut self, name: &str) -> Self {
         let global_action = GlobalAction {
             environment_action: Some(EnvironmentAction {
-                environment: Some(Environment {
-                    name: crate::types::basic::OSString::literal("DefaultEnvironment".to_string()),
-                    parameter_declarations: None,
-                    time_of_day: None,
-                    weather: None,
-                    road_condition: None,
-                }),
+                environment: Some(Environment::new(name)),
                 catalog_reference: None,
             }),
-            ..Default::default()
+            ..GlobalAction::empty()
         };
         self.global_actions.push(global_action);
         self
@@ -75,7 +74,7 @@ impl InitActionBuilder {
             // Add to existing private action
             let teleport_action = crate::types::scenario::init::PrivateAction {
                 teleport_action: Some(crate::types::actions::movement::TeleportAction { position }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             self.private_actions[index]
                 .private_actions
@@ -84,7 +83,7 @@ impl InitActionBuilder {
             // Create new private action
             let teleport_action = crate::types::scenario::init::PrivateAction {
                 teleport_action: Some(crate::types::actions::movement::TeleportAction { position }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             let private = Private::new(entity_ref).add_action(teleport_action);
             self.private_actions.push(private);
@@ -108,8 +107,12 @@ impl InitActionBuilder {
                     speed_action: Some(crate::types::actions::movement::SpeedAction {
                         speed_action_dynamics:
                             crate::types::actions::movement::TransitionDynamics {
-                                dynamics_dimension: crate::types::enums::DynamicsDimension::Time,
-                                dynamics_shape: crate::types::enums::DynamicsShape::Step,
+                                dynamics_dimension: Value::Literal(
+                                    crate::types::enums::DynamicsDimension::Time,
+                                ),
+                                dynamics_shape: Value::Literal(
+                                    crate::types::enums::DynamicsShape::Step,
+                                ),
                                 following_mode: None,
                                 value: crate::types::basic::Double::literal(1.0),
                             },
@@ -123,7 +126,7 @@ impl InitActionBuilder {
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             self.private_actions[index]
                 .private_actions
@@ -135,8 +138,12 @@ impl InitActionBuilder {
                     speed_action: Some(crate::types::actions::movement::SpeedAction {
                         speed_action_dynamics:
                             crate::types::actions::movement::TransitionDynamics {
-                                dynamics_dimension: crate::types::enums::DynamicsDimension::Time,
-                                dynamics_shape: crate::types::enums::DynamicsShape::Step,
+                                dynamics_dimension: Value::Literal(
+                                    crate::types::enums::DynamicsDimension::Time,
+                                ),
+                                dynamics_shape: Value::Literal(
+                                    crate::types::enums::DynamicsShape::Step,
+                                ),
                                 following_mode: None,
                                 value: crate::types::basic::Double::literal(1.0),
                             },
@@ -150,7 +157,7 @@ impl InitActionBuilder {
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
-                ..Default::default()
+                ..crate::types::scenario::init::PrivateAction::empty()
             };
             let private = Private::new(entity_ref).add_action(speed_action);
             self.private_actions.push(private);
@@ -199,7 +206,7 @@ mod tests {
     #[test]
     fn test_init_action_builder_with_environment() {
         let init = InitActionBuilder::new()
-            .add_global_environment_action()
+            .add_global_environment_action("TestEnvironment")
             .build()
             .unwrap();
 

@@ -3,15 +3,19 @@
 //! This test verifies that the new Action wrapper types correctly implement
 //! the OpenSCENARIO XSD schema structure for actions.
 
+use openscenario_rs::types::actions::movement::{SpeedActionTarget, TransitionDynamics};
 use openscenario_rs::types::actions::{wrappers::*, *};
 use openscenario_rs::types::basic::*;
+use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
 use openscenario_rs::types::positions::*;
 use serde_json;
 
 #[test]
 fn test_core_action_serialization() {
     // Test PrivateAction serialization
-    let private_action = PrivateAction::TeleportAction(TeleportAction::default());
+    let private_action = PrivateAction::TeleportAction(TeleportAction::new(Position::world(
+        WorldPosition::new(1.0, 2.0),
+    )));
     let core_action = Action::PrivateAction(private_action);
 
     let serialized = serde_json::to_string(&core_action).unwrap();
@@ -49,7 +53,7 @@ fn test_global_action_variants() {
 fn test_entity_action_types() {
     // Test AddEntityAction
     let add_action = AddEntityAction {
-        position: Position::default(),
+        position: Position::world_origin(),
     };
     let entity_action = EntityAction {
         entity_ref: OSString::literal("new_entity".to_string()),
@@ -72,12 +76,25 @@ fn test_entity_action_types() {
     assert!(serialized.contains("old_entity"));
 }
 
+fn sample_traffic_definition() -> TrafficDefinition {
+    TrafficDefinition::new(
+        "TestTrafficDefinition",
+        VehicleCategoryDistribution::mixed_traffic(),
+        ControllerDistribution::single_controller("TestController".to_string(), 1.0),
+    )
+}
+
 #[test]
 fn test_traffic_action_variants() {
     // Test TrafficSourceAction
     let traffic_action = TrafficAction {
         traffic_name: Some(OSString::literal("source_traffic".to_string())),
-        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::default()),
+        action: TrafficActionChoice::TrafficSourceAction(TrafficSourceAction::new(
+            10.0,
+            10.0,
+            Position::world_origin(),
+            sample_traffic_definition(),
+        )),
     };
 
     let serialized = serde_json::to_string(&traffic_action).unwrap();
@@ -87,7 +104,11 @@ fn test_traffic_action_variants() {
     // Test TrafficSinkAction
     let traffic_action = TrafficAction {
         traffic_name: None,
-        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::default()),
+        action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::new(
+            10.0,
+            50.0,
+            Position::world_origin(),
+        )),
     };
 
     let serialized = serde_json::to_string(&traffic_action).unwrap();
@@ -98,7 +119,10 @@ fn test_traffic_action_variants() {
 #[test]
 fn test_infrastructure_action() {
     let infra_action = InfrastructureAction {
-        traffic_signal_action: TrafficSignalAction::default(),
+        traffic_signal_action: TrafficSignalAction::state_action(
+            "TestSignal".to_string(),
+            "green".to_string(),
+        ),
     };
 
     let serialized = serde_json::to_string(&infra_action).unwrap();
@@ -108,22 +132,30 @@ fn test_infrastructure_action() {
 #[test]
 fn test_private_action_variants() {
     // Test LongitudinalAction
-    let private_action = PrivateAction::LongitudinalAction(LongitudinalAction::default());
+    let private_action =
+        PrivateAction::LongitudinalAction(LongitudinalAction::speed(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        )));
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LongitudinalAction"));
 
     // Test LateralAction
-    let private_action = PrivateAction::LateralAction(LateralAction::default());
+    let private_action =
+        PrivateAction::LateralAction(LateralAction::lane_change(LaneChangeAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            LaneChangeTarget::relative("Ego", -1),
+        )));
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("LateralAction"));
 
     // Test VisibilityAction
-    let private_action = PrivateAction::VisibilityAction(VisibilityAction::default());
+    let private_action = PrivateAction::VisibilityAction(VisibilityAction::new(true, true, true));
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("VisibilityAction"));
 
     // Test ControllerAction
-    let private_action = PrivateAction::ControllerAction(ControllerAction::default());
+    let private_action = PrivateAction::ControllerAction(ControllerAction::empty());
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("ControllerAction"));
 }
@@ -177,10 +209,12 @@ fn test_override_actions() {
 
 #[test]
 fn test_action_wrapper() {
-    let action_wrapper = NamedAction {
-        name: OSString::literal("test_action".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
-    };
+    let action_wrapper = NamedAction::private(
+        "test_action",
+        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
+            1.0, 2.0,
+        )))),
+    );
 
     let serialized = serde_json::to_string(&action_wrapper).unwrap();
     assert!(serialized.contains("test_action"));
@@ -190,7 +224,7 @@ fn test_action_wrapper() {
 #[test]
 fn test_user_defined_action() {
     let user_action = UserDefinedAction {
-        custom_command_action: CustomCommandAction::default(),
+        custom_command_action: CustomCommandAction::new("default", ""),
     };
 
     let core_action = Action::UserDefinedAction(user_action);
@@ -201,10 +235,12 @@ fn test_user_defined_action() {
 #[test]
 fn test_new_action_wrapper_types() {
     // Test main NamedAction wrapper
-    let action = NamedAction {
-        name: OSString::literal("testAction".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::default())),
-    };
+    let action = NamedAction::private(
+        "testAction",
+        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
+            1.0, 2.0,
+        )))),
+    );
 
     let serialized = serde_json::to_string(&action).unwrap();
     assert!(serialized.contains("testAction"));
@@ -212,7 +248,10 @@ fn test_new_action_wrapper_types() {
 
     // Test PrivateAction wrapper (wrapper struct is now just the enum variant)
     let private_action = Action::PrivateAction(PrivateAction::LongitudinalAction(
-        LongitudinalAction::default(),
+        LongitudinalAction::speed(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        )),
     ));
 
     let serialized = serde_json::to_string(&private_action).unwrap();
@@ -366,47 +405,91 @@ fn test_random_route_action() {
 
 #[test]
 fn test_type_aliases() {
-    // Test that type aliases work correctly
-    let _entity_action: EntityAction = EntityAction::default();
-    let _infra_action: InfrastructureAction = InfrastructureAction::default();
-    let _user_action: UserDefinedAction = UserDefinedAction::default();
-    let _var_action: VariableAction = VariableAction::default();
-    let _param_action: ParameterAction = ParameterAction::default();
-    let _monitor_action: SetMonitorAction = SetMonitorAction::default();
-    let _traffic_action: TrafficAction = TrafficAction::default();
+    // These types' `Default` impls fabricated content
+    // (a name, an enum branch) for XSD `use="required"` attributes/choices
+    // and were removed; exercise the named constructors instead.
+    let _entity_action: EntityAction = EntityAction::delete("defaultEntity");
+    let _infra_action: InfrastructureAction = InfrastructureAction::new(
+        TrafficSignalAction::state_action("TestSignal".to_string(), "green".to_string()),
+    );
+    let _user_action: UserDefinedAction =
+        UserDefinedAction::new(CustomCommandAction::new("default", ""));
+    let _var_action: VariableAction = VariableAction::new(
+        "defaultVariable",
+        VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
+    );
+    let _param_action: ParameterAction = ParameterAction::new(
+        "defaultParameter",
+        ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("0")),
+    );
+    let _monitor_action: SetMonitorAction = SetMonitorAction::new("defaultMonitor", true);
+    let _traffic_action: TrafficAction = TrafficAction::new(
+        TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+    );
 
     // All should compile without issues
     assert!(true);
 }
 
 #[test]
-fn test_default_implementations() {
-    // Test all Default implementations work
-    let _core_action = Action::default();
-    let _global_action = GlobalAction::default();
-    let _private_action = PrivateAction::default();
-    let _entity_action = EntityAction::default();
-    let _traffic_action = TrafficAction::default();
-    let _infra_action = InfrastructureAction::default();
-    let _add_entity = AddEntityAction::default();
+fn test_constructors_and_benign_defaults() {
+    // Choice/container structs that default to all-`None` keep their `Default` only when
+    // the schema permits the empty form (category 2 in `docs/type_system_guide.md`).
+    // `TeleportAction`/`AddEntityAction` do not qualify — XSD `Position` (`:1738-1751`) is a
+    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3). These
+    // now name a branch.
+    let _global_action = GlobalAction::TrafficAction(TrafficAction::new(
+        TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
+    ));
+    let _private_action = PrivateAction::TeleportAction(TeleportAction::new(Position::world(
+        WorldPosition::new(1.0, 2.0),
+    )));
+    let _entity_action = EntityAction::delete("defaultEntity");
+    let _traffic_action = TrafficAction::new(TrafficActionChoice::TrafficStopAction(
+        TrafficStopAction::default(),
+    ));
+    let _infra_action = InfrastructureAction::new(TrafficSignalAction::state_action(
+        "TestSignal".to_string(),
+        "green".to_string(),
+    ));
+    let _add_entity = AddEntityAction::new(Position::world(WorldPosition::new(3.0, 4.0)));
     let _delete_entity = DeleteEntityAction::default();
-    let _user_action = UserDefinedAction::default();
-    let _action_wrapper = NamedAction::default();
+    let _user_action = UserDefinedAction::new(CustomCommandAction::new("default", ""));
 
-    // Test new Default implementations
-    let _action = Action::default();
-    let _private_action_wrapper = PrivateAction::default();
-    let _monitor_action = SetMonitorAction::default();
-    let _var_action = VariableAction::default();
-    let _var_set = VariableSetAction::default();
-    let _var_modify = VariableModifyAction::default();
-    let _var_add_rule = VariableAddValueRule::default();
-    let _var_multiply_rule = VariableMultiplyByValueRule::default();
-    let _param_action = ParameterAction::default();
-    let _param_set = ParameterSetAction::default();
-    let _param_modify = ParameterModifyAction::default();
-    let _param_add_rule = ParameterAddValueRule::default();
-    let _param_multiply_rule = ParameterMultiplyByValueRule::default();
+    // `NamedAction` now models the XSD `Action` choice (:705-712) as
+    // parallel `Option` fields and round-trips every branch; the earlier serialize-only
+    // limitation is gone. Named per-branch constructors below.
+    let _action_wrapper = NamedAction::private(
+        "defaultTraffic",
+        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
+            1.0, 2.0,
+        )))),
+    );
+
+    // Named per-branch / `::new` constructors for the previously-fabricating types.
+    let _action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
+        Position::world(WorldPosition::new(1.0, 2.0)),
+    )));
+    let _private_action_wrapper = PrivateAction::TeleportAction(TeleportAction::new(
+        Position::world(WorldPosition::new(1.0, 2.0)),
+    ));
+    let _monitor_action = SetMonitorAction::new("defaultMonitor", true);
+    let _var_action = VariableAction::new(
+        "defaultVariable",
+        VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
+    );
+    let _var_set = VariableSetAction::new("0");
+    let _var_modify = VariableModifyAction::new(VariableModifyRule::add_value(0.0));
+    let _var_add_rule = VariableAddValueRule::new(0.0);
+    let _var_multiply_rule = VariableMultiplyByValueRule::new(1.0);
+    let _param_action = ParameterAction::new(
+        "defaultParameter",
+        ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("0")),
+    );
+    let _param_set = ParameterSetAction::new("0");
+    let _param_modify = ParameterModifyAction::new(ModifyRule::add_value(0.0));
+    let _param_add_rule = ParameterAddValueRule::new(0.0);
+    let _param_multiply_rule = ParameterMultiplyByValueRule::new(1.0);
     let _random_route = RandomRouteAction::default();
 
     // All should compile and not panic
