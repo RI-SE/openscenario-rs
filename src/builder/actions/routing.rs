@@ -1,25 +1,17 @@
-//! Routing action builders for assign route actions
+//! Routing action builders.
 //!
-//! This module provides builders for actions that control entity routing and navigation,
-//! including assigning routes using direct or catalog-based references.
-//!
-//! # Available Builders
-//!
-//! - [`AssignRouteActionBuilder`] - Assign a route to an entity (direct or catalog)
-//!
-//! # Usage Examples
+//! [`AssignRouteActionBuilder`] takes the route either inline or as a catalog
+//! reference; the two are mutually exclusive branches of an XSD choice.
 //!
 //! ```rust
 //! use openscenario_rs::builder::actions::routing::AssignRouteActionBuilder;
 //! use openscenario_rs::types::routing::Route;
 //!
-//! // Create assign route action with direct route
 //! let route = Route::new("my_route", false);
 //! let assign_action = AssignRouteActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .with_direct_route(route);
 //!
-//! // Create assign route action with catalog reference
 //! let assign_catalog_action = AssignRouteActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .with_catalog_route("RouteCatalog", "StandardRoute");

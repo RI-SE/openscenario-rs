@@ -1,7 +1,5 @@
-//! Distribution system module for scenario parameterization and variation
-//!
-//! This module provides the core distribution framework for OpenSCENARIO parameter variation.
-//! It supports both deterministic (systematic) and stochastic (probabilistic) parameter distributions.
+//! Parameter variation: [`deterministic`] distributions enumerate their values
+//! systematically, [`stochastic`] ones sample from a probability distribution.
 
 use crate::error::Result;
 use crate::types::entities::vehicle::File;
@@ -94,8 +92,8 @@ impl ParameterValueDistribution {
 // No Default for ParameterValueDistribution: the XSD's `ScenarioFile` and the
 // Deterministic/Stochastic choice are both required, and the previous impl fabricated a whole
 // nested distribution tree (a fake "default.xosc" file plus an invented parameter distribution)
-// — the "fabricating a whole child" case this issue's method calls out as never having a
-// defensible replacement. Use `new_deterministic`/`new_stochastic`.
+// — the "fabricating a whole child" case, which never has a defensible replacement.
+// Use `new_deterministic`/`new_stochastic`.
 
 // No Default for DistributionDefinition: an xsd:choice group whose only variants each require
 // real scenario content (a Deterministic or Stochastic distribution) — there is no "states

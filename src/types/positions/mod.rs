@@ -1,12 +1,6 @@
-//! Position type module for all spatial positioning systems
-//!
-//! This file contains:
-//! - Base position traits and common positioning behaviors
-//! - Position conversion utilities between coordinate systems
-//! - Orientation handling and coordinate system transformations
-//! - Position validation and constraint checking
-//! - Spatial relationship calculations and utilities
-//!
+//! Position types. `Position` is the XSD choice: exactly one of world, relative,
+//! road, lane, trajectory or route coordinates. Its constructors each select one
+//! branch, since a `Position` with no branch set is not schema-valid.
 use crate::types::basic::{Double, OSString};
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +19,7 @@ pub use route::{
     InRoutePosition, PositionInLaneCoordinates, PositionInRoadCoordinates, PositionOfCurrentEntity,
     RoutePosition, RouteRefElement,
 };
-pub use trajectory::{Trajectory, TrajectoryPosition};
+pub use trajectory::TrajectoryPosition;
 pub use world::{GeographicPosition, WorldPosition};
 
 /// Wrapper for Position element that contains position variants
@@ -189,7 +183,7 @@ mod tests {
     use crate::types::basic::Value;
 
     /// Replaces `test_position_default_is_all_none`, whose subject — the derived
-    /// `Default` — OSR-10 removed. `world_origin` is the honest replacement, and its
+    /// `Default` — has been removed. `world_origin` is the honest replacement, and its
     /// contract is the opposite one: it *does* select a branch, which is the whole point.
     #[test]
     fn test_position_world_origin_selects_the_world_branch() {
@@ -242,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_relative_world_position_new() {
-        // OSR-04 (agent G): `RelativeWorldPosition` no longer has a fabricating `Default`
+        // `RelativeWorldPosition` no longer has a fabricating `Default`
         // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
         let rwp = RelativeWorldPosition::new("Ego", 1.0, 2.0);
         assert_eq!(rwp.entity_ref.as_literal().unwrap(), "Ego");

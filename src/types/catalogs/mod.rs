@@ -1,12 +1,5 @@
-//! Catalog system module for reusable scenario components
-//!
-//! This file contains:
-//! - Base catalog traits and catalog management utilities
-//! - Catalog reference resolution and dependency tracking
-//! - Catalog validation and consistency checking
-//! - Cross-catalog reference handling and circular dependency detection
-//! - Catalog versioning and compatibility management
-//!
+//! Catalog content types: the entries a catalog file holds, and the `CatalogReference`
+//! a scenario uses to name one. Loading and resolution live in [`crate::catalog`].
 pub mod controllers;
 pub mod entities;
 pub mod environments;

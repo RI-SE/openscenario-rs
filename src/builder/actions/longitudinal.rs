@@ -1,28 +1,18 @@
-//! Longitudinal action builders for distance keeping and speed profiles
-//!
-//! This module provides builders for actions that control longitudinal movement,
-//! including maintaining distance to other entities and executing time-based speed profiles.
-//!
-//! # Available Builders
-//!
-//! - [`LongitudinalDistanceActionBuilder`] - Maintain longitudinal distance to a leading entity
-//! - [`SpeedProfileActionBuilder`] - Define multi-point speed profile over time
-//!
-//! # Usage Examples
+//! Longitudinal action builders: distance keeping and speed profiles.
 //!
 //! ```rust
 //! use openscenario_rs::builder::actions::longitudinal::{
 //!     LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder
 //! };
 //!
-//! // Create a longitudinal distance action to maintain 10m from lead vehicle
+//! // Hold 10m behind the lead vehicle.
 //! let distance_action = LongitudinalDistanceActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .from_entity("lead_vehicle")
 //!     .at_distance(10.0)
 //!     .with_freespace(true);
 //!
-//! // Create a speed profile action with multiple time/speed points
+//! // Speed as a function of time, one entry per point.
 //! let profile_action = SpeedProfileActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .add_entry_direct(0.0, 0.0)

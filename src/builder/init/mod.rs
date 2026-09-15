@@ -1,15 +1,7 @@
-//! Init action builders for scenario initialization
+//! Builders for the `Init` block: entity and environment state before the story runs.
 //!
-//! This module provides builders for creating OpenSCENARIO initialization actions
-//! that set up entities and environment before scenario execution begins.
-//!
-//! # Architecture
-//!
-//! - **InitActionBuilder**: Main builder for complete Init structure
-//! - **PrivateActionBuilder**: Builder for entity-specific initialization
-//! - **GlobalActionBuilder**: Builder for environment and infrastructure setup
-//!
-//! # Usage
+//! [`InitActionBuilder`] assembles the whole block; `PrivateActionBuilder` covers
+//! per-entity setup and `GlobalActionBuilder` the environment and infrastructure.
 //!
 //! ```rust
 //! use openscenario_rs::builder::init::InitActionBuilder;
@@ -39,7 +31,7 @@ impl InitActionBuilder {
     ///
     /// `environment_name` is required by XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`,
     /// `@name` `use="required"`, no schema default) — it used to be silently invented as
-    /// `"DefaultEnvironment"` here; callers now state it (OSR-04, agent G).
+    /// `"DefaultEnvironment"` here; callers now state it.
     pub fn with_default_environment(environment_name: &str) -> Self {
         Self::new().add_global_environment_action(environment_name)
     }

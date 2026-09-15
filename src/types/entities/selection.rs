@@ -1,14 +1,10 @@
-//! Entity selection types for OpenSCENARIO scenarios
+//! Entity selection and distribution.
 //!
-//! This module provides types for selecting and managing entities in scenarios:
-//! - EntitySelection: Main entity selection framework with selection criteria
-//! - SelectedEntities: Container for selected entities with entity references
-//! - EntityDistribution: Entity distribution system for probabilistic entity spawning
-//! - EntityDistributionEntry: Individual distribution entry with entity reference and weight
-//! - ScenarioObjectTemplate: Template system for scenario object creation
-//! - ExternalObjectReference: Reference to external object definitions
-//! - ByObjectType: Entity selection by object type (vehicle, pedestrian, etc.)
-//! - ByType: Generic type-based selection criteria
+//! `EntitySelection` names a group of entities, either explicitly through
+//! `SelectedEntities` or by object type through `ByType`. `EntityDistribution`
+//! describes a weighted set of `ScenarioObjectTemplate`s for a simulator to draw
+//! from; a template may carry an `ExternalObjectReference` in place of an inline
+//! definition.
 
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::controllers::ObjectController;

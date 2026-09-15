@@ -1,7 +1,5 @@
-//! Catalog integration for builder system
-//!
-//! This module provides catalog reference support for the builder system,
-//! enabling entities to be loaded from external catalog files.
+//! Catalog references in the builder, so an entity can come from a catalog file
+//! instead of an inline definition.
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::catalog::CatalogManager;

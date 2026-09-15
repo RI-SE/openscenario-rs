@@ -1,12 +1,7 @@
-//! Traffic management actions implementation
-//!
-//! This file contains:
-//! - Traffic source and sink actions for dynamic traffic generation
-//! - Traffic swarm actions for crowd simulation around entities
-//! - Traffic area actions for regional traffic density control
-//! - Traffic signal control actions for intersection management
-//! - Background traffic definition and distribution specifications
-//!
+//! Traffic actions: sources and sinks that add and remove background traffic, swarms
+//! that surround a central entity, area-based density control, and the signal actions
+//! that drive intersections. `TrafficDefinition` describes the population each draws
+//! from, as vehicle-category and controller distributions.
 use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::controllers::Controller;
@@ -15,17 +10,10 @@ use crate::types::enums::VehicleCategory;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
-/// Traffic source action for traffic generation with rate and position
+/// Spawns traffic at a position, at a given rate, within a given radius.
 ///
-/// This action generates traffic vehicles at a specified position with a given rate.
-/// Used to create dynamic traffic scenarios where vehicles enter the simulation over time.
-///
-/// # Fields
-///
-/// * `rate` - Rate of vehicle generation (vehicles per minute)
-/// * `velocity` - Optional velocity for generated vehicles (meters/second)
-/// * `position` - Position where vehicles are generated
-/// * `traffic_definition` - Definition of traffic properties for generated vehicles
+/// XSD `TrafficSourceAction`: `radius` and `rate` are `use="required"`; `velocity`,
+/// `TrafficDefinition` and `TrafficDistribution` are optional.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSourceAction {
     #[serde(rename = "@radius")]
@@ -55,17 +43,10 @@ pub struct TrafficSourceAction {
     pub traffic_distribution: Option<TrafficDistribution>,
 }
 
-/// Traffic sink action for traffic removal with radius control
+/// Removes traffic that enters a radius around a position.
 ///
-/// This action removes vehicles that enter a specified radius around a position.
-/// Used to prevent traffic accumulation and manage vehicle lifecycle in simulations.
-///
-/// # Fields
-///
-/// * `rate` - Rate of vehicle removal (vehicles per minute)
-/// * `radius` - Radius around position for vehicle removal (meters)
-/// * `position` - Center position for removal area
-/// * `traffic_definition` - Optional traffic definition to filter which vehicles are removed
+/// XSD `TrafficSinkAction`: only `radius` is `use="required"`; `rate` and
+/// `TrafficDefinition` are optional.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSinkAction {
     #[serde(rename = "@rate", default, skip_serializing_if = "Option::is_none")]
@@ -82,24 +63,12 @@ pub struct TrafficSinkAction {
     pub traffic_definition: Option<TrafficDefinition>,
 }
 
-/// Traffic swarm action for swarm behavior around central object
+/// Maintains a swarm of vehicles in an elliptical band around a central entity.
 ///
-/// This action creates a swarm of vehicles positioned in an elliptical pattern
-/// around a central object. The swarm can be used to simulate traffic
-/// density and complex interaction scenarios.
-///
-/// # Fields
-///
-/// * `inner_radius` - Inner radius of the elliptical swarm area (meters)
-/// * `number_of_vehicles` - Number of vehicles to generate
-/// * `offset` - Offset from central object (meters)
-/// * `semi_major_axis` - Length of semi-major axis (meters)
-/// * `semi_minor_axis` - Length of semi-minor axis (meters)
-/// * `velocity` - Optional velocity for swarm vehicles
-/// * `central_object` - Reference to central object
-/// * `traffic_definition` - Optional traffic definition for generated vehicles
-///
-/// # Example
+/// The band runs between `inner_radius` and the ellipse given by `semi_major_axis`
+/// and `semi_minor_axis`, displaced from the central object by `offset`. XSD
+/// `TrafficSwarmAction` marks the five geometry attributes and `CentralObject`
+/// required; everything else is optional.
 ///
 /// ```rust
 /// use openscenario_rs::types::actions::{TrafficSwarmAction, CentralSwarmObject};
@@ -264,15 +233,11 @@ pub struct TrafficSignalGroupState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficStopAction {}
 
-/// Traffic definition for vehicle category and controller distribution
+/// The population a traffic source or swarm draws from: which vehicle categories
+/// appear and with what weight, and which controllers drive them.
 ///
-/// Defines the properties of traffic that should be generated, including
-/// vehicle types and their probabilities, as well as controller behavior profiles.
-///
-/// # Fields
-///
-/// * `vehicle_category_distribution` - Distribution of vehicle categories (cars, trucks, etc.)
-/// * `controller_distribution` - Distribution of controller behaviors
+/// XSD `TrafficDefinition` requires `name`, `VehicleCategoryDistribution` and
+/// `ControllerDistribution`; `VehicleRoleDistribution` is optional.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficDefinition {
     #[serde(rename = "@name")]
@@ -453,7 +418,7 @@ pub struct DirectionOfTravelDistribution {
     pub opposite: Double,
 }
 
-// (OSR-04, agent B) `impl Default` removed for every fabricating type in this
+// `impl Default` removed for every fabricating type in this
 // file: `TrafficSourceAction`, `TrafficSinkAction`, `TrafficSwarmAction`,
 // `TrafficSignalAction` (a choice — its old default silently picked the
 // `TrafficSignalStateAction` branch), `TrafficSignalStateAction`,
@@ -1270,7 +1235,7 @@ mod tests {
 
     #[test]
     fn test_traffic_action_construction() {
-        // (OSR-04, agent B) `TrafficSourceAction`/`TrafficSinkAction`/
+        // `TrafficSourceAction`/`TrafficSinkAction`/
         // `TrafficSwarmAction` no longer implement `Default` — every field
         // they fabricated was `use="required"` in the XSD. Exercise the
         // explicit constructors instead.
@@ -1439,7 +1404,7 @@ mod tests {
 
     #[test]
     fn test_traffic_signal_construction() {
-        // (OSR-04, agent B) None of these types implement `Default` anymore
+        // None of these types implement `Default` anymore
         // — every fabricated field (`name`, `duration`, ids, `state`) was
         // `use="required"` in the XSD with no declared default. Exercise the
         // explicit constructors instead.

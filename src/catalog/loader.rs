@@ -1,10 +1,8 @@
-//! Catalog loading and caching functionality
+//! Loading and caching of catalog files.
 //!
-//! This module handles:
-//! - Loading catalog files from directory paths
-//! - Parsing XML catalog content
-//! - Caching loaded catalogs for performance
-//! - File system operations for catalog discovery
+//! Catalogs are found under the `Directory` paths declared in `CatalogLocations`.
+//! Each file is parsed on first use and cached by path, so repeated references into
+//! the same catalog do not re-read it.
 
 use crate::error::{Error, Result};
 use crate::parser::xml::{parse_catalog_from_file, parse_catalog_from_str};

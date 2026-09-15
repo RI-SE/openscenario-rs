@@ -243,8 +243,9 @@ impl LaneOffsetActionBuilder {
 
     /// Set simple dynamics with a literal `dynamicsShape`.
     ///
-    /// The signature is unchanged by OSR-06: it still takes the bare enum and wraps it
-    /// internally. See [`Self::with_simple_dynamics_param`] for the parameter form.
+    /// Wrapping `dynamicsShape` in `Value<T>` left this signature unchanged: it still
+    /// takes the bare enum and wraps it internally. See
+    /// [`Self::with_simple_dynamics_param`] for the parameter form.
     pub fn with_simple_dynamics(
         mut self,
         shape: DynamicsShape,

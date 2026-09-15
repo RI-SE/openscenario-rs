@@ -1,12 +1,8 @@
-//! Condition type module for trigger and event management
+//! Condition types, re-exported from [`entity`], [`spatial`] and [`value`].
 //!
-//! This file contains:
-//! - Base condition traits and common condition behaviors
-//! - Condition evaluation logic and state management
-//! - Trigger edge detection (rising, falling, rising-or-falling)
-//! - Condition group logic (AND/OR combinations)
-//! - Condition validation and constraint checking
-//!
+//! Conditions are modeled here, not evaluated. This crate parses and emits them; a
+//! simulator decides when they fire. The trigger structure that combines them lives
+//! in [`crate::types::scenario::triggers`].
 pub mod entity; // Entity-based conditions
 pub mod spatial; // Spatial conditions
 pub mod value; // Value-based conditions

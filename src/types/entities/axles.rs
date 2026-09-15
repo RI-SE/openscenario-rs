@@ -1,8 +1,6 @@
-//! Axle system definitions for vehicles
-//!
-//! This module provides comprehensive axle modeling for OpenSCENARIO vehicles,
-//! supporting front, rear, and additional axles with full geometric and steering
-//! characteristics as defined in the OpenSCENARIO XSD specification.
+//! Vehicle axles: `Axles` holds a required front and rear axle plus any additional
+//! ones. Each `Axle` carries its max steering angle, wheel diameter, track width,
+//! and position relative to the vehicle reference point.
 
 use crate::error::Result;
 use crate::types::basic::Double;

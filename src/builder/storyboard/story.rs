@@ -524,7 +524,7 @@ impl InitActionBuilderForStoryboard {
     /// Add a global environment action with a named environment
     ///
     /// `name` is required by XSD `Environment` (`Schema/OpenSCENARIO.xsd:1186-1194`); there is
-    /// no schema default (OSR-04, agent G).
+    /// no schema default.
     pub fn add_global_environment_action(mut self, name: &str) -> Self {
         self.init_builder = self.init_builder.add_global_environment_action(name);
         self

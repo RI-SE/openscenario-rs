@@ -1,12 +1,6 @@
-//! Entity-based condition types for scenario triggering
-//!
-//! This file contains:
-//! - Spatial conditions (distance, collision, position-based triggers)
-//! - Motion conditions (speed, acceleration, standstill detection)
-//! - State conditions (end-of-road, off-road, clearance checks)
-//! - Temporal conditions (time headway, time-to-collision)
-//! - Relative conditions comparing entities to each other
-//!
+//! Conditions on an entity's own state: speed, acceleration and standstill; distance
+//! and collision; end-of-road, off-road and lane clearance; time headway and time to
+//! collision. Several have both an absolute and an entity-relative form.
 use crate::types::basic::{Boolean, Double, Int, OSString, Value};
 use crate::types::enums::{
     AngleType, CoordinateSystem, DirectionalDimension, ObjectType, RelativeDistanceType,

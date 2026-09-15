@@ -1,18 +1,9 @@
-//! Builder module for programmatic OpenSCENARIO construction
+//! Programmatic construction of OpenSCENARIO documents.
 //!
-//! This module provides a comprehensive, type-safe API for building OpenSCENARIO documents
-//! programmatically. The builder system uses compile-time state validation to ensure
-//! scenarios are constructed correctly and completely.
-//!
-//! # Key Features
-//!
-//! - **Type-safe construction** - Invalid operations are caught at compile time
-//! - **Fluent API** - Chainable methods for readable code
-//! - **Comprehensive coverage** - All OpenSCENARIO elements supported
-//! - **Validation** - Built-in validation during construction
-//! - **Templates** - Pre-built patterns for common scenarios
-//!
-//! # Quick Start
+//! The builder carries its progress in the type: `ScenarioBuilder<Empty>` has no
+//! `with_entities`, `ScenarioBuilder<HasHeader>` does. Ordering the stages wrongly
+//! is therefore a compile error. A required value left unset is not; that surfaces
+//! at `build()`, as a [`BuilderError`].
 //!
 //! ```rust
 //! use openscenario_rs::builder::ScenarioBuilder;
@@ -20,8 +11,8 @@
 //! use openscenario_rs::types::enums::ParameterType;
 //! use openscenario_rs::types::road::RoadNetwork;
 //!
-//! // Build a complete scenario. CatalogLocations and RoadNetwork are required of a
-//! // scenario document by the XSD; the empty forms state nothing but satisfy it.
+//! // The XSD requires CatalogLocations and RoadNetwork of every scenario
+//! // document; the empty forms state nothing but satisfy it.
 //! let scenario = ScenarioBuilder::new()
 //!     .with_header("Highway Merge Test", "Test Engineer")
 //!     .add_parameter("initial_speed", ParameterType::Double, "25.0")
@@ -37,108 +28,28 @@
 //!     .unwrap();
 //! ```
 //!
-//! # Builder Categories
-//!
-//! ## Core Builders
-//!
-//! - [`ScenarioBuilder`] - Main entry point for scenario construction
-//! - [`VehicleBuilder`] - Vehicle entity creation and configuration
-//! - [`StoryboardBuilder`] - Storyboard structure and flow control
-//!
-//! ## Action Builders
-//!
-//! - [`SpeedActionBuilder`] - Vehicle speed control actions
-//! - [`TeleportActionBuilder`] - Entity positioning actions  
-//! - [`LaneChangeActionBuilder`] - Lane change maneuvers
-//! - [`EnvironmentActionBuilder`] - Environment and weather control
-//!
-//! ## Condition Builders
-//!
-//! - [`TriggerBuilder`] - Event triggering logic
-//! - [`SpeedConditionBuilder`] - Speed-based triggers
-//! - [`TimeConditionBuilder`] - Time-based triggers
-//! - [`RelativeDistanceConditionBuilder`] - Distance-based triggers
-//!
-//! ## Utility Builders
-//!
-//! - [`CatalogLocationsBuilder`] - Catalog reference management
-//! - [`ParameterDeclarationsBuilder`] - Parameter definition
-//! - [`InitActionBuilder`] - Initial entity setup
-//!
-//! # Advanced Usage
-//!
-//! ## Parameterized Scenarios
-//!
-//! ```rust
-//! use openscenario_rs::builder::ScenarioBuilder;
-//! use openscenario_rs::types::catalogs::locations::CatalogLocations;
-//! use openscenario_rs::types::enums::ParameterType;
-//! use openscenario_rs::types::road::RoadNetwork;
-//!
-//! let scenario = ScenarioBuilder::new()
-//!     .with_header("Parameterized Test", "Engineer")
-//!     .add_parameter("target_speed", ParameterType::Double, "30.0")
-//!     .add_parameter("following_distance", ParameterType::Double, "50.0")
-//!     .with_catalog_locations(CatalogLocations::default())
-//!     .with_road_network(RoadNetwork::default())
-//!     .with_entities()
-//!         .add_vehicle("ego", |v| v.car())
-//!     .with_storyboard(|storyboard| {
-//!         storyboard
-//!     })
-//!     .build()
-//!     .unwrap();
-//! ```
-//!
-//! ## Template-Based Construction
+//! [`templates`] holds prebuilt starting points for the common shapes:
 //!
 //! ```rust
 //! use openscenario_rs::builder::templates::{BasicScenarioTemplate, ScenarioTemplate};
 //!
-//! // Use predefined templates for common patterns
-//! let template_builder = BasicScenarioTemplate::create();
-//! let scenario = template_builder
-//!     .with_storyboard(|storyboard| {
-//!         // Configure storyboard with your scenario logic
-//!         storyboard
-//!     })
+//! let scenario = BasicScenarioTemplate::create()
+//!     .with_storyboard(|storyboard| storyboard)
 //!     .build()
 //!     .unwrap();
 //! ```
 //!
-//! ## Detached Builders
-//!
-//! For complex scenarios, you can use detached builders:
+//! Detached builders produce a component with no parent attached, so the same vehicle
+//! or maneuver can be built once and used in several scenarios:
 //!
 //! ```rust
 //! use openscenario_rs::builder::{DetachedVehicleBuilder, DetachedManeuverBuilder};
-//! use openscenario_rs::types::catalogs::locations::CatalogLocations;
-//! use openscenario_rs::types::road::RoadNetwork;
-//! use openscenario_rs::ScenarioBuilder;
 //!
-//! // Build components separately
-//! let ego_vehicle = DetachedVehicleBuilder::new("ego")
-//!     .car()
-//!     .build();
-//!
-//! let speed_maneuver = DetachedManeuverBuilder::new("speed_up", "ego")
-//!     .build();
-//!
-//! // Combine into scenario using closure-based builders
-//! let scenario = ScenarioBuilder::new()
-//!     .with_header("Complex Test", "Engineer")
-//!     .with_catalog_locations(CatalogLocations::default())
-//!     .with_road_network(RoadNetwork::default())
-//!     .with_entities()
-//!         .add_vehicle("ego", |v| v.car())
-//!     .with_storyboard(|storyboard| {
-//!         storyboard
-//!     })
-//!     .build()
-//!     .unwrap();
+//! let ego_vehicle = DetachedVehicleBuilder::new("ego").car().build();
+//! let speed_maneuver = DetachedManeuverBuilder::new("speed_up", "ego").build();
 //! ```
 //!
-//! # Validation and Error Handling
+//! `build()` is where a missing required field surfaces, as a [`BuilderError`]:
 //!
 //! ```rust
 //! use openscenario_rs::builder::{ScenarioBuilder, BuilderError};
@@ -147,30 +58,16 @@
 //!     .with_header("Test", "Engineer")
 //!     .with_entities()
 //!         .add_vehicle("ego", |v| v.car())
-//!     .with_storyboard(|storyboard| {
-//!         storyboard
-//!     })
+//!     .with_storyboard(|storyboard| storyboard)
 //!     .build()
 //! {
-//!     Ok(scenario) => {
-//!         println!("Scenario built successfully!");
-//!         // Use scenario...
-//!     }
+//!     Ok(scenario) => println!("built"),
 //!     Err(BuilderError::MissingField { field, .. }) => {
-//!         eprintln!("Missing required field: {}", field);
+//!         eprintln!("missing required field: {}", field);
 //!     }
-//!     Err(e) => {
-//!         eprintln!("Builder error: {}", e);
-//!     }
+//!     Err(e) => eprintln!("{}", e),
 //! }
 //! ```
-//!
-//! # Performance Tips
-//!
-//! - Use detached builders for reusable components
-//! - Build templates once and reuse for similar scenarios
-//! - Use parameter references instead of literal values for flexibility
-//! - Validate during construction rather than after building
 
 mod error;
 pub use error::{BuilderError, BuilderResult};

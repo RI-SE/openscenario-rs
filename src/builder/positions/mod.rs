@@ -1,7 +1,4 @@
-//! Position builders for programmatic position construction
-//!
-//! This module provides fluent APIs for creating all types of positions in OpenSCENARIO
-//! scenarios with comprehensive validation and type safety.
+//! Builders for each `Position` branch: world, relative, lane, and road.
 
 pub mod lane;
 pub mod relative;

@@ -1,7 +1,4 @@
-//! Parameter builder support for dynamic scenario values
-//!
-//! This module provides builders for working with OpenSCENARIO parameters,
-//! enabling dynamic value substitution and parameterized scenarios.
+//! Builders for parameter declarations and the `${...}` references that use them.
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{

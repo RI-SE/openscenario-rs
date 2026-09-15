@@ -1,9 +1,5 @@
-//! Trailer action types for trailer connection and disconnection
-//!
-//! This file contains:
-//! - Trailer connection and disconnection actions
-//! - Trailer reference management
-//!
+//! `ConnectTrailerAction` and `DisconnectTrailerAction`, and the trailer reference
+//! the first of them takes.
 
 use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};

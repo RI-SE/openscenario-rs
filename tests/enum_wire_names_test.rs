@@ -12,12 +12,12 @@
 //!
 //! The expected wire name is never hand-transcribed from the `#[serde(rename)]`
 //! attribute -- that would just be a copy of the same table the macro already
-//! generates from, and could drift the same way the pre-OSR-05 hand-written
+//! generates from, and could drift the same way the earlier hand-written
 //! Display/FromStr/rename triplets did. Instead it is derived by round-tripping each
 //! variant through `serde_json`, which reads the actual `#[serde(rename)]` the
 //! compiler applied.
 //!
-//! ## OSR-05 provenance
+//! ## Provenance
 //!
 //! This test was first written and run against the *unmodified* tree, before any
 //! `Display`/`FromStr` impl was added or the `osc_enum!` macro existed. At that
@@ -162,16 +162,15 @@ fn enum_display_and_fromstr_agree_with_serde_rename() {
     );
 }
 
-/// OSR-05 acceptance criterion: `Value<VehicleCategory>` (a required, `@`-renamed
-/// attribute type once OSR-06 wraps a field in it) must deserialize from both a
-/// plain literal wire value and a `${param}` reference, and serialize back
-/// byte-identically. `VehicleCategory` was chosen because it is the example used
-/// throughout OSR-05/OSR-06's design discussion; any enum with verified
+/// `Value<VehicleCategory>` (a required, `@`-renamed attribute type, once a field is
+/// wrapped in it) must deserialize from both a plain literal wire value and a parameter
+/// reference, and serialize back byte-identically. `VehicleCategory` was chosen because
+/// it is the example used throughout the design discussion; any enum with verified
 /// `Display`/`FromStr` behaves the same way since `Value<T>` in
 /// `src/types/basic.rs` is generic over `T: FromStr + Display`.
 ///
-/// This is committed (not run-and-discarded) so OSR-06 does not have to
-/// rediscover that this works before wrapping the first field.
+/// This is committed (not run-and-discarded) so that wrapping the enum-typed fields in
+/// `Value<E>` does not have to rediscover that this works first.
 #[test]
 fn value_wraps_vehicle_category_literal_and_parameter() {
     #[derive(Serialize, serde::Deserialize, Debug, PartialEq)]
@@ -192,7 +191,7 @@ fn value_wraps_vehicle_category_literal_and_parameter() {
 
     // Parameter reference on the same field.
     //
-    // OSR-06 changed the spelling this asserts, and the schema is the reason.
+    // The spelling this asserts changed, and the schema is the reason.
     // `Schema/OpenSCENARIO.xsd:4-13` defines two productions:
     //
     //     parameter   [$][A-Za-z_][A-Za-z0-9_]*

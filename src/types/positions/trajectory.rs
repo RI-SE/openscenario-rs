@@ -1,31 +1,14 @@
 //! Trajectory and route-based position types for path following
 
-use crate::types::basic::{Double, OSString, ParameterDeclarations};
-use crate::types::geometry::shapes::Shape;
+use crate::types::basic::Double;
 use serde::{Deserialize, Serialize};
 
-/// Trajectory definition with shape and parameters
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Trajectory {
-    /// Name of the trajectory — XSD attribute `name`, `use="required"`
-    #[serde(rename = "@name")]
-    pub name: OSString,
-    /// Whether the trajectory is closed (forms a loop) — XSD attribute `closed`, `use="required"`
-    #[serde(rename = "@closed")]
-    pub closed: bool,
-    /// Parameter declarations for this trajectory — XSD child element
-    /// `<ParameterDeclarations>`, `minOccurs="0"`, precedes `<Shape>`.
-    #[serde(
-        rename = "ParameterDeclarations",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_declarations: Option<ParameterDeclarations>,
-    /// Shape definition of the trajectory — XSD child element `<Shape>`, a choice of
-    /// Polyline | Clothoid | ClothoidSpline | Nurbs. See `geometry::shapes::Shape`.
-    #[serde(rename = "Shape")]
-    pub shape: Shape,
-}
+// The `Trajectory` struct that used to live here was a dead duplicate of
+// `actions::movement::Trajectory` (the canonical one, boxed inside `TrajectoryRef`). It had
+// zero consumers outside its own `impl`, its own unit tests and the `pub use` in
+// `positions/mod.rs`, and it was also schema-wrong: `@closed` is XSD type `Boolean`
+// (`Schema/OpenSCENARIO.xsd:2361`), a union that admits `$param`, and this copy declared it
+// as a plain Rust `bool`. Removed; use `crate::types::actions::movement::Trajectory`.
 
 /// Clothoid trajectory segment
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -126,30 +109,10 @@ impl TrajectoryPosition {
     }
 }
 
-impl Trajectory {
-    /// Create a new `Trajectory`.
-    ///
-    /// XSD `Trajectory` (:2356-2364): `@name` and `@closed` are both `use="required"`
-    /// with no `default="…"`; `ParameterDeclarations` is `minOccurs="0"` and defaults
-    /// to `None` here; `Shape` is a required child and must be supplied by the caller.
-    ///
-    /// There used to be a `Default` impl here. It set `shape` to a `Polyline` with
-    /// zero `Vertex` children, but the XSD requires `minOccurs="2"` on `Polyline`'s
-    /// `Vertex` — that default could never serialize to schema-valid XML (F16).
-    /// Removed rather than kept, matching every other `Default` this policy removed.
-    pub fn new(name: impl Into<String>, closed: bool, shape: Shape) -> Self {
-        Self {
-            name: OSString::literal(name.into()),
-            closed,
-            parameter_declarations: None,
-            shape,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::geometry::shapes::Shape;
 
     #[test]
     fn test_trajectory_position_new() {
@@ -195,37 +158,6 @@ mod tests {
         assert!(xml.contains("s=\"25\""));
         let deserialized: TrajectoryPosition = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(pos, deserialized);
-    }
-
-    #[test]
-    fn test_trajectory_new_requires_explicit_shape() {
-        use crate::types::geometry::shapes::{Polyline, Vertex};
-        use crate::types::positions::{Position, WorldPosition};
-
-        let shape = Shape {
-            polyline: Some(Polyline {
-                vertices: vec![
-                    Vertex::new(Position {
-                        world_position: Some(WorldPosition::new(0.0, 0.0)),
-                        ..Position::empty()
-                    }),
-                    Vertex::new(Position {
-                        world_position: Some(WorldPosition::new(1.0, 1.0)),
-                        ..Position::empty()
-                    }),
-                ],
-            }),
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
-        };
-        let traj = Trajectory::new("TestTrajectory", false, shape);
-        assert_eq!(traj.name.as_literal(), Some(&"TestTrajectory".to_string()));
-        assert!(!traj.closed);
-        match &traj.shape.polyline {
-            Some(p) => assert_eq!(p.vertices.len(), 2),
-            None => panic!("Expected Polyline shape"),
-        }
     }
 
     // ------------------------------------------------------------------
@@ -371,35 +303,5 @@ mod tests {
         );
         let deserialized: Clothoid = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(clothoid, deserialized);
-    }
-
-    /// `Trajectory` in `positions::trajectory` must round-trip its optional
-    /// `<ParameterDeclarations>` element (XSD Trajectory :2356-2363).
-    #[test]
-    fn test_trajectory_parameter_declarations_round_trip() {
-        let xml = r#"<Trajectory name="Traj1" closed="false">
-    <ParameterDeclarations>
-        <ParameterDeclaration name="speed" parameterType="double" value="10.0"/>
-    </ParameterDeclarations>
-    <Shape>
-        <Polyline>
-            <Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex>
-        </Polyline>
-    </Shape>
-</Trajectory>"#;
-        let trajectory: Trajectory = quick_xml::de::from_str(xml).unwrap();
-        let decls = trajectory
-            .parameter_declarations
-            .as_ref()
-            .expect("ParameterDeclarations must be present");
-        assert_eq!(decls.parameter_declarations.len(), 1);
-
-        let serialized = quick_xml::se::to_string(&trajectory).unwrap();
-        assert!(
-            serialized.contains("<ParameterDeclarations>"),
-            "serialized: {serialized}"
-        );
-        let reparsed: Trajectory = quick_xml::de::from_str(&serialized).unwrap();
-        assert_eq!(trajectory, reparsed);
     }
 }

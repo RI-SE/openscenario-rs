@@ -1,20 +1,16 @@
-//! OpenSCENARIO-rs: Rust library for parsing and manipulating OpenSCENARIO files
+//! Parsing, manipulation and generation of OpenSCENARIO files.
 //!
-//! This library provides a type-safe, serde-based implementation for parsing,
-//! manipulating, and generating OpenSCENARIO files in Rust.
+//! Targets **OpenSCENARIO 1.3**, the schema bundled at `Schema/OpenSCENARIO.xsd`.
+//! Optionality follows that schema: a schema-optional field is `Option<T>`, and no
+//! default is invented beyond what the schema itself declares. Known gaps are
+//! listed in `docs/xsd_gaps.md`.
 //!
-//! Targets **OpenSCENARIO 1.3** (the schema bundled at `Schema/OpenSCENARIO.xsd`).
-//! Optionality follows the XSD: schema-optional fields are `Option<T>`, and no defaults are
-//! invented beyond what the schema defines. Known gaps are listed in `docs/xsd_gaps.md`.
+//! Attributes carrying a scalar are typed [`types::basic::Value<T>`], so `speed="30.0"`
+//! and `speed="${target_speed}"` both parse and the reference is resolved later.
+//! Enum-valued attributes do not yet accept a parameter; see `docs/xsd_gaps.md`.
 //!
-//! # Features
-//!
-//! - **Type-safe parsing** - Full type system for OpenSCENARIO specification
-//! - **Parameter support** - Handle `${parameter}` references with resolution
-//! - **Validation** - Schema validation and semantic checks (with `validation` feature)
-//! - **Builder pattern** - Programmatic scenario construction (with `builder` feature)
-//!
-//! # Quick Start
+//! Two features are off by default: `validation` adds schema validation and the
+//! semantic checks, `builder` adds programmatic construction.
 //!
 //! ```rust,no_run
 //! use openscenario_rs::{parse_file, Result, OpenScenarioDocumentType};

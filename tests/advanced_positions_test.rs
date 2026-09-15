@@ -146,7 +146,7 @@ fn test_relative_object_position_right_of() {
 
 #[test]
 fn test_relative_object_position_zero_offset() {
-    // OSR-04 (agent G): `RelativeObjectPosition` no longer has a fabricating `Default`
+    // `RelativeObjectPosition` no longer has a fabricating `Default`
     // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
     let position = RelativeObjectPosition::new("reference", 0.0, 0.0);
     assert_eq!(

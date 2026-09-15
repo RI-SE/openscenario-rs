@@ -126,7 +126,7 @@ pub struct Range {
 // `default="…"` (confirmed against `Schema/OpenSCENARIO.xsd` — this project has found no genuine
 // attribute default across ~131 checked so far), and `StochasticDistribution` has
 // `maxOccurs="unbounded"` with no `minOccurs="0"`, so an empty `distributions` Vec is not
-// schema-valid either (F16). The previous impl fabricated `numberOfTestRuns: 1`. Use `new()`.
+// schema-valid either. The previous impl fabricated `numberOfTestRuns: 1`. Use `new()`.
 impl Stochastic {
     pub fn new(
         number_of_test_runs: UnsignedInt,

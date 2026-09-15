@@ -1,7 +1,5 @@
-//! Trajectory catalog types for OpenSCENARIO reusable trajectory definitions
-//!
-//! This module contains catalog-specific trajectory types that enable reuse of
-//! trajectory definitions across multiple scenarios with parameter substitution.
+//! `CatalogTrajectory`: a trajectory in its catalog-file form, with parameter
+//! declarations covering its shape.
 
 use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
 use crate::types::positions::Position;
@@ -198,8 +196,9 @@ impl CatalogTrajectory {
     /// There used to be a `Default` impl here. It fabricated `@name` as
     /// `"DefaultCatalogTrajectory"` and, worse, defaulted `shape` to a `Polyline`
     /// with zero `Vertex` children — XSD `Polyline` requires `minOccurs="2"`, so
-    /// that default could never serialize to schema-valid XML (F16, same trap as
-    /// `positions::trajectory::Trajectory`). Removed; callers must supply both.
+    /// that default could never serialize to schema-valid XML. An empty container only
+    /// "states nothing" when the schema permits zero children, and `Polyline` does not.
+    /// Removed; callers must supply both.
     pub fn new(name: String, shape: CatalogTrajectoryShape) -> Self {
         Self {
             name,
@@ -370,8 +369,8 @@ impl CatalogClothoid {
     ///
     /// `start_position` is required: XSD `Clothoid` (`Schema/OpenSCENARIO.xsd:894-897`)
     /// declares its `Position` child with no `minOccurs="0"`. This constructor previously
-    /// filled it with `Position::default()`, inventing a start point nobody wrote — OSR-10
-    /// made it a parameter instead.
+    /// filled it with `Position::default()`, inventing a start point nobody wrote; it is now
+    /// a parameter instead.
     pub fn new(
         curvature: Double,
         curvature_dot: Double,

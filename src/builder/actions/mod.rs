@@ -1,48 +1,16 @@
-//! Action builder module with collection and management utilities
+//! Builders for the actions an entity performs during a scenario.
 //!
-//! This module provides builders for creating various types of actions in OpenSCENARIO scenarios.
-//! Actions define what entities do during scenario execution, including movement, speed changes,
-//! lane changes, and environment modifications.
+//! Movement is [`SpeedActionBuilder`] and [`TeleportActionBuilder`]; lateral motion
+//! is [`LaneChangeActionBuilder`], [`LateralDistanceActionBuilder`] and
+//! [`LaneOffsetActionBuilder`]; controllers are [`ActivateControllerActionBuilder`]
+//! and [`AssignControllerActionBuilder`]. [`EnvironmentActionBuilder`],
+//! [`EntityActionBuilder`] and [`VariableActionBuilder`] are the global actions; they
+//! change the world rather than one entity.
 //!
-//! # Action Categories
-//!
-//! ## Movement Actions
-//! - [`SpeedActionBuilder`] - Control entity speed (absolute or relative)
-//! - [`TeleportActionBuilder`] - Instantly move entities to new positions
-//!
-//! ## Lateral Actions  
-//! - [`LaneChangeActionBuilder`] - Execute lane change maneuvers
-//! - [`LateralDistanceActionBuilder`] - Maintain lateral distance to targets
-//! - [`LaneOffsetActionBuilder`] - Apply lateral offset from lane center
-//!
-//! ## Controller Actions
-//! - [`ActivateControllerActionBuilder`] - Activate entity controllers
-//! - [`AssignControllerActionBuilder`] - Assign controllers to entities
-//!
-//! ## Global Actions
-//! - [`EnvironmentActionBuilder`] - Modify weather, time of day, lighting
-//! - [`EntityActionBuilder`] - Add/remove entities during scenario
-//! - [`VariableActionBuilder`] - Modify scenario variables
-//!
-//! # Basic Usage
-//!
-//! ```rust
-//! use openscenario_rs::builder::actions::{SpeedActionBuilder, TeleportActionBuilder};
-//!
-//! // SpeedActionBuilder and TeleportActionBuilder are used within maneuver builders
-//! // They are not used directly in this way anymore
-//! // See DetachedSpeedActionBuilder and DetachedTeleportActionBuilder for standalone usage
-//! ```
-//!
-//! # Action Collections
-//!
-//! ActionCollection is used internally for managing actions. For creating actions,
-//! see the detached builders in the builder module.
-//!
-//! ```rust
-//! // Action builders are used within maneuver builders
-//! // See storyboard/maneuver module for detailed usage examples
-//! ```
+//! These builders attach to a maneuver and are reached through it, not constructed
+//! directly. For an action built on its own, use the `Detached*` variant in
+//! [`crate::builder`]. `ActionCollection` is internal bookkeeping for a maneuver's
+//! action list.
 
 pub mod base;
 pub mod controller;

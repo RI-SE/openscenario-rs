@@ -1,13 +1,8 @@
-//! Appearance and animation action types for visual representation
+//! Actions that change how an entity looks: lights, animations, and visibility.
 //!
-//! This file contains:
-//! - Light state actions for vehicle lighting systems
-//! - Animation actions for entity movement and component animation
-//! - Pedestrian gesture and motion animations
-//! - Vehicle component animations (doors, windows, etc.)
-//! - Custom user-defined animation support
-//! - Visibility actions for entity appearance control
-//!
+//! Animations cover pedestrian gesture and motion, vehicle components such as doors
+//! and windows, and user-defined animation files. Visibility is separate: it decides
+//! which subsystems see the entity, not how it is drawn.
 use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::entities::vehicle::File;
 use crate::types::enums::{
@@ -220,8 +215,8 @@ pub struct ColorCmyk {
 
 /// Animation action for entity movement and component animation
 ///
-/// (OSR-09) No `Default`. The derive OSR-04 agent D added here was justified as
-/// "every field is `None`, so it states nothing" — the reasoning F16 falsified.
+/// No `Default`. The derive that used to sit here was justified as "every field is
+/// `None`, so it states nothing" — reasoning the schema contradicts.
 /// XSD `AnimationAction` (`Schema/OpenSCENARIO.xsd:740-747`) declares `AnimationType`
 /// with no `minOccurs="0"`, so the element is required; and `AnimationType` is itself
 /// a bare `xsd:choice` (`:757-764`) that must select a branch. The derived default
@@ -252,7 +247,7 @@ pub struct AnimationAction {
 
 /// Choice of animation being addressed
 ///
-/// (OSR-09) No `Default`: XSD `AnimationType` (`Schema/OpenSCENARIO.xsd:757-764`) is a
+/// No `Default`: XSD `AnimationType` (`Schema/OpenSCENARIO.xsd:757-764`) is a
 /// bare `xsd:choice` with no `minOccurs="0"`, so an all-`None` value cannot serialize to
 /// valid XML. Use the per-branch constructors below.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -282,7 +277,7 @@ pub struct AnimationType {
 
 /// Choice of component being animated
 ///
-/// (OSR-09) No `Default`: XSD `ComponentAnimation` (`Schema/OpenSCENARIO.xsd:947-952`) is a
+/// No `Default`: XSD `ComponentAnimation` (`Schema/OpenSCENARIO.xsd:947-952`) is a
 /// bare `xsd:choice` with no `minOccurs="0"` — same category 3 as its parent `AnimationType`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComponentAnimation {
@@ -378,7 +373,7 @@ pub struct AnimationState {
     pub state: Double,
 }
 
-// (OSR-04, agent D) `VisibilityAction`, `LightStateAction`, `LightState` and
+// `VisibilityAction`, `LightStateAction`, `LightState` and
 // `AnimationState` no longer implement `Default`: all fabricated a value for
 // an XSD `use="required"` attribute (`VisibilityAction` :2550-2557, `LightState`
 // :1402-1409, `LightStateAction` :1411-1417, `AnimationState` :754-756) — none

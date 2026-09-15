@@ -1,12 +1,5 @@
-//! Routing and navigation types for OpenSCENARIO
-//!
-//! This module contains:
-//! - Core Route and Waypoint types per XSD specification
-//! - RouteRef for direct and catalog-based route references
-//! - Route analytics and validation utilities
-//! - Integration with existing position and action systems
-//! - Support for parameterizable routes and waypoints
-//!
+//! `Route` and `Waypoint`, and the `RouteRef` choice between an inline route and a
+//! catalog reference to one. `types::positions::route` reuses both.
 use crate::types::basic::{Boolean, Double, OSString, Value};
 use crate::types::enums::{ParameterType, RouteStrategy};
 use crate::types::positions::Position;
@@ -132,7 +125,7 @@ pub enum RouteRef {
     Catalog(CatalogReference),
 }
 
-// (OSR-04, resolves OSR-03's NOTE) `Route`, `Waypoint` and `RouteRef` no
+// `Route`, `Waypoint` and `RouteRef` no
 // longer implement `Default`: it fabricated a `Route` named "DefaultRoute",
 // a `Waypoint` with an invented `Position::default()` and
 // `RouteStrategy::Shortest`, and — worst — a `RouteRef` that silently picked

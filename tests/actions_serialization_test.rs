@@ -209,12 +209,12 @@ fn test_override_actions() {
 
 #[test]
 fn test_action_wrapper() {
-    let action_wrapper = NamedAction {
-        name: OSString::literal("test_action".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
-            Position::world(WorldPosition::new(1.0, 2.0)),
-        ))),
-    };
+    let action_wrapper = NamedAction::private(
+        "test_action",
+        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
+            1.0, 2.0,
+        )))),
+    );
 
     let serialized = serde_json::to_string(&action_wrapper).unwrap();
     assert!(serialized.contains("test_action"));
@@ -235,12 +235,12 @@ fn test_user_defined_action() {
 #[test]
 fn test_new_action_wrapper_types() {
     // Test main NamedAction wrapper
-    let action = NamedAction {
-        name: OSString::literal("testAction".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
-            Position::world(WorldPosition::new(1.0, 2.0)),
-        ))),
-    };
+    let action = NamedAction::private(
+        "testAction",
+        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
+            1.0, 2.0,
+        )))),
+    );
 
     let serialized = serde_json::to_string(&action).unwrap();
     assert!(serialized.contains("testAction"));
@@ -405,7 +405,7 @@ fn test_random_route_action() {
 
 #[test]
 fn test_type_aliases() {
-    // (OSR-04, agent D) These types' `Default` impls fabricated content
+    // These types' `Default` impls fabricated content
     // (a name, an enum branch) for XSD `use="required"` attributes/choices
     // and were removed; exercise the named constructors instead.
     let _entity_action: EntityAction = EntityAction::delete("defaultEntity");
@@ -436,7 +436,7 @@ fn test_constructors_and_benign_defaults() {
     // Choice/container structs that default to all-`None` keep their `Default` only when
     // the schema permits the empty form (category 2 in `docs/type_system_guide.md`).
     // `TeleportAction`/`AddEntityAction` do not qualify — XSD `Position` (`:1738-1751`) is a
-    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3, OSR-09). These
+    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3). These
     // now name a branch.
     let _global_action = GlobalAction::TrafficAction(TrafficAction::new(
         TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
@@ -456,15 +456,15 @@ fn test_constructors_and_benign_defaults() {
     let _delete_entity = DeleteEntityAction::default();
     let _user_action = UserDefinedAction::new(CustomCommandAction::new("default", ""));
 
-    // (OSR-04, agent D) `NamedAction` (F13) cannot round-trip its flattened
-    // `Action` choice through quick-xml's serializer; it is not exercised
-    // for serialization anywhere in the crate, so no constructor is added.
-    let _action_wrapper = NamedAction {
-        name: OSString::literal("defaultTraffic".to_string()),
-        action: Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
-            Position::world(WorldPosition::new(1.0, 2.0)),
-        ))),
-    };
+    // `NamedAction` now models the XSD `Action` choice (:705-712) as
+    // parallel `Option` fields and round-trips every branch; the earlier serialize-only
+    // limitation is gone. Named per-branch constructors below.
+    let _action_wrapper = NamedAction::private(
+        "defaultTraffic",
+        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
+            1.0, 2.0,
+        )))),
+    );
 
     // Named per-branch / `::new` constructors for the previously-fabricating types.
     let _action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(

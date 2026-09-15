@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_vehicle_new_car_defaults() {
-        // OSR-04 (agent G): `Vehicle` no longer has a `Default` impl (it used to fabricate
+        // `Vehicle` no longer has a `Default` impl (it used to fabricate
         // name "DefaultVehicle", a full bounding box, and performance figures nobody wrote).
         // `Vehicle::new_car` requires the name explicitly and fills in the same car-shaped
         // bounding box/performance as a named, deliberate constructor rather than a silent

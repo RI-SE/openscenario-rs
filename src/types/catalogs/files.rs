@@ -1,7 +1,4 @@
-//! Catalog file structure definitions
-//!
-//! This module contains types that represent the structure of catalog files,
-//! matching the XML schema used in OpenSCENARIO catalog files.
+//! The shape of a catalog file itself: the `Catalog` root and the entries it holds.
 
 use super::entities::{
     CatalogController, CatalogManeuver, CatalogMiscObject, CatalogPedestrian, CatalogVehicle,
