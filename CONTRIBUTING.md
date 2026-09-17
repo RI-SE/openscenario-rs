@@ -140,8 +140,8 @@ Three gates run against the corpus in the `conformance` workspace member
 (`openscenario-roundtrip-harness`), which depends on this crate by path with the `validation`
 feature. All three exit non-zero on failure.
 
-The corpus itself is third-party MPL-2.0 content, not vendored into this GPL-3.0-only repo.
-Fetch it once with:
+The corpus itself is third-party content from three upstream repositories (two MPL-2.0, one
+EPL-2.0), not vendored into this GPL-3.0-only repo. Fetch it once with:
 
 ```bash
 bash scripts/fetch-corpus.sh
@@ -154,7 +154,13 @@ bash scripts/fetch-corpus.sh
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs the XSD | schema-invalid output |
 
 Run them from the repo root. `lossy` is the one to check after adding a type, because it is the
-only gate that sees first-parse data loss. All three, plus `cargo test -p
+only gate that sees first-parse data loss.
+
+[`conformance/expectations.toml`](conformance/expectations.toml) records the handful of corpus
+files whose expected outcome is not "passes everything", with the reason and the gates each is
+exempt from. It is not a skip list: every entry asserts something the harness checks, so an
+exemption that stops being needed fails loudly. The categories and the per-gate table are in
+[conformance/README.md](conformance/README.md). All three, plus `cargo test -p
 openscenario-roundtrip-harness`, also run from [the pre-push hook](#the-pre-push-gate), so a push
 that reaches the remote has already cleared them.
 
@@ -163,9 +169,10 @@ identically, so the round-trip comparison still succeeds over data the types nev
 The corpus reported 172/172 for a long time while discarding route positions, vehicle light
 states and global actions. A green `report` means *stable*, not *lossless*.
 
-The corpus also covers only about half the schema – 156 of 294 element declarations. If you
-add a type and `lossy` does not move, that is expected, but it also means the corpus cannot
-validate your work and unit tests are the only check that ran.
+The corpus also covers only part of the schema: 175 of 294 element declarations are present in
+it, and only 165 are reached by a file that a gate actually passes. If you add a type and `lossy`
+does not move, that is expected, but it also means the corpus cannot validate your work and unit
+tests are the only check that ran.
 
 For the audit methods that find gaps in the first place, and the shell caveats that bite while
 running them, see [docs/xsd_gaps.md](docs/xsd_gaps.md).

@@ -17,6 +17,27 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 ### Added
 
+- **A third conformance corpus source, and an expected-failure manifest.** The corpus now also
+  fetches the Eclipse openpass
+  [`openscenario1_engine`](https://gitlab.eclipse.org/eclipse/openpass/openscenario1_engine)
+  scenario data, pinned at `f51968308e464fd8ebdbe5aea6323209d186c70c` and licensed **EPL-2.0**
+  (the two pre-existing sources are MPL-2.0). Like them it is fetched on demand into gitignored
+  `conformance/corpus/` and carries its own upstream `LICENSE`; nothing third-party is vendored.
+  `find conformance/corpus -name '*.xosc' | wc -l` goes **172 → 212**, and the round-trip tests
+  `conformance/build.rs` generates go **172 → 210** (`cargo test -p
+  openscenario-roundtrip-harness`: 217 passed, 0 failed). Schema coverage goes from **156 of 294**
+  element declarations to **175 present in the corpus**, of which **165 are reached by a file that
+  a gate actually passes** — the two figures are not interchangeable and
+  [docs/xsd_gaps.md](docs/xsd_gaps.md) states which is which. The import also added
+  `conformance/expectations.toml`, which records the three corpus files whose expected outcome is
+  not "passes everything": two deliberately invalid upstream fixtures and one schema-valid file
+  this crate cannot yet parse. Exemptions are per gate, and each entry asserts both a premise
+  about the input and that the named gates still genuinely fail, so a stale exemption breaks the
+  build instead of silently protecting nothing. Gate results after the import: `report`
+  210 passed / 0 failed / 2 excluded / 212 total; `lossy` 210 lossless / 0 lossy / 0 skipped /
+  2 excluded / 212 total with 0 dropped and 0 invented items; `validate` 209 schema-valid /
+  0 schema-invalid / 0 skipped / 3 excluded / 212 total with 0 validation errors. No change to
+  `openscenario-rs`'s public API.
 - **`FromStr`/`Display` on all 37 `src/types/enums.rs` enumerations.** Nine enums
   (`TriggeringEntitiesRule`, `Priority`, `StoryboardElementState`, `StoryboardElementType`,
   `ParameterType`, `CoordinateSystem`, `ReferenceContext`, `SpeedTargetValueType`,
@@ -670,13 +691,18 @@ Breaking, unless noted.
   untracked sibling directory that CONTRIBUTING.md and docs/xsd_gaps.md described but a clone
   of this repository did not contain. The repo is now a Cargo workspace; `conformance` is a
   member crate holding the corpus binaries (`report`, `lossy`, `validate`, `builder`) that were
-  previously external, and `scripts/fetch-corpus.sh` fetches the (still unvendored, MPL-2.0)
+  previously external, and `scripts/fetch-corpus.sh` fetches the (still unvendored, third-party)
   corpus on demand. No change to `openscenario-rs`'s public API.
 
 ### Known gaps
 
-None currently tracked. The parameterized-enumeration gap listed here through pass 4 is
-closed — see *90 enum-typed attributes now accept parameter references* under **Changed**.
+**`<TrafficAction>` does not deserialize.** The corpus expansion above brought the first corpus
+file containing one, and the crate rejects it with `invalid type: map, expected a sequence`. It is
+the one `crate-defect` entry in `conformance/expectations.toml`, and ten element declarations are
+present in the corpus but unexercised solely because of it.
+
+The parameterized-enumeration gap listed here through pass 4 is closed — see *90 enum-typed
+attributes now accept parameter references* under **Changed**.
 See [docs/xsd_gaps.md](docs/xsd_gaps.md) for the full ledger.
 
 ## [0.4.2], [0.4.1], [0.4.0] - shipped without changelog entries
