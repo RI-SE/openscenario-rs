@@ -679,6 +679,54 @@ None currently tracked. The parameterized-enumeration gap listed here through pa
 closed — see *90 enum-typed attributes now accept parameter references* under **Changed**.
 See [docs/xsd_gaps.md](docs/xsd_gaps.md) for the full ledger.
 
+## [0.4.2], [0.4.1], [0.4.0] - shipped without changelog entries
+
+These three versions are live and immutable on crates.io. No release notes were written when
+they shipped, and none are reconstructed here. Everything below is transcribed from `git` and
+from the crates.io API; there is deliberately no `Added`/`Changed`/`Fixed` breakdown, because
+no such record exists and inventing one would be worse than the gap. For what a release
+actually contains, run `git log --oneline` over its commit range.
+
+Sources: publication dates are `versions[].created_at` (UTC) from
+`https://crates.io/api/v1/crates/openscenario-rs`. The commit each release was built from is
+the `git.sha1` that `cargo publish` recorded in the published crate's own
+`.cargo_vcs_info.json`, read out of the `.crate` tarball served by crates.io.
+
+| Version | Published (UTC) | crates.io recorded | Tagged at | Commit range |
+|---|---|---|---|---|
+| [0.4.2] | 2026-09-16 | `334d35e` | `334d35e` | `be28848..334d35e` |
+| [0.4.1] | 2026-09-09 | `67b76b1` | `be28848` | `5ae051d..be28848` |
+| [0.4.0] | 2026-09-09 | `b6af9c1` | `5ae051d` | `d9ac1ba..5ae051d` |
+
+Why two rows are tagged somewhere other than what crates.io recorded: this repository's history
+was rewritten (the `backup/*-pre-rewrite` branches predate the rewrite), so two of those SHAs
+are no longer reachable from `main`.
+
+- `67b76b1` is in the repository but not on `main`. The commit `be28848` on `main` has a
+  byte-identical tree (`git rev-parse 67b76b1^{tree} be28848^{tree}`), and every file in the
+  published 0.4.1 `.crate` matches it, so `v0.4.1` is tagged at `be28848`.
+- `b6af9c1` is not in the repository at all. `5ae051d` is the surviving commit whose tree
+  matches the published 0.4.0 `.crate`: of the files in that tarball, all match `5ae051d`
+  except `Cargo.lock`, which `cargo package` regenerates, and `docs/xsd_gaps.md`, which the
+  published crate contains and the rewritten commit does not — that file was lost in the
+  rewrite and later recovered by `09dc499`. `v0.4.0` is tagged at `5ae051d`.
+- The 0.4.2 bump commit is `6195199`; the merge commit `334d35e` two commits later is what was
+  actually published, and it also carries `version = "0.4.2"`. They package identically — the
+  only difference between them, `tools/scenario_converter.rs`, is not included in the crate —
+  so `v0.4.2` is tagged at `334d35e`, the SHA crates.io recorded.
+- The lower bound of the 0.4.0 range is approximate. crates.io recorded 0.3.2 as published from
+  `0474f61`, which is also absent from this repository; `d9ac1ba` is the closest surviving
+  commit (4 of the 193 packaged files differ from the published 0.3.2 crate).
+
+These tags are local and retroactive. They carry no GitHub Releases, because there are no notes
+to put in them.
+
 ## [0.3.2] and earlier
 
 No changelog was kept before this release.
+
+[Unreleased]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/RI-SE/openscenario-rs/tree/v0.4.0
+[0.3.2]: https://crates.io/crates/openscenario-rs/0.3.2
