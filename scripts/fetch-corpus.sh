@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # fetch-corpus.sh — fetch the third-party .xosc conformance corpus.
 #
-# The corpus itself is MPL-2.0 licensed content owned by two upstream
-# repositories. Because this repo is GPL-3.0-only, the corpus is never
-# vendored into git — it is cloned on demand into conformance/corpus/,
-# which is gitignored, and each clone carries its own upstream LICENSE
-# file alongside the .xosc files it supplies.
+# The corpus itself is licensed content owned by three upstream
+# repositories: two MPL-2.0, one EPL-2.0. Because this repo is
+# GPL-3.0-only, the corpus is never vendored into git — it is cloned on
+# demand into conformance/corpus/, which is gitignored, and each clone
+# carries its own upstream LICENSE file alongside the .xosc files it
+# supplies.
 #
 # Usage:
 #   scripts/fetch-corpus.sh            # fetch (idempotent no-op if already present)
@@ -26,6 +27,16 @@ ALKS_SHA="b49dc1dd1750692502c3fc98436f19c6a16ee9f1" # resolved via `git ls-remot
 # https://github.com/vectorgrp/OSC-NCAP-scenarios, default branch: main
 NCAP_URL="https://github.com/vectorgrp/OSC-NCAP-scenarios"
 NCAP_SHA="15365d18bd7d1d6aff46c75938eddaf4325ac8f3" # resolved via `git ls-remote "$NCAP_URL" HEAD` on 2026-08-29
+
+# https://gitlab.eclipse.org/eclipse/openpass/openscenario1_engine, default branch: main
+OPENPASS_URL="https://gitlab.eclipse.org/eclipse/openpass/openscenario1_engine"
+OPENPASS_SHA="f51968308e464fd8ebdbe5aea6323209d186c70c" # resolved via `git ls-remote "$OPENPASS_URL" HEAD` on 2026-09-17
+# Cone-mode sparse checkout of one directory. Cone mode also materializes
+# every ancestor-level file (repo root, engine/, engine/tests/), which is
+# wanted here: LICENSE and NOTICE.md land next to the data for free, along
+# with a handful of C++ build/test files from the upstream engine — do not
+# be surprised to see them in the clone.
+OPENPASS_SPARSE="engine/tests/data"
 
 # --- Paths -------------------------------------------------------------------
 # Resolve everything relative to this script's own location, not $PWD, so it
@@ -82,20 +93,26 @@ clone_sha_at() {
   git_at "$dir" rev-parse HEAD 2>/dev/null
 }
 
-# fetch_pinned <name> <url> <sha> <dest>
+# fetch_pinned <name> <url> <sha> <dest> [sparse_paths]
 #
 # Clones a single commit of a repo into $dest, pinned to $sha. Idempotent: if
 # $dest is already a clone whose HEAD matches $sha, this is a fast no-op.
 # Relies on the "fetch an arbitrary SHA" idiom below, which requires the
 # server to allow fetching by commit hash rather than just by ref
 # (uploadpack.allowReachableSHA1InWant). This has been verified to work
-# against GitHub for both repos used here.
+# against GitHub and against gitlab.eclipse.org.
+#
+# The optional fifth argument is a space-separated list of cone-mode
+# sparse-checkout directories. When non-empty, the fetch adds
+# --filter=blob:none (a partial clone — do not download blobs outside the
+# cone) and a sparse-checkout is set up between the fetch and the checkout.
+# When absent, behaviour is unchanged from a plain full clone.
 #
 # The clone is built in a temporary directory and moved into place only after
 # its SHA is verified, so an interrupted or failed run can never leave a
 # broken clone at $dest for the next run to trip over.
 fetch_pinned() {
-  local name="$1" url="$2" sha="$3" dest="$4"
+  local name="$1" url="$2" sha="$3" dest="$4" sparse="${5:-}"
 
   local current_sha
   if current_sha="$(clone_sha_at "$dest")" && [[ "$current_sha" == "$sha" ]]; then
@@ -120,12 +137,21 @@ fetch_pinned() {
   git init -q "$tmp"
   git_at "$tmp" remote add origin "$url"
 
+  local -a fetch_args=(fetch -q --depth 1)
+  if [[ -n "$sparse" ]]; then
+    fetch_args+=(--filter=blob:none)
+    git_at "$tmp" sparse-checkout init --cone
+    # shellcheck disable=SC2086  # $sparse is intentionally word-split: a
+    # space-separated list of cone-mode directories.
+    git_at "$tmp" sparse-checkout set $sparse
+  fi
+
   # Retry the fetch: GitHub intermittently answers a fetch-by-SHA with
   # "not our ref" even for a current branch tip, and a corpus fetch is not
   # worth failing a whole push over a blip.
   local attempt
   for attempt in 1 2 3; do
-    if git_at "$tmp" fetch -q --depth 1 origin "$sha"; then
+    if git_at "$tmp" "${fetch_args[@]}" origin "$sha"; then
       break
     fi
     if [[ "$attempt" -eq 3 ]]; then
@@ -152,8 +178,10 @@ fetch_pinned() {
 
 fetch_pinned "OSC-ALKS-scenarios" "$ALKS_URL" "$ALKS_SHA" "${CORPUS_DIR}/OSC-ALKS-scenarios"
 fetch_pinned "OSC-NCAP-scenarios" "$NCAP_URL" "$NCAP_SHA" "${CORPUS_DIR}/OSC-NCAP-scenarios"
+fetch_pinned "openscenario1-engine" "$OPENPASS_URL" "$OPENPASS_SHA" \
+  "${CORPUS_DIR}/openscenario1-engine" "$OPENPASS_SPARSE"
 
 # --- Summary -------------------------------------------------------------
 xosc_count="$(find "$CORPUS_DIR" -name '*.xosc' | wc -l | tr -d ' ')"
-echo "==> done: ${xosc_count} .xosc files under ${CORPUS_DIR} (expected 172)"
-echo "==> both corpora are MPL-2.0 licensed; each clone carries its own upstream LICENSE file"
+echo "==> done: ${xosc_count} .xosc files under ${CORPUS_DIR} (expected 212)"
+echo "==> three corpora: two MPL-2.0, one EPL-2.0; each clone carries its own upstream LICENSE file"
