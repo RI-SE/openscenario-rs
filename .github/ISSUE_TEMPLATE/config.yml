@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions about conventions
+    url: https://github.com/RI-SE/openscenario-rs/blob/main/CONTRIBUTING.md
+    about: See CONTRIBUTING.md for conventions and guidelines

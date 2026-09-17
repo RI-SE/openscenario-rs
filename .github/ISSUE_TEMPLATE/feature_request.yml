@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a new feature or enhancement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what_is_missing
+    attributes:
+      label: What is missing?
+      description: Describe the feature or functionality that is missing.
+    validations:
+      required: true
+  - type: textarea
+    id: schema_declaration
+    attributes:
+      label: The schema declaration that defines it
+      description: Cite the type definition in Schema/OpenSCENARIO.xsd. A type with no counterpart in the XSD does not belong in the crate.
+      render: xml
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: What are you trying to build?
+      description: Describe your use case or scenario.
+    validations:
+      required: true
