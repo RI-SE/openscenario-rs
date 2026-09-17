@@ -1,0 +1,65 @@
+# Corpus files whose expected outcome is not "parses, round-trips losslessly, and serializes to
+# schema-valid XML". Anything absent from this file must meet all three.
+#
+# An exclusion that asserts nothing is a silent skip by another name, so every entry carries two
+# assertions the harness actually runs, and a stale entry fails loudly instead of rotting:
+#
+#   1. `assert` states a premise about the *input* file, checked against
+#      `Schema/OpenSCENARIO.xsd` with the crate's own validator:
+#        input-schema-invalid  the input must fail XSD validation. If upstream fixes the file
+#                              when the pinned SHA moves, this trips.
+#        crate-defect          the input must be XSD *valid*. The file is fine; the crate is not.
+#                              `reason` must name the issue that tracks the fix.
+#   2. Every gate named in `gates` must still genuinely fail for this file. An exemption that is
+#      no longer needed — because the crate was fixed or upstream changed — trips too, and the
+#      entry has to be deleted rather than quietly protecting nothing.
+#
+# `path` is relative to `conformance/corpus/` so the manifest is machine-independent, and every
+# `path` must exist in the fetched corpus or the harness errors.
+#
+# `gates` names the binaries the file is exempt from: "report" (round-trip fixed point, and the
+# generated round-trip test `build.rs` emits for it), "lossy", "validate".
+
+[[entry]]
+path = "openscenario1-engine/engine/tests/data/Scenarios/AutomatedLaneKeepingSystemScenarios/Invalid.xosc"
+gates = ["report", "lossy", "validate"]
+assert = "input-schema-invalid"
+reason = """
+Deliberately invalid upstream fixture. Its own comment says so: "The ParameterDeclarations \
+section below is invalid and will lead to validation errors". Line 6 is a bare \
+<ParameterDeclaration /> with no name/parameterType/value, and xmllint reports all three \
+attributes as missing. The crate rejects it at parse with `missing field '@name'`, which is the \
+correct behaviour and the only positive result this file can produce: a successful parse would \
+be the regression. Because the parse fails, `lossy` and `validate` can only skip it, and a skip \
+counts as a failure there — hence all three gates.\
+"""
+
+[[entry]]
+path = "openscenario1-engine/engine/tests/data/Scenarios/OSC_1_3_test_invalid.xosc"
+gates = ["validate"]
+assert = "input-schema-invalid"
+reason = """
+Deliberately invalid upstream fixture. Its own comment says so: "XOR was fixed between 1.2 and \
+1.3. Now ScenarioObject must have an EntityObject (Vehicle, Pedestrian...)". The <ScenarioObject \
+name="Ego"> at line 10 has no EntityObject child. The crate models that choice group as parallel \
+Option fields, so it parses, round-trips to a fixed point and reproduces the input losslessly — \
+it stays live on `report` and `lossy` and must keep passing both. Its serialized output then \
+carries exactly the one schema error the input has ("Element 'ScenarioObject': Missing child \
+element(s)..."), which is the crate behaving correctly: garbage in, identical garbage out. Only \
+`validate` is exempt.\
+"""
+
+[[entry]]
+path = "openscenario1-engine/engine/tests/data/Scenarios/traffic_area_action_test_scenario.xosc"
+gates = ["report", "lossy", "validate"]
+assert = "crate-defect"
+reason = """
+TEMPORARY. This input is schema-valid; the defect is ours. It is the only corpus file containing \
+a <TrafficAction> element, and the crate fails to deserialize it with "invalid type: map, \
+expected a sequence": any field deserialized as a sequence anywhere below <TrafficAction> fails, \
+bisected in OSP-07-RESULTS.md §4 root cause B and localized to the #[serde(flatten)] choice \
+wrapper at src/types/actions/wrappers.rs:72-78. Tracked by OSP-11; the fix lives in src/, which \
+OSP-09 may not touch. The parse failure means `lossy` and `validate` can only skip it, hence all \
+three gates. When OSP-11 lands, the "gate must still fail" assertion above trips and this entry \
+must be deleted — that is the intended way for it to expire.\
+"""

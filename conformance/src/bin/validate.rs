@@ -7,12 +7,26 @@
 //! output no conforming consumer would accept.
 //!
 //! This binary parses each corpus file, serializes it to `xml1`, and validates `xml1` against
-//! the crate's `Schema/OpenSCENARIO.xsd`. Every corpus file is itself XSD-valid, so any failure here is
-//! a crate bug.
+//! the crate's `Schema/OpenSCENARIO.xsd`.
+//!
+//! **Not every corpus file is itself XSD-valid.** The upstream openpass test data deliberately
+//! includes fixtures that are not — a `<ParameterDeclaration />` with no attributes, a
+//! `<ScenarioObject>` with no EntityObject child — and for those the crate's correct behaviour is
+//! to reproduce the invalid document faithfully, which this gate would then flag. Such files are
+//! named in `conformance/expectations.toml` with `validate` among their `gates`, and excluded
+//! here. An exclusion is never a bare opt-out: each excluded file is still parsed, serialized and
+//! validated, must still fail (a stale exemption is an error), must still prove the premise its
+//! `assert` states about the input file, and is named on its own summary line. So any failure
+//! here is still a crate bug — the exclusions are the files where that inference would not hold,
+//! each carrying a positive assertion about why.
 
 use openscenario_roundtrip_harness::xml_profile::{first_line, print_ranked};
 
-use openscenario_roundtrip_harness::{corpus_dir, is_catalog, load_schema, require_corpus};
+use openscenario_roundtrip_harness::{
+    corpus_dir, is_catalog, load_schema, require_corpus, stale_exemption_message, Expectations,
+    Gate,
+};
+use openscenario_rs::validation::ValidationError;
 use openscenario_rs::{
     parse_catalog_from_file, parse_from_file, serialize_catalog_to_string, serialize_to_string,
 };
@@ -23,6 +37,14 @@ fn main() {
     let corpus_dir = corpus_dir();
     let verbose = env::args().any(|a| a == "-v" || a == "--verbose");
     let entries = require_corpus();
+
+    let expectations = match Expectations::load_for(&entries) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(2);
+        }
+    };
 
     // Parse the 2500-line schema exactly once and reuse the context for every file.
     let mut validator = match load_schema() {
@@ -42,6 +64,8 @@ fn main() {
     let mut invalid_files = 0usize;
     let mut skipped = 0usize;
     let mut total_errors = 0usize;
+    let mut excluded: Vec<String> = Vec::new();
+    let mut broken_expectations: Vec<String> = Vec::new();
 
     for path in &entries {
         let rel = path.strip_prefix(&corpus_dir).unwrap();
@@ -57,20 +81,48 @@ fn main() {
                 .and_then(|d| serialize_to_string(&d).map_err(|e| e.to_string()))
         };
 
-        let produced_xml = match produced_xml {
-            Ok(x) => x,
-            Err(e) => {
-                skipped += 1;
-                println!("SKIP  {}  ({})", rel.display(), first_line(&e));
-                continue;
-            }
+        // Both the parse/serialize step and the validation step can fail; `Ok(errors)` is the
+        // only outcome that says anything about schema validity. `outcome` keeps the exemption
+        // handling below from having to repeat the distinction three times.
+        let outcome: Result<Vec<ValidationError>, String> = match produced_xml {
+            Ok(xml) => validator
+                .validate_str(&xml)
+                .map_err(|e| first_line(&e.to_string()).to_string()),
+            Err(e) => Err(first_line(&e).to_string()),
         };
 
-        let errors = match validator.validate_str(&produced_xml) {
+        if let Some(entry) = expectations.exemption(rel, Gate::Validate) {
+            // Excluded, but still run: the exemption has to keep earning its place.
+            match &outcome {
+                Err(e) => println!(
+                    "XFAIL {}  ({e})  (expectations.toml: {})",
+                    rel.display(),
+                    entry.assertion
+                ),
+                Ok(errors) if !errors.is_empty() => {
+                    println!(
+                        "XFAIL {}  ({} errors)  (expectations.toml: {})",
+                        rel.display(),
+                        errors.len(),
+                        entry.assertion
+                    );
+                    if verbose {
+                        for error in errors {
+                            println!("        {error}");
+                        }
+                    }
+                }
+                Ok(_) => broken_expectations.push(stale_exemption_message(rel, Gate::Validate)),
+            }
+            excluded.push(rel.display().to_string());
+            continue;
+        }
+
+        let errors = match outcome {
             Ok(e) => e,
             Err(e) => {
                 skipped += 1;
-                println!("SKIP  {}  ({})", rel.display(), first_line(&e.to_string()));
+                println!("SKIP  {}  ({e})", rel.display());
                 continue;
             }
         };
@@ -95,12 +147,36 @@ fn main() {
         }
     }
 
+    // The other half of what makes an exemption more than a skip: prove each entry's claim about
+    // the input file. Run for every entry in the manifest, not just the ones this gate excluded.
+    broken_expectations.extend(expectations.check_premises(&mut validator));
+
     println!("\n--- summary ---");
     println!(
-        "{valid_files} schema-valid, {invalid_files} schema-invalid, {skipped} skipped, {} total",
+        "{valid_files} schema-valid, {invalid_files} schema-invalid, {skipped} skipped, \
+         {} excluded, {} total",
+        excluded.len(),
         entries.len()
     );
     println!("{total_errors} total validation errors");
+    if !excluded.is_empty() {
+        println!(
+            "\n{} excluded by conformance/expectations.toml:",
+            excluded.len()
+        );
+        for f in &excluded {
+            println!("  {f}");
+        }
+    }
+    if !broken_expectations.is_empty() {
+        println!(
+            "\n{} broken expectation(s) in conformance/expectations.toml:",
+            broken_expectations.len()
+        );
+        for f in &broken_expectations {
+            println!("  {f}");
+        }
+    }
 
     print_ranked("error messages", &message_totals, 40);
     print_ranked("error types", &type_totals, 40);
@@ -108,8 +184,10 @@ fn main() {
     // Exit non-zero so this is a gate, not just a report: a caller checking `$?` must be able to
     // tell a clean run from a regression without parsing the summary text. `skipped` counts as
     // failure too — a file that could not be parsed or serialized was never actually validated,
-    // and silently passing it would hide exactly the kind of breakage this is here to catch.
-    if invalid_files > 0 || skipped > 0 {
+    // and silently passing it would hide exactly the kind of breakage this is here to catch. That
+    // rule is unchanged for every file the manifest does not name; an expectation entry is an
+    // assertion about one specific file, never a widened filter.
+    if invalid_files > 0 || skipped > 0 || !broken_expectations.is_empty() {
         std::process::exit(1);
     }
 }
