@@ -134,11 +134,14 @@ from nothing; it passes `report`, `lossy` and `validate`. It is nevertheless
 That is a real hole in the instrument, tracked as OSP-14. The file is not handled; it is
 merely not caught.
 
-**A green gate run can also be green over nothing.** `conformance/build.rs` generates the
-round-trip tests from whatever is in `conformance/corpus/` at build time, so if the corpus
-is moved or re-fetched by hand and cargo does not re-run `build.rs`, `bash scripts/gate.sh`
-can exit 0 having executed **zero** generated tests. Check the count, not the exit code;
-recovery is `touch conformance/build.rs`. Tracked as OSP-15.
+**A green gate run could once be green over nothing.** `conformance/build.rs` generates the
+round-trip tests from whatever is in `conformance/corpus/` at build time, and cargo tracks
+that directory by its own mtime — which `mv` preserves. Moving the corpus aside and back
+therefore left in place the empty generated file written while it was absent, and
+`bash scripts/gate.sh` would exit 0 having executed **zero** generated tests. The build script
+now records how many corpus files it saw, and `conformance/tests/generated.rs` compares that
+against the corpus at run time, so a stale suite fails instead of passing vacuously. Recovery
+is still `touch conformance/build.rs`, but you are now told to run it. Fixed in OSP-15.
 
 ## Corpus import, 2026-09-17
 
@@ -151,8 +154,9 @@ sources are MPL-2.0). Like them it is fetched on demand into gitignored
 
 - **Files:** `find conformance/corpus -name '*.xosc' | wc -l` went **172 → 212** (+40).
 - **Generated round-trip tests:** 172 → 210; `cargo test -p openscenario-roundtrip-harness`
-  reports **217 passed, 0 failed** (210 generated + 2 lib unit + 1 builder fixture +
-  4 parameterized-enum).
+  reports **218 passed, 0 failed** (210 generated + 2 lib unit + 1 builder fixture +
+  4 parameterized-enum + 1 generated-suite staleness check, the last added by OSP-15 after
+  this import).
 - **Elements present:** 156 → 175 of 294. **Elements proven by a passing gate:** 156 → 165.
   Nineteen element declarations appear in the corpus for the first time —
   `EntityDistribution`, `EntityDistributionEntry`, `Fog`, `GeoPosition`, `Precipitation`,

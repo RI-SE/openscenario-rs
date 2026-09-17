@@ -140,14 +140,17 @@ type and `lossy` does not move, that is expected when the corpus does not exerci
 not mean the type is correct. The method behind both figures, and which one to use when, is in
 [../docs/xsd_gaps.md](../docs/xsd_gaps.md).
 
-Two further ways a green run can mislead, both of them open:
+Two further ways a green run can mislead, one of them still open:
 
 - `trajectory_shape.xosc` passes all three gates and is `xmllint`-invalid anyway. It passes
   `lossy` only because `lossy` cannot see character content. Tracked as OSP-14.
 - `conformance/build.rs` generates the round-trip tests from whatever is in `corpus/` at build
-  time. If the corpus is moved or re-fetched by hand and cargo does not re-run `build.rs`,
-  `bash scripts/gate.sh` can exit 0 having run **zero** generated tests. Read the count, not the
-  exit code; recovery is `touch conformance/build.rs`. Tracked as OSP-15.
+  time. Cargo tracks `corpus/` by the directory's own mtime and `mv` preserves it, so moving the
+  corpus aside and back used to leave the empty generated file behind and let
+  `bash scripts/gate.sh` exit 0 having run **zero** generated tests. The build script now records
+  how many corpus files it saw and `tests/generated.rs` checks that against the corpus at run
+  time, so a stale suite fails and names its recovery, `touch conformance/build.rs`. Fixed in
+  OSP-15.
 
 See [../docs/xsd_gaps.md](../docs/xsd_gaps.md) for the audit methods that find these gaps and
 the currently open conformance gap (`<TrafficAction>` deserialization, OSP-11).

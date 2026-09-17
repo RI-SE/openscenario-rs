@@ -22,6 +22,22 @@ struct Manifest {
     entry: Vec<Entry>,
 }
 
+/// The prelude every generated file carries, empty corpus or not: what this script actually saw.
+///
+/// `tests/generated.rs` compares `CORPUS_FILES_AT_BUILD_TIME` against `corpus_files()` at run
+/// time. Cargo tracks a `rerun-if-changed` directory by the directory's own mtime and `mv`
+/// preserves mtime, so restoring a corpus that was moved aside does not always re-run this
+/// script; without that comparison the empty file written while the corpus was absent survives
+/// and `cargo test` reports `0 passed` as success (OSP-15).
+fn counts_prelude(corpus_files: usize, generated_tests: usize) -> String {
+    format!(
+        "/// Number of `.xosc` files the build script saw under `conformance/corpus/`.\n\
+         const CORPUS_FILES_AT_BUILD_TIME: usize = {corpus_files};\n\n\
+         /// Number of generated round-trip test functions below.\n\
+         const GENERATED_ROUNDTRIP_TESTS: usize = {generated_tests};\n\n"
+    )
+}
+
 fn sanitize(path: &str) -> String {
     path.to_lowercase()
         .chars()
@@ -59,9 +75,11 @@ fn main() {
 
     if entries.is_empty() {
         // The corpus is fetched on demand, not vendored, so this is the normal state of a fresh
-        // checkout. Emit an empty file: `tests/generated.rs` then compiles to zero tests and the
-        // rest of the harness (the builder fixtures, which need no corpus) still runs.
-        fs::write(&dest_path, "").unwrap();
+        // checkout. Emit the counts and nothing else: `tests/generated.rs` then compiles to its
+        // own staleness check and zero round-trip tests, and the rest of the harness (the builder
+        // fixtures, which need no corpus) still runs. The counts are what stops that empty file
+        // from passing vacuously once a corpus is present again — see `counts_prelude`.
+        fs::write(&dest_path, counts_prelude(0, 0)).unwrap();
         println!("cargo:warning=conformance corpus not present; run scripts/fetch-corpus.sh to enable the corpus gates");
         return;
     }
@@ -90,6 +108,9 @@ fn main() {
         .map(|e| e.path.as_str())
         .collect();
 
+    let corpus_files = entries.len();
+    let mut generated_tests = 0usize;
+
     for entry in entries {
         let path = entry.path();
         let rel = path.strip_prefix(&corpus_dir).unwrap();
@@ -113,9 +134,12 @@ fn main() {
         generated.push_str(&format!(
             "#[test]\nfn {test_name}() {{\n    openscenario_roundtrip_harness::{helper}(r#\"{abs_path}\"#);\n}}\n\n",
         ));
+        generated_tests += 1;
 
         println!("cargo:rerun-if-changed={}", path.display());
     }
 
-    fs::write(&dest_path, generated).unwrap();
+    let mut out = counts_prelude(corpus_files, generated_tests);
+    out.push_str(&generated);
+    fs::write(&dest_path, out).unwrap();
 }
