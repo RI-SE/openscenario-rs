@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gate.sh — the project's quality gate: ten stages, in a fixed order.
+# gate.sh — the project's quality gate: eleven stages, in a fixed order.
 #
 # This used to live only inside scripts/hooks/pre-push, which meant nothing
 # else (CI, the release workflow) could run the same checks without copying
@@ -9,13 +9,13 @@
 # Usage:
 #   scripts/gate.sh [all|lint|build|conformance]
 #
-#   (no argument), all  -> all ten stages (markdown links, fmt, clippy, build,
-#                          test, fetch corpus, harness test, report, lossy,
-#                          validate)
+#   (no argument), all  -> all eleven stages (markdown links, fmt, clippy,
+#                          build, test, fetch corpus, harness test, report,
+#                          lossy, validate, validate-input)
 #   lint                -> markdown links, fmt, clippy               (3 stages)
 #   build               -> build, test                               (2 stages)
 #   conformance         -> fetch corpus, harness test, report, lossy,
-#                          validate                                  (5 stages)
+#                          validate, validate-input                  (6 stages)
 #
 # Any other argument is a usage error: a gate that would otherwise run zero
 # stages must never exit 0.
@@ -92,7 +92,7 @@ group_selected() {
   [[ "$filter" == "all" || "$filter" == "$1" ]]
 }
 
-declare -a STAGE_GROUPS=(lint lint lint build build conformance conformance conformance conformance conformance)
+declare -a STAGE_GROUPS=(lint lint lint build build conformance conformance conformance conformance conformance conformance)
 TOTAL_STAGES=0
 for g in "${STAGE_GROUPS[@]}"; do
   group_selected "$g" && TOTAL_STAGES=$((TOTAL_STAGES + 1))
@@ -175,7 +175,14 @@ stage conformance "Fetch conformance corpus"              -- bash scripts/fetch-
 stage conformance "Test conformance harness"              -- cargo test -p openscenario-roundtrip-harness
 stage conformance "Conformance report (round-trip)"       -- cargo run -p openscenario-roundtrip-harness --bin report
 stage conformance "Conformance lossy (dropped/invented)"  -- cargo run -p openscenario-roundtrip-harness --bin lossy
-stage conformance "Conformance XSD validation"            -- cargo run -p openscenario-roundtrip-harness --bin validate
+stage conformance "Conformance XSD validation (output)"   -- cargo run -p openscenario-roundtrip-harness --bin validate
+
+# The only stage that asks a question about the corpus rather than about this
+# crate: is each input file itself XSD-valid? Added by OSP-14, because a
+# schema-invalid input whose invalid part the crate does not model is parsed,
+# the content is dropped, and the output validates — so `validate` went green
+# *because* something was lost.
+stage conformance "Conformance XSD validation (input)"    -- cargo run -p openscenario-roundtrip-harness --bin validate-input
 
 echo
 echo "${green}${bold}gate.sh: all ${TOTAL_STAGES} stages passed in ${SECONDS}s.${reset}"

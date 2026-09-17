@@ -255,17 +255,24 @@ pub fn assert_catalog_roundtrip_fixed_point(path: &str) {
 //   2. "still needed" — the gate the file is exempt from must still genuinely fail for it,
 //      checked by each binary at the point it would otherwise have run the gate.
 
-/// One of the three corpus gates a file can be exempted from.
+/// One of the four corpus gates a file can be exempted from.
 ///
 /// `Report` covers both `src/bin/report.rs` and the round-trip test `build.rs` generates for the
 /// file — they ask the same question of the same file, so exempting one without the other would
 /// leave the gate red in `cargo test` and green in the binary.
+///
+/// `ValidateInput` is the odd one out: it asks about the **input** file rather than about
+/// anything this crate produced, so it is the only gate whose result is independent of the code.
+/// Added by OSP-14, because `report`, `lossy` and `validate` between them could all stay green
+/// over a schema-invalid input that the crate quietly improved into a valid document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Gate {
     Report,
     Lossy,
     Validate,
+    #[serde(rename = "validate-input")]
+    ValidateInput,
 }
 
 impl fmt::Display for Gate {
@@ -274,6 +281,7 @@ impl fmt::Display for Gate {
             Gate::Report => "report",
             Gate::Lossy => "lossy",
             Gate::Validate => "validate",
+            Gate::ValidateInput => "validate-input",
         })
     }
 }

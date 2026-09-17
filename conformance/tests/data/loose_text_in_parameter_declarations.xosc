@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-built regression fixture for OSP-14. Everything here is the smallest document that still
+  parses, except line 12: the stray `value="1.57" />` is loose character content inside
+  <ParameterDeclarations>, whose XSD content type is element-only. It reproduces, in eighteen
+  lines, the upstream typo in the corpus file
+  openscenario1-engine/engine/tests/data/Scenarios/trajectory_shape.xosc.
+
+  Delete nothing from this file without reading conformance/tests/loose_text.rs first: the test
+  asserts that the input is XSD-invalid *because of the character content*, that the crate drops
+  the text, and that `profile()` sees the drop.
+-->
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2026-09-17T00:00:00" description="OSP-14 regression fixture: loose text in an element-only parent" author="openscenario-rs"/>
+  <ParameterDeclarations>
+    <ParameterDeclaration name="Speed" parameterType="double" value="16.66666667"/>
+    value="1.57" />
+  </ParameterDeclarations>
+  <CatalogLocations/>
+  <RoadNetwork>
+    <LogicFile filepath="Road.xodr"/>
+  </RoadNetwork>
+  <Entities/>
+  <Storyboard>
+    <Init>
+      <Actions/>
+    </Init>
+  </Storyboard>
+</OpenSCENARIO>

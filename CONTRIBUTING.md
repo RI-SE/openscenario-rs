@@ -25,7 +25,7 @@ all – which is an easy way to land code that does not build.
 
 ### The pre-push gate
 
-All ten gate stages – markdown links, `cargo fmt --check`, clippy, build, test, and the five
+All eleven gate stages – markdown links, `cargo fmt --check`, clippy, build, test, and the six
 conformance stages – live in one place, [`scripts/gate.sh`](scripts/gate.sh). Both the local
 `pre-push` hook and the hosted `gate` job in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) run that same script, so there is exactly
@@ -45,7 +45,7 @@ run"), so this one setting works from every `git worktree` of the repo.
 
 `scripts/hooks/pre-push` itself only parses what Git hands it on stdin and decides whether there
 is anything new to verify; if there is, it `exec`s `scripts/gate.sh` with no arguments, so it
-always runs all ten stages. It checks the working tree as it currently sits, not the commits
+always runs all eleven stages. It checks the working tree as it currently sits, not the commits
 being pushed – a dirty tree, or a commit amended after the last green run, is not what was
 verified. That caveat is no reason to distrust the hook; it is the reason the hosted `gate` job
 exists too, checking the actual commits on every pull request and every push to `main`.
@@ -57,8 +57,8 @@ bash scripts/gate.sh
 ```
 
 It takes an optional stage filter as its one argument – `lint` (markdown links, fmt, clippy),
-`build` (build, test), or `conformance` (fetch corpus plus the four conformance binaries) – for a
-faster loop while iterating; an unrecognized filter is a usage error, not a silent no-op. It also
+`build` (build, test), or `conformance` (fetch corpus, the harness tests, and the four corpus
+gate binaries) – for a faster loop while iterating; an unrecognized filter is a usage error, not a silent no-op. It also
 checks system prerequisites first, for every filter – the MSRV from `Cargo.toml`'s
 `rust-version`, and `pkg-config`'s view of libxml2, which the `validation` feature links against
 – so a missing dependency reports itself instead of surfacing as a linker error halfway through a
@@ -136,9 +136,9 @@ which asserts the emitted element name for every such site.
 
 ## The conformance gates
 
-Three gates run against the corpus in the `conformance` workspace member
+Four gates run against the corpus in the `conformance` workspace member
 (`openscenario-roundtrip-harness`), which depends on this crate by path with the `validation`
-feature. All three exit non-zero on failure.
+feature. All four exit non-zero on failure.
 
 The corpus itself is third-party content from three upstream repositories (two MPL-2.0, one
 EPL-2.0), not vendored into this GPL-3.0-only repo. Fetch it once with:
@@ -152,15 +152,19 @@ bash scripts/fetch-corpus.sh
 | `cargo run -p openscenario-roundtrip-harness --bin report` | `xml1` vs `xml2` | parse failures, instability across serialization |
 | `cargo run -p openscenario-roundtrip-harness --bin lossy` | the original file vs `xml1` | data dropped or invented on the first parse |
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs the XSD | schema-invalid output |
+| `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs the XSD | a schema-invalid input, which the crate may otherwise "improve" into a valid document by dropping the invalid part |
 
 Run them from the repo root. `lossy` is the one to check after adding a type, because it is the
-only gate that sees first-parse data loss.
+only gate that sees first-parse data loss. `validate-input` is the odd one out: it never parses
+the file with this crate, so its verdict is a fact about the corpus rather than about the code,
+and it is what stops a green `validate` run from meaning "the output is valid" when the reason is
+that content went missing.
 
 [`conformance/expectations.toml`](conformance/expectations.toml) records the handful of corpus
 files whose expected outcome is not "passes everything", with the reason and the gates each is
 exempt from. It is not a skip list: every entry asserts something the harness checks, so an
 exemption that stops being needed fails loudly. The categories and the per-gate table are in
-[conformance/README.md](conformance/README.md). All three, plus `cargo test -p
+[conformance/README.md](conformance/README.md). All four, plus `cargo test -p
 openscenario-roundtrip-harness`, also run from [the pre-push hook](#the-pre-push-gate), so a push
 that reaches the remote has already cleared them.
 

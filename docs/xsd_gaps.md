@@ -32,9 +32,9 @@ the bundled `xosc-validate` binary validates individual files without it.
 
 ## What the harness proves, and what it does not
 
-Four independent checks run against the corpus in `conformance/corpus`. All four exit
+Five independent checks run against the corpus in `conformance/corpus`. All five exit
 non-zero on failure, so they can be gated on `$?` rather than by reading output. Only the
-first three run in `scripts/hooks/pre-push`; `builder` does not, because it exercises
+first four run in `scripts/hooks/pre-push`; `builder` does not, because it exercises
 `src/builder/` rather than the parser and has no corpus fixtures of its own — run it by
 hand for any change under `src/builder/`.
 
@@ -43,6 +43,7 @@ hand for any change under `src/builder/`.
 | `cargo run -p openscenario-roundtrip-harness --bin report` | `xml1` vs `xml2` | parse failures, and instability across serialization |
 | `cargo run -p openscenario-roundtrip-harness --bin lossy` | **original file** vs `xml1` | data dropped or invented on the *first* parse |
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs **the XSD** | schema-invalid output: invented fields, mis-ordered sequences, empty choice groups |
+| `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs **the XSD** | a schema-invalid *input*, which the crate may otherwise "improve" into a valid document by dropping the part that made it invalid (OSP-14) |
 | `cargo run -p openscenario-roundtrip-harness --bin builder` (not in the pre-push gate) | every builder fixture, through the same three questions | the builder API producing non-schema-valid or lossy output, using code as the corpus instead of files |
 
 ### The corpus covers about three fifths of the schema
@@ -53,7 +54,7 @@ This bounds every green result above, and is the most important caveat on this p
 | measure | elements | of 294 |
 |---|---|---|
 | present anywhere in the 212-file corpus | 175 | 59.5% |
-| **proven by a passing gate** — the 209 files no gate exempts | **165** | **56.1%** |
+| **proven by a passing gate** — the 208 files no gate exempts | **165** | **56.1%** |
 | for comparison, the 172-file corpus before the 2026-09 import | 156 | 53.1% |
 
 **Method.** This was never written down when `156 of 294` was first recorded here, and had
@@ -74,6 +75,12 @@ comm -12 /tmp/xsd_elements.txt /tmp/present.txt | wc -l                   # 175
 Restricting the `find` to the files that no entry in `conformance/expectations.toml`
 exempts gives **165**. Both pipelines avoid `tr`, for the aliasing reason noted under
 *Audit methods*.
+
+That restricted set went 209 → 208 files in OSP-14, when `trajectory_shape.xosc` gained an
+entry, and the element figure did **not** move: re-running the pipeline with that file
+excluded as well still gives 165, because every element it contains occurs in some other
+non-exempt file. Measured 2026-09-17 by adding `! -name 'trajectory_shape.xosc'` to the
+`find` above and diffing the two `comm -12` outputs, which come out identical.
 
 **Which figure to trust: 165.** An excluded file is parsed by nothing and serialized by
 nothing, so counting its elements as "exercised" would credit the corpus for work no gate
@@ -154,9 +161,11 @@ sources are MPL-2.0). Like them it is fetched on demand into gitignored
 
 - **Files:** `find conformance/corpus -name '*.xosc' | wc -l` went **172 → 212** (+40).
 - **Generated round-trip tests:** 172 → 210; `cargo test -p openscenario-roundtrip-harness`
-  reports **218 passed, 0 failed** (210 generated + 2 lib unit + 1 builder fixture +
+  reported **218 passed, 0 failed** (210 generated + 2 lib unit + 1 builder fixture +
   4 parameterized-enum + 1 generated-suite staleness check, the last added by OSP-15 after
-  this import).
+  this import). It is **225** since OSP-14, which added 4 `xml_profile` unit tests and the
+  3-test `tests/loose_text.rs` regression; the generated count is unchanged, because
+  `trajectory_shape.xosc` is not exempt from `report`.
 - **Elements present:** 156 → 175 of 294. **Elements proven by a passing gate:** 156 → 165.
   Nineteen element declarations appear in the corpus for the first time —
   `EntityDistribution`, `EntityDistributionEntry`, `Fog`, `GeoPosition`, `Precipitation`,
@@ -168,7 +177,8 @@ sources are MPL-2.0). Like them it is fetched on demand into gitignored
 - **What the gates said afterwards:** `report` 210 passed / 0 failed / 2 excluded / 212
   total; `lossy` 210 lossless / 0 lossy / 0 skipped / 2 excluded / 212 total, 0 dropped and
   0 invented items; `validate` 209 schema-valid / 0 schema-invalid / 0 skipped / 3 excluded
-  / 212 total, 0 validation errors. `bash scripts/gate.sh` exits 0 over all ten stages.
+  / 212 total, 0 validation errors. `bash scripts/gate.sh` exits 0 over all ten stages
+  (ten at that commit; eleven since OSP-14 added the `validate-input` stage).
 
 The import found one defect in this crate rather than in the data: the crate cannot
 deserialize `<TrafficAction>`, failing with `invalid type: map, expected a sequence` at the

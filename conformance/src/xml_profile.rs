@@ -1,9 +1,15 @@
 //! Structural XML comparison and shared reporting helpers.
 //!
-//! Both sides of a comparison are reduced to a multiset of `path/to/Element` and
-//! `path/to/Element@attr` keys, so attribute order and whitespace don't matter. Anything present
-//! on the left but not the right is *dropped*; anything on the right but not the left is
-//! *invented*.
+//! Both sides of a comparison are reduced to a multiset of `path/to/Element`,
+//! `path/to/Element@attr` and `path/to/Element#text` keys, so attribute order and whitespace
+//! don't matter. Anything present on the left but not the right is *dropped*; anything on the
+//! right but not the left is *invented*.
+//!
+//! The `#text` keys were added by OSP-14. Without them `profile()` could not see character
+//! content at all, so a document carrying loose text in an element that forbids it parsed,
+//! silently lost the text, and was certified *lossless* by the one gate whose entire job is to
+//! notice that nothing was dropped. An unobservable difference must not be reported as no
+//! difference.
 //!
 //! `lossy` uses this to compare an original corpus file against the crate's re-serialization of
 //! it; the builder harness uses the same comparator to measure how much of a real scenario a
@@ -19,7 +25,8 @@ pub fn is_plumbing(attr: &str) -> bool {
     attr.starts_with("xmlns") || attr.starts_with("xsi:")
 }
 
-/// Reduces XML to a multiset of `path/to/Element` and `path/to/Element@attr` keys.
+/// Reduces XML to a multiset of `path/to/Element`, `path/to/Element@attr` and
+/// `path/to/Element#text` keys.
 pub fn profile(xml: &str) -> Result<BTreeMap<String, i64>, String> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);
@@ -41,11 +48,33 @@ pub fn profile(xml: &str) -> Result<BTreeMap<String, i64>, String> {
             Ok(Event::End(_)) => {
                 stack.pop();
             }
+            Ok(Event::Text(e)) => note_text(&mut counts, &stack, e.as_ref()),
+            Ok(Event::CData(e)) => note_text(&mut counts, &stack, e.as_ref()),
             _ => {}
         }
         buf.clear();
     }
     Ok(counts)
+}
+
+/// Records one character-content node under the element currently on the stack, as a
+/// `path/to/Element#text` key.
+///
+/// `trim_text(true)` is set on the reader, but confirm what that actually leaves before relying
+/// on it: it drops a text event whose content is *entirely* whitespace, and trims the ends of one
+/// that is not, so what reaches here is every text node with at least one non-whitespace
+/// character. It does not apply to `CDATA` at all, hence the explicit re-trim below.
+///
+/// Keyed by path and counted, never keyed by value. The question this gate asks is "did anything
+/// disappear", and a per-path count answers it without making the key sensitive to escaping or
+/// to internal whitespace, which serialization is free to change.
+fn note_text(counts: &mut BTreeMap<String, i64>, stack: &[String], raw: &[u8]) {
+    if String::from_utf8_lossy(raw).trim().is_empty() {
+        return;
+    }
+    let mut key = stack.join("/");
+    key.push_str("#text");
+    *counts.entry(key).or_insert(0) += 1;
 }
 
 fn push_element(
@@ -132,4 +161,48 @@ pub fn print_ranked(label: &str, totals: &BTreeMap<String, i64>, limit: usize) {
 
 pub fn first_line(message: &str) -> &str {
     message.lines().next().unwrap_or(message)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// What `trim_text(true)` actually leaves, pinned rather than assumed: indentation between
+    /// elements produces no key at all, so `#text` keys only ever mean real content.
+    #[test]
+    fn whitespace_between_elements_is_not_a_key() {
+        let counts = profile("<a>\n  <b/>\n</a>").expect("well-formed");
+        assert_eq!(
+            counts.keys().collect::<Vec<_>>(),
+            vec!["a", "a/b"],
+            "indentation must not register as character content"
+        );
+    }
+
+    /// Mixed content is counted per node, under the element the node sits in.
+    #[test]
+    fn mixed_content_counts_one_key_per_text_node() {
+        let counts = profile("<a>one<b/>two</a>").expect("well-formed");
+        assert_eq!(counts.get("a#text").copied(), Some(2));
+        assert_eq!(counts.get("a/b#text").copied(), None);
+    }
+
+    /// `trim_text` does not apply to CDATA, which is why `note_text` re-trims.
+    #[test]
+    fn cdata_is_character_content_but_whitespace_cdata_is_not() {
+        let counts = profile("<a><![CDATA[x]]><b><![CDATA[   ]]></b></a>").expect("well-formed");
+        assert_eq!(counts.get("a#text").copied(), Some(1));
+        assert_eq!(counts.get("a/b#text").copied(), None);
+    }
+
+    /// The OSP-14 defect in miniature: text present on the left, absent on the right, and the
+    /// comparator has to say so.
+    #[test]
+    fn dropped_text_shows_up_in_the_diff() {
+        let before = profile("<a><b/>stray</a>").expect("well-formed");
+        let after = profile("<a><b/></a>").expect("well-formed");
+        let d = diff(&before, &after);
+        assert_eq!(d.dropped, vec![("a#text".to_string(), 1)]);
+        assert!(d.invented.is_empty());
+    }
 }

@@ -6,7 +6,7 @@
 # without sending anything (githooks(5): "If this hook exits with a non-zero
 # status, git push will abort without pushing anything").
 #
-# The gate itself (all ten stages, the preflight checks, and the fmt/markdown
+# The gate itself (all eleven stages, the preflight checks, and the fmt/markdown
 # helpers) lives in scripts/gate.sh, so CI and the release workflow can run
 # the same stages without copying them into a second file that would drift
 # from this one. This hook only handles what is genuinely hook-specific: the

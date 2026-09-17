@@ -1,6 +1,6 @@
 # openscenario-roundtrip-harness
 
-This crate is the `conformance` workspace member: a corpus of real `.xosc` files plus four
+This crate is the `conformance` workspace member: a corpus of real `.xosc` files plus five
 binaries that run this repo's types against them. It depends on `openscenario-rs` by path with
 the `builder` and `validation` features, so it always exercises the working tree, never a
 published version. See [../CONTRIBUTING.md](../CONTRIBUTING.md) for the day-to-day commands and
@@ -35,16 +35,17 @@ The openpass clone is fetched with a cone-mode sparse checkout of `engine/tests/
 also materialises every ancestor-level file, which is how its `LICENSE` and `NOTICE.md` land in
 the clone rather than being sparsed away.
 
-Without the corpus, `report`, `lossy` and `validate` print a hint and exit 1; `cargo test -p
-openscenario-roundtrip-harness` generates zero corpus tests and still runs the builder-fixture
-gate; `builder` (without `--coverage`) needs no corpus at all.
+Without the corpus, `report`, `lossy`, `validate` and `validate-input` print a hint and exit 1;
+`cargo test -p openscenario-roundtrip-harness` generates zero corpus tests and still runs the
+builder-fixture gate; `builder` (without `--coverage`) needs no corpus at all.
 
-## The four binaries
+## The five binaries
 
 ```bash
 cargo run -p openscenario-roundtrip-harness --bin report
 cargo run -p openscenario-roundtrip-harness --bin lossy
 cargo run -p openscenario-roundtrip-harness --bin validate
+cargo run -p openscenario-roundtrip-harness --bin validate-input
 cargo run -p openscenario-roundtrip-harness --bin builder
 cargo run -p openscenario-roundtrip-harness --bin builder -- --coverage
 ```
@@ -54,6 +55,7 @@ cargo run -p openscenario-roundtrip-harness --bin builder -- --coverage
 | `report` | Every corpus file parses, serializes, reparses and reserializes to the same XML twice in a row (a round-trip fixed point). |
 | `lossy` | The *first* serialization against the *original* file, so it can see data dropped or invented on the initial parse — the one thing `report` cannot see. |
 | `validate` | The serialized output against `Schema/OpenSCENARIO.xsd`. |
+| `validate-input` | The corpus file *as it sits on disk* against `Schema/OpenSCENARIO.xsd`. The only gate that never parses the file with this crate, so its verdict is a fact about the corpus. It exists because a schema-invalid input whose invalid part the crate does not model is parsed, the content is dropped, and the output validates — `validate` then goes green *because* something was lost. Added by OSP-14. |
 | `builder` | Every builder fixture through the same three questions (round trip, fidelity, schema), using code as the corpus instead of files. With `--coverage`, reports how much of one real scenario the builder can reconstruct — a figure, not a gate. |
 
 ## Expected failures: `expectations.toml`
@@ -79,14 +81,22 @@ these two things is true about it.
 ### Exemptions are per gate
 
 `gates` names the binaries a file is exempt from — `"report"` (which also suppresses the
-round-trip test `build.rs` generates for it), `"lossy"`, `"validate"`. A file exempt from one is
-still live on the others and must still pass them.
+round-trip test `build.rs` generates for it), `"lossy"`, `"validate"` (the crate's *output*
+against the XSD), `"validate-input"` (the file *as it sits on disk* against the XSD). A file
+exempt from one is still live on the others and must still pass them.
+
+`"validate"` and `"validate-input"` ask different questions and an entry needs whichever one it
+actually fails. Being exempt from `"validate-input"` while staying live on `"validate"` is the
+normal shape of a deliberately invalid fixture the crate reproduces faithfully; for an
+`assert = "crate-defect"` entry, whose premise is that the input is valid, a `"validate-input"`
+exemption can never be right.
 
 | File (under `corpus/openscenario1-engine/engine/tests/data/Scenarios/`) | `gates` | `assert` | Why |
 |---|---|---|---|
-| `AutomatedLaneKeepingSystemScenarios/Invalid.xosc` | report, lossy, validate | `input-schema-invalid` | Deliberately invalid upstream fixture; the crate correctly refuses to parse it, so the other two gates could only skip it. |
-| `OSC_1_3_test_invalid.xosc` | validate | `input-schema-invalid` | Deliberately invalid upstream fixture that nonetheless round-trips losslessly, so it stays live on `report` and `lossy`. Its output carries exactly the one schema error its input has: garbage in, identical garbage out. |
-| `traffic_area_action_test_scenario.xosc` | report, lossy, validate | `crate-defect` | **Temporary.** Schema-valid input the crate cannot deserialize (`<TrafficAction>`); tracked by OSP-11. |
+| `AutomatedLaneKeepingSystemScenarios/Invalid.xosc` | report, lossy, validate, validate-input | `input-schema-invalid` | Deliberately invalid upstream fixture; the crate correctly refuses to parse it, so the other two gates could only skip it. |
+| `OSC_1_3_test_invalid.xosc` | validate, validate-input | `input-schema-invalid` | Deliberately invalid upstream fixture that nonetheless round-trips losslessly, so it stays live on `report` and `lossy`. Its output carries exactly the one schema error its input has: garbage in, identical garbage out. |
+| `traffic_area_action_test_scenario.xosc` | report, lossy, validate | `crate-defect` | **Temporary.** Schema-valid input the crate cannot deserialize (`<TrafficAction>`); tracked by OSP-11. Its input *is* valid, so it stays live on `validate-input` and passes it. |
+| `trajectory_shape.xosc` | lossy, validate-input | `input-schema-invalid` | Upstream typo leaves loose text inside `<ParameterDeclarations>`, which is element-only. The crate has nowhere to put it, drops it, and emits a **valid** document — an invalid input quietly improved. Stays live on `report` and on `validate`, both of which it genuinely passes. Found by OSP-07, made visible by OSP-14. |
 
 ### The anti-rot mechanism is two assertions, not one
 
@@ -115,8 +125,12 @@ XFAIL …/traffic_area_action_test_scenario.xosc  (XML parsing error: invalid ty
 209 schema-valid, 0 schema-invalid, 0 skipped, 3 excluded, 212 total
 ```
 
-The denominator of a green run is therefore not 212. `report` and `lossy` report 2 excluded;
-`validate` reports 3.
+The denominator of a green run is therefore not 212. `report` reports 2 excluded; `lossy`,
+`validate` and `validate-input` report 3 each — but not the same 3. `lossy` excludes
+`Invalid.xosc`, `traffic_area_action_test_scenario.xosc` and `trajectory_shape.xosc`; `validate`
+excludes `Invalid.xosc`, `OSC_1_3_test_invalid.xosc` and `traffic_area_action_test_scenario.xosc`;
+`validate-input` excludes the three files that are invalid on disk, which are `Invalid.xosc`,
+`OSC_1_3_test_invalid.xosc` and `trajectory_shape.xosc`.
 
 | Exit code | Meaning |
 |---|---|
@@ -126,11 +140,13 @@ The denominator of a green run is therefore not 212. `report` and `lossy` report
 
 ## What a green run proves, and what it does not
 
-`report`, `lossy` and `validate` all exit non-zero on failure, so they gate cleanly on `$?`.
-But a green `report` run means the round trip is **stable**, not **lossless**: serde drops
-unknown XML identically on every pass, so a field the Rust types never modeled produces a
-passing comparison anyway. `lossy` is what makes dropped or invented data visible, and
-`validate` is the only one of the three that consults the schema at all.
+`report`, `lossy`, `validate` and `validate-input` all exit non-zero on failure, so they gate
+cleanly on `$?`. But a green `report` run means the round trip is **stable**, not **lossless**:
+serde drops unknown XML identically on every pass, so a field the Rust types never modeled
+produces a passing comparison anyway. `lossy` is what makes dropped or invented data visible —
+including dropped *character content*, which it could not see before OSP-14 — and the two
+`validate` binaries are the ones that consult the schema, one about the output and one about the
+input.
 
 The corpus itself bounds every result above. It is **212 `.xosc` files** from three scenario
 families, and it covers **175 of the schema's 294 element declarations (59.5%)** — but only
@@ -142,8 +158,11 @@ not mean the type is correct. The method behind both figures, and which one to u
 
 Two further ways a green run can mislead, one of them still open:
 
-- `trajectory_shape.xosc` passes all three gates and is `xmllint`-invalid anyway. It passes
-  `lossy` only because `lossy` cannot see character content. Tracked as OSP-14.
+- `trajectory_shape.xosc` used to pass all three gates while being `xmllint`-invalid anyway,
+  because `lossy` could not see character content and so could not see the crate dropping the
+  stray text that made the input invalid. `profile()` now counts `path/to/Element#text` keys and
+  the `validate-input` gate checks each input against the XSD, so the file is flagged by both and
+  carries an `expectations.toml` entry stating why. Fixed in OSP-14.
 - `conformance/build.rs` generates the round-trip tests from whatever is in `corpus/` at build
   time. Cargo tracks `corpus/` by the directory's own mtime and `mv` preserves it, so moving the
   corpus aside and back used to leave the empty generated file behind and let

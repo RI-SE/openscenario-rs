@@ -18,11 +18,18 @@
 # `path` must exist in the fetched corpus or the harness errors.
 #
 # `gates` names the binaries the file is exempt from: "report" (round-trip fixed point, and the
-# generated round-trip test `build.rs` emits for it), "lossy", "validate".
+# generated round-trip test `build.rs` emits for it), "lossy", "validate" (the crate's *output*
+# against the XSD), "validate-input" (the file *as it sits on disk* against the XSD).
+#
+# "validate" and "validate-input" are not the same question and an entry needs whichever one it
+# actually fails. A file can be exempt from "validate-input" and still live on "validate": that is
+# the normal shape of a deliberately invalid upstream fixture whose invalidity the crate
+# reproduces faithfully. The reverse combination cannot be right for an `assert = "crate-defect"`
+# entry, whose whole premise is that the input is valid.
 
 [[entry]]
 path = "openscenario1-engine/engine/tests/data/Scenarios/AutomatedLaneKeepingSystemScenarios/Invalid.xosc"
-gates = ["report", "lossy", "validate"]
+gates = ["report", "lossy", "validate", "validate-input"]
 assert = "input-schema-invalid"
 reason = """
 Deliberately invalid upstream fixture. Its own comment says so: "The ParameterDeclarations \
@@ -31,12 +38,13 @@ section below is invalid and will lead to validation errors". Line 6 is a bare \
 attributes as missing. The crate rejects it at parse with `missing field '@name'`, which is the \
 correct behaviour and the only positive result this file can produce: a successful parse would \
 be the regression. Because the parse fails, `lossy` and `validate` can only skip it, and a skip \
-counts as a failure there — hence all three gates.\
+counts as a failure there — hence those three gates. `validate-input` is the fourth: the input \
+file is invalid on disk, which is the whole point of the fixture.\
 """
 
 [[entry]]
 path = "openscenario1-engine/engine/tests/data/Scenarios/OSC_1_3_test_invalid.xosc"
-gates = ["validate"]
+gates = ["validate", "validate-input"]
 assert = "input-schema-invalid"
 reason = """
 Deliberately invalid upstream fixture. Its own comment says so: "XOR was fixed between 1.2 and \
@@ -46,7 +54,8 @@ Option fields, so it parses, round-trips to a fixed point and reproduces the inp
 it stays live on `report` and `lossy` and must keep passing both. Its serialized output then \
 carries exactly the one schema error the input has ("Element 'ScenarioObject': Missing child \
 element(s)..."), which is the crate behaving correctly: garbage in, identical garbage out. Only \
-`validate` is exempt.\
+the two schema gates are exempt: `validate` because the output is invalid, `validate-input` \
+because the input is.\
 """
 
 [[entry]]
@@ -62,4 +71,24 @@ wrapper at src/types/actions/wrappers.rs:72-78. Tracked by OSP-11; the fix lives
 OSP-09 may not touch. The parse failure means `lossy` and `validate` can only skip it, hence all \
 three gates. When OSP-11 lands, the "gate must still fail" assertion above trips and this entry \
 must be deleted — that is the intended way for it to expire.\
+"""
+
+[[entry]]
+path = "openscenario1-engine/engine/tests/data/Scenarios/trajectory_shape.xosc"
+gates = ["lossy", "validate-input"]
+assert = "input-schema-invalid"
+reason = """
+Upstream typo, not a deliberate fixture: line 12 is the stray text `value="1.57" /> ` left \
+loose inside <ParameterDeclarations> after an edit, and xmllint reports "Element \
+'ParameterDeclarations': Character content other than whitespace is not allowed because the \
+content type is 'element-only'". The crate has nowhere to put character content inside that \
+element, so it drops the text and emits a document that is schema-VALID — an invalid input \
+quietly improved into a valid one. That is why this file needs two exemptions and no more: \
+`lossy` sees the dropped `OpenSCENARIO/ParameterDeclarations#text` key (it could not see \
+character content at all before OSP-14, which is how this file passed everything) and \
+`validate-input` sees the invalid input. It stays live on `report`, which it passes as a \
+fixed point, and on `validate`, which it passes because the output really is valid — recording \
+that the improvement happened rather than pretending it did not. If upstream fixes the typo, \
+both the `input-schema-invalid` premise and both gate assertions trip at once and this entry \
+must be deleted.\
 """
