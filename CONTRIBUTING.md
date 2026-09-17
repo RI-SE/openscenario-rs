@@ -25,8 +25,14 @@ all – which is an easy way to land code that does not build.
 
 ### The pre-push gate
 
-There is no hosted CI. The full gate runs locally instead, as a `pre-push` hook. Enable it once
-per clone:
+All ten gate stages – markdown links, `cargo fmt --check`, clippy, build, test, and the five
+conformance stages – live in one place, [`scripts/gate.sh`](scripts/gate.sh). Both the local
+`pre-push` hook and the hosted `gate` job in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) run that same script, so there is exactly
+one copy of the stage list and it cannot drift between "what the hook checks" and "what CI
+checks."
+
+Enable the hook once per clone:
 
 ```bash
 git config core.hooksPath scripts/hooks
@@ -37,10 +43,47 @@ only Git's stock `*.sample` files. The relative path is resolved against the top
 tree (`git-config(1)`: "A relative path is taken as relative to the directory where the hooks are
 run"), so this one setting works from every `git worktree` of the repo.
 
-The hook runs everything above plus all four conformance gates, and aborts the push if any stage
-fails. It checks system prerequisites first – the MSRV, and `pkg-config`'s view of libxml2, which
-the `validation` feature links against – so a missing dependency reports itself instead of
-surfacing as a linker error halfway through a build.
+`scripts/hooks/pre-push` itself only parses what Git hands it on stdin and decides whether there
+is anything new to verify; if there is, it `exec`s `scripts/gate.sh` with no arguments, so it
+always runs all ten stages. It checks the working tree as it currently sits, not the commits
+being pushed – a dirty tree, or a commit amended after the last green run, is not what was
+verified. That caveat is no reason to distrust the hook; it is the reason the hosted `gate` job
+exists too, checking the actual commits on every pull request and every push to `main`.
+
+You can also run the gate directly, without pushing:
+
+```bash
+bash scripts/gate.sh
+```
+
+It takes an optional stage filter as its one argument – `lint` (markdown links, fmt, clippy),
+`build` (build, test), or `conformance` (fetch corpus plus the four conformance binaries) – for a
+faster loop while iterating; an unrecognized filter is a usage error, not a silent no-op. It also
+checks system prerequisites first, for every filter – the MSRV from `Cargo.toml`'s
+`rust-version`, and `pkg-config`'s view of libxml2, which the `validation` feature links against
+– so a missing dependency reports itself instead of surfacing as a linker error halfway through a
+build.
+
+## How changes land
+
+Only `main` exists as a long-lived branch, and nothing is committed to it directly. Every change
+is a branch and a pull request:
+
+- Branch names follow the same conventional-commit prefixes this file already mandates for
+  commits: `feat/`, `fix/`, `refactor/`, `docs/`, `chore/`, plus `release/x.y.z` for a release
+  branch (see [RELEASING.md](RELEASING.md)).
+- Pull requests are **squash merged only**, and the branch is deleted on merge. `main` keeps a
+  linear history – no merge commits.
+- The `gate` check (the same `scripts/gate.sh` described above, run by
+  [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) must be green on the PR. It is a
+  required check; there is no override short of an admin bypass.
+- Anything user-visible goes into `CHANGELOG.md`'s `[Unreleased]` section as part of the same PR
+  – not just breaking changes, any addition, fix or behavior change a downstream user could
+  notice. The crate has downstream users, and a change that only shows up in `git log` is
+  effectively undocumented.
+- Releases – tagging, the `release.yml` workflow, and the one manual step it deliberately does
+  not automate (publishing to crates.io stays a manual, local `cargo publish`, never run in CI) –
+  are the whole subject of [RELEASING.md](RELEASING.md).
 
 ## The one rule that matters
 
