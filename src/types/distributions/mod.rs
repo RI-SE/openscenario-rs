@@ -6,7 +6,7 @@ use crate::types::entities::vehicle::File;
 use serde::{Deserialize, Serialize};
 
 // Import distribution types
-pub use deterministic::{Deterministic, DeterministicParameterDistribution};
+pub use deterministic::Deterministic;
 pub use stochastic::{Stochastic, StochasticDistribution};
 
 pub mod deterministic;
@@ -27,12 +27,18 @@ pub struct ParameterValueDistribution {
 }
 
 /// Union of all distribution types
+///
+/// XSD group `DistributionDefinition` (`Schema/OpenSCENARIO.xsd:1086-1091`) is a choice of
+/// exactly two elements, `Deterministic` (type `Deterministic`) and `Stochastic` (type
+/// `Stochastic`). There is no third `UserDefined` branch in the group, and neither payload is a
+/// per-item choice: `Deterministic` is an unbounded sequence of single/multi entries, held by
+/// the `Deterministic` container type, not by the single-entry choice
+/// (`DeterministicParameterDistributionGroup`, below).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum DistributionDefinition {
-    Deterministic(DeterministicParameterDistribution),
-    Stochastic(StochasticDistribution),
-    UserDefined(UserDefinedDistribution),
+    Deterministic(Deterministic),
+    Stochastic(Stochastic),
 }
 
 /// User-defined distribution for custom parameter distributions
@@ -146,12 +152,16 @@ impl ValidateDistribution for UserDefinedDistribution {
 // All 5 groups are trivial wrappers around existing complete infrastructure
 
 /// DistributionDefinition group - XSD group wrapper for deterministic/stochastic choice
+///
+/// Same XSD group as `DistributionDefinition` above (`:1086-1091`), so the payloads are the
+/// same container types: `Deterministic`'s unbounded sequence and `Stochastic`'s struct, not
+/// the single-entry `DeterministicParameterDistributionGroup` choice.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DistributionDefinitionGroup {
     #[serde(rename = "Deterministic")]
-    Deterministic(DeterministicParameterDistribution),
+    Deterministic(Deterministic),
     #[serde(rename = "Stochastic")]
-    Stochastic(StochasticDistribution),
+    Stochastic(Stochastic),
 }
 
 /// DeterministicParameterDistribution group - XSD group wrapper for single/multi parameter choice
@@ -201,12 +211,12 @@ pub struct ParameterValueDistributionDefinitionGroup {
 
 impl DistributionDefinitionGroup {
     /// Create deterministic distribution group
-    pub fn deterministic(dist: DeterministicParameterDistribution) -> Self {
+    pub fn deterministic(dist: Deterministic) -> Self {
         Self::Deterministic(dist)
     }
 
     /// Create stochastic distribution group
-    pub fn stochastic(dist: StochasticDistribution) -> Self {
+    pub fn stochastic(dist: Stochastic) -> Self {
         Self::Stochastic(dist)
     }
 
@@ -221,7 +231,7 @@ impl DistributionDefinitionGroup {
     }
 
     /// Get deterministic distribution if available
-    pub fn as_deterministic(&self) -> Option<&DeterministicParameterDistribution> {
+    pub fn as_deterministic(&self) -> Option<&Deterministic> {
         match self {
             Self::Deterministic(dist) => Some(dist),
             _ => None,
@@ -229,7 +239,7 @@ impl DistributionDefinitionGroup {
     }
 
     /// Get stochastic distribution if available
-    pub fn as_stochastic(&self) -> Option<&StochasticDistribution> {
+    pub fn as_stochastic(&self) -> Option<&Stochastic> {
         match self {
             Self::Stochastic(dist) => Some(dist),
             _ => None,
@@ -410,8 +420,11 @@ mod tests {
         ))
     }
 
-    fn sample_deterministic_parameter_distribution() -> DeterministicParameterDistribution {
-        DeterministicParameterDistribution::Single(sample_single_parameter_distribution())
+    fn sample_deterministic_parameter_distribution() -> Deterministic {
+        Deterministic {
+            single_distributions: vec![sample_single_parameter_distribution()],
+            multi_distributions: vec![],
+        }
     }
 
     fn sample_parameter_value_distribution() -> ParameterValueDistribution {

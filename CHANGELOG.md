@@ -317,6 +317,21 @@ Breaking, unless noted.
     `CatalogDefinition` only wrapped `Catalog`. **Surviving twin:
     `types::scenario::storyboard::CatalogDefinition`**, which already held `CatalogContent`
     directly and is what `OpenScenario::catalog` has always used.
+  - **`types::distributions::deterministic::DeterministicParameterDistribution`** — an
+    externally-tagged enum naming its branches `Single`/`Multi`, where
+    `Schema/OpenSCENARIO.xsd:1039-1044` declares the same choice group under the element names
+    `DeterministicSingleParameterDistribution`/`DeterministicMultiParameterDistribution`.
+    **Surviving twin: `types::distributions::DeterministicParameterDistributionGroup`**, which
+    already names both branches correctly and was defined for the same XSD group. Reachable
+    only through its own constructors, an unused iterator (`Deterministic::all_distributions`,
+    removed with it) and unit tests; no parsed field held it.
+  - **`types::scenario::init::LongitudinalActionType`** — a second, incomplete model of XSD
+    `LongitudinalAction` (`Schema/OpenSCENARIO.xsd:1431-1437`), a three-way choice of
+    `SpeedAction`, `LongitudinalDistanceAction` and `SpeedProfileAction`. The enum named only
+    the first branch. **Surviving twin: `types::scenario::init::LongitudinalAction`**, the
+    struct already held by `Private.longitudinal_action`, which models all three branches as
+    parallel `Option` fields. `LongitudinalActionType` had no consumer beyond its own
+    definition and re-export.
 - **Five public types with no schema counterpart**: `controllers::ControllerDistribution`,
   `controllers::ActivateControllerAction`, `controllers::ControllerAssignment`,
   `positions::RoadCoordinate` and `positions::LaneCoordinate`. The `controllers` module now
@@ -1024,6 +1039,28 @@ Breaking, unless noted.
   renames on the entity condition structs and on `ParameterAssignments`.
 - Catalog `Maneuver` entries now parse their `Event` sequence; `CatalogMiscObject` gained its
   missing XSD attributes.
+- **`DistributionDefinition` and `DistributionDefinitionGroup` could not serialize their
+  `Deterministic` branch, and could not have deserialized the schema's own element names
+  either.** XSD group `DistributionDefinition` (`Schema/OpenSCENARIO.xsd:1086-1091`) is a choice
+  between the `Deterministic` element (type `Deterministic`, an unbounded sequence) and the
+  `Stochastic` element (type `Stochastic`). Both Rust enums instead typed the `Deterministic`
+  branch as `DeterministicParameterDistribution`, the *different* group nested one level down,
+  inside `<Deterministic>`'s own sequence, choosing between a single item and a multi item.
+  Nesting one externally-tagged enum inside another does not serialize under quick-xml: it
+  failed with `Unsupported("cannot serialize enum newtype variant ...")` before emitting any
+  tag, and deserializing the schema's actual inner element name
+  (`DeterministicSingleParameterDistribution`) failed with `unknown variant`, since the group's
+  own variants are named `Single`/`Multi`. Both enums now hold `Deterministic`/`Stochastic`
+  directly. `DistributionDefinition` also carried a third `UserDefined` variant absent from the
+  schema's choice; it is removed (see **Removed**, `DeterministicParameterDistribution`, for the
+  wrongly named group this leaves behind). Neither enum is reachable from any parsed document
+  today — the crate's real `<Deterministic>` support is the hand-written `Serialize`/
+  `Deserialize` pair on `Deterministic` itself — so this closes a latent gap rather than a live
+  one. `tests/distribution_definition_element_names_test.rs` pins the schema element name for
+  both enums and asserts the pre-fix `Unsupported`/`unknown variant` failures against the
+  previous shape. `bash scripts/gate.sh` passes all eleven stages; the test total goes
+  **1556 → 1559**; clippy stays at **197**; `report`, `lossy`, `validate` and `validate-input`
+  are unchanged at 211 / 210 / 210 / 209 passing.
 - **The conformance gates are runnable from a fresh checkout.** They previously lived in an
   untracked sibling directory that CONTRIBUTING.md and docs/xsd_gaps.md described but a clone
   of this repository did not contain. The repo is now a Cargo workspace; `conformance` is a

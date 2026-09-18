@@ -121,14 +121,6 @@ impl Deterministic {
     }
 }
 
-/// Wrapper for deterministic parameter distributions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum DeterministicParameterDistribution {
-    Single(DeterministicSingleParameterDistribution),
-    Multi(DeterministicMultiParameterDistribution),
-}
-
 /// Single parameter deterministic distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeterministicSingleParameterDistribution {
@@ -245,15 +237,6 @@ pub struct ParameterAssignment {
     pub value: OSString,
 }
 
-impl ValidateDistribution for DeterministicParameterDistribution {
-    fn validate(&self) -> Result<()> {
-        match self {
-            DeterministicParameterDistribution::Single(dist) => dist.validate(),
-            DeterministicParameterDistribution::Multi(dist) => dist.validate(),
-        }
-    }
-}
-
 impl ValidateDistribution for DeterministicSingleParameterDistribution {
     fn validate(&self) -> Result<()> {
         // Ensure exactly one distribution type is present
@@ -290,20 +273,6 @@ impl Deterministic {
     /// Get total count of all distributions
     pub fn total_count(&self) -> usize {
         self.single_distributions.len() + self.multi_distributions.len()
-    }
-
-    /// Get unified iterator over all distributions
-    pub fn all_distributions(
-        &self,
-    ) -> impl Iterator<Item = DeterministicParameterDistribution> + '_ {
-        self.single_distributions
-            .iter()
-            .map(|d| DeterministicParameterDistribution::Single(d.clone()))
-            .chain(
-                self.multi_distributions
-                    .iter()
-                    .map(|d| DeterministicParameterDistribution::Multi(d.clone())),
-            )
     }
 }
 
@@ -384,7 +353,7 @@ impl ValidateDistribution for ParameterValueSet {
 }
 
 // No Default impls here: every type in this file is either an XSD choice group
-// (`DeterministicParameterDistribution`, `DeterministicSingleParameterDistributionType`) whose
+// (`DeterministicSingleParameterDistributionType`) whose
 // variants each carry required scenario content, or a container whose child element has
 // minOccurs="1" in the schema (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
 // `ParameterValueSet.ParameterAssignment` all lack `minOccurs="0"`/have no `minOccurs="0"` —

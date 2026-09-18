@@ -426,14 +426,6 @@ impl LongitudinalAction {
     }
 }
 
-/// Types of longitudinal actions
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub enum LongitudinalActionType {
-    SpeedAction(SpeedAction),
-    // SpeedProfileAction, SynchronizeAction, etc. can be added later
-}
-
 impl Private {
     /// Create a new Private action container for the specified entity
     pub fn new(entity_ref: &str) -> Self {

@@ -9,8 +9,7 @@ pub mod variables;
 
 // Re-export main types for convenience
 pub use init::{
-    Actions, EnvironmentAction, GlobalAction, Init, LongitudinalAction, LongitudinalActionType,
-    Private, PrivateAction,
+    Actions, EnvironmentAction, GlobalAction, Init, LongitudinalAction, Private, PrivateAction,
 };
 pub use monitors::{MonitorDeclaration, MonitorDeclarations};
 pub use story::{Act, Actors, EntityRef, Event, Maneuver, ManeuverGroup, ScenarioStory};

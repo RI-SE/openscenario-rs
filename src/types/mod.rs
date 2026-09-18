@@ -59,7 +59,6 @@ pub use scenario::storyboard::{
 pub use distributions::{
     DeterministicMultiParameterDistribution,
     // Deterministic types
-    DeterministicParameterDistribution,
     DeterministicSingleParameterDistribution,
     DeterministicSingleParameterDistributionType,
     DistributionDefinition,
