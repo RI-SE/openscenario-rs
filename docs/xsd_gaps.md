@@ -264,6 +264,15 @@ and `tr` are shadowed by a `trash-restore` alias in some setups, so prefix with
    empty choice groups, none of which the other two gates can see. When testing that this
    gate works, corrupt the *serialized output*, never an input file: unknown elements are
    dropped at parse and never reach the output.
+8. **Parameterized enum-typed attributes vs the corpus**: derive the set of `xsd:attribute`
+   names whose `type=` is one of the 37 enumeration `simpleType`s (37 types yield 39 attribute
+   names — `type` and `displacement` each back two of the 37), then grep the corpus for a `$`
+   in the value of any of them, anchored on the preceding whitespace so a bare `category`
+   cannot prefix-match `vehicleCategory`. Re-run for OSP-18 (2026-09-18) against the 212-file
+   corpus: 0 hits on the 39 enum-typed names, against 71 files that parameterize some other
+   attribute (31 distinct names — `value`, `laneId`, `s`, `catalogName`, ... — none enum-typed).
+   Confirms `conformance/tests/parameterized_enums.rs`'s claim that the corpus still cannot
+   cover the `vehicleCategory="$cat"` path the two hand-built fixtures exist for.
 
 ## Open gaps
 
