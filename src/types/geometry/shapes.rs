@@ -465,9 +465,10 @@ pub struct Knot {
 
 /// Polyline shape with time-positioned vertices
 ///
-/// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so the field carries no `default`. A
-/// document missing `Vertex` children, or supplying only one, is not schema-valid and must
-/// fail to parse rather than deserialize into an empty or single-element vector.
+/// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so the field carries no `default` and a
+/// document with no `Vertex` child fails to parse rather than deserializing into an empty
+/// vector. The lower bound of two is not yet enforced: a single vertex still parses, because
+/// no serde attribute expresses a minimum above one.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Polyline {
     #[serde(rename = "Vertex")]
