@@ -669,6 +669,29 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **Inline routes, speed profiles and story-level global actions parse again.** Four element
+  wrappers that host an `xsd:choice` still carried `#[serde(flatten)]`: `AssignRouteAction`
+  (`types/actions/movement.rs`), `RouteRefElement` (`types/positions/route.rs`),
+  `LongitudinalAction` (`types/actions/movement.rs`) and the story-level `GlobalAction` wrapper
+  (`types/scenario/story.rs`). `#[serde(flatten)]` makes serde buffer an element's children into
+  a `Content` map through `deserialize_any`. quick-xml cannot know at that point that a child
+  will later be read back as a sequence, so a `Vec<T>` replayed out of that buffer failed with
+  `invalid type: map, expected a sequence`, even when the element occurred only once. XSD `Route`
+  requires `minOccurs="2"` `Waypoint` children, hence **no conformant inline route could be
+  parsed at all**, by either of the two paths that reach one. `SpeedProfileAction` carries a
+  sequence of `SpeedProfileEntry`, and the story-level `<TrafficAction>` reaches `RoadRange` with
+  its two required `RoadCursor` children, so both of those branches were unreadable as well.
+  Each wrapper now hosts its choice enum behind the field name `$value`, which takes the element
+  name from the serialized type so that variant names become element tags and the branch is read
+  from the live reader. Serde then enforces the choice cardinality structurally: a wrapper with
+  no branch is rejected with ``missing field `$value` `` and one with two branches with
+  ``duplicate field `$value` ``, so exactly-one is a property of the type rather than a
+  convention about its use. The public field types and names are unchanged, hence this is a fix
+  rather than a breaking change. `tests/choice_wrapper_value_sequences_test.rs` pins each site
+  with a byte-exact round trip and with the zero-branch and two-branch rejections.
+  `bash scripts/gate.sh` passes all eleven stages, with the test total going **1476 → 1488** and
+  `report`, `lossy`, `validate` and `validate-input` unchanged at 211 / 210 / 210 / 209 passing.
+
 - **Sequences below a choice wrapper parse again — an entire branch of `<TrafficAction>` was
   unreachable.** `#[serde(flatten)]` makes serde buffer an element's children into a `Content`
   map through `deserialize_any`. quick-xml cannot know at that point that a child will later be

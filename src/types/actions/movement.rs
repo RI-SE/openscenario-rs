@@ -280,8 +280,16 @@ pub struct FollowTrajectoryAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "AssignRouteAction")]
 pub struct AssignRouteAction {
-    /// Route reference (direct or catalog-based)
-    #[serde(flatten)]
+    /// Route reference, either an inline `<Route>` or a `<CatalogReference>`.
+    ///
+    /// `$value` takes the element name from the serialized variant, so the
+    /// branch is read from the live reader. `#[serde(flatten)]` cannot do
+    /// that: it buffers the children into a map through `deserialize_any`,
+    /// and a `Vec<T>` replayed out of that buffer fails with
+    /// `invalid type: map, expected a sequence`, even when the element occurs
+    /// once. XSD `Route` requires two `Waypoint` children, hence no
+    /// conformant inline route could be parsed here at all.
+    #[serde(rename = "$value")]
     pub route: RouteRef,
 }
 
@@ -465,9 +473,20 @@ pub struct LateralDistanceAction {
 }
 
 /// Longitudinal action wrapper for all longitudinal movement types
+///
+/// XSD `LongitudinalAction` (:1431-1437) is a choice of `SpeedAction` |
+/// `LongitudinalDistanceAction` | `SpeedProfileAction`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
-    #[serde(flatten)]
+    /// The concrete longitudinal action carried by this element.
+    ///
+    /// `$value` takes the element name from the serialized variant, so the
+    /// branch is read from the live reader. `#[serde(flatten)]` cannot do
+    /// that: it buffers the children into a map through `deserialize_any`,
+    /// and a `Vec<T>` replayed out of that buffer fails with
+    /// `invalid type: map, expected a sequence`. `SpeedProfileAction` holds a
+    /// sequence of `SpeedProfileEntry`, hence that branch was unreadable.
+    #[serde(rename = "$value")]
     pub longitudinal_action_choice: LongitudinalActionChoice,
 }
 

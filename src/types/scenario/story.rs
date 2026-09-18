@@ -62,7 +62,16 @@ pub struct StoryAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "GlobalAction")]
 pub struct StoryGlobalAction {
-    #[serde(flatten)]
+    /// The concrete global action carried by this element.
+    ///
+    /// `$value` takes the element name from the serialized variant, so the
+    /// branch is read from the live reader. `#[serde(flatten)]` cannot do
+    /// that: it buffers the children into a map through `deserialize_any`,
+    /// and a `Vec<T>` replayed out of that buffer fails with
+    /// `invalid type: map, expected a sequence`. `TrafficAction` reaches
+    /// `RoadRange`, which requires two `RoadCursor` children, hence that
+    /// branch was unreadable at story level.
+    #[serde(rename = "$value")]
     pub action: crate::types::actions::wrappers::GlobalAction,
 }
 

@@ -181,7 +181,7 @@ impl InRoutePosition {
 /// XSD `RouteRef` (:1975-1980) is a choice of `Route` | `CatalogReference`,
 /// already modeled as `crate::types::routing::RouteRef`. As an *element* the
 /// choice has to sit behind a named wrapper, so this struct only re-hosts the
-/// existing enum via `flatten` (the same shape `AssignRouteAction` uses).
+/// existing enum (the same shape `AssignRouteAction` uses).
 // No `Default`: it required `routing::RouteRef: Default`, which
 // silently picked the `Direct` branch of a choice — see
 // `types/routing/mod.rs`. Construct via `RouteRefElement { route_ref: ... }`
@@ -189,7 +189,16 @@ impl InRoutePosition {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "RouteRef")]
 pub struct RouteRefElement {
-    #[serde(flatten)]
+    /// The branch carried by this `<RouteRef>` element.
+    ///
+    /// `$value` takes the element name from the serialized variant, so the
+    /// branch is read from the live reader. `#[serde(flatten)]` cannot do
+    /// that: it buffers the children into a map through `deserialize_any`,
+    /// and a `Vec<T>` replayed out of that buffer fails with
+    /// `invalid type: map, expected a sequence`. XSD `Route` requires two
+    /// `Waypoint` children, hence no conformant inline route could be parsed
+    /// here at all.
+    #[serde(rename = "$value")]
     pub route_ref: RouteRef,
 }
 
