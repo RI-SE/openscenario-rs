@@ -733,6 +733,13 @@ Breaking, unless noted.
   reintroduced the `invalid type: map, expected a sequence` failure the moment a repeated
   element was added beneath it. All nine now host their choice enum behind `$value`, the same
   mechanism the previous release established.
+  For five of the nine — `TrafficSignalAction`, `LaneChangeTarget`, `LaneOffsetTarget`,
+  `LateralAction` and `FinalSpeed` — the change also fixes a defect that was live rather than
+  latent. A document giving two branches of the choice, which the schema forbids, was accepted
+  under `flatten`: the first branch was kept and the second discarded without an error. Probed
+  against the previous release, `<LaneChangeTarget>` holding both `<AbsoluteTargetLane>` and
+  `<RelativeTargetLane>` parsed as the absolute target alone. Serde now rejects it with
+  ``duplicate field `$value` ``.
   `EntityAction`, `TrafficAction`, `GlobalActionElement` and `PrivateActionElement` moved with
   them, off the private parallel-`Option` wire representation `choice_wrapper_repr!` generated
   for each. That macro reconstructed, by hand, the exactly-one-branch guarantee `$value` already

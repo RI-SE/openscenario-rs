@@ -12,8 +12,13 @@
 //! name rather than through a buffered map. Serde enforces "exactly one
 //! branch" structurally this way, so no hand-written `validate()` is needed.
 //!
-//! Every case below fails on the pre-OSR-12 source with
-//! `invalid type: map, expected a sequence`, except where marked as a control.
+//! The cases in sections 1 to 5 fail on the source that predates this suite
+//! with `invalid type: map, expected a sequence`, except where marked as a
+//! control. The wrappers in sections 6 to 8 never hit that failure, because
+//! nothing in their schema subtree is repeatable; what they did do, before the
+//! conversion, was accept a document carrying two branches and keep whichever
+//! came first. Their rejection cases pin that, and fail on the earlier source
+//! by parsing successfully.
 //!
 //! The byte-exact round-trip fixtures are written in the order the crate emits.
 //! `TrafficAreaAction` and `FollowTrajectoryAction` are both `xsd:all`
@@ -346,9 +351,10 @@ fn modify_rule_still_parses() {
 
 // ═══ 7. The four wrappers above, given a byte-exact round trip and the two
 // rejection cases they gained by moving to `$value`. Their sequence-free
-// subtree meant `flatten` never failed on them, so there is no "before" to
-// reproduce for the sequence case; the rejection cases are new coverage,
-// not a regression guard.
+// subtree meant `flatten` never failed on them for a sequence, so there is no
+// "before" to reproduce for that case. The rejection cases are a regression
+// guard rather than new coverage: under `flatten` a two-branch document was
+// accepted and the second branch discarded without a word.
 
 #[test]
 fn variable_action_set_round_trips_byte_for_byte() {
