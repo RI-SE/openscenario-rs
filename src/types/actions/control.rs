@@ -135,13 +135,24 @@ pub struct ActivateControllerAction {
 // Individual Override Actions matching XSD schema names
 
 /// Override brake action (XSD compliant name)
+///
+/// XSD `OverrideBrakeAction` wraps the `BrakeInput` choice group with
+/// `minOccurs="0"`, so the element carries at most one of `<BrakePercent>` or
+/// `<BrakeForce>`. `$value` takes the element name from the serialized variant
+/// and reads the branch from the live reader, hence the choice coexists with
+/// the sibling attributes. This field used to be `#[serde(flatten)]`, which
+/// buffers the children into a map through `deserialize_any` before any of them
+/// is interpreted. A map has no notion of how often a key occurred, so a
+/// document carrying both branches was accepted and the second branch was
+/// discarded without a diagnostic. Under `$value` the same document is rejected
+/// with `duplicate field $value`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OverrideBrakeAction {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@value", skip_serializing_if = "Option::is_none")]
     pub value: Option<Double>, // deprecated
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
     pub brake_input: Option<BrakeInput>,
 }
 
@@ -170,24 +181,32 @@ pub struct OverrideSteeringWheelAction {
 }
 
 /// Override gear action (XSD compliant name)
+///
+/// The `Gear` choice group is optional in XSD `OverrideGearAction`, and `$value`
+/// carries the branch. See `OverrideBrakeAction` for why `#[serde(flatten)]`
+/// cannot enforce the choice cardinality here.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OverrideGearAction {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@number", skip_serializing_if = "Option::is_none")]
     pub number: Option<Double>, // deprecated
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
     pub gear: Option<Gear>,
 }
 
 /// Override parking brake action (XSD compliant name)
+///
+/// The `BrakeInput` choice group is optional in XSD `OverrideParkingBrakeAction`,
+/// and `$value` carries the branch. See `OverrideBrakeAction` for why
+/// `#[serde(flatten)]` cannot enforce the choice cardinality here.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OverrideParkingBrakeAction {
     #[serde(rename = "@active")]
     pub active: Boolean,
     #[serde(rename = "@value", skip_serializing_if = "Option::is_none")]
     pub value: Option<Double>, // deprecated
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
     pub brake_input: Option<BrakeInput>,
 }
 

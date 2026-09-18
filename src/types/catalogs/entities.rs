@@ -575,8 +575,12 @@ pub struct CatalogManeuver {
     )]
     pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 
-    /// Events making up this maneuver — XSD `<Event>`, `maxOccurs="unbounded"`
-    #[serde(rename = "Event", default, skip_serializing_if = "Vec::is_empty")]
+    /// Events making up this maneuver. XSD `Maneuver` declares `<Event>` with
+    /// `maxOccurs="unbounded"` and no `minOccurs`, so at least one is required.
+    /// Hence no `default`, which would fabricate an empty maneuver from a
+    /// document that has none, and no `skip_serializing_if`, which would emit a
+    /// `<Maneuver>` carrying no `<Event>` at all.
+    #[serde(rename = "Event")]
     pub events: Vec<crate::types::scenario::story::Event>,
 }
 

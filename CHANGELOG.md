@@ -723,6 +723,38 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **Three override actions accepted a document carrying two branches of a choice group, and
+  discarded the second.** `OverrideBrakeAction`, `OverrideGearAction` and
+  `OverrideParkingBrakeAction` (`types/actions/control.rs`) held their choice group behind
+  `#[serde(flatten, skip_serializing_if = "Option::is_none")]`. Earlier passes through the
+  crate's `flatten` sites enumerated them with `grep -rn 'serde(flatten)' src/`, which does not
+  match an attribute that carries a second argument, hence these three were never counted and
+  the claim that no attribute site remained was incomplete. `flatten` buffers an element's
+  children into a map through `deserialize_any` before any child is interpreted, and a map does
+  not record how often a key occurred. XSD `OverrideBrakeAction`, `OverrideGearAction` and
+  `OverrideParkingBrakeAction` each wrap their group with `minOccurs="0"`, so zero branches and
+  one branch are both valid while two are not, yet
+  `<OverrideBrakeAction active="true"><BrakePercent value="0.5"/><BrakeForce value="9"/></OverrideBrakeAction>`
+  parsed and kept only `BrakePercent`. No corpus file exercises any of the three, so no gate
+  reported it. Each now hosts its choice enum behind `$value`, which reads the branch from the
+  live reader and rejects the second with ``duplicate field `$value` `` while still accepting
+  the empty element the schema allows. Field names and types are unchanged, hence this is a fix
+  rather than a breaking change. `grep -rn 'flatten' src/` now returns only prose.
+- **`UserDefinedDistribution` rejected the empty text body that the schema permits.** XSD
+  `UserDefinedDistribution` is a `simpleContent` extension of `xsd:string`, which admits the
+  empty string, so `<UserDefinedDistribution type="t"/>` is schema-valid and `xmllint` confirms
+  it. The `$text` field carried no `#[serde(default)]`, hence that document failed with
+  ``missing field `$text` ``. The field now defaults, and an absent text body reads as an empty
+  string.
+- **`CatalogManeuver` fabricated an empty maneuver from a document that declares no event.** XSD
+  `Maneuver` declares `<Event>` with `maxOccurs="unbounded"` and no `minOccurs`, which defaults
+  to one, so at least one event is required. The field carried `#[serde(default,
+  skip_serializing_if = "Vec::is_empty")]`, so `<Maneuver name="m"/>` parsed into a maneuver
+  with no events instead of failing. Both attributes are removed, and such a document is now
+  rejected. `types/scenario/story.rs`'s `Maneuver`, which models the same schema type, was
+  already correct. Note that an in-memory value holding an empty `events` still serializes to a
+  `<Maneuver>` carrying no `<Event>`; a `Vec` cannot express "at least one", so that side of the
+  rule is not enforceable by serde attributes.
 - **No stochastic parameter distribution parsed at all, in either of the two shapes that hold a
   sequence.** `StochasticDistribution` (`types/distributions/stochastic.rs`) still carried
   `#[serde(flatten)]` around its seven-way `StochasticDistributionType` choice; the earlier pass

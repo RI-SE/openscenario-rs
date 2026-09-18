@@ -38,10 +38,15 @@ pub enum DistributionDefinition {
 /// User-defined distribution for custom parameter distributions
 ///
 /// XSD `UserDefinedDistribution` is a `simpleContent` extension of `xsd:string`
-/// with a required `@type` attribute — the text body is not a child element.
+/// with a required `@type` attribute, so the text body is not a child element.
+///
+/// The base type permits the empty string. Hence `<UserDefinedDistribution
+/// type="t"/>` is schema-valid, and `content` carries `#[serde(default)]` so
+/// that an absent text body reads as an empty string rather than failing with
+/// `missing field $text`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserDefinedDistribution {
-    #[serde(rename = "$text")]
+    #[serde(rename = "$text", default)]
     pub content: String,
     #[serde(rename = "@type")]
     pub distribution_type: String,
