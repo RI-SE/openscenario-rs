@@ -342,9 +342,17 @@ pub struct LaneChangeAction {
 }
 
 /// Lane change target specification
+///
+/// XSD `LaneChangeTarget` (:1343-1348) is a choice of `RelativeTargetLane` |
+/// `AbsoluteTargetLane`. `$value` takes the element name from the serialized
+/// variant, so the branch is read from the live reader; `#[serde(flatten)]`
+/// instead buffers the children into a map through `deserialize_any`, and a
+/// sequence replayed out of that buffer fails with `invalid type: map,
+/// expected a sequence` even though nothing below this particular choice
+/// currently repeats.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneChangeTarget {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub target_choice: LaneChangeTargetChoice,
 }
 
@@ -393,9 +401,14 @@ pub struct LaneOffsetActionDynamics {
 }
 
 /// Lane offset target specification
+///
+/// XSD `LaneOffsetTarget` (:1360-1365) is a choice of `RelativeTargetLaneOffset`
+/// | `AbsoluteTargetLaneOffset`. `$value` reads the branch from the live
+/// reader by element name; `flatten` would buffer the children into a map
+/// first, which breaks the moment a sequence appears below the choice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LaneOffsetTarget {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub target_choice: LaneOffsetTargetChoice,
 }
 
@@ -424,9 +437,15 @@ pub struct AbsoluteTargetLaneOffset {
 }
 
 /// Lateral action wrapper for all lateral movement types
+///
+/// XSD `LateralAction` (:1375-1381) is a choice of `LaneChangeAction` |
+/// `LaneOffsetAction` | `LateralDistanceAction`. `$value` reads the branch
+/// from the live reader by element name; `flatten` would buffer the children
+/// into a map first, which breaks the moment a sequence appears below the
+/// choice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LateralAction {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub lateral_choice: LateralActionChoice,
 }
 
@@ -618,9 +637,14 @@ pub struct SynchronizeAction {
 }
 
 /// Final speed specification for synchronize action
+///
+/// XSD `FinalSpeed` (:1232-1237) is a choice of `AbsoluteSpeed` |
+/// `RelativeSpeedToMaster`. `$value` reads the branch from the live reader by
+/// element name; `flatten` would buffer the children into a map first, which
+/// breaks the moment a sequence appears below the choice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FinalSpeed {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub speed_choice: FinalSpeedChoice,
 }
 

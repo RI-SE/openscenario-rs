@@ -52,135 +52,25 @@ pub enum PrivateAction {
     TrailerAction(TrailerAction),
 }
 
-// ─── OSR-12: choice wrappers must not use `#[serde(flatten)]` ────────────────
-//
-// `#[serde(flatten)]` forces serde to buffer the element's children into a
-// `serde::__private::de::Content` map via `deserialize_any`. quick-xml has no
-// way, at `deserialize_any` time, to know that a given child name will be read
-// back as a sequence — that knowledge only exists when `deserialize_seq` is
-// called on the live reader. So every repeated (and even every *single*) child
-// element lands in the buffer as a map entry, and a `Vec<T>` field replayed out
-// of it fails with `invalid type: map, expected a sequence`.
-//
-// The consequence is blunt: **any field deserialized as a sequence, anywhere
-// below a flattened choice wrapper, cannot be parsed.** For `TrafficAction`
-// that is not a corner case — XSD `RoadRange` requires `minOccurs="2"`
-// `RoadCursor` children and `TrafficDistribution` requires at least one
-// `TrafficDistributionEntry`, so no conformant `TrafficAreaAction` exists that
-// dodges it.
-//
-// The crate's documented alternative is the parallel-`Option` struct, but that
-// is a fidelity downgrade: it admits all-`None` (violates `minOccurs="1"`) and
-// two-`Some` (violates `maxOccurs="1"`), neither of which the XSD allows.
-// Instead the parallel-`Option` struct is kept *private*, as the serde wire
-// representation only, and the public type stays the externally-tagged enum
-// that makes those two states unrepresentable. `#[serde(try_from/into)]` joins
-// them, and the `TryFrom` is the `validate()` the crate convention asks for —
-// except that it runs at parse time and cannot be forgotten.
-//
-// This macro generates that representation plus both conversions. `$label` is
-// the XSD type name used in the two error messages, worded to match
-// `GlobalAction::validate` in `src/types/scenario/init.rs`.
-macro_rules! choice_wrapper_repr {
-    (
-        wrapper: $wrapper:ident,
-        repr: $repr:ident,
-        label: $label:literal,
-        attrs: { $( $( #[$ameta:meta] )* $afield:ident : $aty:ty ),* $(,)? },
-        choice_field: $cfield:ident,
-        choice_enum: $cenum:ident,
-        variants: { $( $( #[$vmeta:meta] )* $vfield:ident : $vty:ty => $variant:ident ),+ $(,)? }
-    ) => {
-        /// Private serde wire representation of the XSD choice — parallel
-        /// `Option` fields, so quick-xml sees ordinary child elements and
-        /// sequences below them deserialize normally.
-        #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-        #[serde(rename = $label)]
-        struct $repr {
-            $( $( #[$ameta] )* $afield: $aty, )*
-            $(
-                $( #[$vmeta] )*
-                #[serde(default, skip_serializing_if = "Option::is_none")]
-                $vfield: Option<$vty>,
-            )+
-        }
-
-        impl std::convert::TryFrom<$repr> for $wrapper {
-            type Error = String;
-
-            fn try_from(repr: $repr) -> Result<Self, Self::Error> {
-                let selected = [ $( repr.$vfield.is_some() ),+ ]
-                    .iter()
-                    .filter(|&&present| present)
-                    .count();
-                match selected {
-                    1 => {}
-                    0 => {
-                        return Err(format!(
-                            "{} must contain exactly one action type, found none",
-                            $label
-                        ))
-                    }
-                    _ => {
-                        return Err(format!(
-                            "{} must contain exactly one action type, found multiple",
-                            $label
-                        ))
-                    }
-                }
-                let $cfield = $(
-                    if let Some(value) = repr.$vfield {
-                        $cenum::$variant(value)
-                    } else
-                )+ {
-                    unreachable!("exactly one branch was counted above")
-                };
-                Ok($wrapper { $( $afield: repr.$afield, )* $cfield })
-            }
-        }
-
-        impl From<$wrapper> for $repr {
-            fn from(wrapper: $wrapper) -> Self {
-                let mut repr = $repr {
-                    $( $afield: wrapper.$afield, )*
-                    $( $vfield: None, )+
-                };
-                match wrapper.$cfield {
-                    $( $cenum::$variant(value) => repr.$vfield = Some(value), )+
-                }
-                repr
-            }
-        }
-    };
-}
-
 // EntityAction wrapper type
 //
-// XSD `EntityAction` (:1128-1135): required `@entityRef` plus a choice of
-// `AddEntityAction` | `DeleteEntityAction`.
+// XSD `EntityAction` (:1128-1134): required `@entityRef` plus a choice of
+// `AddEntityAction` | `DeleteEntityAction`. `$value` takes the element name
+// from the serialized variant, so the branch is read from the live reader
+// and coexists with the sibling attribute. `#[serde(flatten)]` cannot do
+// that: it buffers the children into a map through `deserialize_any`, and a
+// sequence replayed out of that buffer fails with `invalid type: map,
+// expected a sequence` even when the element occurs once. This used to be
+// worked around with a private parallel-`Option` wire representation joined
+// by `#[serde(try_from/into)]`; `$value` gets the same exactly-one-branch
+// guarantee structurally, so that representation and its hand-written
+// `TryFrom` are no longer needed.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(try_from = "EntityActionRepr", into = "EntityActionRepr")]
 pub struct EntityAction {
+    #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
+    #[serde(rename = "$value")]
     pub action: EntityActionChoice,
-}
-
-choice_wrapper_repr! {
-    wrapper: EntityAction,
-    repr: EntityActionRepr,
-    label: "EntityAction",
-    attrs: {
-        #[serde(rename = "@entityRef")]
-        entity_ref: OSString,
-    },
-    choice_field: action,
-    choice_enum: EntityActionChoice,
-    variants: {
-        #[serde(rename = "AddEntityAction")]
-        add_entity_action: AddEntityAction => AddEntityAction,
-        #[serde(rename = "DeleteEntityAction")]
-        delete_entity_action: DeleteEntityAction => DeleteEntityAction,
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -192,37 +82,23 @@ pub enum EntityActionChoice {
 
 // TrafficAction wrapper type
 //
-// XSD `TrafficAction` (:2204-2213): optional `@trafficName` plus a choice of
-// the five traffic actions.
+// XSD `TrafficAction` (:2204-2212): optional `@trafficName` plus a choice of
+// the five traffic actions. `$value` takes the element name from the
+// serialized variant, so the branch is read from the live reader and
+// coexists with the sibling attribute; `flatten` would buffer the children
+// into a map first. `TrafficAreaAction` holds `RoadRange`, which requires
+// `minOccurs="2"` `RoadCursor` children, so that branch was unreadable under
+// `flatten` regardless of how many `RoadCursor` elements were present.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(try_from = "TrafficActionRepr", into = "TrafficActionRepr")]
 pub struct TrafficAction {
+    #[serde(
+        rename = "@trafficName",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub traffic_name: Option<OSString>,
+    #[serde(rename = "$value")]
     pub action: TrafficActionChoice,
-}
-
-choice_wrapper_repr! {
-    wrapper: TrafficAction,
-    repr: TrafficActionRepr,
-    label: "TrafficAction",
-    attrs: {
-        #[serde(rename = "@trafficName", default, skip_serializing_if = "Option::is_none")]
-        traffic_name: Option<OSString>,
-    },
-    choice_field: action,
-    choice_enum: TrafficActionChoice,
-    variants: {
-        #[serde(rename = "TrafficSourceAction")]
-        traffic_source_action: TrafficSourceAction => TrafficSourceAction,
-        #[serde(rename = "TrafficSinkAction")]
-        traffic_sink_action: TrafficSinkAction => TrafficSinkAction,
-        #[serde(rename = "TrafficSwarmAction")]
-        traffic_swarm_action: TrafficSwarmAction => TrafficSwarmAction,
-        #[serde(rename = "TrafficAreaAction")]
-        traffic_area_action: TrafficAreaAction => TrafficAreaAction,
-        #[serde(rename = "TrafficStopAction")]
-        traffic_stop_action: TrafficStopAction => TrafficStopAction,
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -350,11 +226,17 @@ pub struct SetMonitorAction {
 }
 
 // Variable Action System
+//
+// XSD `VariableAction` (:2456-2461) is a required `@variableRef` attribute
+// plus a choice of `SetAction` | `ModifyAction`. `$value` reads the branch
+// from the live reader by element name and coexists with the sibling
+// attribute; `flatten` would buffer the children into a map first, which
+// breaks the moment a sequence appears below the choice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VariableAction {
     #[serde(rename = "@variableRef")]
     pub variable_ref: OSString,
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub action: VariableActionChoice,
 }
 
@@ -382,10 +264,13 @@ pub struct VariableModifyAction {
     pub rule: VariableModifyRule,
 }
 
-/// XSD `VariableModifyRule` (XSD:2486-2491) — wrapper for the `<Rule>` element content
+/// XSD `VariableModifyRule` (XSD:2486-2491) — wrapper for the `<Rule>` element content.
+///
+/// The choice below is read by `$value`; `flatten` would buffer the children
+/// into a map first, which breaks the moment a sequence appears below it.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VariableModifyRule {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub rule: VariableModifyRuleChoice,
 }
 
@@ -412,11 +297,17 @@ pub struct VariableMultiplyByValueRule {
 }
 
 // Parameter Action System (deprecated but needed for compatibility)
+//
+// XSD `ParameterAction` (:1604-1614) is a required `@parameterRef` attribute
+// plus a choice of `SetAction` | `ModifyAction`. `$value` reads the branch
+// from the live reader by element name and coexists with the sibling
+// attribute; `flatten` would buffer the children into a map first, which
+// breaks the moment a sequence appears below the choice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ParameterAction {
     #[serde(rename = "@parameterRef")]
     pub parameter_ref: OSString,
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub action: ParameterActionChoice,
 }
 
@@ -444,10 +335,13 @@ pub struct ParameterModifyAction {
     pub rule: ModifyRule,
 }
 
-/// XSD `ModifyRule` (XSD:1490-1496) — wrapper for the `<Rule>` element content
+/// XSD `ModifyRule` (XSD:1490-1496) — wrapper for the `<Rule>` element content.
+///
+/// The choice below is read by `$value`; `flatten` would buffer the children
+/// into a map first, which breaks the moment a sequence appears below it.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModifyRule {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub rule: ModifyRuleChoice,
 }
 
@@ -479,78 +373,23 @@ pub struct ParameterMultiplyByValueRule {
 /// enum `GlobalAction` above. As a *named child element* the choice has to sit
 /// behind a wrapper struct — the same shape `StoryGlobalAction`
 /// (`scenario/story.rs`) and `RoutePosition.RouteRefElement` already use.
+/// `$value` takes the element name from the serialized variant, so the
+/// branch is read from the live reader; the private parallel-`Option` wire
+/// representation this used to hold reconstructed the same exactly-one-branch
+/// guarantee by hand and is no longer needed.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(try_from = "GlobalActionElementRepr", into = "GlobalActionElementRepr")]
 pub struct GlobalActionElement {
+    #[serde(rename = "$value")]
     pub action: GlobalAction,
-}
-
-choice_wrapper_repr! {
-    wrapper: GlobalActionElement,
-    repr: GlobalActionElementRepr,
-    label: "GlobalAction",
-    attrs: {},
-    choice_field: action,
-    choice_enum: GlobalAction,
-    variants: {
-        #[serde(rename = "EnvironmentAction")]
-        environment_action: EnvironmentAction => EnvironmentAction,
-        #[serde(rename = "EntityAction")]
-        entity_action: EntityAction => EntityAction,
-        #[serde(rename = "InfrastructureAction")]
-        infrastructure_action: InfrastructureAction => InfrastructureAction,
-        #[serde(rename = "SetMonitorAction")]
-        set_monitor_action: SetMonitorAction => SetMonitorAction,
-        #[serde(rename = "ParameterAction")]
-        parameter_action: ParameterAction => ParameterAction,
-        #[serde(rename = "TrafficAction")]
-        traffic_action: TrafficAction => TrafficAction,
-        #[serde(rename = "VariableAction")]
-        variable_action: VariableAction => VariableAction,
-    }
 }
 
 /// Element wrapper hosting the `PrivateAction` choice as a named child element.
 ///
 /// XSD `PrivateAction` (:1777-1791). Same shape as `GlobalActionElement`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(
-    try_from = "PrivateActionElementRepr",
-    into = "PrivateActionElementRepr"
-)]
 pub struct PrivateActionElement {
+    #[serde(rename = "$value")]
     pub action: PrivateAction,
-}
-
-choice_wrapper_repr! {
-    wrapper: PrivateActionElement,
-    repr: PrivateActionElementRepr,
-    label: "PrivateAction",
-    attrs: {},
-    choice_field: action,
-    choice_enum: PrivateAction,
-    variants: {
-        #[serde(rename = "LongitudinalAction")]
-        longitudinal_action: LongitudinalAction => LongitudinalAction,
-        #[serde(rename = "LateralAction")]
-        lateral_action: LateralAction => LateralAction,
-        #[serde(rename = "VisibilityAction")]
-        visibility_action: VisibilityAction => VisibilityAction,
-        #[serde(rename = "SynchronizeAction")]
-        synchronize_action: SynchronizeAction => SynchronizeAction,
-        #[serde(rename = "ActivateControllerAction")]
-        activate_controller_action: ActivateControllerAction => ActivateControllerAction,
-        #[serde(rename = "ControllerAction")]
-        controller_action: ControllerAction => ControllerAction,
-        #[serde(rename = "TeleportAction")]
-        teleport_action: TeleportAction => TeleportAction,
-        #[serde(rename = "RoutingAction")]
-        routing_action: RoutingAction => RoutingAction,
-        #[serde(rename = "AppearanceAction")]
-        appearance_action: AppearanceAction => AppearanceAction,
-        #[serde(rename = "TrailerAction")]
-        trailer_action: TrailerAction => TrailerAction,
-    }
 }
 
 /// XSD `Action` (:705-712): `@name` (required) plus

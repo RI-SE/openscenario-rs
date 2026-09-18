@@ -149,9 +149,15 @@ pub struct TrafficAreaAction {
 }
 
 /// Traffic signal action wrapper for all traffic signal operations
+///
+/// XSD `TrafficSignalAction` (:2248-2253) is a choice of
+/// `TrafficSignalControllerAction` | `TrafficSignalStateAction`. `$value`
+/// reads the branch from the live reader by element name; `flatten` would
+/// buffer the children into a map first, which breaks the moment a sequence
+/// appears below the choice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficSignalAction {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub signal_action_choice: TrafficSignalActionChoice,
 }
 

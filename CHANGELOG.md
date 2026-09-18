@@ -723,6 +723,29 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **Nine more choice wrappers parse a repeated child again, and the choice-group macro is gone.**
+  `VariableAction`, `VariableModifyRule`, `ParameterAction` and `ModifyRule`
+  (`types/actions/wrappers.rs`), `TrafficSignalAction` (`types/actions/traffic.rs`) and
+  `LaneChangeTarget`, `LaneOffsetTarget`, `LateralAction` and `FinalSpeed`
+  (`types/actions/movement.rs`) still carried `#[serde(flatten)]`. Each parsed correctly today
+  only because nothing in its current XSD subtree carries `maxOccurs > 1`; that immunity was a
+  property of the schema as it stands, not of the construct, so any of the nine would have
+  reintroduced the `invalid type: map, expected a sequence` failure the moment a repeated
+  element was added beneath it. All nine now host their choice enum behind `$value`, the same
+  mechanism the previous release established.
+  `EntityAction`, `TrafficAction`, `GlobalActionElement` and `PrivateActionElement` moved with
+  them, off the private parallel-`Option` wire representation `choice_wrapper_repr!` generated
+  for each. That macro reconstructed, by hand, the exactly-one-branch guarantee `$value` already
+  supplies structurally: roughly 130 lines deleted for no loss of behavior. The public field
+  names and types on all thirteen wrappers are unchanged, hence this is a fix rather than a
+  breaking change; only the rejection wording moved from the macro's own message to serde's
+  ``missing field `$value` `` and ``duplicate field `$value` ``.
+  `tests/osr12_choice_wrapper_sequences_test.rs` gained a byte-exact round trip and the
+  zero-branch and two-branch rejections for each of the thirteen wrappers.
+  `bash scripts/gate.sh` passes all eleven stages, with the test total going **1495 → 1513** and
+  `report`, `lossy`, `validate` and `validate-input` unchanged at 211 / 210 / 210 / 209 passing;
+  clippy stays at **197**.
+
 - **A controller's `<Properties>` element parses when empty, and no longer drops `<File>` or
   `<CustomContent>` children.** XSD `Properties` declares `Property`, `File` and
   `CustomContent` all at `minOccurs="0" maxOccurs="unbounded"`, so an empty `<Properties/>` is
