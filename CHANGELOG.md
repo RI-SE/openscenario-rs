@@ -1082,6 +1082,25 @@ Breaking, unless noted.
   member crate holding the corpus binaries (`report`, `lossy`, `validate`, `builder`) that were
   previously external, and `scripts/fetch-corpus.sh` fetches the (still unvendored, third-party)
   corpus on demand. No change to `openscenario-rs`'s public API.
+- **Nine required, repeated child elements fabricated an empty list when absent.**
+  `UsedArea.position`, `SpeedProfileAction.entries`, `VehicleRoleDistribution.entries`,
+  `VehicleCategoryDistribution.entries`, `ControllerDistribution.entries`,
+  `ClothoidSpline.segments`, `Nurbs.control_points`, `Nurbs.knots` and `Polyline.vertices` each
+  carried `#[serde(default)]` on a `Vec` whose XSD element has `minOccurs` of one or two, so a
+  document missing the required children, such as `<Polyline/>`, parsed into an empty vector
+  instead of failing, and the crate went on to re-emit the same schema-invalid element on
+  serialization. `default` on a `Vec` is the correct attribute only when `minOccurs="0"`; here it
+  substituted a fabricated empty collection for a required one. All nine now carry no `default`,
+  so the missing-children document is rejected with `missing field` naming the element, for
+  example ``missing field `Vertex` `` for `Polyline`. This closes the zero-children case only;
+  the `minOccurs="2"` bound on `UsedArea.position`, `Nurbs.control_points`, `Nurbs.knots` and
+  `Polyline.vertices` still admits one child where the schema requires two, because no serde
+  attribute expresses a lower bound above one, and that gap is tracked separately. A new test
+  file parses each of the nine types from its empty element and asserts the exact `missing
+  field` text, one assertion per test. `bash scripts/gate.sh` passes all eleven stages; the test
+  total goes **1559 → 1568**; clippy stays at **191**; `report`, `lossy`, `validate` and
+  `validate-input` are unchanged at 211 / 210 / 210 / 209 passing. No change to
+  `openscenario-rs`'s public API.
 
 ### Known gaps
 

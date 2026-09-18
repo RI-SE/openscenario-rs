@@ -40,7 +40,7 @@ pub struct TrafficSignals {
 /// Region of the road network actually used by the scenario
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsedArea {
-    #[serde(rename = "Position", default)]
+    #[serde(rename = "Position")]
     pub position: Vec<Position>,
 }
 

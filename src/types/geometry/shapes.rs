@@ -403,7 +403,7 @@ impl Shape {
 /// A sequence of clothoid segments forming a spline
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClothoidSpline {
-    #[serde(rename = "ClothoidSplineSegment", default)]
+    #[serde(rename = "ClothoidSplineSegment")]
     pub segments: Vec<ClothoidSplineSegment>,
     #[serde(rename = "@timeEnd", default, skip_serializing_if = "Option::is_none")]
     pub time_end: Option<Double>,
@@ -439,9 +439,9 @@ pub struct ClothoidSplineSegment {
 pub struct Nurbs {
     #[serde(rename = "@order")]
     pub order: crate::types::basic::UnsignedInt,
-    #[serde(rename = "ControlPoint", default)]
+    #[serde(rename = "ControlPoint")]
     pub control_points: Vec<ControlPoint>,
-    #[serde(rename = "Knot", default)]
+    #[serde(rename = "Knot")]
     pub knots: Vec<Knot>,
 }
 
@@ -465,12 +465,12 @@ pub struct Knot {
 
 /// Polyline shape with time-positioned vertices
 ///
-/// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so an empty vertex list is not
-/// schema-valid on its own, but `Vec::new()` states nothing invented and is kept as the
-/// bare construction default; callers building a real polyline must supply vertices.
+/// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so the field carries no `default`. A
+/// document missing `Vertex` children, or supplying only one, is not schema-valid and must
+/// fail to parse rather than deserialize into an empty or single-element vector.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Polyline {
-    #[serde(rename = "Vertex", default)]
+    #[serde(rename = "Vertex")]
     pub vertices: Vec<Vertex>,
 }
 

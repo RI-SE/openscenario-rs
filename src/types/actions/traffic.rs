@@ -263,7 +263,7 @@ pub struct TrafficDefinition {
 /// Vehicle role distribution for traffic composition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleRoleDistribution {
-    #[serde(rename = "VehicleRoleDistributionEntry", default)]
+    #[serde(rename = "VehicleRoleDistributionEntry")]
     pub entries: Vec<VehicleRoleDistributionEntry>,
 }
 
@@ -279,7 +279,7 @@ pub struct VehicleRoleDistributionEntry {
 /// Vehicle category distribution for traffic composition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleCategoryDistribution {
-    #[serde(rename = "VehicleCategoryDistributionEntry", default)]
+    #[serde(rename = "VehicleCategoryDistributionEntry")]
     pub entries: Vec<VehicleCategoryDistributionEntry>,
 }
 
@@ -295,7 +295,7 @@ pub struct VehicleCategoryDistributionEntry {
 /// Controller distribution for traffic behavior
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerDistribution {
-    #[serde(rename = "ControllerDistributionEntry", default)]
+    #[serde(rename = "ControllerDistributionEntry")]
     pub entries: Vec<ControllerDistributionEntry>,
 }
 

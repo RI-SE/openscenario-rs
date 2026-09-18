@@ -561,7 +561,7 @@ pub struct SpeedProfileAction {
     pub following_mode: Value<FollowingMode>,
     #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
-    #[serde(rename = "SpeedProfileEntry", default)]
+    #[serde(rename = "SpeedProfileEntry")]
     pub entries: Vec<SpeedProfileEntry>,
 }
 
