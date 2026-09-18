@@ -75,12 +75,9 @@ impl ActionBuilder for AssignRouteActionBuilder {
             route: self.route_ref.unwrap(),
         };
 
-        Ok(PrivateAction::RoutingAction(RoutingAction {
-            assign_route_action: Some(action),
-            follow_trajectory_action: None,
-            acquire_position_action: None,
-            random_route_action: None,
-        }))
+        Ok(PrivateAction::RoutingAction(
+            RoutingAction::with_assign_route(action),
+        ))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -102,6 +99,7 @@ impl ManeuverAction for AssignRouteActionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::actions::movement::RoutingActionChoice;
     use crate::types::enums::RouteStrategy;
     use crate::types::routing::Waypoint;
 
@@ -123,10 +121,10 @@ mod tests {
         // Verify structure
         match builder {
             PrivateAction::RoutingAction(ref action) => {
-                assert!(action.assign_route_action.is_some());
-                assert!(action.follow_trajectory_action.is_none());
-
-                let assign_action = action.assign_route_action.as_ref().unwrap();
+                let RoutingActionChoice::AssignRouteAction(assign_action) = &action.routing_choice
+                else {
+                    panic!("Expected AssignRouteAction branch");
+                };
                 assert!(matches!(assign_action.route, RouteRef::Direct(_)));
             }
             _ => panic!("Expected RoutingAction"),
@@ -143,7 +141,10 @@ mod tests {
 
         match builder {
             PrivateAction::RoutingAction(ref action) => {
-                let assign_action = action.assign_route_action.as_ref().unwrap();
+                let RoutingActionChoice::AssignRouteAction(assign_action) = &action.routing_choice
+                else {
+                    panic!("Expected AssignRouteAction branch");
+                };
                 assert!(matches!(assign_action.route, RouteRef::Catalog(_)));
             }
             _ => panic!("Expected RoutingAction"),

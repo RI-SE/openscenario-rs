@@ -14,7 +14,9 @@ use openscenario_rs::types::actions::movement::{AbsoluteSpeed, RelativeSpeedToMa
 use openscenario_rs::types::actions::wrappers::{EntityActionChoice, GlobalAction};
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::SpeedTargetValueType;
-use openscenario_rs::types::scenario::story::StoryAction;
+use openscenario_rs::types::scenario::story::{
+    StoryAction, StoryActionChoice, StoryPrivateActionChoice,
+};
 
 fn de<T: serde::de::DeserializeOwned>(xml: &str) -> T {
     quick_xml::de::from_str(xml).unwrap_or_else(|e| panic!("deserialize failed for {xml}: {e}"))
@@ -104,16 +106,18 @@ fn story_action_global_action_round_trip() {
     let xml = r#"<Action name="x"><GlobalAction><EntityAction entityRef="e"><DeleteEntityAction/></EntityAction></GlobalAction></Action>"#;
     let action: StoryAction = de(xml);
     assert_eq!(action.name.to_string(), "x");
-    assert!(action.private_action.is_none());
-    match action.global_action.as_ref().map(|g| &g.action) {
-        Some(GlobalAction::EntityAction(e)) => {
-            assert_eq!(e.entity_ref.to_string(), "e");
-            assert!(matches!(
-                e.action,
-                EntityActionChoice::DeleteEntityAction(_)
-            ));
-        }
-        other => panic!("expected EntityAction, got {other:?}"),
+    match &action.action {
+        StoryActionChoice::GlobalAction(g) => match &g.action {
+            GlobalAction::EntityAction(e) => {
+                assert_eq!(e.entity_ref.to_string(), "e");
+                assert!(matches!(
+                    e.action,
+                    EntityActionChoice::DeleteEntityAction(_)
+                ));
+            }
+            other => panic!("expected EntityAction, got {other:?}"),
+        },
+        other => panic!("expected GlobalAction, got {other:?}"),
     }
 
     let out = ser("Action", &action);
@@ -126,11 +130,15 @@ fn story_action_global_action_round_trip() {
 fn story_action_activate_controller_action_round_trip() {
     let xml = r#"<Action name="act"><PrivateAction><ActivateControllerAction controllerRef="ctrl" lateral="true"/></PrivateAction></Action>"#;
     let action: StoryAction = de(xml);
-    let private = action.private_action.as_ref().expect("private action");
-    let aca = private
-        .activate_controller_action
-        .as_ref()
-        .expect("activate controller action");
+    let StoryActionChoice::PrivateAction(private) = &action.action else {
+        panic!("expected PrivateAction, got {:?}", action.action);
+    };
+    let StoryPrivateActionChoice::ActivateControllerAction(aca) = &private.action else {
+        panic!(
+            "expected ActivateControllerAction, got {:?}",
+            private.action
+        );
+    };
     assert_eq!(
         aca.controller_ref.as_ref().map(|r| r.to_string()),
         Some("ctrl".to_string())

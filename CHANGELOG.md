@@ -116,6 +116,33 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **`RoutingAction`, `StoryAction` and `StoryPrivateAction` now hold a choice enum instead of
+  parallel `Option` fields.** XSD `RoutingAction` (`:1981-1988`), `Action` (`:705-712`) and
+  `PrivateAction` (`:1777-1791`) are each a bare `xsd:choice`, so `minOccurs` and `maxOccurs`
+  both default to 1 and exactly one branch is required. Modeled as parallel `Option` fields,
+  all three accepted a document naming no branch and a document naming two, with no
+  diagnostic in either direction: `<RoutingAction/>` parsed into an all-`None` value, and
+  `<RoutingAction><RandomRouteAction/><AcquirePositionAction>…</AcquirePositionAction></RoutingAction>`
+  parsed into a value carrying both branches. The branch now sits in an externally tagged enum behind
+  `#[serde(rename = "$value")]`, hence serde rejects zero branches with
+  ``missing field `$value` `` and two with ``duplicate field `$value` ``, and no
+  hand-written check is involved.
+
+  This breaks field access and struct literals. `RoutingAction`'s four `Option` fields become
+  one `routing_choice: RoutingActionChoice`; `StoryAction`'s three become one
+  `action: StoryActionChoice` beside the unchanged `name`; and `StoryPrivateAction`'s ten
+  become one `action: StoryPrivateActionChoice`. The three new public enums name their
+  variants after the XSD element names. `RoutingAction::with_assign_route`,
+  `::with_trajectory`, `StoryAction::private`, `StoryPrivateAction::longitudinal`,
+  `::visibility` and `::teleport` keep their signatures. `StoryPrivateAction::empty`, a
+  private helper that built the all-`None` value, is gone with the shape it built.
+
+  The conversion also made `convert_private_action_to_story` in `src/builder/` total. It
+  previously mapped six of the ten `PrivateAction` branches and returned an empty
+  `StoryPrivateAction` for the other four, so an activate-controller, controller, appearance
+  or trailer action built through that path was replaced by an action naming nothing. All ten
+  branches now map to their counterpart.
+
 - **90 enum-typed attributes now accept parameter references.** All 37 enumeration
   `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose second member is
   `<xsd:restriction base="parameter"/>`, so `<Vehicle vehicleCategory="$cat">` is

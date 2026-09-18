@@ -2,7 +2,7 @@
 
 This document describes how `openscenario-rs` maps the OpenSCENARIO 1.3 XSD onto Rust types:
 the `Value<T>` wrapper that makes every attribute parameterizable, the serde conventions that
-distinguish XML attributes from child elements, the two idioms used for schema choice groups,
+distinguish XML attributes from child elements, the idiom used for schema choice groups,
 and the deliberate policies on optionality and `Default`.
 
 It is written for contributors adding or correcting types. For the conformance ledger, which
@@ -140,34 +140,46 @@ crate emits something the file never contained.
 
 ## Choice groups
 
-An XSD `choice` admits exactly one of several branches. Two idioms coexist in the crate, and
-which one applies depends on how the choice appears in the schema.
+An XSD `choice` admits exactly one of several branches. The idiom for it is an externally
+tagged enum behind the special field name `$value`.
 
-### Parallel `Option` fields
-
-Stated as the crate convention at `src/types/scenario/init.rs:51`. Every branch is an
-`Option` field, and a hand-written `validate()` enforces the exactly-one rule that the type
-system cannot:
+### The externally tagged enum behind `$value`
 
 ```rust
-pub struct GlobalAction {
-    #[serde(rename = "EnvironmentAction", default, skip_serializing_if = "Option::is_none")]
-    pub environment_action: Option<EnvironmentAction>,
-    #[serde(rename = "EntityAction", default, skip_serializing_if = "Option::is_none")]
-    pub entity_action: Option<EntityAction>,
-    // ... five further branches
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RoutingAction {
+    #[serde(rename = "$value")]
+    pub routing_choice: RoutingActionChoice,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum RoutingActionChoice {
+    AssignRouteAction(AssignRouteAction),
+    FollowTrajectoryAction(FollowTrajectoryAction),
+    AcquirePositionAction(AcquirePositionAction),
+    RandomRouteAction(RandomRouteAction),
 }
 ```
 
-Such types carry two companion methods by convention: `validate() -> Result<(), String>`,
-which rejects zero or several populated branches, and `get_action_type() -> Option<&str>`,
-which names the populated one.
+`$value` takes the element name from the serialized variant, so the branch is read from the
+live reader and written back under the same tag. Sibling attributes coexist with it, as in
+`StoryAction`, which carries `@name` next to its `$value` field.
 
-### `#[serde(flatten)]` over an externally tagged enum
+The shape also carries the cardinality. `<xsd:choice>` without an explicit `minOccurs` or
+`maxOccurs` requires exactly one branch, and an externally tagged enum admits exactly one
+variant. Serde therefore rejects a document naming no branch with ``missing field `$value` ``
+and one naming two with ``duplicate field `$value` ``, with no hand-written check.
 
-Used where the choice is the entire content of an element, in
-`types/actions/{movement,control,traffic,wrappers}.rs`, `types/routing` and elsewhere.
-Here one rule governs everything:
+Where the schema wraps the group as `<xsd:group ref="..." minOccurs="0"/>`, zero branches are
+valid and one is valid. That is an `Option` around the enum, not parallel `Option` fields:
+
+```rust
+#[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
+pub brake_input: Option<BrakeInput>,
+```
+
+One rule governs the variant names:
 
 > **The enum variant name must equal the XSD element name.**
 
@@ -176,8 +188,27 @@ names and XML element names are different namespaces, and they diverge often –
 `TransitionDynamics` appears on the wire as `<SpeedActionDynamics>`. Naming a variant after
 the type produces a struct that compiles and emits an element the schema has never heard of.
 
-`tests/choice_flatten_roundtrip_test.rs` pins a round trip for every such site and asserts the
-emitted tag. A new flattened choice belongs in that test.
+### Why parallel `Option` fields are wrong for a choice
+
+Parallel `Option` fields describe `xsd:all` with optional members, a different schema
+production. A document naming no branch and a document naming two both deserialize, the first
+into an all-`None` value and the second into a value that no schema-valid document can
+describe. Neither is reported. The exactly-one rule then has to be recovered by a
+hand-written `validate()` that every caller must remember to call, hence the invariant stops
+being a property of the type and becomes a convention about its use.
+
+A few types in the crate still carry that older shape, among them `init::GlobalAction`,
+`init::PrivateAction` and `wrappers::NamedAction`. They are not the model to copy; a new
+choice group takes the `$value` enum.
+
+### Do not use `#[serde(flatten)]`
+
+quick-xml documents `flatten` as unsupported. It buffers an element's children into a map
+through `deserialize_any` before anything decides how a child should be read, so a `Vec<T>`
+replayed out of that buffer fails with `invalid type: map, expected a sequence`, and a
+flattened enum whose variant payload is itself an externally tagged enum fails to serialize
+with `Unsupported("cannot serialize enum newtype variant ...")`. Both failures are specific
+to particular branches, hence a corpus that never exercises those branches reports nothing.
 
 ## Enumerations
 

@@ -2,7 +2,9 @@ use openscenario_rs::parser::xml::parse_from_str;
 use openscenario_rs::types::actions::VisibilityAction;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::Priority;
-use openscenario_rs::types::scenario::story::{Event, StoryAction, StoryPrivateAction};
+use openscenario_rs::types::scenario::story::{
+    Event, StoryAction, StoryActionChoice, StoryPrivateAction, StoryPrivateActionChoice,
+};
 
 #[test]
 fn test_event_multiple_actions_struct() {
@@ -12,22 +14,14 @@ fn test_event_multiple_actions_struct() {
         maximum_execution_count: Some(Value::literal(1)),
         priority: Value::Literal(Priority::Override),
         actions: vec![
-            StoryAction {
-                global_action: None,
-                user_defined_action: None,
-                name: Value::literal("Action1".to_string()),
-                private_action: Some(StoryPrivateAction::visibility(VisibilityAction::new(
-                    true, true, true,
-                ))),
-            },
-            StoryAction {
-                global_action: None,
-                user_defined_action: None,
-                name: Value::literal("Action2".to_string()),
-                private_action: Some(StoryPrivateAction::visibility(VisibilityAction::new(
-                    true, true, true,
-                ))),
-            },
+            StoryAction::private(
+                "Action1",
+                StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
+            ),
+            StoryAction::private(
+                "Action2",
+                StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
+            ),
         ],
         start_trigger: None,
     };
@@ -59,20 +53,25 @@ fn test_event_multiple_actions_xml_parsing() {
     );
 
     // Verify the first action is a speed action
-    if let Some(private_action) = &event.actions[0].private_action {
-        assert!(
-            private_action.longitudinal_action.is_some(),
-            "First action should be longitudinal"
-        );
-    }
+    let StoryActionChoice::PrivateAction(first) = &event.actions[0].action else {
+        panic!("First action should be a PrivateAction");
+    };
+    assert!(
+        matches!(
+            first.action,
+            StoryPrivateActionChoice::LongitudinalAction(_)
+        ),
+        "First action should be longitudinal"
+    );
 
     // Verify the second action is a visibility action
-    if let Some(private_action) = &event.actions[1].private_action {
-        assert!(
-            private_action.visibility_action.is_some(),
-            "Second action should be visibility"
-        );
-    }
+    let StoryActionChoice::PrivateAction(second) = &event.actions[1].action else {
+        panic!("Second action should be a PrivateAction");
+    };
+    assert!(
+        matches!(second.action, StoryPrivateActionChoice::VisibilityAction(_)),
+        "Second action should be visibility"
+    );
 }
 
 #[test]
@@ -83,14 +82,10 @@ fn test_event_new_starts_with_no_actions() {
     // callers must state what action(s) the event actually performs.
     let mut event = Event::new("MyEvent", Priority::Override);
     assert_eq!(event.actions.len(), 0, "New event should have no actions");
-    event.actions.push(StoryAction {
-        global_action: None,
-        user_defined_action: None,
-        name: Value::literal("Action1".to_string()),
-        private_action: Some(StoryPrivateAction::visibility(VisibilityAction::new(
-            true, true, true,
-        ))),
-    });
+    event.actions.push(StoryAction::private(
+        "Action1",
+        StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
+    ));
     assert_eq!(event.actions.len(), 1);
     assert_eq!(event.actions[0].name.as_literal().unwrap(), "Action1");
 }
@@ -102,18 +97,14 @@ fn test_event_serialization_with_multiple_actions() {
         maximum_execution_count: None,
         priority: Value::Literal(Priority::Parallel),
         actions: vec![
-            StoryAction {
-                global_action: None,
-                user_defined_action: None,
-                name: Value::literal("FirstAction".to_string()),
-                private_action: None,
-            },
-            StoryAction {
-                global_action: None,
-                user_defined_action: None,
-                name: Value::literal("SecondAction".to_string()),
-                private_action: None,
-            },
+            StoryAction::private(
+                "FirstAction",
+                StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
+            ),
+            StoryAction::private(
+                "SecondAction",
+                StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
+            ),
         ],
         start_trigger: None,
     };

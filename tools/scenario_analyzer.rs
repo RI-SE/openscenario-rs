@@ -48,7 +48,10 @@ use openscenario_rs::{
     catalog::{extract_scenario_parameters, resolve_catalog_reference_simple},
     expression::evaluate_expression,
     parse_from_file,
-    types::{basic::Value, scenario::storyboard::OpenScenario, OpenScenarioDocumentType},
+    types::{
+        basic::Value, scenario::story::StoryActionChoice, scenario::storyboard::OpenScenario,
+        OpenScenarioDocumentType,
+    },
 };
 use std::{collections::HashMap, env, path::Path, process};
 
@@ -1214,12 +1217,17 @@ fn analyze_acts_detailed(
                                 .name
                                 .as_literal()
                                 .map_or("Unknown".to_string(), |v| v.clone());
-                            let (action_type, action_category) =
-                                if let Some(private_action) = &action.private_action {
+                            let (action_type, action_category) = match &action.action {
+                                StoryActionChoice::PrivateAction(private_action) => {
                                     analyze_private_action_type(private_action)
-                                } else {
-                                    ("Unknown".to_string(), "Unknown".to_string())
-                                };
+                                }
+                                StoryActionChoice::GlobalAction(_) => {
+                                    ("GlobalAction".to_string(), "Global".to_string())
+                                }
+                                StoryActionChoice::UserDefinedAction(_) => {
+                                    ("UserDefinedAction".to_string(), "Custom".to_string())
+                                }
+                            };
 
                             detailed_event.actions.push(EventActionAnalysis {
                                 action_name,
@@ -1378,26 +1386,24 @@ fn analyze_trigger_conditions(
 fn analyze_private_action_type(
     private_action: &openscenario_rs::types::scenario::story::StoryPrivateAction,
 ) -> (String, String) {
-    if private_action.longitudinal_action.is_some() {
-        ("LongitudinalAction".to_string(), "Movement".to_string())
-    } else if private_action.lateral_action.is_some() {
-        ("LateralAction".to_string(), "Movement".to_string())
-    } else if private_action.teleport_action.is_some() {
-        ("TeleportAction".to_string(), "Movement".to_string())
-    } else if private_action.routing_action.is_some() {
-        ("RoutingAction".to_string(), "Movement".to_string())
-    } else if private_action.synchronize_action.is_some() {
-        ("SynchronizeAction".to_string(), "Coordination".to_string())
-    } else if private_action.controller_action.is_some() {
-        ("ControllerAction".to_string(), "Control".to_string())
-    } else if private_action.visibility_action.is_some() {
-        ("VisibilityAction".to_string(), "Appearance".to_string())
-    } else if private_action.appearance_action.is_some() {
-        ("AppearanceAction".to_string(), "Appearance".to_string())
-    } else if private_action.trailer_action.is_some() {
-        ("TrailerAction".to_string(), "Vehicle".to_string())
-    } else {
-        ("Unknown".to_string(), "Unknown".to_string())
+    use openscenario_rs::types::scenario::story::StoryPrivateActionChoice as Choice;
+
+    match &private_action.action {
+        Choice::LongitudinalAction(_) => ("LongitudinalAction".to_string(), "Movement".to_string()),
+        Choice::LateralAction(_) => ("LateralAction".to_string(), "Movement".to_string()),
+        Choice::TeleportAction(_) => ("TeleportAction".to_string(), "Movement".to_string()),
+        Choice::RoutingAction(_) => ("RoutingAction".to_string(), "Movement".to_string()),
+        Choice::SynchronizeAction(_) => {
+            ("SynchronizeAction".to_string(), "Coordination".to_string())
+        }
+        Choice::ControllerAction(_) => ("ControllerAction".to_string(), "Control".to_string()),
+        Choice::ActivateControllerAction(_) => (
+            "ActivateControllerAction".to_string(),
+            "Control".to_string(),
+        ),
+        Choice::VisibilityAction(_) => ("VisibilityAction".to_string(), "Appearance".to_string()),
+        Choice::AppearanceAction(_) => ("AppearanceAction".to_string(), "Appearance".to_string()),
+        Choice::TrailerAction(_) => ("TrailerAction".to_string(), "Vehicle".to_string()),
     }
 }
 

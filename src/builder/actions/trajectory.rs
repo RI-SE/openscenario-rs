@@ -304,12 +304,9 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             initial_distance_offset: self.initial_distance_offset.map(|v| Double::literal(v)),
         };
 
-        Ok(PrivateAction::RoutingAction(RoutingAction {
-            assign_route_action: None,
-            follow_trajectory_action: Some(follow_trajectory_action),
-            acquire_position_action: None,
-            random_route_action: None,
-        }))
+        Ok(PrivateAction::RoutingAction(
+            RoutingAction::with_trajectory(follow_trajectory_action),
+        ))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -336,6 +333,7 @@ impl ManeuverAction for FollowTrajectoryActionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::actions::movement::RoutingActionChoice;
 
     #[test]
     fn test_trajectory_builder_basic() {
@@ -530,8 +528,11 @@ mod tests {
         // Verify action structure
         match action {
             PrivateAction::RoutingAction(ref routing) => {
-                assert!(routing.follow_trajectory_action.is_some());
-                let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
+                let RoutingActionChoice::FollowTrajectoryAction(follow_action) =
+                    &routing.routing_choice
+                else {
+                    panic!("Expected FollowTrajectoryAction branch");
+                };
                 assert!(follow_action.trajectory.is_some());
                 assert_eq!(
                     follow_action.trajectory_following_mode.following_mode,
@@ -564,7 +565,11 @@ mod tests {
 
         match action {
             PrivateAction::RoutingAction(ref routing) => {
-                let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
+                let RoutingActionChoice::FollowTrajectoryAction(follow_action) =
+                    &routing.routing_choice
+                else {
+                    panic!("Expected FollowTrajectoryAction branch");
+                };
                 assert_eq!(
                     follow_action.trajectory_following_mode.following_mode,
                     Value::Literal(FollowingMode::Position)
@@ -597,7 +602,11 @@ mod tests {
 
         match action {
             PrivateAction::RoutingAction(ref routing) => {
-                let follow_action = routing.follow_trajectory_action.as_ref().unwrap();
+                let RoutingActionChoice::FollowTrajectoryAction(follow_action) =
+                    &routing.routing_choice
+                else {
+                    panic!("Expected FollowTrajectoryAction branch");
+                };
                 assert_eq!(
                     follow_action
                         .initial_distance_offset

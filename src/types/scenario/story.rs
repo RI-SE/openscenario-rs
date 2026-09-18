@@ -15,37 +15,45 @@ use crate::types::basic::ParameterDeclarations;
 /// Story-level Action wrapper with name attribute and action content
 ///
 /// XSD `Action` (:705-712): required `@name` plus a choice of `GlobalAction`
-/// | `UserDefinedAction` | `PrivateAction`, modeled as parallel optional
-/// siblings (see module note on `wrappers::NamedAction`).
+/// | `UserDefinedAction` | `PrivateAction`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StoryAction {
     /// Name of the action
     #[serde(rename = "@name")]
     pub name: OSString,
 
-    /// Global action affecting the whole scenario
-    #[serde(
-        rename = "GlobalAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub global_action: Option<StoryGlobalAction>,
+    /// The concrete action carried by this element.
+    ///
+    /// The group is a bare `xsd:choice`, so `minOccurs` and `maxOccurs` both
+    /// default to 1 and exactly one branch is required. An externally-tagged
+    /// enum behind `$value` states that: the element name comes from the
+    /// serialized variant, the sibling `@name` attribute coexists with it, and
+    /// serde rejects a document naming no branch with `missing field $value`
+    /// and one naming two with `duplicate field $value`. Parallel `Option`
+    /// fields instead describe `xsd:all` with optional members, which accepts
+    /// both of those documents.
+    #[serde(rename = "$value")]
+    pub action: StoryActionChoice,
+}
 
-    /// User-defined (custom command) action
-    #[serde(
-        rename = "UserDefinedAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub user_defined_action: Option<crate::types::actions::wrappers::UserDefinedAction>,
-
-    /// Private action for individual entities
-    #[serde(
-        rename = "PrivateAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub private_action: Option<StoryPrivateAction>,
+/// The three branches of the XSD `Action` choice (:705-712).
+///
+/// Each variant carries an element wrapper rather than the branch enum itself.
+/// quick-xml cannot serialize an externally-tagged enum whose variant payload
+/// is another externally-tagged enum, and it reports
+/// `Unsupported("cannot serialize enum newtype variant ...")` when asked to.
+/// The wrapper struct holds its own `$value`, so each level writes one element
+/// name.
+// The branches differ in size because the schema types they carry differ in
+// size. Boxing one of them would state something about that branch which the
+// schema does not, hence the lint is silenced rather than satisfied.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum StoryActionChoice {
+    GlobalAction(StoryGlobalAction),
+    UserDefinedAction(crate::types::actions::wrappers::UserDefinedAction),
+    PrivateAction(StoryPrivateAction),
 }
 
 /// Element wrapper hosting the `GlobalAction` choice.
@@ -76,32 +84,42 @@ pub struct StoryGlobalAction {
 }
 
 /// Private action at story level (reuses init-level structure)
+///
+/// XSD `PrivateAction` (:1777-1791) is a bare `xsd:choice` of ten branches.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StoryPrivateAction {
-    #[serde(rename = "LongitudinalAction", skip_serializing_if = "Option::is_none")]
-    pub longitudinal_action: Option<crate::types::scenario::init::LongitudinalAction>,
-    #[serde(rename = "LateralAction", skip_serializing_if = "Option::is_none")]
-    pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
-    #[serde(rename = "VisibilityAction", skip_serializing_if = "Option::is_none")]
-    pub visibility_action: Option<crate::types::actions::VisibilityAction>,
-    #[serde(rename = "SynchronizeAction", skip_serializing_if = "Option::is_none")]
-    pub synchronize_action: Option<crate::types::actions::SynchronizeAction>,
+    /// The concrete private action carried by this element.
+    ///
+    /// The group is a bare `xsd:choice`, so `minOccurs` and `maxOccurs` both
+    /// default to 1 and exactly one branch is required. An externally-tagged
+    /// enum behind `$value` states that: the element name comes from the
+    /// serialized variant, and serde rejects a document naming no branch with
+    /// `missing field $value` and one naming two with
+    /// `duplicate field $value`. Parallel `Option` fields instead describe
+    /// `xsd:all` with optional members, which accepts both of those documents.
+    #[serde(rename = "$value")]
+    pub action: StoryPrivateActionChoice,
+}
+
+/// The ten branches of the XSD `PrivateAction` choice (:1777-1791).
+// The branches differ in size because the schema types they carry differ in
+// size. Boxing one of them would state something about that branch which the
+// schema does not, hence the lint is silenced rather than satisfied.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum StoryPrivateActionChoice {
+    LongitudinalAction(crate::types::scenario::init::LongitudinalAction),
+    LateralAction(crate::types::actions::movement::LateralAction),
+    VisibilityAction(crate::types::actions::VisibilityAction),
+    SynchronizeAction(crate::types::actions::SynchronizeAction),
     /// Deprecated in XSD `PrivateAction` (:1777-1791) but widely emitted
-    #[serde(
-        rename = "ActivateControllerAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub activate_controller_action: Option<crate::types::actions::ActivateControllerAction>,
-    #[serde(rename = "ControllerAction", skip_serializing_if = "Option::is_none")]
-    pub controller_action: Option<crate::types::actions::ControllerAction>,
-    #[serde(rename = "TeleportAction", skip_serializing_if = "Option::is_none")]
-    pub teleport_action: Option<crate::types::actions::movement::TeleportAction>,
-    #[serde(rename = "RoutingAction", skip_serializing_if = "Option::is_none")]
-    pub routing_action: Option<crate::types::actions::movement::RoutingAction>,
-    #[serde(rename = "AppearanceAction", skip_serializing_if = "Option::is_none")]
-    pub appearance_action: Option<crate::types::actions::AppearanceAction>,
-    #[serde(rename = "TrailerAction", skip_serializing_if = "Option::is_none")]
-    pub trailer_action: Option<crate::types::actions::TrailerAction>,
+    ActivateControllerAction(crate::types::actions::ActivateControllerAction),
+    ControllerAction(crate::types::actions::ControllerAction),
+    TeleportAction(crate::types::actions::movement::TeleportAction),
+    RoutingAction(crate::types::actions::movement::RoutingAction),
+    AppearanceAction(crate::types::actions::AppearanceAction),
+    TrailerAction(crate::types::actions::TrailerAction),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -300,60 +318,39 @@ pub struct EntityRef {
 // is `use="required"` (XSD `Action`, :705-712) with no schema default, and its old impl
 // additionally fabricated a whole `PrivateAction` child nobody wrote. `StoryPrivateAction`
 // mirrors XSD `PrivateAction` (:1777-1791), a bare `xsd:choice` with no `minOccurs="0"`
-// override — the choice itself is required, so an all-`None` value is *also* not schema-valid
-// content ("it states nothing" is no defence when the schema demands a branch), on top of the
-// old impl's fabricated `SpeedAction` branch. Neither type gets a replacement `Default`; callers
-// build one branch explicitly via the constructors below.
+// override, and its old impl fabricated the `SpeedAction` branch. Neither choice has a
+// schema-declared default, hence neither type gets a replacement `Default`; callers build one
+// branch explicitly via the constructors below.
 impl StoryAction {
     /// Create a named `PrivateAction` (XSD `Action` choice member; `@name` is required and has
     /// no schema default, so it must be supplied).
     pub fn private(name: &str, private_action: StoryPrivateAction) -> Self {
         Self {
             name: OSString::literal(name.to_string()),
-            global_action: None,
-            user_defined_action: None,
-            private_action: Some(private_action),
+            action: StoryActionChoice::PrivateAction(private_action),
         }
     }
 }
 
 impl StoryPrivateAction {
-    fn empty() -> Self {
-        Self {
-            longitudinal_action: None,
-            lateral_action: None,
-            visibility_action: None,
-            synchronize_action: None,
-            activate_controller_action: None,
-            controller_action: None,
-            teleport_action: None,
-            routing_action: None,
-            appearance_action: None,
-            trailer_action: None,
-        }
-    }
-
     /// `PrivateAction` choosing the `LongitudinalAction` branch.
     pub fn longitudinal(action: crate::types::scenario::init::LongitudinalAction) -> Self {
         Self {
-            longitudinal_action: Some(action),
-            ..Self::empty()
+            action: StoryPrivateActionChoice::LongitudinalAction(action),
         }
     }
 
     /// `PrivateAction` choosing the `VisibilityAction` branch.
     pub fn visibility(action: crate::types::actions::VisibilityAction) -> Self {
         Self {
-            visibility_action: Some(action),
-            ..Self::empty()
+            action: StoryPrivateActionChoice::VisibilityAction(action),
         }
     }
 
     /// `PrivateAction` choosing the `TeleportAction` branch.
     pub fn teleport(action: crate::types::actions::movement::TeleportAction) -> Self {
         Self {
-            teleport_action: Some(action),
-            ..Self::empty()
+            action: StoryPrivateActionChoice::TeleportAction(action),
         }
     }
 }
@@ -598,7 +595,11 @@ mod tests {
     fn test_event_missing_priority_fails() {
         let xml = r#"<Event name="TestEvent">
             <Action name="Action1">
-                <PrivateAction/>
+                <PrivateAction>
+                    <TeleportAction>
+                        <Position><WorldPosition x="1" y="2"/></Position>
+                    </TeleportAction>
+                </PrivateAction>
             </Action>
         </Event>"#;
         let result = quick_xml::de::from_str::<Event>(xml);
@@ -612,7 +613,11 @@ mod tests {
     fn test_event_with_priority_succeeds() {
         let xml = r#"<Event name="TestEvent" priority="override">
             <Action name="Action1">
-                <PrivateAction/>
+                <PrivateAction>
+                    <TeleportAction>
+                        <Position><WorldPosition x="1" y="2"/></Position>
+                    </TeleportAction>
+                </PrivateAction>
             </Action>
         </Event>"#;
         let result = quick_xml::de::from_str::<Event>(xml);

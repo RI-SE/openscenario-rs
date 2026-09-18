@@ -299,27 +299,31 @@ pub struct AssignRouteAction {
 /// `FollowTrajectoryAction` | `AcquirePositionAction` | `RandomRouteAction`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoutingAction {
-    /// Assign route action
-    #[serde(rename = "AssignRouteAction", skip_serializing_if = "Option::is_none")]
-    pub assign_route_action: Option<AssignRouteAction>,
+    /// The concrete routing action carried by this element.
+    ///
+    /// The group is a bare `xsd:choice`, so `minOccurs` and `maxOccurs` both
+    /// default to 1 and exactly one branch is required. An externally-tagged
+    /// enum behind `$value` states that: the element name comes from the
+    /// serialized variant, and serde rejects a document naming no branch with
+    /// `missing field $value` and one naming two with
+    /// `duplicate field $value`. Parallel `Option` fields instead describe
+    /// `xsd:all` with optional members, which accepts both of those documents.
+    #[serde(rename = "$value")]
+    pub routing_choice: RoutingActionChoice,
+}
 
-    /// Follow trajectory action
-    #[serde(
-        rename = "FollowTrajectoryAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub follow_trajectory_action: Option<FollowTrajectoryAction>,
-
-    /// Acquire position action
-    #[serde(
-        rename = "AcquirePositionAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub acquire_position_action: Option<AcquirePositionAction>,
-
-    /// Random route action
-    #[serde(rename = "RandomRouteAction", skip_serializing_if = "Option::is_none")]
-    pub random_route_action: Option<crate::types::actions::wrappers::RandomRouteAction>,
+/// The four branches of the XSD `RoutingAction` choice (:1981-1988).
+// The branches differ in size because the schema types they carry differ in
+// size. Boxing one of them would state something about that branch which the
+// schema does not, hence the lint is silenced rather than satisfied.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum RoutingActionChoice {
+    AssignRouteAction(AssignRouteAction),
+    FollowTrajectoryAction(FollowTrajectoryAction),
+    AcquirePositionAction(AcquirePositionAction),
+    RandomRouteAction(crate::types::actions::wrappers::RandomRouteAction),
 }
 
 /// Lane change action for lateral lane movements
@@ -1052,19 +1056,13 @@ impl RoutingAction {
     /// Create a routing action with assign route action
     pub fn with_assign_route(action: AssignRouteAction) -> Self {
         Self {
-            assign_route_action: Some(action),
-            follow_trajectory_action: None,
-            acquire_position_action: None,
-            random_route_action: None,
+            routing_choice: RoutingActionChoice::AssignRouteAction(action),
         }
     }
     /// Create a routing action with trajectory following
     pub fn with_trajectory(action: FollowTrajectoryAction) -> Self {
         Self {
-            assign_route_action: None,
-            follow_trajectory_action: Some(action),
-            acquire_position_action: None,
-            random_route_action: None,
+            routing_choice: RoutingActionChoice::FollowTrajectoryAction(action),
         }
     }
 
@@ -2171,10 +2169,10 @@ mod tests {
         // XSD `RoutingAction` (:1981-1988) choice branch `AcquirePositionAction`.
         let xml = r#"<RoutingAction><AcquirePositionAction><Position><WorldPosition x="1.0" y="2.0" z="0.0"/></Position></AcquirePositionAction></RoutingAction>"#;
         let action: RoutingAction = quick_xml::de::from_str(xml).unwrap();
-        assert!(action.acquire_position_action.is_some());
-        assert!(action.assign_route_action.is_none());
-        assert!(action.follow_trajectory_action.is_none());
-        assert!(action.random_route_action.is_none());
+        assert!(matches!(
+            action.routing_choice,
+            RoutingActionChoice::AcquirePositionAction(_)
+        ));
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
         assert!(serialized.contains("AcquirePositionAction"));
@@ -2187,10 +2185,10 @@ mod tests {
         // XSD `RoutingAction` (:1981-1988) choice branch `RandomRouteAction` (empty complexType).
         let xml = r#"<RoutingAction><RandomRouteAction/></RoutingAction>"#;
         let action: RoutingAction = quick_xml::de::from_str(xml).unwrap();
-        assert!(action.random_route_action.is_some());
-        assert!(action.assign_route_action.is_none());
-        assert!(action.follow_trajectory_action.is_none());
-        assert!(action.acquire_position_action.is_none());
+        assert!(matches!(
+            action.routing_choice,
+            RoutingActionChoice::RandomRouteAction(_)
+        ));
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
         assert!(serialized.contains("RandomRouteAction"));

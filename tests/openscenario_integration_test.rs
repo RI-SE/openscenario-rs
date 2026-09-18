@@ -7,8 +7,10 @@
 //! - Failing tests indicate missing functionality to implement next
 
 use openscenario_rs::parse_str;
+use openscenario_rs::types::actions::movement::RoutingActionChoice;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
+use openscenario_rs::types::scenario::story::{StoryActionChoice, StoryPrivateActionChoice};
 use openscenario_rs::types::OpenScenario;
 use std::fs;
 
@@ -678,7 +680,9 @@ fn can_parse_routing_actions_in_story_events() {
                 println!("✓ TeleportAction parsed");
             }
             if let Some(routing) = &action_wrapper.routing_action {
-                if let Some(follow_action) = &routing.follow_trajectory_action {
+                if let RoutingActionChoice::FollowTrajectoryAction(follow_action) =
+                    &routing.routing_choice
+                {
                     // This validates the trajectory system integration
                     println!("✓ RoutingAction with FollowTrajectoryAction parsed");
 
@@ -750,9 +754,15 @@ fn can_validate_trajectory_following_modes() {
                     for event in &maneuver.events {
                         let actions = &event.actions;
                         for action in actions {
-                            if let Some(ref private_action) = action.private_action {
-                                if let Some(routing) = &private_action.routing_action {
-                                    if let Some(follow_action) = &routing.follow_trajectory_action {
+                            if let StoryActionChoice::PrivateAction(private_action) = &action.action
+                            {
+                                if let StoryPrivateActionChoice::RoutingAction(routing) =
+                                    &private_action.action
+                                {
+                                    if let RoutingActionChoice::FollowTrajectoryAction(
+                                        follow_action,
+                                    ) = &routing.routing_choice
+                                    {
                                         routing_actions_found += 1;
 
                                         use openscenario_rs::types::enums::FollowingMode;
@@ -908,7 +918,9 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         conditions::{ByValueCondition, SimulationTimeCondition},
         enums::{ConditionEdge, DynamicsDimension, DynamicsShape, Priority, Rule},
         scenario::init::LongitudinalAction,
-        scenario::story::{StoryAction, StoryPrivateAction},
+        scenario::story::{
+            StoryAction, StoryActionChoice, StoryPrivateAction, StoryPrivateActionChoice,
+        },
         scenario::triggers::{Condition, ConditionGroup, Trigger},
         scenario::{Act, Actors, EntityRef, Event, Maneuver, ManeuverGroup, ScenarioStory},
     };
@@ -969,24 +981,13 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         maximum_execution_count: Some(Value::literal(1)),
         priority: Value::Literal(Priority::Override),
         actions: vec![StoryAction {
-            global_action: None,
-            user_defined_action: None,
             name: Value::literal("SpeedAction1".to_string()),
-            private_action: Some(StoryPrivateAction {
-                activate_controller_action: None,
-                longitudinal_action: Some(LongitudinalAction {
+            action: StoryActionChoice::PrivateAction(StoryPrivateAction {
+                action: StoryPrivateActionChoice::LongitudinalAction(LongitudinalAction {
                     speed_action: Some(speed_action),
                     longitudinal_distance_action: None,
                     speed_profile_action: None,
                 }),
-                lateral_action: None,
-                visibility_action: None,
-                synchronize_action: None,
-                controller_action: None,
-                teleport_action: None,
-                routing_action: None,
-                appearance_action: None,
-                trailer_action: None,
             }),
         }],
         start_trigger: Some(trigger),
@@ -1082,8 +1083,10 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     // Verify the action system
     assert_eq!(event.actions[0].name.as_literal().unwrap(), "SpeedAction1");
-    if let Some(private_action) = &event.actions[0].private_action {
-        if let Some(longitudinal_action) = &private_action.longitudinal_action {
+    if let StoryActionChoice::PrivateAction(private_action) = &event.actions[0].action {
+        if let StoryPrivateActionChoice::LongitudinalAction(longitudinal_action) =
+            &private_action.action
+        {
             if let Some(speed_action) = &longitudinal_action.speed_action {
                 assert_eq!(
                     speed_action.speed_action_dynamics.dynamics_dimension,
