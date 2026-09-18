@@ -669,6 +669,32 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **Sequences below a choice wrapper parse again — an entire branch of `<TrafficAction>` was
+  unreachable.** `#[serde(flatten)]` makes serde buffer an element's children into a `Content`
+  map through `deserialize_any`. quick-xml cannot know at that point that a child will later be
+  read back as a sequence, so a `Vec<T>` replayed out of that buffer failed with
+  `invalid type: map, expected a sequence` — **even when the element occurred only once.** Any
+  field deserialized as a sequence, anywhere below a flattened choice wrapper, was therefore
+  unparseable. For `TrafficAction` this was not a corner case: XSD `RoadRange` requires
+  `minOccurs="2"` `RoadCursor` children and `TrafficDistribution` requires at least one
+  `TrafficDistributionEntry`, so **no conformant `TrafficAreaAction` could be written that dodged
+  it.** `EntityAction`, `TrafficAction`, `GlobalActionElement` and `PrivateActionElement` now keep
+  their public externally-tagged enum — which makes "no branch" and "two branches"
+  unrepresentable — but move the serde wire format to a private parallel-`Option` representation
+  joined by `#[serde(try_from/into)]`. The `TryFrom` is the choice-group `validate()` the crate
+  convention asks for, except that it runs at parse time and cannot be forgotten; it rejects
+  all-`None` and multiple-`Some` with the same pair of messages `GlobalAction::validate` returns.
+  The public field types are unchanged, so this is a fix rather than a breaking change.
+  `VariableAction`, `VariableModifyRule`, `ParameterAction` and `ModifyRule` keep the flatten
+  construct: their entire XSD subtree contains no element with `maxOccurs > 1`, so nothing below
+  them can ever deserialize as a sequence. `tests/osr12_choice_wrapper_sequences_test.rs` pins
+  that reasoning, so adding a `Vec` under one of them fails loudly.
+  `conformance/corpus/openscenario1-engine/.../traffic_area_action_test_scenario.xosc` — the only
+  corpus file containing a `<TrafficAction>`, and the sole supplier of ten element declarations
+  including `RoadCursor`, `RoadRange`, `TrafficArea` and `EntityDistribution` — now passes;
+  `report` goes **210 passed / 2 excluded → 211 passed / 1 excluded** and its `crate-defect` entry
+  in `conformance/expectations.toml` is deleted.
+
 - **The builder's cross-reference rules actually check something.**
   `ParameterReferenceValidationRule` was a no-op whose body was an empty `if` with a comment,
   and it asked the wrong question besides: whether declarations are *used*, which is fine

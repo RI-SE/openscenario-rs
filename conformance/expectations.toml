@@ -59,21 +59,6 @@ because the input is.\
 """
 
 [[entry]]
-path = "openscenario1-engine/engine/tests/data/Scenarios/traffic_area_action_test_scenario.xosc"
-gates = ["report", "lossy", "validate"]
-assert = "crate-defect"
-reason = """
-TEMPORARY. This input is schema-valid; the defect is ours. It is the only corpus file containing \
-a <TrafficAction> element, and the crate fails to deserialize it with "invalid type: map, \
-expected a sequence": any field deserialized as a sequence anywhere below <TrafficAction> fails, \
-bisected in OSP-07-RESULTS.md §4 root cause B and localized to the #[serde(flatten)] choice \
-wrapper at src/types/actions/wrappers.rs:72-78. Tracked by OSP-11; the fix lives in src/, which \
-OSP-09 may not touch. The parse failure means `lossy` and `validate` can only skip it, hence all \
-three gates. When OSP-11 lands, the "gate must still fail" assertion above trips and this entry \
-must be deleted — that is the intended way for it to expire.\
-"""
-
-[[entry]]
 path = "openscenario1-engine/engine/tests/data/Scenarios/trajectory_shape.xosc"
 gates = ["lossy", "validate-input"]
 assert = "input-schema-invalid"
