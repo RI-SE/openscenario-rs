@@ -33,11 +33,42 @@ The conformance ledger, including what the test corpus does and does not prove, 
   not "passes everything": two deliberately invalid upstream fixtures and one schema-valid file
   this crate cannot yet parse. Exemptions are per gate, and each entry asserts both a premise
   about the input and that the named gates still genuinely fail, so a stale exemption breaks the
-  build instead of silently protecting nothing. Gate results after the import: `report`
-  210 passed / 0 failed / 2 excluded / 212 total; `lossy` 210 lossless / 0 lossy / 0 skipped /
-  2 excluded / 212 total with 0 dropped and 0 invented items; `validate` 209 schema-valid /
-  0 schema-invalid / 0 skipped / 3 excluded / 212 total with 0 validation errors. No change to
-  `openscenario-rs`'s public API.
+  build instead of silently protecting nothing. Gate results immediately after this import (later
+  entries in this section record how the harness and these counts changed as further gates
+  landed): `report` 210 passed / 0 failed / 2 excluded / 212 total; `lossy` 210 lossless /
+  0 lossy / 0 skipped / 2 excluded / 212 total with 0 dropped and 0 invented items; `validate`
+  209 schema-valid / 0 schema-invalid / 0 skipped / 3 excluded / 212 total with 0 validation
+  errors. No change to `openscenario-rs`'s public API.
+- **A fourth conformance gate, `validate-input`, and character content visible to the fidelity
+  gate.** `profile()` (`conformance/src/xml_profile.rs`), which reduces a document to a multiset
+  of element/attribute keys for the `lossy` gate, previously handled only element start/end/empty
+  events and discarded text nodes, so `lossy` — the gate whose job is "nothing was dropped,
+  nothing was invented" — could not see character content being dropped. It now emits
+  `path/to/Element#text` keys, counted per node rather than by value, so serialization is free to
+  change escaping or whitespace without tripping the gate. That alone only made the loss visible
+  from one side: a schema-invalid input whose invalid part this crate does not model could still
+  be parsed, have the invalid content silently dropped, and pass `validate` on output because
+  something was removed. The new `validate-input` gate closes that by checking each corpus file
+  as it sits on disk against `Schema/OpenSCENARIO.xsd`, without parsing it through this crate, so
+  its verdict is a fact about the corpus rather than about the code. `bash scripts/gate.sh` now
+  runs **eleven** stages, not ten. Of the 212 corpus files, exactly three fail input validation,
+  all upstream openpass fixtures, and `conformance/expectations.toml` records why each is exempt
+  from which gates. Gate results: `lossy` 209 lossless / 0 lossy / 0 skipped / 3 excluded /
+  212 total; `validate` 209 schema-valid / 0 schema-invalid / 0 skipped / 3 excluded / 212 total;
+  `validate-input` 209 input-schema-valid / 0 input-schema-invalid / 0 skipped / 3 excluded /
+  212 total. No change to `openscenario-rs`'s public API.
+- **The generated round-trip test suite now fails loudly, instead of passing over nothing, when
+  it goes stale.** `conformance/build.rs` regenerates one round-trip test per corpus file at
+  build time, and cargo's `rerun-if-changed` on the corpus directory tracks only the directory's
+  own mtime. Moving the corpus aside and back — as when re-fetching it by hand — preserves that
+  mtime, so cargo would not rerun the build script and a stale, empty generated test file could
+  survive undetected: the `tests/generated.rs` target would run nothing while the package's other
+  test targets kept passing, so `cargo test -p openscenario-roundtrip-harness` and the rest of the
+  gate stayed green. The generated file now also records the
+  corpus file count the build script saw, and a new check in `conformance/tests/generated.rs`
+  compares that count against the corpus on disk at run time, failing with a recovery hint
+  (`touch conformance/build.rs`) if they disagree. `cargo test -p openscenario-roundtrip-harness`
+  reports 225 passed, 0 failed. No change to `openscenario-rs`'s public API.
 - **`FromStr`/`Display` on all 37 `src/types/enums.rs` enumerations.** Nine enums
   (`TriggeringEntitiesRule`, `Priority`, `StoryboardElementState`, `StoryboardElementType`,
   `ParameterType`, `CoordinateSystem`, `ReferenceContext`, `SpeedTargetValueType`,
