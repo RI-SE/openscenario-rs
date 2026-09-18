@@ -8,7 +8,7 @@
 
 use crate::types::basic::{Double, OSString, Value};
 use crate::types::controllers::ObjectController;
-use crate::types::entities::{MiscObject, Pedestrian, ScenarioEntityReference, Vehicle};
+use crate::types::entities::{EntityCatalogReference, MiscObject, Pedestrian, Vehicle};
 use crate::types::enums::ObjectType;
 use crate::types::scenario::triggers::EntityRef;
 use serde::{Deserialize, Serialize};
@@ -109,9 +109,9 @@ pub struct ScenarioObjectTemplate {
     )]
     pub external_object_reference: Option<ExternalObjectReference>,
 
-    /// Entity catalog reference (vehicle or pedestrian, optional)
+    /// Entity catalog reference (optional)
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub entity_catalog_reference: Option<ScenarioEntityReference>,
+    pub entity_catalog_reference: Option<EntityCatalogReference>,
 
     /// Object controller configuration (optional, may occur multiple times)
     #[serde(
@@ -503,17 +503,13 @@ mod tests {
 
     #[test]
     fn test_scenario_object_template_catalog_reference_roundtrip() {
-        use crate::types::catalogs::entities::CatalogVehicle;
-        use crate::types::catalogs::references::CatalogReference;
-
-        let catalog_ref: CatalogReference<CatalogVehicle> =
-            CatalogReference::new("VehicleCatalog".to_string(), "Sedan".to_string());
+        let catalog_ref = EntityCatalogReference::new("VehicleCatalog", "Sedan");
         let template = ScenarioObjectTemplate {
             vehicle: None,
             pedestrian: None,
             misc_object: None,
             external_object_reference: None,
-            entity_catalog_reference: Some(ScenarioEntityReference::Vehicle(catalog_ref)),
+            entity_catalog_reference: Some(catalog_ref),
             object_controller: Vec::new(),
         };
 

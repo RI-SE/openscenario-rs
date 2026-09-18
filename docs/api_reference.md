@@ -311,13 +311,17 @@ pub struct ScenarioObject {
     pub pedestrian: Option<Pedestrian>,
     pub misc_object: Option<MiscObject>,
     pub external_object_reference: Option<ExternalObjectReference>,
-    pub entity_catalog_reference: Option<ScenarioEntityReference>,
+    pub entity_catalog_reference: Option<EntityCatalogReference>,
     pub object_controller: Vec<ObjectController>,                  // may repeat
 }
 ```
 
 The entity variants are flat `Option` fields; there is no `EntityObject` enum. The catalog
-reference field is named `entity_catalog_reference`, not `catalog_reference`.
+reference field is named `entity_catalog_reference`, not `catalog_reference`, and it is read
+through the accessor `catalog_reference()`. `EntityCatalogReference` carries `catalog_name`,
+`entry_name` and an optional `parameter_assignments`, and it is untyped: the schema gives
+every kind of entity the same `<CatalogReference>` element, so the kind of entity an entry
+describes is known only once the referenced catalog file is read.
 
 ### Conditions by value
 

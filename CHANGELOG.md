@@ -199,6 +199,29 @@ Breaking, unless noted.
 
 ### Removed
 
+- **The typed entity catalog reference, and the accessors and constructors built on it.**
+  These are breaking changes.
+  - **`types::entities::ScenarioEntityReference`** — an `#[serde(untagged)]` enum over
+    `CatalogReference<CatalogVehicle>` and `CatalogReference<CatalogPedestrian>`, which
+    silently resolved every parsed reference to the vehicle variant; see the entry under
+    *Fixed* below. **Surviving type: `types::entities::EntityCatalogReference`**, which is
+    untyped, as the schema's element is.
+  - **`ScenarioObject::new_vehicle_catalog_reference`** and
+    **`ScenarioObject::new_pedestrian_catalog_reference`** — the entity kind is not part of
+    a catalog reference, so the two constructors said something the document cannot say.
+    **Surviving constructor: `ScenarioObject::new_catalog_reference`.**
+  - **`ScenarioObject::vehicle_catalog_reference`** and
+    **`ScenarioObject::pedestrian_catalog_reference`** — the first returned `Some` for every
+    parsed reference and the second for none of them. **Surviving accessor:
+    `ScenarioObject::catalog_reference`**, which returns the reference without claiming a
+    kind.
+  - **The `Serialize` and `Deserialize` derives on `types::scenario::triggers::ConditionType`**
+    — the enum is a constructor argument for `Condition`, not a serde field, since XSD
+    `Condition` places the choice directly in the element and `Condition` models it with
+    parallel `Option` fields. The derives were untagged, hence they presented the same
+    guess-by-trial-order shape as a sanctioned pattern. The enum itself remains, and
+    `Condition::new` still takes it.
+
 - **Duplicate and dead types.** Each entry names the surviving twin:
   - **`catalog::resolver::CatalogManager`** — a second, shadowing `CatalogManager` distinct
     from the canonical `catalog::CatalogManager` (`src/catalog/mod.rs`), which is what
@@ -675,6 +698,30 @@ Breaking, unless noted.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed
+
+- **Entity catalog references no longer resolve to the wrong kind of entity.** `ScenarioObject`
+  and `ScenarioObjectTemplate` held their `<CatalogReference>` child in
+  `ScenarioEntityReference`, an `#[serde(untagged)]` enum with a `CatalogReference<CatalogVehicle>`
+  variant and a `CatalogReference<CatalogPedestrian>` one. The type parameter carries no
+  serialized data, so both variants deserialize from exactly the same two attributes and the
+  same optional child, and an untagged enum takes the first variant that matches. Every catalog
+  reference in every document was therefore parsed as a vehicle reference, and
+  `pedestrian_catalog_reference()` could never return `Some` for a parsed document. The
+  serialized bytes are identical either way, hence neither the round-trip gate nor the lossy
+  gate could see it: the parsed document described the wrong thing while every conformance
+  measure stayed green. This was silent data corruption rather than a parse failure, which is
+  the worse of the two, since a parse failure is loud and a caller works around it.
+  XSD `EntityObject` (`:1168-1176`) offers one `<CatalogReference>` element for every kind of
+  entity, and XSD `CatalogReference` (`:879-885`) carries only `catalogName`, `entryName` and an
+  optional `ParameterAssignments`. Thus the document does not record which kind of entity the
+  named entry describes; that is knowable only once the referenced catalog file is read, and no
+  deserializer can recover it. The field now holds the untyped `EntityCatalogReference`, and the
+  entity kind is settled at catalog-resolution time instead of guessed while parsing.
+  `tests/entity_catalog_reference_test.rs` pins the parsed content, a byte-exact round trip of
+  the source document, and the survival of the `ParameterAssignments` sequence below the
+  reference. `bash scripts/gate.sh` passes all eleven stages, with the test total going
+  **1490 → 1493** and `report`, `lossy`, `validate` and `validate-input` unchanged at
+  211 / 210 / 210 / 209 passing.
 
 - **Inline routes, speed profiles and story-level global actions parse again.** Four element
   wrappers that host an `xsd:choice` still carried `#[serde(flatten)]`: `AssignRouteAction`

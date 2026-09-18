@@ -71,8 +71,14 @@ pub struct Condition {
 }
 
 /// Type of condition - either entity-based or value-based
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(untagged)]
+///
+/// This enum is a constructor argument for `Condition`, not a serde field: XSD
+/// `Condition` places the choice directly in the element, which `Condition` models with
+/// parallel `Option` fields. Hence it derives no `Serialize` or `Deserialize`. An
+/// untagged enum over two structurally distinct conditions would resolve by trial order
+/// rather than by element name, so deriving them here would sanction a shape that cannot
+/// parse reliably.
+#[derive(Debug, Clone, PartialEq)]
 pub enum ConditionType {
     /// Entity-based condition (collision, distance, speed, etc.)
     ByEntity(ByEntityCondition),

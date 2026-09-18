@@ -32,26 +32,43 @@ pub enum EntityObject {
     MiscObject(Box<MiscObject>),
 }
 
-/// Catalog reference for scenario entities (vehicle or pedestrian)
+/// A `<CatalogReference>` standing in for an entity in the `EntityObject` choice group.
 ///
-/// This enum wraps typed catalog references to handle the XSD constraint that
-/// only one CatalogReference element can exist per ScenarioObject. The actual
-/// type (vehicle vs pedestrian) is determined at runtime during catalog resolution.
+/// XSD `EntityObject` (`:1168-1176`) offers a single `<CatalogReference>` element, and
+/// XSD `CatalogReference` (`:879-885`) carries only `catalogName`, `entryName` and an
+/// optional `ParameterAssignments`. The document therefore does not say whether the
+/// entry it names is a vehicle, a pedestrian or a miscellaneous object. That is knowable
+/// only once the referenced catalog file is read. Hence this reference carries no entity
+/// type, and the kind is settled at catalog-resolution time rather than guessed while parsing.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ScenarioEntityReference {
-    /// Vehicle catalog reference
-    Vehicle(
-        crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogVehicle,
-        >,
-    ),
-    /// Pedestrian catalog reference
-    Pedestrian(
-        crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogPedestrian,
-        >,
-    ),
+#[serde(rename = "CatalogReference")]
+pub struct EntityCatalogReference {
+    /// Name of the catalog file holding the entry
+    #[serde(rename = "@catalogName")]
+    pub catalog_name: OSString,
+
+    /// Name of the entry within that catalog
+    #[serde(rename = "@entryName")]
+    pub entry_name: OSString,
+
+    /// Parameter assignments applied when the entry is resolved
+    #[serde(
+        rename = "ParameterAssignments",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub parameter_assignments: Option<crate::types::catalogs::references::ParameterAssignments>,
+}
+
+impl EntityCatalogReference {
+    /// Create a reference to an entry in a catalog, without parameter assignments.
+    pub fn new(catalog_name: impl Into<String>, entry_name: impl Into<String>) -> Self {
+        Self {
+            catalog_name: OSString::literal(catalog_name.into()),
+            entry_name: OSString::literal(entry_name.into()),
+            parameter_assignments: None,
+        }
+    }
 }
 
 /// Wrapper for scenario objects containing entity information
@@ -85,12 +102,12 @@ pub struct ScenarioObject {
     )]
     pub external_object_reference: Option<ExternalObjectReference>,
 
-    /// Entity catalog reference (vehicle or pedestrian)
+    /// Entity catalog reference
     ///
-    /// References a vehicle or pedestrian from an external catalog.
-    /// Mutually exclusive with direct vehicle/pedestrian definitions.
+    /// References an entry in an external catalog. Mutually exclusive with the
+    /// direct entity definitions above.
     #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub entity_catalog_reference: Option<ScenarioEntityReference>,
+    pub entity_catalog_reference: Option<EntityCatalogReference>,
 
     /// Object controller configuration (optional, may occur multiple times)
     #[serde(
@@ -161,68 +178,25 @@ impl ScenarioObject {
         }
     }
 
-    /// Create a new scenario object with a vehicle catalog reference
-    pub fn new_vehicle_catalog_reference(
-        name: String,
-        catalog_reference: crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogVehicle,
-        >,
-    ) -> Self {
+    /// Create a new scenario object referencing a catalog entry
+    ///
+    /// The document does not record which kind of entity the entry describes, so this
+    /// constructor takes no entity type.
+    pub fn new_catalog_reference(name: String, catalog_reference: EntityCatalogReference) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
             vehicle: None,
             pedestrian: None,
             misc_object: None,
             external_object_reference: None,
-            entity_catalog_reference: Some(ScenarioEntityReference::Vehicle(catalog_reference)),
+            entity_catalog_reference: Some(catalog_reference),
             object_controller: Vec::new(),
         }
     }
 
-    /// Create a new scenario object with a pedestrian catalog reference
-    pub fn new_pedestrian_catalog_reference(
-        name: String,
-        catalog_reference: crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogPedestrian,
-        >,
-    ) -> Self {
-        Self {
-            name: crate::types::basic::Value::literal(name),
-            vehicle: None,
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
-            entity_catalog_reference: Some(ScenarioEntityReference::Pedestrian(catalog_reference)),
-            object_controller: Vec::new(),
-        }
-    }
-
-    /// Get vehicle catalog reference if present
-    pub fn vehicle_catalog_reference(
-        &self,
-    ) -> Option<
-        &crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogVehicle,
-        >,
-    > {
-        match &self.entity_catalog_reference {
-            Some(ScenarioEntityReference::Vehicle(r)) => Some(r),
-            _ => None,
-        }
-    }
-
-    /// Get pedestrian catalog reference if present
-    pub fn pedestrian_catalog_reference(
-        &self,
-    ) -> Option<
-        &crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::entities::CatalogPedestrian,
-        >,
-    > {
-        match &self.entity_catalog_reference {
-            Some(ScenarioEntityReference::Pedestrian(r)) => Some(r),
-            _ => None,
-        }
+    /// Get the catalog reference if this object is defined by one
+    pub fn catalog_reference(&self) -> Option<&EntityCatalogReference> {
+        self.entity_catalog_reference.as_ref()
     }
 
     /// Get the entity object as an enum variant

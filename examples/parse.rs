@@ -555,8 +555,8 @@ fn resolve_catalog_references_simple(
                 println!("   🎭 Processing entity: {}", entity_name);
 
                 // Check if entity has a catalog reference
-                if let Some(catalog_ref) = entity.vehicle_catalog_reference() {
-                    println!("      🔗 Resolving vehicle catalog reference...");
+                if let Some(catalog_ref) = entity.catalog_reference() {
+                    println!("      🔗 Resolving entity catalog reference...");
                     println!("         Catalog: {:?}", catalog_ref.catalog_name);
                     println!("         Entry: {:?}", catalog_ref.entry_name);
 
