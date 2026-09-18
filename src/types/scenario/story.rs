@@ -44,10 +44,6 @@ pub struct StoryAction {
 /// `Unsupported("cannot serialize enum newtype variant ...")` when asked to.
 /// The wrapper struct holds its own `$value`, so each level writes one element
 /// name.
-// The branches differ in size because the schema types they carry differ in
-// size. Boxing one of them would state something about that branch which the
-// schema does not, hence the lint is silenced rather than satisfied.
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum StoryActionChoice {
@@ -102,10 +98,6 @@ pub struct StoryPrivateAction {
 }
 
 /// The ten branches of the XSD `PrivateAction` choice (:1777-1791).
-// The branches differ in size because the schema types they carry differ in
-// size. Boxing one of them would state something about that branch which the
-// schema does not, hence the lint is silenced rather than satisfied.
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum StoryPrivateActionChoice {

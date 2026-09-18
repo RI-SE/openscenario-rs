@@ -39,6 +39,14 @@
 //! }
 //! ```
 
+// Every instance of this lint in the crate sits on an enum modeling an `xsd:choice`, where
+// variant size is set by the schema's branch types, not by a design choice here. Boxing the
+// large branch would add an indirection the wire format does not want, purely to quiet the
+// lint. The allow is crate-level rather than repeated per enum because the population is
+// coextensive with "mirrors an xsd:choice": every new choice conversion would otherwise need
+// its own local allow.
+#![allow(clippy::large_enum_variant)]
+
 // Module declarations
 pub mod catalog;
 pub mod error;

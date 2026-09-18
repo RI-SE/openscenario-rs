@@ -241,6 +241,21 @@ Breaking, unless noted.
 - **Multiple `ObjectController` elements are accepted** on a `ScenarioObject`, per the schema.
 - `Actors` may be empty and `ManeuverGroup` may carry no `Maneuver`, both per
   `minOccurs="0"`.
+- **`clippy::large_enum_variant` is now allowed crate-wide, from `src/lib.rs`, instead of at
+  three individual enum sites.** Every choice group modeled as an externally tagged enum has
+  variant sizes set by the schema types its branches carry, not by a design choice in this
+  crate, so the lint's population here is exactly the set of enums that mirror an
+  `xsd:choice`. Boxing the larger branches would add an indirection the wire format does not
+  ask for, purely to satisfy a lint that is measuring the schema rather than the code. The
+  crate-level allow removes three local ones and covers every choice enum still to be
+  converted, rather than requiring one per site. `cargo clippy --features builder,validation
+  --all-targets` goes **197 → 191**. This changes no behavior; `bash scripts/gate.sh` stays
+  green across all eleven stages, and the test total is unchanged at 1559.
+- **`CONTRIBUTING.md` no longer presents parallel `Option` fields or `#[serde(flatten)]` as
+  acceptable ways to model a choice group.** Both idioms are described along with the failure
+  each one produces, and the guide now names the externally tagged enum behind `$value` as the
+  one shape to write. The pointer to a single dedicated round-trip test file is replaced with
+  the same neighbor-file rule the guide already states for every other test.
 
 ### Removed
 

@@ -121,9 +121,17 @@ not the schema's `complexType` name. Those are different namespaces and they div
 `TransitionDynamics` appears on the wire as `<SpeedActionDynamics>`. Naming a variant after
 the type emits an element the schema has never heard of.
 
-Two idioms exist for choice groups: parallel `Option` fields with a hand-written
-`validate()` / `get_action_type()` pair, and `#[serde(flatten)]` over an externally tagged
-enum. Match whichever the surrounding code uses for that part of the tree.
+**Model a choice group as an externally tagged enum behind `#[serde(rename = "$value")]`.**
+`$value` takes the element name from the serialized variant, so serde enforces the choice's
+cardinality structurally: a document naming no branch fails with `missing field $value`, and
+one naming two fails with `duplicate field $value`. No hand-written `validate()` is needed.
+
+Two other shapes come up in older code and neither is correct here. Parallel `Option` fields
+model `xsd:all` with optional members, a different schema production that accepts documents
+the choice forbids and only rejects them if every caller remembers to run the accompanying
+check. `#[serde(flatten)]` buffers an element's children into a map before deserializing them,
+so a sequence underneath it fails to parse and a nested choice fails to serialize. Neither
+limitation is visible until the document that exercises it is actually written.
 
 ## Tests
 
@@ -131,8 +139,9 @@ Every new or corrected type needs a round-trip test: build the value, serialize 
 back, and compare. `tests/` is organized by area (conditions, positions, actions, catalogs,
 entity selection, builders), so put it next to its neighbors rather than in a new file.
 
-A flattened choice group additionally belongs in `tests/choice_flatten_roundtrip_test.rs`,
-which asserts the emitted element name for every such site.
+A choice group's round-trip test follows the same rule as any other: it goes next to its
+neighbors, not into one dedicated file. Feed a minimal schema-valid document in, check the
+deserialized variant and its field values, re-serialize, and assert the emitted element name.
 
 ## The conformance gates
 

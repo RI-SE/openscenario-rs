@@ -313,10 +313,6 @@ pub struct RoutingAction {
 }
 
 /// The four branches of the XSD `RoutingAction` choice (:1981-1988).
-// The branches differ in size because the schema types they carry differ in
-// size. Boxing one of them would state something about that branch which the
-// schema does not, hence the lint is silenced rather than satisfied.
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum RoutingActionChoice {
