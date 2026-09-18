@@ -169,7 +169,7 @@ Breaking, unless noted.
   36 optional) now hold `Value<E>` and `Option<Value<E>>` respectively; the catalog twins
   moved in lockstep with their scenario counterparts. `Value<T>` was extended rather than
   duplicated, so `Resolve<T>` (`src/types/mod.rs`) and
-  `CatalogParameterSubstitution::resolve_value` (`src/catalog/parameters.rs`) work on enums
+  `ParameterSubstitutionEngine::resolve_value` (`src/catalog/parameters.rs`) work on enums
   for free. Per-enum aliases (`VehicleCategoryValue`, `RuleValue`, … one per enum) are in
   `src/types/basic.rs`.
 
