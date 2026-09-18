@@ -17,9 +17,20 @@ pub struct Stochastic {
 }
 
 /// Wrapper for stochastic distributions
+///
+/// XSD `StochasticDistribution` (`Schema/OpenSCENARIO.xsd:2088-2093`) is a
+/// `StochasticDistributionType` choice group plus a sibling
+/// `@parameterName` attribute. `$value` takes the element name from the
+/// serialized variant and reads the chosen branch straight from the live
+/// parser. `#[serde(flatten)]` cannot do that: it buffers the element's
+/// children into a map through `deserialize_any` before the enum picks a
+/// variant, and a `Vec<T>` replayed out of that buffer fails with `invalid
+/// type: map, expected a sequence`. Two branches here hold a `Vec` directly,
+/// `ProbabilityDistributionSet.elements` and `Histogram.bins`, so no
+/// document using either could be parsed at all under `flatten`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StochasticDistribution {
-    #[serde(flatten)]
+    #[serde(rename = "$value")]
     pub distribution_type: StochasticDistributionType,
     #[serde(rename = "@parameterName")]
     pub parameter_name: OSString,

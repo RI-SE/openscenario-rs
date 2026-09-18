@@ -723,6 +723,28 @@ Breaking, unless noted.
 
 ### Fixed
 
+- **No stochastic parameter distribution parsed at all, in either of the two shapes that hold a
+  sequence.** `StochasticDistribution` (`types/distributions/stochastic.rs`) still carried
+  `#[serde(flatten)]` around its seven-way `StochasticDistributionType` choice; the earlier pass
+  through the crate's `flatten` sites missed this one. Two of the seven branches hold a `Vec`
+  directly below the choice, `ProbabilityDistributionSet.elements` and `Histogram.bins`, and
+  `flatten` buffers an element's children into a map through `deserialize_any` before the enum
+  picks a variant, so a `Vec<T>` replayed out of that buffer failed with `invalid type: map,
+  expected a sequence`, even with a single child element. Neither branch is exercised by the
+  conformance corpus, so this was unreachable for as long as the type has existed with no gate
+  reporting it. The wrapper now hosts its choice enum behind `$value`, the mechanism already
+  used at `types/catalogs/trajectories.rs:45` and applied to the other fourteen sites in earlier
+  releases; `grep -rn 'serde(flatten)' src/` now returns no attribute sites anywhere in the
+  crate. The public field types and names are unchanged, hence this is a fix rather than a
+  breaking change; only the rejection wording moves from `no variant of enum
+  StochasticDistributionType found in flattened data` to serde's ``missing field `$value` `` and
+  ``duplicate field `$value` ``. A new test file parses one and two `<Element>` children of
+  `ProbabilityDistributionSet` and one and two `<Bin>` children of `Histogram`, asserts a
+  byte-exact round trip including the sibling `@parameterName` attribute, and asserts the
+  zero-branch and two-branch rejections. `bash scripts/gate.sh` passes all eleven stages, with
+  the test total going **1513 → 1521**; clippy stays at **197**, and `report`, `lossy`,
+  `validate` and `validate-input` are unchanged at 211 / 210 / 210 / 209 passing.
+
 - **Nine more choice wrappers parse a repeated child again, and the choice-group macro is gone.**
   `VariableAction`, `VariableModifyRule`, `ParameterAction` and `ModifyRule`
   (`types/actions/wrappers.rs`), `TrafficSignalAction` (`types/actions/traffic.rs`) and
