@@ -1,6 +1,6 @@
 //! The builder's corpus.
 //!
-//! The parser harness enumerates 172 real `.xosc` files because the parser's input is *files*.
+//! The parser harness enumerates 212 real `.xosc` files because the parser's input is *files*.
 //! The builder's input is *code*, so its corpus has to be a set of builder programs. Those
 //! programs already existed, scattered across `main/tests/*_builders_test.rs`,
 //! `main/examples/builder_*.rs`, and `main/src/builder/templates/basic.rs`, where nothing ever

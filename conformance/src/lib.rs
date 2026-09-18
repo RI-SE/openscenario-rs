@@ -104,7 +104,7 @@ pub fn check_catalog_roundtrip(path: &str) -> Result<(), RoundtripError> {
 /// Runs a builder fixture through the same three questions the corpus binaries ask of the
 /// parser, and returns *every* failure rather than stopping at the first.
 ///
-/// The parser harness gets to ask its questions of 172 real files; the builder's input is code,
+/// The parser harness gets to ask its questions of 212 real files; the builder's input is code,
 /// so the fixtures in [`builder_fixtures`] are its corpus. The checks, in order:
 ///
 /// 1. **round trip** — `build` -> serialize -> parse -> serialize is a fixed point, mirroring
