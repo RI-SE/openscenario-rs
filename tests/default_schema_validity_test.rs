@@ -132,10 +132,6 @@ fn cases() -> Vec<DefaultCase> {
             "ParameterDeclarations"
         ),
         case!(
-            openscenario_rs::types::catalogs::controllers::ControllerProperties,
-            "Properties"
-        ),
-        case!(
             openscenario_rs::types::catalogs::environments::CatalogWeather,
             "Weather"
         ),
@@ -146,10 +142,6 @@ fn cases() -> Vec<DefaultCase> {
         case!(
             openscenario_rs::types::catalogs::references::ParameterAssignments,
             "ParameterAssignments"
-        ),
-        case!(
-            openscenario_rs::types::controllers::ControllerProperties,
-            "Properties"
         ),
         case!(
             openscenario_rs::types::distributions::deterministic::Deterministic,
@@ -334,7 +326,7 @@ fn every_defaulted_xsd_type_serializes_to_schema_valid_xml() {
 
 /// Number of registry entries. Asserted so that a *removal* is as loud as an addition —
 /// the same guard `tests/enum_wire_names_test.rs` puts on the 37 enum tables.
-const EXPECTED_CASES: usize = 31;
+const EXPECTED_CASES: usize = 29;
 
 /// Every `Default` site the source scan finds, as `(type name, file)`.
 fn scan_src_for_default_impls() -> BTreeMap<String, BTreeSet<String>> {

@@ -199,6 +199,29 @@ Breaking, unless noted.
 
 ### Removed
 
+- **Two divergent `Properties` types, folded into the one the schema actually describes.**
+  These are breaking changes.
+  - **`types::catalogs::controllers::ControllerProperties`** and its paired
+    **`ControllerProperty`** — `ControllerProperties` declared only a `Property` child, so a
+    `<Properties>` element carrying a `<File>` or `<CustomContent>` child parsed without error
+    while silently dropping both; `ControllerProperty` modeled `@value` as a parameterizable
+    `Value<String>`, a capability the surviving type does not carry (see the note below).
+    **Surviving type: `types::entities::vehicle::Properties`**, whose `Property`, `File` and
+    `CustomContent` fields are each a `Vec` with `#[serde(default)]`, matching XSD `Properties`
+    (`Schema/OpenSCENARIO.xsd:1802-1808`), which places all three at `minOccurs="0"
+    maxOccurs="unbounded"`. `CatalogController::properties` now holds this type directly.
+  - **`types::controllers::ControllerProperties`** — a second type of the same name, reachable
+    only through the crate's public re-export and not through any parsing path inside the
+    crate, whose `Property` field lacked `#[serde(default)]`. XSD `Properties` permits an empty
+    element, so an absent `Property` list should deserialize to an empty vector; instead it
+    was a parse error. **Surviving type: the same `types::entities::vehicle::Properties`**,
+    which `types::controllers::Controller::properties` already held.
+  - A caller who set a catalog controller's property value to a parameter reference
+    (`$speedLimit`) loses that ability: `entities::vehicle::Property::value` is a plain
+    `String`. No file in the conformance corpus exercises a parameterized `Property` value, so
+    the loss is not visible to any gate; it is a real narrowing for a downstream caller and is
+    reported here rather than fixed silently.
+
 - **The typed entity catalog reference, and the accessors and constructors built on it.**
   These are breaking changes.
   - **`types::entities::ScenarioEntityReference`** — an `#[serde(untagged)]` enum over
@@ -252,7 +275,8 @@ Breaking, unless noted.
 - **Five public types with no schema counterpart**: `controllers::ControllerDistribution`,
   `controllers::ActivateControllerAction`, `controllers::ControllerAssignment`,
   `positions::RoadCoordinate` and `positions::LaneCoordinate`. The `controllers` module now
-  exports `Controller`, `ControllerProperties` and `ObjectController` only.
+  exports `Controller` and `ObjectController` only; its own `ControllerProperties` was removed
+  in a later pass (see below).
 - **`Condition` and `ConditionWrapper`**, neither of which the schema defines.
 - **Non-schema extension fields** on `ActivateControllerAction` and `SpeedCondition`, and a
   broader sweep of fields and types with no schema counterpart.
@@ -698,6 +722,22 @@ Breaking, unless noted.
 - Divergent duplicate types, folded into their canonical definitions.
 
 ### Fixed
+
+- **A controller's `<Properties>` element parses when empty, and no longer drops `<File>` or
+  `<CustomContent>` children.** XSD `Properties` declares `Property`, `File` and
+  `CustomContent` all at `minOccurs="0" maxOccurs="unbounded"`, so an empty `<Properties/>` is
+  schema-valid and every child kind should survive a parse. Two of the crate's three
+  `Properties` models disagreed: one declared only `Property` and dropped the other two
+  children silently, since serde ignores element tags a struct does not name; the other
+  additionally lacked `#[serde(default)]` on its lone `Vec`, turning an absent `<Property>`
+  list into a parse error rather than an empty vector. Both are removed (see **Removed**) in
+  favor of the one model that already had this right, `types::entities::vehicle::Properties`.
+  `tests/properties_consolidation_test.rs` parses an empty `<Properties/>` through both a
+  scenario `Controller` and a catalog `CatalogController`, and asserts a byte-identical round
+  trip of a `<Properties>` carrying all three child kinds through `CatalogController`; before
+  this change the test did not compile, since `catalogs::controllers::ControllerProperties`
+  had no `files` or `custom_content` field to assert against. `bash scripts/gate.sh` passes all
+  eleven stages, with the test total going **1493 → 1495**; clippy stays at **197**.
 
 - **Entity catalog references no longer resolve to the wrong kind of entity.** `ScenarioObject`
   and `ScenarioObjectTemplate` held their `<CatalogReference>` child in

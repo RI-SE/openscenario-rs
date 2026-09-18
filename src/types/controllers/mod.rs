@@ -3,7 +3,7 @@
 
 use crate::types::basic::{Directory, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
-use crate::types::entities::vehicle::{Properties, Property};
+use crate::types::entities::vehicle::Properties;
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
 
@@ -152,18 +152,6 @@ impl<'de> Deserialize<'de> for ObjectController {
 // This one was found by neither of the campaign's two greps nor by the derive sweep:
 // every field is `Option`, so detector 3 cannot see it either. See the report.
 
-/// Collection of controller-specific properties.
-///
-/// Provides a container for controller parameters and configuration options.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-#[derive(Default)]
-pub struct ControllerProperties {
-    /// List of controller properties
-    #[serde(rename = "Property")]
-    pub properties: Vec<Property>,
-}
-
 /// Catalog location for controller definitions.
 ///
 /// Specifies where controller catalog files can be found.
@@ -284,6 +272,7 @@ impl ObjectController {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::entities::vehicle::Property;
     use crate::types::enums::ControllerType;
 
     #[test]
@@ -322,8 +311,7 @@ mod tests {
 
     #[test]
     fn test_controller_properties() {
-        let mut properties = ControllerProperties::default();
-        // Create a simple property with correct String types
+        let mut properties = Properties::default();
         let property = Property {
             name: "testProp".to_string(),
             value: "testValue".to_string(),
@@ -344,7 +332,7 @@ mod tests {
                 "ControllerCatalog".to_string(),
                 "TestController".to_string(),
             ));
-        let properties = ControllerProperties::default();
+        let properties = Properties::default();
 
         assert!(object_controller.controller.is_none());
         assert!(object_controller.catalog_reference.is_some());

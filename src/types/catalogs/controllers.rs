@@ -1,9 +1,10 @@
 //! `CatalogController`: a controller definition in its catalog-file form, carrying the
 //! parameter declarations that a `CatalogReference` supplies values for.
 
-use crate::types::basic::{OSString, ParameterDeclarations, Value};
+use crate::types::basic::ParameterDeclarations;
+use crate::types::basic::Value;
 use crate::types::controllers::Controller;
-use crate::types::entities::vehicle::{Properties, Property};
+use crate::types::entities::vehicle::Properties;
 use crate::types::enums::ControllerType;
 use serde::{Deserialize, Serialize};
 
@@ -31,36 +32,7 @@ pub struct CatalogController {
 
     /// Controller-specific properties
     #[serde(rename = "Properties", skip_serializing_if = "Option::is_none")]
-    pub properties: Option<ControllerProperties>,
-}
-
-/// Properties specific to catalog controllers
-///
-/// Container for controller parameters and configuration options that
-/// can be parameterized and overridden when the controller is referenced.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "Properties")]
-#[derive(Default)]
-pub struct ControllerProperties {
-    /// List of controller properties
-    #[serde(rename = "Property", default)]
-    pub properties: Vec<ControllerProperty>,
-}
-
-/// Individual property for catalog controllers
-///
-/// Represents a single configuration parameter for a controller that
-/// can be parameterized using OpenSCENARIO parameter syntax.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "Property")]
-pub struct ControllerProperty {
-    /// Property name
-    #[serde(rename = "@name")]
-    pub name: String,
-
-    /// Property value (can be parameterized)
-    #[serde(rename = "@value")]
-    pub value: OSString,
+    pub properties: Option<Properties>,
 }
 
 // Implementation methods for catalog controllers
@@ -94,7 +66,7 @@ impl CatalogController {
     pub fn with_properties(
         name: String,
         controller_type: ControllerType,
-        properties: ControllerProperties,
+        properties: Properties,
     ) -> Self {
         Self {
             name,
@@ -111,73 +83,7 @@ impl CatalogController {
             name: Value::Literal(self.name.clone()),
             controller_type: self.controller_type.clone(),
             parameter_declarations: self.parameter_declarations.clone(),
-            properties: self.properties.as_ref().map(|p| p.to_scenario_properties()),
-        }
-    }
-}
-
-impl ControllerProperties {
-    /// Creates properties from a list of name-value pairs
-    pub fn from_pairs<I>(pairs: I) -> Self
-    where
-        I: IntoIterator<Item = (String, OSString)>,
-    {
-        let properties = pairs
-            .into_iter()
-            .map(|(name, value)| ControllerProperty { name, value })
-            .collect();
-
-        Self { properties }
-    }
-
-    /// Adds a property to this collection
-    pub fn add_property(&mut self, name: String, value: OSString) {
-        self.properties.push(ControllerProperty { name, value });
-    }
-
-    /// Finds a property by name
-    pub fn find_property(&self, name: &str) -> Option<&ControllerProperty> {
-        self.properties.iter().find(|p| p.name == name)
-    }
-
-    /// Converts to scenario Properties (using existing vehicle Properties type)
-    pub fn to_scenario_properties(&self) -> Properties {
-        let scenario_properties = self
-            .properties
-            .iter()
-            .map(|p| Property {
-                name: p.name.clone(),
-                value: p.value.as_literal().unwrap_or(&"".to_string()).clone(),
-            })
-            .collect();
-
-        Properties {
-            properties: scenario_properties,
-            files: vec![],
-            custom_content: vec![],
-        }
-    }
-}
-
-impl ControllerProperty {
-    /// Creates a new controller property
-    pub fn new(name: String, value: OSString) -> Self {
-        Self { name, value }
-    }
-
-    /// Creates a property with a literal value
-    pub fn with_literal(name: String, value: String) -> Self {
-        Self {
-            name,
-            value: Value::Literal(value),
-        }
-    }
-
-    /// Creates a property with a parameter reference
-    pub fn with_parameter(name: String, parameter_ref: String) -> Self {
-        Self {
-            name,
-            value: Value::Parameter(parameter_ref),
+            properties: self.properties.clone(),
         }
     }
 }
@@ -185,7 +91,8 @@ impl ControllerProperty {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::basic::ParameterDeclaration;
+    use crate::types::basic::{OSString, ParameterDeclaration};
+    use crate::types::entities::vehicle::Property;
 
     use crate::types::enums::ParameterType;
 
@@ -205,34 +112,40 @@ mod tests {
 
     #[test]
     fn test_controller_properties() {
-        let mut properties = ControllerProperties::default();
-        properties.add_property(
-            "maxSpeed".to_string(),
-            Value::Parameter("speedLimit".to_string()),
-        );
-        properties.add_property("aggressive".to_string(), Value::Literal("true".to_string()));
+        let properties = Properties {
+            properties: vec![
+                Property {
+                    name: "maxSpeed".to_string(),
+                    value: "30".to_string(),
+                },
+                Property {
+                    name: "aggressive".to_string(),
+                    value: "true".to_string(),
+                },
+            ],
+            files: vec![],
+            custom_content: vec![],
+        };
 
         assert_eq!(properties.properties.len(), 2);
 
-        let max_speed = properties.find_property("maxSpeed").unwrap();
-        assert!(matches!(max_speed.value, Value::Parameter(_)));
-
-        let aggressive = properties.find_property("aggressive").unwrap();
-        assert_eq!(aggressive.value.as_literal().unwrap(), "true");
+        let aggressive = properties
+            .properties
+            .iter()
+            .find(|p| p.name == "aggressive")
+            .unwrap();
+        assert_eq!(aggressive.value, "true");
     }
 
     #[test]
     fn test_controller_property_creation() {
-        let property1 =
-            ControllerProperty::with_literal("testProp".to_string(), "testValue".to_string());
-        let property2 =
-            ControllerProperty::with_parameter("paramProp".to_string(), "paramRef".to_string());
+        let property = Property {
+            name: "testProp".to_string(),
+            value: "testValue".to_string(),
+        };
 
-        assert_eq!(property1.name, "testProp");
-        assert_eq!(property1.value.as_literal().unwrap(), "testValue");
-
-        assert_eq!(property2.name, "paramProp");
-        assert!(matches!(property2.value, Value::Parameter(_)));
+        assert_eq!(property.name, "testProp");
+        assert_eq!(property.value, "testValue");
     }
 
     #[test]
@@ -267,11 +180,14 @@ mod tests {
 
     #[test]
     fn test_to_scenario_controller() {
-        let mut properties = ControllerProperties::default();
-        properties.add_property(
-            "testProp".to_string(),
-            Value::Literal("testValue".to_string()),
-        );
+        let properties = Properties {
+            properties: vec![Property {
+                name: "testProp".to_string(),
+                value: "testValue".to_string(),
+            }],
+            files: vec![],
+            custom_content: vec![],
+        };
 
         let catalog_controller = CatalogController::with_properties(
             "TestController".to_string(),
@@ -294,16 +210,18 @@ mod tests {
 
     #[test]
     fn test_defaults() {
-        // `ControllerProperties::default()` is honest: XSD `Properties` has all of
+        // `Properties::default()` is honest: XSD `Properties` has all of
         // `Property`/`File`/`CustomContent` at `minOccurs="0"`, so an empty
-        // collection states nothing. `CatalogController` and `ControllerProperty`
-        // have no `Default` — `@name` is `use="required"` on both with no schema
-        // default, so callers must supply one explicitly via `new`/`with_literal`.
-        let properties = ControllerProperties::default();
+        // collection states nothing. `CatalogController` has no `Default` —
+        // `@name` is `use="required"` with no schema default, so callers must
+        // supply one explicitly via `new`.
+        let properties = Properties::default();
         let controller =
             CatalogController::new("ExplicitController".to_string(), ControllerType::Movement);
-        let property =
-            ControllerProperty::with_literal("explicitProp".to_string(), "value".to_string());
+        let property = Property {
+            name: "explicitProp".to_string(),
+            value: "value".to_string(),
+        };
 
         assert_eq!(controller.name, "ExplicitController");
         assert!(properties.properties.is_empty());

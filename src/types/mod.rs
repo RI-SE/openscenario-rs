@@ -89,7 +89,7 @@ pub use distributions::{
 // Re-export controller types
 pub use actions::control::ActivateControllerAction;
 pub use actions::traffic::ControllerDistribution;
-pub use controllers::{Controller, ControllerProperties, ObjectController};
+pub use controllers::{Controller, ObjectController};
 
 // Re-export catalog location types
 pub use catalogs::locations::{
