@@ -692,6 +692,21 @@ Breaking, unless noted.
   `bash scripts/gate.sh` passes all eleven stages, with the test total going **1476 → 1488** and
   `report`, `lossy`, `validate` and `validate-input` unchanged at 211 / 210 / 210 / 209 passing.
 
+- **A `<Catalog>` element with more than one entry of the same kind parses again.** `Catalog`
+  wrapped `CatalogContent` behind `#[serde(flatten)]`, but `Catalog` in
+  `Schema/OpenSCENARIO.xsd` is an `xsd:sequence` of `minOccurs="0" maxOccurs="unbounded"`
+  elements plus a required `@name` attribute, and `CatalogContent` already modeled that sequence
+  directly. The wrapper was therefore not expressing a choice at all; it only bought the same
+  `deserialize_any` buffering that breaks a sequence below `flatten` elsewhere in this release,
+  so a `<Catalog name="c">` with two `<Vehicle>` children failed with
+  `invalid type: map, expected a sequence`. The corpus never exercised this path: catalog files
+  load through `CatalogFile`, which holds `CatalogContent` directly and never passed through
+  `Catalog`. `Catalog` and its matching `CatalogDefinition` are removed; nothing in the crate
+  referenced either outside their own definitions, so this is a deletion rather than a breaking
+  change to any reachable type. `bash scripts/gate.sh` passes all eleven stages, with the test
+  total going 1488 → 1490 and `report`, `lossy` and `validate` unchanged at 211 / 210 / 210
+  passing.
+
 - **Sequences below a choice wrapper parse again — an entire branch of `<TrafficAction>` was
   unreachable.** `#[serde(flatten)]` makes serde buffer an element's children into a `Content`
   map through `deserialize_any`. quick-xml cannot know at that point that a child will later be
