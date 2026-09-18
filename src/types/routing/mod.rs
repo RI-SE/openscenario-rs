@@ -11,26 +11,11 @@ use serde::{Deserialize, Serialize};
 // duplicating a second, incorrect copy.
 pub use crate::types::basic::{ValueConstraint, ValueConstraintGroup};
 
-/// Simple catalog reference for routes
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename = "CatalogReference")]
-pub struct CatalogReference {
-    /// Name of the catalog
-    #[serde(rename = "@catalogName")]
-    pub catalog_name: OSString,
-
-    /// Name of the entry within the catalog
-    #[serde(rename = "@entryName")]
-    pub entry_name: OSString,
-
-    /// Optional parameter assignments
-    #[serde(
-        rename = "ParameterAssignments",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_assignments: Option<ParameterAssignments>,
-}
-
+/// XSD declares one `CatalogReference` complexType (`Schema/OpenSCENARIO.xsd:879-885`)
+/// for every position that names a catalog entry. `RouteRef` resolves to a `Route`,
+/// so this is `catalogs::references::CatalogReference<CatalogRoute>` rather than a
+/// second, route-specific struct.
+pub use crate::types::catalogs::references::RouteCatalogReference as CatalogReference;
 pub use crate::types::catalogs::references::{ParameterAssignment, ParameterAssignments};
 
 /// Simple parameter declarations for routes
@@ -376,11 +361,10 @@ impl RouteRef {
 
     /// Create a catalog route reference
     pub fn catalog(catalog_name: impl Into<String>, entry_name: impl Into<String>) -> Self {
-        RouteRef::Catalog(CatalogReference {
-            catalog_name: OSString::literal(catalog_name.into()),
-            entry_name: OSString::literal(entry_name.into()),
-            parameter_assignments: None,
-        })
+        RouteRef::Catalog(CatalogReference::new(
+            catalog_name.into(),
+            entry_name.into(),
+        ))
     }
 }
 

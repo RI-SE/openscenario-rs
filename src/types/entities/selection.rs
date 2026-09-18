@@ -521,6 +521,45 @@ mod tests {
     }
 
     #[test]
+    fn test_scenario_object_template_catalog_reference_absent_parameter_assignments_roundtrip() {
+        let xml = r#"<ScenarioObjectTemplate><CatalogReference catalogName="VehicleCatalog" entryName="Sedan"/></ScenarioObjectTemplate>"#;
+        let template: ScenarioObjectTemplate = quick_xml::de::from_str(xml).unwrap();
+        let catalog_reference = template
+            .entity_catalog_reference
+            .as_ref()
+            .expect("CatalogReference must parse");
+        assert!(
+            catalog_reference.parameter_assignments.is_none(),
+            "absent <ParameterAssignments> must yield None"
+        );
+
+        let ser = quick_xml::se::to_string(&template).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip, no ParameterAssignments");
+    }
+
+    #[test]
+    fn test_scenario_object_template_catalog_reference_with_parameter_assignments_roundtrip() {
+        let xml = r#"<ScenarioObjectTemplate><CatalogReference catalogName="VehicleCatalog" entryName="Sedan"><ParameterAssignments><ParameterAssignment parameterRef="Color" value="Red"/></ParameterAssignments></CatalogReference></ScenarioObjectTemplate>"#;
+        let template: ScenarioObjectTemplate = quick_xml::de::from_str(xml).unwrap();
+        let assignments = template
+            .entity_catalog_reference
+            .as_ref()
+            .and_then(|r| r.parameter_assignments.as_ref())
+            .expect("present <ParameterAssignments> must yield Some");
+        assert_eq!(assignments.assignments.len(), 1);
+        assert_eq!(
+            assignments.assignments[0]
+                .parameter_ref
+                .as_literal()
+                .unwrap(),
+            "Color"
+        );
+
+        let ser = quick_xml::se::to_string(&template).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip with ParameterAssignments");
+    }
+
+    #[test]
     fn test_scenario_object_template_vehicle_with_controller_roundtrip() {
         use crate::types::controllers::Controller;
         use crate::types::enums::ControllerType;

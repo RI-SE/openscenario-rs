@@ -122,19 +122,12 @@ pub enum StoryPrivateActionChoice {
     TrailerAction(crate::types::actions::TrailerAction),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CatalogReference {
-    #[serde(rename = "@catalogName")]
-    pub catalog_name: OSString,
-    #[serde(rename = "@entryName")]
-    pub entry_name: OSString,
-    #[serde(
-        rename = "ParameterAssignments",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_assignments: Option<crate::types::controllers::ParameterAssignments>,
-}
+/// XSD declares one `CatalogReference` complexType (`Schema/OpenSCENARIO.xsd:879-885`)
+/// for every position that names a catalog entry. A `ManeuverGroup`'s `CatalogReference`
+/// resolves to a `Maneuver`, so this is
+/// `catalogs::references::CatalogReference<CatalogManeuver>` rather than a second,
+/// maneuver-specific struct.
+pub use crate::types::catalogs::references::ManeuverCatalogReference as CatalogReference;
 
 /// Story definition with parameter scope and act sequences
 ///
@@ -627,5 +620,40 @@ mod tests {
             result.err()
         );
         assert_eq!(result.unwrap().priority, Value::Literal(Priority::Override));
+    }
+
+    #[test]
+    fn test_maneuver_group_catalog_reference_absent_parameter_assignments_roundtrip() {
+        let xml = r#"<ManeuverGroup name="Group1" maximumExecutionCount="1"><Actors selectTriggeringEntities="false"/><CatalogReference catalogName="ManeuverCatalog" entryName="Entry1"/></ManeuverGroup>"#;
+        let parsed: ManeuverGroup = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(parsed.catalog_reference.len(), 1);
+        assert!(
+            parsed.catalog_reference[0].parameter_assignments.is_none(),
+            "absent <ParameterAssignments> must yield None"
+        );
+
+        let ser = quick_xml::se::to_string(&parsed).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip, no ParameterAssignments");
+    }
+
+    #[test]
+    fn test_maneuver_group_catalog_reference_with_parameter_assignments_roundtrip() {
+        let xml = r#"<ManeuverGroup name="Group1" maximumExecutionCount="1"><Actors selectTriggeringEntities="false"/><CatalogReference catalogName="ManeuverCatalog" entryName="Entry1"><ParameterAssignments><ParameterAssignment parameterRef="Speed" value="30.0"/></ParameterAssignments></CatalogReference></ManeuverGroup>"#;
+        let parsed: ManeuverGroup = quick_xml::de::from_str(xml).unwrap();
+        let assignments = parsed.catalog_reference[0]
+            .parameter_assignments
+            .as_ref()
+            .expect("present <ParameterAssignments> must yield Some");
+        assert_eq!(assignments.assignments.len(), 1);
+        assert_eq!(
+            assignments.assignments[0]
+                .parameter_ref
+                .as_literal()
+                .unwrap(),
+            "Speed"
+        );
+
+        let ser = quick_xml::se::to_string(&parsed).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip with ParameterAssignments");
     }
 }

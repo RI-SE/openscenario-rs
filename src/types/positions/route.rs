@@ -309,17 +309,22 @@ mod tests {
 
     #[test]
     fn test_route_position_catalog_reference_roundtrip() {
-        // Real corpus shape.
-        let xml = r#"<RoutePosition><RouteRef><CatalogReference catalogName="RouteCatalog" entryName="EgoRoute"/></RouteRef><InRoutePosition><FromLaneCoordinates laneId="-1" pathS="$_Ego_initS" laneOffset="0"/></InRoutePosition></RoutePosition>"#;
+        // Real corpus shape: no `<ParameterAssignments>`, per `minOccurs="0"`.
+        let xml = r#"<RoutePosition><RouteRef><CatalogReference catalogName="RouteCatalog" entryName="EgoRoute"/></RouteRef><InRoutePosition><FromLaneCoordinates laneId="-1" laneOffset="0" pathS="$_Ego_initS"/></InRoutePosition></RoutePosition>"#;
         let parsed: RoutePosition = quick_xml::de::from_str(xml).unwrap();
         match &parsed.route_ref.route_ref {
             RouteRef::Catalog(CatalogReference {
                 catalog_name,
                 entry_name,
+                parameter_assignments,
                 ..
             }) => {
                 assert_eq!(catalog_name.as_literal().unwrap(), "RouteCatalog");
                 assert_eq!(entry_name.as_literal().unwrap(), "EgoRoute");
+                assert!(
+                    parameter_assignments.is_none(),
+                    "absent <ParameterAssignments> must yield None"
+                );
             }
             other => panic!("expected catalog route ref, got {other:?}"),
         }
@@ -327,9 +332,37 @@ mod tests {
         assert!(parsed.in_route_position.from_lane_coordinates.is_some());
 
         let ser = quick_xml::se::to_string(&parsed).unwrap();
-        assert!(ser.contains("CatalogReference"), "serialized: {ser}");
+        assert_eq!(ser, xml, "byte-exact round trip, no ParameterAssignments");
         let back: RoutePosition = quick_xml::de::from_str(&ser).unwrap();
         assert_eq!(parsed, back);
+    }
+
+    #[test]
+    fn test_route_position_catalog_reference_with_parameter_assignments_roundtrip() {
+        let xml = r#"<RoutePosition><RouteRef><CatalogReference catalogName="RouteCatalog" entryName="EgoRoute"><ParameterAssignments><ParameterAssignment parameterRef="Speed" value="30.0"/></ParameterAssignments></CatalogReference></RouteRef><InRoutePosition><FromLaneCoordinates laneId="-1" laneOffset="0" pathS="0"/></InRoutePosition></RoutePosition>"#;
+        let parsed: RoutePosition = quick_xml::de::from_str(xml).unwrap();
+        match &parsed.route_ref.route_ref {
+            RouteRef::Catalog(CatalogReference {
+                parameter_assignments,
+                ..
+            }) => {
+                let assignments = parameter_assignments
+                    .as_ref()
+                    .expect("present <ParameterAssignments> must yield Some");
+                assert_eq!(assignments.assignments.len(), 1);
+                assert_eq!(
+                    assignments.assignments[0]
+                        .parameter_ref
+                        .as_literal()
+                        .unwrap(),
+                    "Speed"
+                );
+            }
+            other => panic!("expected catalog route ref, got {other:?}"),
+        }
+
+        let ser = quick_xml::se::to_string(&parsed).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip with ParameterAssignments");
     }
 
     #[test]

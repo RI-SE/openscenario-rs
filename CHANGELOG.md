@@ -747,6 +747,27 @@ Breaking, unless noted.
   `types/scenario/story.rs` was in none of the file sets covered. See `docs/type_system_guide.md` for
   every survivor's individual justification.
 - Divergent duplicate types, folded into their canonical definitions.
+- **Three of the crate's four `CatalogReference` types, folded into the one the schema
+  actually declares.** This is a breaking change.
+  - **`types::routing::CatalogReference`** — a route-specific struct whose
+    `parameter_assignments` field lacked `#[serde(default)]`, unlike its three siblings.
+    **Surviving type: `types::catalogs::references::CatalogReference<CatalogRoute>`**, now
+    re-exported as `types::routing::CatalogReference` so `RouteRef::Catalog` and its call
+    sites are unaffected.
+  - **`types::scenario::story::CatalogReference`** — a maneuver-specific struct that named its
+    `ParameterAssignments` field through the `types::controllers` re-export rather than the
+    type's own module, a naming divergence with no behavioral effect since both paths resolve
+    to `types::catalogs::references::ParameterAssignments`. **Surviving type:
+    `types::catalogs::references::CatalogReference<CatalogManeuver>`**, re-exported as
+    `types::scenario::story::CatalogReference`.
+  - `Schema/OpenSCENARIO.xsd:879-885` declares one `CatalogReference` complexType, reused at
+    ten element positions across the schema. `CatalogRoute` and `CatalogManeuver` already
+    implement `CatalogEntity` for their catalog-loading paths, so both positions fold into the
+    existing generic `CatalogReference<T>` rather than gaining a second, type-specific copy.
+    `types::entities::EntityCatalogReference` is untyped by design (OSS-04) and is unaffected:
+    the `EntityObject` choice group it models resolves to five different element kinds, so no
+    single `T` could describe it. Four types before this change, two after: the generic
+    `CatalogReference<T>` and the untyped `EntityCatalogReference`.
 
 ### Fixed
 

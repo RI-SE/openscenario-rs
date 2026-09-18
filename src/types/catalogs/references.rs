@@ -162,11 +162,14 @@ impl ParameterAssignment {
 }
 
 // Type aliases for common catalog reference types
-use super::entities::{CatalogController, CatalogPedestrian, CatalogVehicle};
+use super::entities::{CatalogController, CatalogManeuver, CatalogPedestrian, CatalogVehicle};
+use super::routes::CatalogRoute;
 
 pub type VehicleCatalogReference = CatalogReference<CatalogVehicle>;
 pub type ControllerCatalogReference = CatalogReference<CatalogController>;
 pub type PedestrianCatalogReference = CatalogReference<CatalogPedestrian>;
+pub type RouteCatalogReference = CatalogReference<CatalogRoute>;
+pub type ManeuverCatalogReference = CatalogReference<CatalogManeuver>;
 
 #[cfg(test)]
 mod tests {

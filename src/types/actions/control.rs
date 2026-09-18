@@ -811,4 +811,43 @@ mod tests {
         let deserialized: Brake = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(brake, deserialized);
     }
+
+    #[test]
+    fn test_assign_controller_action_catalog_reference_absent_parameter_assignments_roundtrip() {
+        let xml = r#"<AssignControllerAction><CatalogReference catalogName="ControllerCatalog" entryName="AIDriver"/></AssignControllerAction>"#;
+        let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
+        let catalog_reference = action
+            .catalog_reference
+            .as_ref()
+            .expect("CatalogReference must parse");
+        assert!(
+            catalog_reference.parameter_assignments.is_none(),
+            "absent <ParameterAssignments> must yield None"
+        );
+
+        let ser = quick_xml::se::to_string(&action).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip, no ParameterAssignments");
+    }
+
+    #[test]
+    fn test_assign_controller_action_catalog_reference_with_parameter_assignments_roundtrip() {
+        let xml = r#"<AssignControllerAction><CatalogReference catalogName="ControllerCatalog" entryName="AIDriver"><ParameterAssignments><ParameterAssignment parameterRef="Aggressiveness" value="0.8"/></ParameterAssignments></CatalogReference></AssignControllerAction>"#;
+        let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
+        let assignments = action
+            .catalog_reference
+            .as_ref()
+            .and_then(|r| r.parameter_assignments.as_ref())
+            .expect("present <ParameterAssignments> must yield Some");
+        assert_eq!(assignments.assignments.len(), 1);
+        assert_eq!(
+            assignments.assignments[0]
+                .parameter_ref
+                .as_literal()
+                .unwrap(),
+            "Aggressiveness"
+        );
+
+        let ser = quick_xml::se::to_string(&action).unwrap();
+        assert_eq!(ser, xml, "byte-exact round trip with ParameterAssignments");
+    }
 }
