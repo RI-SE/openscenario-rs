@@ -143,6 +143,24 @@ Breaking, unless noted.
   or trailer action built through that path was replaced by an action naming nothing. All ten
   branches now map to their counterpart.
 
+- **`Property`'s `@name` and `@value` now accept parameter references.** XSD `Property`
+  (`Schema/OpenSCENARIO.xsd:1809-1812`) types both attributes as the schema's `String`, a
+  union whose second member is the parameter production, so `<Property name="maxSpeed"
+  value="$speedLimit"/>` is schema-valid. `entities::vehicle::Property` held both as plain
+  Rust `String`, so a document naming a parameter there parsed and round-tripped
+  byte-identically while carrying the literal text `$speedLimit` as data; nothing
+  substituted it and nothing errored. This was reported as a known narrowing under
+  *Removed*, above, when the three divergent `Properties` types were folded onto this one;
+  it is fixed here rather than left standing. Both fields now hold `OSString`
+  (`Value<String>`), so
+  `Value<T>::resolve` (`src/types/basic.rs`) — the same path every other parameterizable
+  attribute goes through — resolves them too.
+
+  This breaks direct field access and struct literals: `property.name` and `property.value`
+  are `OSString` rather than `String`, so a struct literal must supply
+  `OSString::literal("...".to_string())` and a comparison against a `&str` becomes
+  `property.value.as_literal().map(String::as_str)`.
+
 - **90 enum-typed attributes now accept parameter references.** All 37 enumeration
   `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose second member is
   `<xsd:restriction base="parameter"/>`, so `<Vehicle vehicleCategory="$cat">` is
@@ -244,10 +262,10 @@ Breaking, unless noted.
     was a parse error. **Surviving type: the same `types::entities::vehicle::Properties`**,
     which `types::controllers::Controller::properties` already held.
   - A caller who set a catalog controller's property value to a parameter reference
-    (`$speedLimit`) loses that ability: `entities::vehicle::Property::value` is a plain
+    (`$speedLimit`) lost that ability: `entities::vehicle::Property::value` was a plain
     `String`. No file in the conformance corpus exercises a parameterized `Property` value, so
-    the loss is not visible to any gate; it is a real narrowing for a downstream caller and is
-    reported here rather than fixed silently.
+    the loss was not visible to any gate. Fixed under *Changed*, below: both `Property`
+    attributes now hold `OSString`.
 
 - **The typed entity catalog reference, and the accessors and constructors built on it.**
   These are breaking changes.

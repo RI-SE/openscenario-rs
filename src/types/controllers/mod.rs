@@ -272,6 +272,7 @@ impl ObjectController {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::basic::OSString;
     use crate::types::entities::vehicle::Property;
     use crate::types::enums::ControllerType;
 
@@ -313,8 +314,8 @@ mod tests {
     fn test_controller_properties() {
         let mut properties = Properties::default();
         let property = Property {
-            name: "testProp".to_string(),
-            value: "testValue".to_string(),
+            name: OSString::literal("testProp".to_string()),
+            value: OSString::literal("testValue".to_string()),
         };
         properties.properties.push(property);
 

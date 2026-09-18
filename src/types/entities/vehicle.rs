@@ -84,13 +84,15 @@ pub struct CustomContent {
     pub content: Option<String>,
 }
 
-/// Property key-value pair
+/// Property key-value pair. XSD `Property` (`:1809-1812`) types both `@name` and
+/// `@value` as the schema's `String`, which is a union including the parameter member,
+/// so either attribute may hold `$paramName` or `${expr}` rather than a literal.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Property {
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
     #[serde(rename = "@value")]
-    pub value: String,
+    pub value: OSString,
 }
 
 /// File reference

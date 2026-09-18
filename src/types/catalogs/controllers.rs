@@ -115,12 +115,12 @@ mod tests {
         let properties = Properties {
             properties: vec![
                 Property {
-                    name: "maxSpeed".to_string(),
-                    value: "30".to_string(),
+                    name: OSString::literal("maxSpeed".to_string()),
+                    value: OSString::literal("30".to_string()),
                 },
                 Property {
-                    name: "aggressive".to_string(),
-                    value: "true".to_string(),
+                    name: OSString::literal("aggressive".to_string()),
+                    value: OSString::literal("true".to_string()),
                 },
             ],
             files: vec![],
@@ -132,20 +132,29 @@ mod tests {
         let aggressive = properties
             .properties
             .iter()
-            .find(|p| p.name == "aggressive")
+            .find(|p| p.name.as_literal().map(String::as_str) == Some("aggressive"))
             .unwrap();
-        assert_eq!(aggressive.value, "true");
+        assert_eq!(
+            aggressive.value.as_literal().map(String::as_str),
+            Some("true")
+        );
     }
 
     #[test]
     fn test_controller_property_creation() {
         let property = Property {
-            name: "testProp".to_string(),
-            value: "testValue".to_string(),
+            name: OSString::literal("testProp".to_string()),
+            value: OSString::literal("testValue".to_string()),
         };
 
-        assert_eq!(property.name, "testProp");
-        assert_eq!(property.value, "testValue");
+        assert_eq!(
+            property.name.as_literal().map(String::as_str),
+            Some("testProp")
+        );
+        assert_eq!(
+            property.value.as_literal().map(String::as_str),
+            Some("testValue")
+        );
     }
 
     #[test]
@@ -182,8 +191,8 @@ mod tests {
     fn test_to_scenario_controller() {
         let properties = Properties {
             properties: vec![Property {
-                name: "testProp".to_string(),
-                value: "testValue".to_string(),
+                name: OSString::literal("testProp".to_string()),
+                value: OSString::literal("testValue".to_string()),
             }],
             files: vec![],
             custom_content: vec![],
@@ -219,12 +228,15 @@ mod tests {
         let controller =
             CatalogController::new("ExplicitController".to_string(), ControllerType::Movement);
         let property = Property {
-            name: "explicitProp".to_string(),
-            value: "value".to_string(),
+            name: OSString::literal("explicitProp".to_string()),
+            value: OSString::literal("value".to_string()),
         };
 
         assert_eq!(controller.name, "ExplicitController");
         assert!(properties.properties.is_empty());
-        assert_eq!(property.name, "explicitProp");
+        assert_eq!(
+            property.name.as_literal().map(String::as_str),
+            Some("explicitProp")
+        );
     }
 }
