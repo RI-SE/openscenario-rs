@@ -219,6 +219,13 @@ Breaking, unless noted.
     `Boolean` and is what `TrajectoryRef` already boxes.
   - **`types::actions::ValidateAction`** — a trait with zero impls; its only mention in the
     tree was a commented-out line. **Surviving twin: `types::mod::Validate`.**
+  - **`types::catalogs::Catalog` / `types::catalogs::CatalogDefinition`** — both `pub` and
+    reachable, so removing them is breaking for any downstream consumer that named either path
+    directly, even though nothing inside this crate did. `Catalog` wrapped `CatalogContent`
+    behind `#[serde(flatten)]` for no reason the schema requires (see **Fixed**), and
+    `CatalogDefinition` only wrapped `Catalog`. **Surviving twin:
+    `types::scenario::storyboard::CatalogDefinition`**, which already held `CatalogContent`
+    directly and is what `OpenScenario::catalog` has always used.
 - **Five public types with no schema counterpart**: `controllers::ControllerDistribution`,
   `controllers::ActivateControllerAction`, `controllers::ControllerAssignment`,
   `positions::RoadCoordinate` and `positions::LaneCoordinate`. The `controllers` module now
@@ -701,11 +708,9 @@ Breaking, unless noted.
   so a `<Catalog name="c">` with two `<Vehicle>` children failed with
   `invalid type: map, expected a sequence`. The corpus never exercised this path: catalog files
   load through `CatalogFile`, which holds `CatalogContent` directly and never passed through
-  `Catalog`. `Catalog` and its matching `CatalogDefinition` are removed; nothing in the crate
-  referenced either outside their own definitions, so this is a deletion rather than a breaking
-  change to any reachable type. `bash scripts/gate.sh` passes all eleven stages, with the test
-  total going 1488 → 1490 and `report`, `lossy` and `validate` unchanged at 211 / 210 / 210
-  passing.
+  `Catalog`. `Catalog` and its matching `CatalogDefinition` are removed rather than reshaped —
+  see **Removed** below. `bash scripts/gate.sh` passes all eleven stages, with the test total
+  going 1488 → 1490 and `report`, `lossy` and `validate` unchanged at 211 / 210 / 210 passing.
 
 - **Sequences below a choice wrapper parse again — an entire branch of `<TrafficAction>` was
   unreachable.** `#[serde(flatten)]` makes serde buffer an element's children into a `Content`
