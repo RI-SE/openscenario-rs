@@ -197,8 +197,8 @@ fn entity_action_with_sequence_below_position_parses() {
         .as_ref()
         .expect("TrajectoryPosition dropped")
         .trajectory_ref
-        .trajectory
-        .as_ref()
+        .trajectory_ref
+        .as_trajectory()
         .expect("Trajectory dropped")
         .shape
         .polyline

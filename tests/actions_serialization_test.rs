@@ -155,7 +155,11 @@ fn test_private_action_variants() {
     assert!(serialized.contains("VisibilityAction"));
 
     // Test ControllerAction
-    let private_action = PrivateAction::ControllerAction(ControllerAction::empty());
+    let private_action = PrivateAction::ControllerAction(ControllerAction {
+        controller_action: ControllerActionChoice::ActivateControllerAction(
+            ActivateControllerAction::default(),
+        ),
+    });
     let serialized = serde_json::to_string(&private_action).unwrap();
     assert!(serialized.contains("ControllerAction"));
 }

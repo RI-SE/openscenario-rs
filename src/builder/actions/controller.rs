@@ -4,7 +4,10 @@ use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Value;
 use crate::types::{
-    actions::control::{ActivateControllerAction, AssignControllerAction, ControllerAction},
+    actions::control::{
+        ActivateControllerAction, AssignControllerAction, AssignControllerActionChoice,
+        ControllerAction, ControllerActionChoice,
+    },
     actions::wrappers::PrivateAction,
     basic::Boolean,
     controllers::Controller,
@@ -87,9 +90,7 @@ impl ActionBuilder for ActivateControllerActionBuilder {
         };
 
         Ok(PrivateAction::ControllerAction(ControllerAction {
-            assign_controller_action: None,
-            override_controller_value_action: None,
-            activate_controller_action: Some(activate_action),
+            controller_action: ControllerActionChoice::ActivateControllerAction(activate_action),
         }))
     }
 
@@ -159,20 +160,19 @@ impl ActionBuilder for AssignControllerActionBuilder {
     fn build_action(self) -> BuilderResult<PrivateAction> {
         self.validate()?;
 
+        // `validate` above established that `self.controller` is `Some`, which is
+        // what lets the choice branch be named unconditionally here.
+        let controller = self.controller.ok_or_else(|| {
+            BuilderError::validation_error("Controller is required for assign controller action")
+        })?;
+
         let assign_action = AssignControllerAction {
-            activate_lateral: None,
-            activate_longitudinal: None,
-            activate_animation: None,
-            activate_lighting: None,
-            controller: self.controller,
-            catalog_reference: None,
-            object_controller: None,
+            controller: Some(AssignControllerActionChoice::Controller(controller)),
+            ..AssignControllerAction::default()
         };
 
         Ok(PrivateAction::ControllerAction(ControllerAction {
-            assign_controller_action: Some(assign_action),
-            override_controller_value_action: None,
-            activate_controller_action: None,
+            controller_action: ControllerActionChoice::AssignControllerAction(assign_action),
         }))
     }
 
@@ -206,7 +206,11 @@ mod tests {
 
         // Verify the action was built correctly
         if let PrivateAction::ControllerAction(controller_action) = action {
-            let activate = controller_action.activate_controller_action.unwrap();
+            let ControllerActionChoice::ActivateControllerAction(activate) =
+                controller_action.controller_action
+            else {
+                panic!("Expected ActivateControllerAction branch");
+            };
             assert!(*activate.lateral.unwrap().as_literal().unwrap());
             assert!(*activate.longitudinal.unwrap().as_literal().unwrap());
             assert!(!*activate.lighting.unwrap().as_literal().unwrap());
@@ -233,11 +237,16 @@ mod tests {
 
         // Verify the action was built correctly
         if let PrivateAction::ControllerAction(controller_action) = action {
-            let assign = controller_action.assign_controller_action.unwrap();
-            assert_eq!(
-                assign.controller.unwrap().name.as_literal().unwrap(),
-                "TestController"
-            );
+            let ControllerActionChoice::AssignControllerAction(assign) =
+                controller_action.controller_action
+            else {
+                panic!("Expected AssignControllerAction branch");
+            };
+            let Some(AssignControllerActionChoice::Controller(controller)) = assign.controller
+            else {
+                panic!("Expected Controller branch");
+            };
+            assert_eq!(controller.name.as_literal().unwrap(), "TestController");
         } else {
             panic!("Expected ControllerAction");
         }

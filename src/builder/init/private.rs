@@ -57,10 +57,12 @@ impl PrivateActionBuilder {
                 value: Double::literal(1.0),
             },
             speed_action_target: SpeedActionTarget {
-                absolute: Some(crate::types::actions::movement::AbsoluteTargetSpeed {
-                    value: Double::literal(speed),
-                }),
-                relative: None,
+                target:
+                    crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(
+                        crate::types::actions::movement::AbsoluteTargetSpeed {
+                            value: Double::literal(speed),
+                        },
+                    ),
             },
         };
 
@@ -359,17 +361,12 @@ mod tests {
         assert!(longitudinal.speed_action.is_some());
 
         let speed_action = longitudinal.speed_action.as_ref().unwrap();
-        assert_eq!(
-            speed_action
-                .speed_action_target
-                .absolute
-                .as_ref()
-                .unwrap()
-                .value
-                .as_literal()
-                .unwrap(),
-            &30.0
-        );
+        let crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(absolute) =
+            &speed_action.speed_action_target.target
+        else {
+            panic!("Expected AbsoluteTargetSpeed branch");
+        };
+        assert_eq!(absolute.value.as_literal().unwrap(), &30.0);
     }
 
     #[test]

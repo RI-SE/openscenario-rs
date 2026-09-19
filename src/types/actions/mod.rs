@@ -14,8 +14,9 @@ pub use movement::{
     LaneChangeTargetChoice, LaneOffsetAction, LaneOffsetActionDynamics, LaneOffsetTarget,
     LaneOffsetTargetChoice, LateralAction, LateralActionChoice, LateralDistanceAction,
     LongitudinalAction, LongitudinalDistanceAction, RelativeTargetLane, RelativeTargetLaneOffset,
-    RoutingAction, SpeedAction, SpeedProfileAction, SynchronizeAction, TargetDistanceSteadyState,
-    TargetTimeSteadyState, TeleportAction, Trajectory, TrajectoryFollowingMode,
+    RoutingAction, SpeedAction, SpeedProfileAction, SteadyState, SynchronizeAction,
+    TargetDistanceSteadyState, TargetTimeSteadyState, TeleportAction, Trajectory,
+    TrajectoryFollowingMode,
 };
 
 pub use crate::types::enums::VehicleCategory;
@@ -61,10 +62,10 @@ pub use trailer::{ConnectTrailerAction, DisconnectTrailerAction, TrailerAction};
 
 // Export updated controller action
 pub use control::{
-    ActivateControllerAction, AssignControllerAction, AutomaticGear, AutomaticGearType, Brake,
-    BrakeInput, ControllerAction, Gear, ManualGear, OverrideBrakeAction, OverrideClutchAction,
-    OverrideGearAction, OverrideParkingBrakeAction, OverrideSteeringWheelAction,
-    OverrideThrottleAction,
+    ActivateControllerAction, AssignControllerAction, AssignControllerActionChoice, AutomaticGear,
+    AutomaticGearType, Brake, BrakeInput, ControllerAction, ControllerActionChoice, Gear,
+    ManualGear, OverrideBrakeAction, OverrideClutchAction, OverrideGearAction,
+    OverrideParkingBrakeAction, OverrideSteeringWheelAction, OverrideThrottleAction,
 };
 
 // Export wrapper types from the wrappers module

@@ -11,7 +11,7 @@ use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
         AbsoluteTargetSpeed, LongitudinalAction, LongitudinalActionChoice, SpeedAction,
-        SpeedActionTarget, TeleportAction, TransitionDynamics,
+        SpeedActionTarget, SpeedActionTargetChoice, TeleportAction, TransitionDynamics,
     },
     actions::wrappers::PrivateAction,
     basic::Double,
@@ -63,10 +63,9 @@ impl ActionBuilder for SpeedActionBuilder {
                 value: Double::literal(1.0),
             },
             speed_action_target: SpeedActionTarget {
-                absolute: Some(AbsoluteTargetSpeed {
+                target: SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed {
                     value: Double::literal(self.target_speed.unwrap()),
                 }),
-                relative: None,
             },
         };
 

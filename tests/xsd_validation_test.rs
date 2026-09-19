@@ -73,14 +73,11 @@ fn test_follow_trajectory_action_complete() {
             openscenario_rs::types::geometry::shapes::Shape::empty(),
         )),
         catalog_reference: None,
-        time_reference: TimeReference {
-            none: None,
-            timing: Some(Timing {
-                domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
-                scale: Double::literal(1.0),
-                offset: Double::literal(0.0),
-            }),
-        },
+        time_reference: TimeReference::timing(Timing {
+            domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
+            scale: Double::literal(1.0),
+            offset: Double::literal(0.0),
+        }),
         trajectory_ref: None,
         trajectory_following_mode: TrajectoryFollowingMode {
             following_mode: Value::Literal(FollowingMode::Follow),
@@ -93,14 +90,11 @@ fn test_follow_trajectory_action_complete() {
     let time_ref_action = FollowTrajectoryAction {
         trajectory: None,
         catalog_reference: None,
-        time_reference: TimeReference {
-            none: None,
-            timing: Some(Timing {
-                domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
-                scale: Double::literal(1.0),
-                offset: Double::literal(0.0),
-            }),
-        },
+        time_reference: TimeReference::timing(Timing {
+            domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
+            scale: Double::literal(1.0),
+            offset: Double::literal(0.0),
+        }),
         trajectory_ref: None,
         trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
         initial_distance_offset: None,
@@ -111,14 +105,11 @@ fn test_follow_trajectory_action_complete() {
     let traj_ref_action = FollowTrajectoryAction {
         trajectory: None,
         catalog_reference: None,
-        time_reference: TimeReference {
-            none: None,
-            timing: Some(Timing {
-                domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
-                scale: Double::literal(1.0),
-                offset: Double::literal(0.0),
-            }),
-        },
+        time_reference: TimeReference::timing(Timing {
+            domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
+            scale: Double::literal(1.0),
+            offset: Double::literal(0.0),
+        }),
         trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
             "TestTrajectory",
             false,

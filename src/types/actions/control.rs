@@ -13,45 +13,30 @@ use serde::{Deserialize, Serialize};
 /// | `OverrideControllerValueAction` | `ActivateControllerAction`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerAction {
-    /// Assign controller action
-    #[serde(
-        rename = "AssignControllerAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub assign_controller_action: Option<AssignControllerAction>,
-
-    /// Override controller value action
-    #[serde(
-        rename = "OverrideControllerValueAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub override_controller_value_action: Option<OverrideControllerValueAction>,
-
-    /// Activate controller action (deprecated in OpenSCENARIO 1.2)
-    #[serde(
-        rename = "ActivateControllerAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub activate_controller_action: Option<ActivateControllerAction>,
+    /// The concrete controller action carried by this element.
+    ///
+    /// The group is a bare `xsd:choice`, so `minOccurs` and `maxOccurs` both
+    /// default to 1 and exactly one branch is required. An externally-tagged
+    /// enum behind `$value` states that in the type: the element name comes
+    /// from the serialized variant, serde rejects a document naming no branch
+    /// with `missing field $value`, and one naming two with
+    /// `duplicate field $value`. Parallel `Option` fields instead describe
+    /// `xsd:all` with optional members, which accepts both of those documents,
+    /// so the invariant had to be restated by every caller.
+    #[serde(rename = "$value")]
+    pub controller_action: ControllerActionChoice,
 }
 
-impl ControllerAction {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `ControllerAction (`:1013-1019`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
-        Self {
-            assign_controller_action: None,
-            override_controller_value_action: None,
-            activate_controller_action: None,
-        }
-    }
+/// The three branches of the XSD `ControllerAction` choice (:978-984).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ControllerActionChoice {
+    #[serde(rename = "AssignControllerAction")]
+    AssignControllerAction(AssignControllerAction),
+    #[serde(rename = "OverrideControllerValueAction")]
+    OverrideControllerValueAction(OverrideControllerValueAction),
+    /// Deprecated in OpenSCENARIO 1.2, still declared by the schema.
+    #[serde(rename = "ActivateControllerAction")]
+    ActivateControllerAction(ActivateControllerAction),
 }
 
 /// XSD `OverrideControllerValueAction` (:1565-1574): `xsd:all` of six optional
@@ -84,7 +69,19 @@ pub struct OverrideControllerValueAction {
 }
 
 /// Assign controller action for controller assignment with catalog support
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+///
+/// XSD `AssignControllerAction` (:771-785) is an `xsd:choice` in which **every**
+/// branch carries `minOccurs="0"`. A choice particle that can itself match the
+/// empty sequence makes the whole group nullable, so the element legally
+/// carries zero or one branch and never two. `xmllint` against
+/// `Schema/OpenSCENARIO.xsd` confirms it: `<AssignControllerAction/>` validates,
+/// and `<Controller>` beside `<ObjectController>` does not.
+///
+/// Hence the branch is `Option<AssignControllerActionChoice>` behind `$value`
+/// with `default`, the same shape the optional `<xsd:group ref=… minOccurs="0"/>`
+/// wrappers take, rather than a bare `$value`, which would reject the legal
+/// empty element.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AssignControllerAction {
     #[serde(rename = "@activateLateral", skip_serializing_if = "Option::is_none")]
     pub activate_lateral: Option<Boolean>,
@@ -97,12 +94,23 @@ pub struct AssignControllerAction {
     pub activate_animation: Option<Boolean>,
     #[serde(rename = "@activateLighting", skip_serializing_if = "Option::is_none")]
     pub activate_lighting: Option<Boolean>,
-    #[serde(rename = "Controller", skip_serializing_if = "Option::is_none")]
-    pub controller: Option<Controller>,
-    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub catalog_reference: Option<CatalogReference<CatalogController>>,
-    #[serde(rename = "ObjectController", skip_serializing_if = "Option::is_none")]
-    pub object_controller: Option<ObjectController>,
+    /// The nullable controller source (:772-780).
+    #[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
+    pub controller: Option<AssignControllerActionChoice>,
+}
+
+/// The three branches of the XSD `AssignControllerAction` choice (:772-780).
+///
+/// `Controller` and `CatalogReference` are annotated `deprecated` by the
+/// schema; `ObjectController` is the current spelling.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum AssignControllerActionChoice {
+    #[serde(rename = "Controller")]
+    Controller(Controller),
+    #[serde(rename = "CatalogReference")]
+    CatalogReference(CatalogReference<CatalogController>),
+    #[serde(rename = "ObjectController")]
+    ObjectController(ObjectController),
 }
 
 /// Activate controller action for controller activation control
@@ -272,19 +280,11 @@ pub enum Gear {
     AutomaticGear(AutomaticGear),
 }
 
-impl Default for AssignControllerAction {
-    fn default() -> Self {
-        Self {
-            controller: None,
-            catalog_reference: None,
-            object_controller: None,
-            activate_lateral: None,
-            activate_longitudinal: None,
-            activate_animation: None,
-            activate_lighting: None,
-        }
-    }
-}
+// `AssignControllerAction`'s `Default` is a `#[derive]` again. The hand-written
+// impl only existed to spell out one `None` per choice branch; the branch is now
+// a single `Option`, and the schema says an all-absent value is valid here
+// (every branch of the choice at :772-780 has `minOccurs="0"`), so the derived
+// all-`None` value is schema-valid rather than a silently-picked branch.
 
 // `ActivateControllerAction`'s hand-written `Default`
 // fabricated `longitudinal`/`lateral`/`lighting`/`animation` values — none of
@@ -303,26 +303,28 @@ impl AssignControllerAction {
     /// Create assignment with direct controller
     pub fn with_controller(controller: Controller) -> Self {
         Self {
-            controller: Some(controller),
-            catalog_reference: None,
-            object_controller: None,
-            activate_lateral: None,
-            activate_longitudinal: None,
-            activate_animation: None,
-            activate_lighting: None,
+            controller: Some(AssignControllerActionChoice::Controller(controller)),
+            ..Self::default()
         }
     }
 
     /// Create assignment with catalog reference
     pub fn with_catalog_reference(catalog_reference: CatalogReference<CatalogController>) -> Self {
         Self {
-            controller: None,
-            catalog_reference: Some(catalog_reference),
-            object_controller: None,
-            activate_lateral: None,
-            activate_longitudinal: None,
-            activate_animation: None,
-            activate_lighting: None,
+            controller: Some(AssignControllerActionChoice::CatalogReference(
+                catalog_reference,
+            )),
+            ..Self::default()
+        }
+    }
+
+    /// Create assignment with an object controller (:779), the current spelling.
+    pub fn with_object_controller(object_controller: ObjectController) -> Self {
+        Self {
+            controller: Some(AssignControllerActionChoice::ObjectController(
+                object_controller,
+            )),
+            ..Self::default()
         }
     }
 }
@@ -519,8 +521,10 @@ mod tests {
         );
         let action = AssignControllerAction::with_controller(controller);
 
-        assert!(action.controller.is_some());
-        assert!(action.catalog_reference.is_none());
+        assert!(matches!(
+            action.controller,
+            Some(AssignControllerActionChoice::Controller(_))
+        ));
     }
 
     #[test]
@@ -584,9 +588,11 @@ mod tests {
 
     #[test]
     fn test_controller_action_defaults() {
+        // Every branch of the XSD choice at :772-780 carries `minOccurs="0"`,
+        // so an `AssignControllerAction` with no branch is schema-valid and the
+        // derived `Default` is not a fabrication.
         let assign = AssignControllerAction::default();
         assert!(assign.controller.is_none());
-        assert!(assign.catalog_reference.is_none());
 
         // `ActivateControllerAction::default()` is all-`None` (benign, derived) —
         // the previously-fabricated `true`/`true` values now require
@@ -595,10 +601,17 @@ mod tests {
         assert!(activate.longitudinal.is_none());
         assert!(activate.lateral.is_none());
 
-        let controller_action = ControllerAction::empty();
-        assert!(controller_action.assign_controller_action.is_none());
-        assert!(controller_action.override_controller_value_action.is_none());
-        assert!(controller_action.activate_controller_action.is_none());
+        // `ControllerAction` no longer has a branchless constructor: XSD :978-984
+        // is a bare choice, so the type now requires a branch to be named.
+        let controller_action = ControllerAction {
+            controller_action: ControllerActionChoice::ActivateControllerAction(
+                ActivateControllerAction::default(),
+            ),
+        };
+        assert!(matches!(
+            controller_action.controller_action,
+            ControllerActionChoice::ActivateControllerAction(_)
+        ));
     }
 
     // Tests for new group types
@@ -705,7 +718,10 @@ mod tests {
 </AssignControllerAction>"#;
 
         let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
-        assert!(action.object_controller.is_some());
+        assert!(matches!(
+            action.controller,
+            Some(AssignControllerActionChoice::ObjectController(_))
+        ));
         assert_eq!(
             action.activate_lateral.clone().unwrap().as_literal(),
             Some(&true)
@@ -783,10 +799,10 @@ mod tests {
         let xml = r#"<ControllerAction><OverrideControllerValueAction><Brake active="true" value="0.5"/></OverrideControllerValueAction></ControllerAction>"#;
 
         let action: ControllerAction = quick_xml::de::from_str(xml).unwrap();
-        let ov = action
-            .override_controller_value_action
-            .as_ref()
-            .expect("OverrideControllerValueAction should be present");
+        let ControllerActionChoice::OverrideControllerValueAction(ov) = &action.controller_action
+        else {
+            panic!("Expected OverrideControllerValueAction branch");
+        };
         assert!(ov.brake.is_some());
         assert!(ov.throttle.is_none());
         let brake = ov.brake.as_ref().unwrap();
@@ -816,10 +832,11 @@ mod tests {
     fn test_assign_controller_action_catalog_reference_absent_parameter_assignments_roundtrip() {
         let xml = r#"<AssignControllerAction><CatalogReference catalogName="ControllerCatalog" entryName="AIDriver"/></AssignControllerAction>"#;
         let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
-        let catalog_reference = action
-            .catalog_reference
-            .as_ref()
-            .expect("CatalogReference must parse");
+        let Some(AssignControllerActionChoice::CatalogReference(catalog_reference)) =
+            action.controller.as_ref()
+        else {
+            panic!("CatalogReference must parse");
+        };
         assert!(
             catalog_reference.parameter_assignments.is_none(),
             "absent <ParameterAssignments> must yield None"
@@ -833,10 +850,14 @@ mod tests {
     fn test_assign_controller_action_catalog_reference_with_parameter_assignments_roundtrip() {
         let xml = r#"<AssignControllerAction><CatalogReference catalogName="ControllerCatalog" entryName="AIDriver"><ParameterAssignments><ParameterAssignment parameterRef="Aggressiveness" value="0.8"/></ParameterAssignments></CatalogReference></AssignControllerAction>"#;
         let action: AssignControllerAction = quick_xml::de::from_str(xml).unwrap();
-        let assignments = action
-            .catalog_reference
+        let Some(AssignControllerActionChoice::CatalogReference(catalog_reference)) =
+            action.controller.as_ref()
+        else {
+            panic!("CatalogReference must parse");
+        };
+        let assignments = catalog_reference
+            .parameter_assignments
             .as_ref()
-            .and_then(|r| r.parameter_assignments.as_ref())
             .expect("present <ParameterAssignments> must yield Some");
         assert_eq!(assignments.assignments.len(), 1);
         assert_eq!(

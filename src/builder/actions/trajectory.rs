@@ -8,8 +8,8 @@ use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
-        FollowTrajectoryAction, RoutingAction, TimeReference, Timing, Trajectory,
-        TrajectoryFollowingMode,
+        FollowTrajectoryAction, RoutingAction, TimeReference, TimeReferenceChoice, Timing,
+        Trajectory, TrajectoryFollowingMode,
     },
     actions::wrappers::PrivateAction,
     basic::{Boolean, Double, OSString},
@@ -290,8 +290,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             trajectory: self.trajectory,
             catalog_reference: None,
             time_reference: TimeReference {
-                none: None,
-                timing: Some(Timing {
+                time_reference: TimeReferenceChoice::Timing(Timing {
                     domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
                     scale: Double::literal(1.0),
                     offset: Double::literal(0.0),

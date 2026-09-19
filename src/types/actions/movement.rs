@@ -132,18 +132,29 @@ pub struct TransitionDynamics {
     pub value: Double,
 }
 
+/// Target speed for a `SpeedAction`.
+///
+/// XSD `SpeedActionTarget` (:2049-2054) is a bare `xsd:choice` of
+/// `RelativeTargetSpeed` | `AbsoluteTargetSpeed`, so `minOccurs` and
+/// `maxOccurs` both default to 1 and exactly one branch is required. An
+/// externally-tagged enum behind `$value` states that in the type: the element
+/// name comes from the serialized variant, serde rejects a document naming no
+/// branch with `missing field $value`, and one naming two with
+/// `duplicate field $value`. Parallel `Option` fields instead describe
+/// `xsd:all` with optional members, which accepts both of those documents.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedActionTarget {
-    #[serde(
-        rename = "AbsoluteTargetSpeed",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub absolute: Option<AbsoluteTargetSpeed>,
-    #[serde(
-        rename = "RelativeTargetSpeed",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub relative: Option<RelativeTargetSpeed>,
+    #[serde(rename = "$value")]
+    pub target: SpeedActionTargetChoice,
+}
+
+/// The two branches of the XSD `SpeedActionTarget` choice (:2049-2054).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SpeedActionTargetChoice {
+    #[serde(rename = "RelativeTargetSpeed")]
+    RelativeTargetSpeed(RelativeTargetSpeed),
+    #[serde(rename = "AbsoluteTargetSpeed")]
+    AbsoluteTargetSpeed(AbsoluteTargetSpeed),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -162,6 +173,24 @@ pub struct RelativeTargetSpeed {
     pub value_type: Value<SpeedTargetValueType>,
     #[serde(rename = "@continuous")]
     pub continuous: bool,
+}
+
+impl SpeedActionTargetChoice {
+    /// The `<AbsoluteTargetSpeed>` branch if this is the one selected, else `None`.
+    pub fn as_absolute(&self) -> Option<&AbsoluteTargetSpeed> {
+        match self {
+            Self::AbsoluteTargetSpeed(target) => Some(target),
+            Self::RelativeTargetSpeed(_) => None,
+        }
+    }
+
+    /// The `<RelativeTargetSpeed>` branch if this is the one selected, else `None`.
+    pub fn as_relative(&self) -> Option<&RelativeTargetSpeed> {
+        match self {
+            Self::RelativeTargetSpeed(target) => Some(target),
+            Self::AbsoluteTargetSpeed(_) => None,
+        }
+    }
 }
 
 /// Complete trajectory definition with shape and metadata
@@ -189,13 +218,44 @@ pub struct Trajectory {
 /// Boxing breaks this cycle so the types have a computable, finite size.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrajectoryRef {
-    /// Direct trajectory definition
-    #[serde(rename = "Trajectory", skip_serializing_if = "Option::is_none")]
-    pub trajectory: Option<Box<Trajectory>>,
+    /// The trajectory source, either an inline `<Trajectory>` or a
+    /// `<CatalogReference>`.
+    ///
+    /// XSD `TrajectoryRef` (:2380-2385) is a bare `xsd:choice`, so exactly one
+    /// branch is required. See `SpeedActionTarget` for why that is a `$value`
+    /// enum rather than parallel `Option` fields.
+    #[serde(rename = "$value")]
+    pub trajectory_ref: TrajectoryRefChoice,
+}
 
-    /// Reference to a trajectory in a catalog
-    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub catalog_reference: Option<CatalogReference<CatalogTrajectory>>,
+/// The two branches of the XSD `TrajectoryRef` choice (:2380-2385).
+///
+/// The inline trajectory stays boxed for the cycle reason given on
+/// `TrajectoryRef` above.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TrajectoryRefChoice {
+    #[serde(rename = "Trajectory")]
+    Trajectory(Box<Trajectory>),
+    #[serde(rename = "CatalogReference")]
+    CatalogReference(CatalogReference<CatalogTrajectory>),
+}
+
+impl TrajectoryRefChoice {
+    /// The inline `<Trajectory>` if this reference carries one, else `None`.
+    pub fn as_trajectory(&self) -> Option<&Trajectory> {
+        match self {
+            Self::Trajectory(trajectory) => Some(trajectory),
+            Self::CatalogReference(_) => None,
+        }
+    }
+
+    /// The `<CatalogReference>` if this reference carries one, else `None`.
+    pub fn as_catalog_reference(&self) -> Option<&CatalogReference<CatalogTrajectory>> {
+        match self {
+            Self::CatalogReference(reference) => Some(reference),
+            Self::Trajectory(_) => None,
+        }
+    }
 }
 
 /// Trajectory following mode specification
@@ -214,12 +274,26 @@ pub struct NoneElement {}
 /// OpenSCENARIO defines this as a choice between `<None/>` and `<Timing>`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeReference {
-    /// Present when no timing constraint is needed (`<None/>`).
-    #[serde(rename = "None", default, skip_serializing_if = "Option::is_none")]
-    pub none: Option<NoneElement>,
-    /// Present when explicit timing is specified.
-    #[serde(rename = "Timing", default, skip_serializing_if = "Option::is_none")]
-    pub timing: Option<Timing>,
+    /// Either `<None/>` or a `<Timing>` element.
+    ///
+    /// XSD `TimeReference` (:2173-2178) is a bare `xsd:choice`, so exactly one
+    /// branch is required. See `SpeedActionTarget` for why that is a `$value`
+    /// enum rather than parallel `Option` fields.
+    #[serde(rename = "$value")]
+    pub time_reference: TimeReferenceChoice,
+}
+
+/// The two branches of the XSD `TimeReference` choice (:2173-2178).
+///
+/// The first variant is spelled `NoneElement` rather than `None` so that it
+/// does not shadow `Option::None` in match arms; `#[serde(rename)]` restores
+/// the schema element name on the wire.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TimeReferenceChoice {
+    #[serde(rename = "None")]
+    NoneElement(NoneElement),
+    #[serde(rename = "Timing")]
+    Timing(Timing),
 }
 
 /// Timing specification for trajectory following
@@ -674,37 +748,45 @@ pub struct TargetTimeSteadyState {
     pub time: Double,
 }
 
+/// The two branches of the XSD `SteadyState` group (:2075-2080).
+///
+/// `SteadyState` is a named `xsd:group` wrapping an `xsd:choice`, referenced by
+/// `AbsoluteSpeed` (:674) and `RelativeSpeedToMaster` (:1891). The Rust type
+/// therefore carries the group name, not the name of either referring type.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SteadyState {
+    #[serde(rename = "TargetDistanceSteadyState")]
+    TargetDistanceSteadyState(TargetDistanceSteadyState),
+    #[serde(rename = "TargetTimeSteadyState")]
+    TargetTimeSteadyState(TargetTimeSteadyState),
+}
+
 /// Absolute speed specification
 ///
-/// XSD `AbsoluteSpeed` (:672-677): required `@value` plus the optional
-/// `SteadyState` group (:2075-2080), a choice of `TargetDistanceSteadyState`
-/// | `TargetTimeSteadyState`, modeled here as parallel optional siblings.
+/// XSD `AbsoluteSpeed` (:672-677) is an `xsd:sequence` holding
+/// `<xsd:group ref="SteadyState" minOccurs="0"/>`, plus a required `@value`.
+/// Because the group reference is optional, the element carries zero or one
+/// steady-state branch and never two. `Option<SteadyState>` behind `$value`
+/// with `default` states exactly that cardinality: absence deserializes to
+/// `None`, one branch to `Some`, and a document naming both is rejected with
+/// `duplicate field $value`. A bare `$value` would be wrong here, since it
+/// would reject the legal empty element.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsoluteSpeed {
     #[serde(rename = "@value")]
     pub value: Double,
 
-    /// SteadyState choice branch: target distance
-    #[serde(
-        rename = "TargetDistanceSteadyState",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub target_distance_steady_state: Option<TargetDistanceSteadyState>,
-
-    /// SteadyState choice branch: target time
-    #[serde(
-        rename = "TargetTimeSteadyState",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub target_time_steady_state: Option<TargetTimeSteadyState>,
+    /// The optional `SteadyState` group reference (:674).
+    #[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
+    pub steady_state: Option<SteadyState>,
 }
 
 /// Relative speed to master specification
 ///
 /// XSD `RelativeSpeedToMaster` (:1889-1895): required `@speedTargetValueType`
-/// and `@value`, plus the optional `SteadyState` group.
+/// and `@value`, plus the same optional `SteadyState` group reference (:1891).
+/// See `AbsoluteSpeed` for why the group takes `Option<SteadyState>` behind
+/// `$value` rather than a bare `$value`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelativeSpeedToMaster {
     #[serde(rename = "@speedTargetValueType")]
@@ -713,21 +795,9 @@ pub struct RelativeSpeedToMaster {
     #[serde(rename = "@value")]
     pub value: Double,
 
-    /// SteadyState choice branch: target distance
-    #[serde(
-        rename = "TargetDistanceSteadyState",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub target_distance_steady_state: Option<TargetDistanceSteadyState>,
-
-    /// SteadyState choice branch: target time
-    #[serde(
-        rename = "TargetTimeSteadyState",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub target_time_steady_state: Option<TargetTimeSteadyState>,
+    /// The optional `SteadyState` group reference (:1891).
+    #[serde(rename = "$value", default, skip_serializing_if = "Option::is_none")]
+    pub steady_state: Option<SteadyState>,
 }
 
 /// Acquire position action for moving to a specific position
@@ -788,16 +858,14 @@ impl SpeedActionTarget {
     /// branch; call this explicitly instead.
     pub fn absolute(value: f64) -> Self {
         Self {
-            absolute: Some(AbsoluteTargetSpeed::new(value)),
-            relative: None,
+            target: SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed::new(value)),
         }
     }
 
     /// Create a `SpeedActionTarget` carrying a relative target speed.
     pub fn relative(relative: RelativeTargetSpeed) -> Self {
         Self {
-            absolute: None,
-            relative: Some(relative),
+            target: SpeedActionTargetChoice::RelativeTargetSpeed(relative),
         }
     }
 }
@@ -904,16 +972,14 @@ impl TimeReference {
     /// instead.
     pub fn none() -> Self {
         Self {
-            none: Some(NoneElement {}),
-            timing: None,
+            time_reference: TimeReferenceChoice::NoneElement(NoneElement {}),
         }
     }
 
     /// Create a `TimeReference` carrying explicit `Timing`.
     pub fn timing(timing: Timing) -> Self {
         Self {
-            none: None,
-            timing: Some(timing),
+            time_reference: TimeReferenceChoice::Timing(timing),
         }
     }
 }
@@ -930,16 +996,14 @@ impl TrajectoryRef {
     /// Create a trajectory reference with direct trajectory definition
     pub fn with_trajectory(trajectory: Trajectory) -> Self {
         Self {
-            trajectory: Some(Box::new(trajectory)),
-            catalog_reference: None,
+            trajectory_ref: TrajectoryRefChoice::Trajectory(Box::new(trajectory)),
         }
     }
 
     /// Create a trajectory reference with catalog reference
     pub fn with_catalog_reference(catalog_reference: CatalogReference<CatalogTrajectory>) -> Self {
         Self {
-            trajectory: None,
-            catalog_reference: Some(catalog_reference),
+            trajectory_ref: TrajectoryRefChoice::CatalogReference(catalog_reference),
         }
     }
 
@@ -1460,8 +1524,7 @@ impl AbsoluteSpeed {
     pub fn new(value: f64) -> Self {
         Self {
             value: Double::literal(value),
-            target_distance_steady_state: None,
-            target_time_steady_state: None,
+            steady_state: None,
         }
     }
 }
@@ -1476,8 +1539,7 @@ impl RelativeSpeedToMaster {
         Self {
             speed_target_value_type: Value::Literal(speed_target_value_type),
             value: Double::literal(value),
-            target_distance_steady_state: None,
-            target_time_steady_state: None,
+            steady_state: None,
         }
     }
 }
@@ -1877,8 +1939,7 @@ mod tests {
             final_speed: Some(FinalSpeed {
                 speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
                     value: Double::literal(15.0),
-                    target_distance_steady_state: None,
-                    target_time_steady_state: None,
+                    steady_state: None,
                 }),
             }),
             target_tolerance_master: Some(Double::literal(1.0)),
@@ -1960,8 +2021,7 @@ mod tests {
         let abs_final = FinalSpeed {
             speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
                 value: Double::literal(25.0),
-                target_distance_steady_state: None,
-                target_time_steady_state: None,
+                steady_state: None,
             }),
         };
 
@@ -1974,8 +2034,7 @@ mod tests {
             speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
                 speed_target_value_type: Value::Literal(SpeedTargetValueType::Delta),
                 value: Double::literal(-5.0),
-                target_distance_steady_state: None,
-                target_time_steady_state: None,
+                steady_state: None,
             }),
         };
 

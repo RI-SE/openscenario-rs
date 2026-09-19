@@ -215,7 +215,8 @@ fn can_use_public_api_convenience_functions() {
 #[test]
 fn can_create_and_serialize_actions() {
     use openscenario_rs::types::actions::movement::{
-        AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, TeleportAction, TransitionDynamics,
+        AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, SpeedActionTargetChoice,
+        TeleportAction, TransitionDynamics,
     };
 
     use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
@@ -230,10 +231,9 @@ fn can_create_and_serialize_actions() {
             value: openscenario_rs::types::Double::literal(5.0),
         },
         speed_action_target: SpeedActionTarget {
-            absolute: Some(AbsoluteTargetSpeed {
+            target: SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed {
                 value: openscenario_rs::types::Double::literal(30.0),
             }),
-            relative: None,
         },
     };
 
@@ -914,7 +914,8 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     use openscenario_rs::types::enums::ParameterType;
     use openscenario_rs::types::{
         actions::movement::{
-            AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, TransitionDynamics,
+            AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, SpeedActionTargetChoice,
+            TransitionDynamics,
         },
         basic::{ParameterDeclaration, ParameterDeclarations, Value},
         conditions::{ByValueCondition, SimulationTimeCondition},
@@ -962,10 +963,9 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
             value: Value::literal(3.0),
         },
         speed_action_target: SpeedActionTarget {
-            absolute: Some(AbsoluteTargetSpeed {
+            target: SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed {
                 value: Value::literal(25.0),
             }),
-            relative: None,
         },
     };
 
@@ -1099,12 +1099,13 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
                     &3.0
                 );
 
-                if let Some(target) = &speed_action.speed_action_target.absolute {
-                    assert_eq!(target.value.as_literal().unwrap(), &25.0);
-                } else if speed_action.speed_action_target.relative.is_some() {
-                    panic!("Expected absolute target speed");
-                } else {
-                    panic!("No target speed specified");
+                match &speed_action.speed_action_target.target {
+                    SpeedActionTargetChoice::AbsoluteTargetSpeed(target) => {
+                        assert_eq!(target.value.as_literal().unwrap(), &25.0);
+                    }
+                    SpeedActionTargetChoice::RelativeTargetSpeed(_) => {
+                        panic!("Expected absolute target speed");
+                    }
                 }
             } else {
                 panic!("Expected speed action");

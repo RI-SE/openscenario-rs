@@ -1054,7 +1054,7 @@ fn analyze_init_detailed(
 
             if let Some(longitudinal_action) = &action.longitudinal_action {
                 if let Some(speed_action) = &longitudinal_action.speed_action {
-                    if let Some(absolute) = &speed_action.speed_action_target.absolute {
+                    if let Some(absolute) = speed_action.speed_action_target.target.as_absolute() {
                         // Try to get literal value first, then check for parameter/expression
                         let speed_value = if let Some(literal_val) = absolute.value.as_literal() {
                             literal_val.to_string()
@@ -1070,7 +1070,9 @@ fn analyze_init_detailed(
                             speed_value,
                             speed_type: "Absolute".to_string(),
                         });
-                    } else if let Some(relative) = &speed_action.speed_action_target.relative {
+                    } else if let Some(relative) =
+                        speed_action.speed_action_target.target.as_relative()
+                    {
                         // Handle relative speed as well
                         let speed_value = if let Some(literal_val) = relative.value.as_literal() {
                             literal_val.to_string()
@@ -2803,7 +2805,7 @@ fn resolve_expressions_in_scenario(
                 if let Some(speed_action) = &action.longitudinal_action {
                     if let Some(speed_action) = &speed_action.speed_action {
                         let target = &speed_action.speed_action_target;
-                        if let Some(absolute_speed) = &target.absolute {
+                        if let Some(absolute_speed) = target.target.as_absolute() {
                             resolve_numeric_value(
                                 &absolute_speed.value,
                                 &format!("Entity '{}' init speed", entity_ref),

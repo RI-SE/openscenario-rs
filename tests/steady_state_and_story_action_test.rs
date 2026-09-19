@@ -10,7 +10,9 @@
 //! - The deprecated-but-emitted `ActivateControllerAction` branch of
 //!   `PrivateAction` (XSD:1777-1791).
 
-use openscenario_rs::types::actions::movement::{AbsoluteSpeed, RelativeSpeedToMaster};
+use openscenario_rs::types::actions::movement::{
+    AbsoluteSpeed, RelativeSpeedToMaster, SteadyState,
+};
 use openscenario_rs::types::actions::wrappers::{EntityActionChoice, GlobalAction};
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::SpeedTargetValueType;
@@ -32,14 +34,13 @@ fn absolute_speed_target_distance_steady_state_round_trip() {
         r#"<AbsoluteSpeed value="0"><TargetDistanceSteadyState distance="5"/></AbsoluteSpeed>"#;
     let speed: AbsoluteSpeed = de(xml);
     assert_eq!(speed.value.as_literal().copied(), Some(0.0));
-    assert_eq!(
-        speed
-            .target_distance_steady_state
-            .as_ref()
-            .and_then(|s| s.distance.as_literal().copied()),
-        Some(5.0)
-    );
-    assert!(speed.target_time_steady_state.is_none());
+    let Some(SteadyState::TargetDistanceSteadyState(distance)) = speed.steady_state.as_ref() else {
+        panic!(
+            "expected the TargetDistanceSteadyState branch, got {:?}",
+            speed.steady_state
+        );
+    };
+    assert_eq!(distance.distance.as_literal().copied(), Some(5.0));
 
     let out = ser("AbsoluteSpeed", &speed);
     assert!(out.contains(r#"distance="5""#), "got: {out}");
@@ -51,14 +52,13 @@ fn absolute_speed_target_distance_steady_state_round_trip() {
 fn absolute_speed_target_time_steady_state_round_trip() {
     let xml = r#"<AbsoluteSpeed value="12.5"><TargetTimeSteadyState time="2"/></AbsoluteSpeed>"#;
     let speed: AbsoluteSpeed = de(xml);
-    assert_eq!(
-        speed
-            .target_time_steady_state
-            .as_ref()
-            .and_then(|s| s.time.as_literal().copied()),
-        Some(2.0)
-    );
-    assert!(speed.target_distance_steady_state.is_none());
+    let Some(SteadyState::TargetTimeSteadyState(time)) = speed.steady_state.as_ref() else {
+        panic!(
+            "expected the TargetTimeSteadyState branch, got {:?}",
+            speed.steady_state
+        );
+    };
+    assert_eq!(time.time.as_literal().copied(), Some(2.0));
 
     let out = ser("AbsoluteSpeed", &speed);
     assert!(out.contains("TargetTimeSteadyState"), "got: {out}");
@@ -69,8 +69,7 @@ fn absolute_speed_target_time_steady_state_round_trip() {
 fn absolute_speed_without_steady_state_round_trip() {
     let xml = r#"<AbsoluteSpeed value="30"/>"#;
     let speed: AbsoluteSpeed = de(xml);
-    assert!(speed.target_distance_steady_state.is_none());
-    assert!(speed.target_time_steady_state.is_none());
+    assert!(speed.steady_state.is_none());
 
     let out = ser("AbsoluteSpeed", &speed);
     assert!(!out.contains("SteadyState"), "got: {out}");
@@ -85,13 +84,13 @@ fn relative_speed_to_master_round_trip() {
         Value::Literal(SpeedTargetValueType::Delta)
     );
     assert_eq!(speed.value.as_literal().copied(), Some(-5.0));
-    assert_eq!(
-        speed
-            .target_time_steady_state
-            .as_ref()
-            .and_then(|s| s.time.as_literal().copied()),
-        Some(1.5)
-    );
+    let Some(SteadyState::TargetTimeSteadyState(time)) = speed.steady_state.as_ref() else {
+        panic!(
+            "expected the TargetTimeSteadyState branch, got {:?}",
+            speed.steady_state
+        );
+    };
+    assert_eq!(time.time.as_literal().copied(), Some(1.5));
 
     let out = ser("RelativeSpeedToMaster", &speed);
     assert!(

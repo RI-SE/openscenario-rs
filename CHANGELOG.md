@@ -127,6 +127,55 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **The movement and controller choice groups now hold a choice enum instead of parallel
+  `Option` fields.** Seven types are converted, and they fall into two groups that are not
+  interchangeable. `SpeedActionTarget` (`:2049-2054`), `TrajectoryRef` (`:2380-2385`),
+  `TimeReference` (`:2173-2178`) and `ControllerAction` (`:978-984`) are each a bare
+  `xsd:choice`, so `minOccurs` and `maxOccurs` both default to 1 and exactly one branch is
+  required. Each now carries a single required `$value` field holding an externally-tagged
+  enum: `SpeedActionTarget::target`, `TrajectoryRef::trajectory_ref`,
+  `TimeReference::time_reference` and `ControllerAction::controller_action`, of types
+  `SpeedActionTargetChoice`, `TrajectoryRefChoice`, `TimeReferenceChoice` and
+  `ControllerActionChoice`. `AbsoluteSpeed` (`:672-677`) and `RelativeSpeedToMaster`
+  (`:1889-1895`) instead hold an `xsd:sequence` wrapping
+  `<xsd:group ref="SteadyState" minOccurs="0"/>`, where `SteadyState` (`:2075-2080`) is a named
+  group over a choice of `TargetDistanceSteadyState` | `TargetTimeSteadyState`. Since the group
+  reference is optional, both take `Option<SteadyState>` behind `$value` with `default`, and
+  their two former sibling fields collapse into one `steady_state` field.
+  `AssignControllerAction` (`:771-785`) takes the same optional shape for a different reason:
+  it is an `xsd:choice` in which every branch carries `minOccurs="0"`, and a choice whose
+  particles can each match the empty sequence is itself nullable. `xmllint` against
+  `Schema/OpenSCENARIO.xsd` confirms that `<AssignControllerAction/>` validates while
+  `<Controller>` beside `<ObjectController>` does not, so its three former element fields
+  collapse into one `controller: Option<AssignControllerActionChoice>`.
+
+  Modeled as parallel `Option` fields, every one of the seven accepted a document naming two
+  branches and kept both, then re-serialized both. `<AbsoluteSpeed value="30">` carrying both
+  `<TargetDistanceSteadyState>` and `<TargetTimeSteadyState>` parsed into a value holding both
+  and emitted the same invalid document again; the four bare choices additionally accepted a
+  document naming no branch at all. Under `$value` serde reads the branch from the live reader
+  by element name, so the cardinality is a property of the type: a bare choice rejects zero
+  branches with ``missing field `$value` `` and two with ``duplicate field `$value` ``, and an
+  optional group accepts zero, accepts one, and rejects two. No hand-written `validate()` is
+  needed, and none is added.
+
+  `ControllerAction::empty()` is removed, since the type can no longer describe a branchless
+  value. `AssignControllerAction`'s hand-written `Default` is replaced by a `#[derive]`, which
+  is now schema-valid rather than a silently-picked branch, and `::with_object_controller` is
+  added alongside the existing `::with_controller` and `::with_catalog_reference`.
+  `SpeedActionTargetChoice::as_absolute`/`as_relative` and
+  `TrajectoryRefChoice::as_trajectory`/`as_catalog_reference` are added for the read paths that
+  previously matched on an `Option` field. `SteadyState`, `SpeedActionTargetChoice`,
+  `TimeReferenceChoice`, `TrajectoryRefChoice`, `ControllerActionChoice` and
+  `AssignControllerActionChoice` are new public types.
+
+  `FollowTrajectoryAction` is deliberately **not** converted. XSD `FollowTrajectoryAction`
+  (`:1244-1256`) is an `xsd:all` of optional members, not a choice, and its `validate()`
+  enforces an extra-schema rule that at most one trajectory source is named. That rule has no
+  `xsd:choice` behind it and thus no `$value` enum can absorb it. `OverrideControllerValueAction`
+  (`:1565-1574`) is likewise `xsd:all` of six optional children, and `SpeedProfileAction`
+  (`:2060-2067`) is an `xsd:sequence`; both are left as they are.
+
 - **`RoutingAction`, `StoryAction` and `StoryPrivateAction` now hold a choice enum instead of
   parallel `Option` fields.** XSD `RoutingAction` (`:1981-1988`), `Action` (`:705-712`) and
   `PrivateAction` (`:1777-1791`) are each a bare `xsd:choice`, so `minOccurs` and `maxOccurs`

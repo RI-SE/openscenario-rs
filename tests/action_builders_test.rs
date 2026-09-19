@@ -16,8 +16,11 @@ mod action_builder_tests {
             openscenario_rs::types::actions::wrappers::PrivateAction::LongitudinalAction(long_action) => {
                 match long_action.longitudinal_action_choice {
                     openscenario_rs::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action) => {
-                        assert!(speed_action.speed_action_target.absolute.is_some());
-                        let abs_target = speed_action.speed_action_target.absolute.unwrap();
+                        let abs_target = speed_action
+                            .speed_action_target
+                            .target
+                            .as_absolute()
+                            .expect("Expected AbsoluteTargetSpeed branch");
                         assert_eq!(abs_target.value.as_literal(), Some(&30.0));
                     }
                     _ => panic!("Expected SpeedAction"),

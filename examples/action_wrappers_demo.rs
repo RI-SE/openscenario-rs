@@ -58,7 +58,13 @@ fn demonstrate_private_actions() {
     println!("   - Created LongitudinalAction wrapped in PrivateAction");
 
     // Create a ControllerAction wrapped in PrivateAction
-    let controller_action = ControllerAction::empty();
+    // XSD `ControllerAction` (:978-984) is a bare choice, so the value has to name
+    // a branch. `ActivateControllerAction` is the smallest one.
+    let controller_action = ControllerAction {
+        controller_action: ControllerActionChoice::ActivateControllerAction(
+            ActivateControllerAction::default(),
+        ),
+    };
     let private_action = PrivateAction::ControllerAction(controller_action);
     let core_action = Action::PrivateAction(private_action);
 
