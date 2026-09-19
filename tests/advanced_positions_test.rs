@@ -3,7 +3,7 @@
 use openscenario_rs::types::{
     actions::movement::Trajectory,
     basic::{Double, OSString},
-    geometry::shapes::Shape,
+    geometry::shapes::{Polyline, Shape, Vertex},
     positions::{
         relative::RelativeObjectPosition, trajectory::TrajectoryPosition,
         world::GeographicPosition, Position, TrajectoryRef,
@@ -11,7 +11,12 @@ use openscenario_rs::types::{
 };
 
 fn test_trajectory_ref() -> TrajectoryRef {
-    TrajectoryRef::with_trajectory(Trajectory::new("TestTrajectory", false, Shape::empty()))
+    // A minimal schema-valid `Shape` (a one-vertex polyline): these tests exercise
+    // `TrajectoryPosition`, not the trajectory's own shape content.
+    let shape = Shape::polyline(Polyline {
+        vertices: vec![Vertex::new(Position::world_origin())],
+    });
+    TrajectoryRef::with_trajectory(Trajectory::new("TestTrajectory", false, shape))
 }
 
 #[test]

@@ -2,142 +2,94 @@
 
 use crate::error::Result;
 use crate::types::basic::{OSString, Value};
-use crate::types::distributions::{DistributionSampler, ValidateDistribution};
+use crate::types::distributions::{
+    DeterministicParameterDistributionGroup, DistributionSampler, ValidateDistribution,
+};
 use serde::{Deserialize, Serialize};
 
-/// Container for deterministic parameter distributions (matches XSD Deterministic type)
-/// This version handles interspersed elements by collecting them all in one place
-#[derive(Debug, Clone, PartialEq, Default)]
+/// Container for deterministic parameter distributions.
+///
+/// XSD `Deterministic` (`Schema/OpenSCENARIO.xsd:1024-1028`) is a sequence of one particle,
+/// `<xsd:group ref="DeterministicParameterDistribution" minOccurs="0" maxOccurs="unbounded"/>`.
+/// Each occurrence of the group independently picks one of its two branches
+/// (`DeterministicMultiParameterDistribution` | `DeterministicSingleParameterDistribution`,
+/// XSD:1038-1042), so a document may freely interleave the two kinds. The single ordered
+/// `Vec` below preserves that interleaving; the crate's earlier hand-written `Serialize`
+/// collected singles and multis into two separate `Vec`s and re-emitted all of one kind
+/// before the other, which reorders any document that interleaves them (invisible to the
+/// conformance corpus, since no corpus file does).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Deterministic {
-    pub single_distributions: Vec<DeterministicSingleParameterDistribution>,
-    pub multi_distributions: Vec<DeterministicMultiParameterDistribution>,
-}
-
-impl serde::Serialize for Deterministic {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeMap;
-
-        let mut map = serializer.serialize_map(None)?;
-
-        // Serialize single distributions
-        for dist in &self.single_distributions {
-            map.serialize_entry("DeterministicSingleParameterDistribution", dist)?;
-        }
-
-        // Serialize multi distributions
-        for dist in &self.multi_distributions {
-            map.serialize_entry("DeterministicMultiParameterDistribution", dist)?;
-        }
-
-        map.end()
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for Deterministic {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::{MapAccess, Visitor};
-        use std::fmt;
-
-        struct DeterministicVisitor;
-
-        impl<'de> Visitor<'de> for DeterministicVisitor {
-            type Value = Deterministic;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a map with distribution elements")
-            }
-
-            fn visit_map<M>(self, mut map: M) -> std::result::Result<Deterministic, M::Error>
-            where
-                M: MapAccess<'de>,
-            {
-                let mut single_distributions = Vec::new();
-                let mut multi_distributions = Vec::new();
-
-                // Process elements in the order they appear
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "DeterministicSingleParameterDistribution" => {
-                            let dist: DeterministicSingleParameterDistribution =
-                                map.next_value()?;
-                            single_distributions.push(dist);
-                        }
-                        "DeterministicMultiParameterDistribution" => {
-                            let dist: DeterministicMultiParameterDistribution = map.next_value()?;
-                            multi_distributions.push(dist);
-                        }
-                        _ => {
-                            // Skip unknown fields
-                            let _: serde::de::IgnoredAny = map.next_value()?;
-                        }
-                    }
-                }
-
-                Ok(Deterministic {
-                    single_distributions,
-                    multi_distributions,
-                })
-            }
-        }
-
-        deserializer.deserialize_map(DeterministicVisitor)
-    }
+    /// The distribution entries, in document order.
+    #[serde(rename = "$value", default, skip_serializing_if = "Vec::is_empty")]
+    pub distributions: Vec<DeterministicParameterDistributionGroup>,
 }
 
 impl Deterministic {
     /// Check if the container has no distributions
     pub fn is_empty(&self) -> bool {
-        self.single_distributions.is_empty() && self.multi_distributions.is_empty()
+        self.distributions.is_empty()
     }
 
     /// Add a single parameter distribution
     pub fn add_single(&mut self, distribution: DeterministicSingleParameterDistribution) {
-        self.single_distributions.push(distribution);
+        self.distributions
+            .push(DeterministicParameterDistributionGroup::single(
+                distribution,
+            ));
     }
 
     /// Add a multi parameter distribution
     pub fn add_multi(&mut self, distribution: DeterministicMultiParameterDistribution) {
-        self.multi_distributions.push(distribution);
+        self.distributions
+            .push(DeterministicParameterDistributionGroup::multi(distribution));
     }
 
-    /// Get single distributions
+    /// Iterate the single-parameter entries, in document order (other entries skipped).
     pub fn single_distributions(
         &self,
     ) -> impl Iterator<Item = &DeterministicSingleParameterDistribution> {
-        self.single_distributions.iter()
+        self.distributions.iter().filter_map(|d| match d {
+            DeterministicParameterDistributionGroup::DeterministicSingleParameterDistribution(
+                s,
+            ) => Some(s),
+            _ => None,
+        })
     }
 
-    /// Get multi distributions
+    /// Iterate the multi-parameter entries, in document order (other entries skipped).
     pub fn multi_distributions(
         &self,
     ) -> impl Iterator<Item = &DeterministicMultiParameterDistribution> {
-        self.multi_distributions.iter()
+        self.distributions.iter().filter_map(|d| match d {
+            DeterministicParameterDistributionGroup::DeterministicMultiParameterDistribution(m) => {
+                Some(m)
+            }
+            _ => None,
+        })
+    }
+
+    /// Get total count of all distributions
+    pub fn total_count(&self) -> usize {
+        self.distributions.len()
     }
 }
 
 /// Single parameter deterministic distribution
+///
+/// XSD `DeterministicSingleParameterDistribution` (`:1045-1049`): sequence of the bare
+/// choice group `DeterministicSingleParameterDistributionType` (`:1051-1057`, no
+/// `minOccurs` on the group or any of its three branches, so the choice is required), plus
+/// required attribute `parameterName`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeterministicSingleParameterDistribution {
     #[serde(rename = "@parameterName")]
     pub parameter_name: OSString,
-    #[serde(rename = "DistributionSet", skip_serializing_if = "Option::is_none")]
-    pub distribution_set: Option<DistributionSet>,
-    #[serde(rename = "DistributionRange", skip_serializing_if = "Option::is_none")]
-    pub distribution_range: Option<DistributionRange>,
-    #[serde(
-        rename = "UserDefinedDistribution",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub user_defined_distribution: Option<crate::types::distributions::UserDefinedDistribution>,
+    #[serde(rename = "$value")]
+    pub distribution: DeterministicSingleParameterDistributionType,
 }
 
-/// Types of single parameter distributions (legacy enum - kept for backward compatibility)
+/// The three branches of the `DeterministicSingleParameterDistributionType` choice (XSD:1051-1057).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum DeterministicSingleParameterDistributionType {
@@ -147,34 +99,15 @@ pub enum DeterministicSingleParameterDistributionType {
 }
 
 impl DeterministicSingleParameterDistribution {
-    /// Get the distribution type as an enum (for backward compatibility)
-    pub fn distribution_type(&self) -> Option<DeterministicSingleParameterDistributionType> {
-        if let Some(set) = &self.distribution_set {
-            Some(DeterministicSingleParameterDistributionType::DistributionSet(set.clone()))
-        } else if let Some(range) = &self.distribution_range {
-            Some(DeterministicSingleParameterDistributionType::DistributionRange(range.clone()))
-        } else {
-            self.user_defined_distribution.as_ref().map(|user_defined| {
-                DeterministicSingleParameterDistributionType::UserDefinedDistribution(
-                    user_defined.clone(),
-                )
-            })
+    /// Construct a single-parameter distribution from its required name and chosen branch.
+    pub fn new(
+        parameter_name: OSString,
+        distribution: DeterministicSingleParameterDistributionType,
+    ) -> Self {
+        Self {
+            parameter_name,
+            distribution,
         }
-    }
-
-    /// Check if this has a distribution set
-    pub fn has_distribution_set(&self) -> bool {
-        self.distribution_set.is_some()
-    }
-
-    /// Check if this has a distribution range
-    pub fn has_distribution_range(&self) -> bool {
-        self.distribution_range.is_some()
-    }
-
-    /// Check if this has a user defined distribution
-    pub fn has_user_defined_distribution(&self) -> bool {
-        self.user_defined_distribution.is_some()
     }
 }
 
@@ -239,49 +172,23 @@ pub struct ParameterAssignment {
 
 impl ValidateDistribution for DeterministicSingleParameterDistribution {
     fn validate(&self) -> Result<()> {
-        // Ensure exactly one distribution type is present
-        let count = [
-            self.distribution_set.is_some(),
-            self.distribution_range.is_some(),
-            self.user_defined_distribution.is_some(),
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
-
-        if count != 1 {
-            return Err(crate::error::Error::validation_error(
-                "DeterministicSingleParameterDistribution",
-                "Must have exactly one distribution type (set, range, or user-defined)",
-            ));
-        }
-
-        // Validate the present distribution
-        if let Some(dist) = &self.distribution_set {
-            dist.validate()?;
-        } else if let Some(dist) = &self.distribution_range {
-            dist.validate()?;
-        } else if let Some(dist) = &self.user_defined_distribution {
-            dist.validate()?;
-        }
-
-        Ok(())
+        self.distribution.validate()
     }
 }
 
-impl Deterministic {
-    /// Get total count of all distributions
-    pub fn total_count(&self) -> usize {
-        self.single_distributions.len() + self.multi_distributions.len()
+impl ValidateDistribution for DeterministicSingleParameterDistributionType {
+    fn validate(&self) -> Result<()> {
+        match self {
+            Self::DistributionSet(dist) => dist.validate(),
+            Self::DistributionRange(dist) => dist.validate(),
+            Self::UserDefinedDistribution(dist) => dist.validate(),
+        }
     }
 }
 
 impl ValidateDistribution for Deterministic {
     fn validate(&self) -> Result<()> {
-        for dist in &self.single_distributions {
-            dist.validate()?;
-        }
-        for dist in &self.multi_distributions {
+        for dist in &self.distributions {
             dist.validate()?;
         }
         Ok(())
@@ -352,33 +259,16 @@ impl ValidateDistribution for ParameterValueSet {
     }
 }
 
-// No Default impls here: every type in this file is either an XSD choice group
-// (`DeterministicSingleParameterDistributionType`) whose
-// variants each carry required scenario content, or a container whose child element has
-// minOccurs="1" in the schema (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
-// `ParameterValueSet.ParameterAssignment` all lack `minOccurs="0"`/have no `minOccurs="0"` —
-// verified against `Schema/OpenSCENARIO.xsd`), so an empty `Vec` would not be schema-valid either
-// There is no default that states nothing; callers must supply the required content via
-// `::new()`.
-
-impl DeterministicSingleParameterDistribution {
-    /// Construct a single-parameter distribution. Exactly one of `distribution_set`,
-    /// `distribution_range`, `user_defined_distribution` should be `Some` (xsd:choice) — see
-    /// [`Self::validate`].
-    pub fn new(
-        parameter_name: OSString,
-        distribution_set: Option<DistributionSet>,
-        distribution_range: Option<DistributionRange>,
-        user_defined_distribution: Option<crate::types::distributions::UserDefinedDistribution>,
-    ) -> Self {
-        Self {
-            parameter_name,
-            distribution_set,
-            distribution_range,
-            user_defined_distribution,
-        }
-    }
-}
+// No Default impls below `Deterministic` itself: every other type in this file is either an
+// XSD choice group (`DeterministicSingleParameterDistributionType`) whose variants each carry
+// required scenario content, or a container whose child element has minOccurs="1" in the
+// schema (`DistributionSet.Element`, `ValueSetDistribution.ParameterValueSet`,
+// `ParameterValueSet.ParameterAssignment` all lack `minOccurs="0"` — verified against
+// `Schema/OpenSCENARIO.xsd`), so an empty `Vec` would not be schema-valid either. There is no
+// default that states nothing; callers must supply the required content via `::new()`.
+// `Deterministic`'s own derived `Default` is the one exception: its sole field is the sequence
+// itself (`minOccurs="0" maxOccurs="unbounded"`), so an empty `Vec` — zero occurrences — is
+// schema-valid content, not a fabrication.
 
 impl DistributionSet {
     /// Construct a distribution set. The schema requires at least one `Element`
@@ -574,5 +464,118 @@ mod tests {
             ],
         };
         assert!(duplicate_set.validate().is_err());
+    }
+
+    fn sample_single(name: &str) -> DeterministicSingleParameterDistribution {
+        DeterministicSingleParameterDistribution::new(
+            Value::literal(name.to_string()),
+            DeterministicSingleParameterDistributionType::DistributionSet(DistributionSet::new(
+                DistributionSetElement::new(Value::literal("1.0".to_string())),
+                vec![],
+            )),
+        )
+    }
+
+    fn sample_multi() -> DeterministicMultiParameterDistribution {
+        DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
+            ParameterValueSet::new(
+                ParameterAssignment::new("p".to_string(), Value::literal("1.0".to_string())),
+                vec![],
+            ),
+            vec![],
+        ))
+    }
+
+    #[test]
+    fn test_deterministic_single_parameter_distribution_round_trip() {
+        let dist = sample_single("speed");
+        let xml = quick_xml::se::to_string(&dist).expect("serialize");
+        assert!(
+            xml.starts_with(r#"<DeterministicSingleParameterDistribution parameterName="speed">"#),
+            "{xml}"
+        );
+        let reparsed: DeterministicSingleParameterDistribution =
+            quick_xml::de::from_str(&xml).expect("deserialize");
+        assert_eq!(dist, reparsed);
+    }
+
+    #[test]
+    fn test_deterministic_single_parameter_distribution_zero_branches_rejected() {
+        let xml = r#"<DeterministicSingleParameterDistribution parameterName="speed"></DeterministicSingleParameterDistribution>"#;
+        let result: std::result::Result<DeterministicSingleParameterDistribution, _> =
+            quick_xml::de::from_str(xml);
+        assert!(result.is_err(), "empty choice must be rejected: {result:?}");
+    }
+
+    #[test]
+    fn test_deterministic_single_parameter_distribution_two_branches_rejected() {
+        let xml = r#"<DeterministicSingleParameterDistribution parameterName="speed"><DistributionSet><Element value="1.0"/></DistributionSet><DistributionRange stepWidth="1.0"><Range lowerLimit="0.0" upperLimit="1.0"/></DistributionRange></DeterministicSingleParameterDistribution>"#;
+        let result: std::result::Result<DeterministicSingleParameterDistribution, _> =
+            quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "two branches on the choice must be rejected: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_deterministic_empty_parses_and_round_trips() {
+        // The `Deterministic` sequence particle is `minOccurs="0" maxOccurs="unbounded"`, so
+        // zero entries is legal content, not a rejected case.
+        let xml = r#"<Deterministic></Deterministic>"#;
+        let det: Deterministic = quick_xml::de::from_str(xml).expect("deserialize");
+        assert!(det.is_empty());
+        let serialized = quick_xml::se::to_string(&det).expect("serialize");
+        assert_eq!(serialized, "<Deterministic/>");
+    }
+
+    #[test]
+    fn test_deterministic_repeated_single_entries_accepted() {
+        // Two entries of the same branch (both `DeterministicSingleParameterDistribution`)
+        // must be accepted: the repetition lives in `Deterministic`'s own sequence, not in a
+        // one-of-two choice.
+        let mut det = Deterministic::default();
+        det.add_single(sample_single("a"));
+        det.add_single(sample_single("b"));
+        assert_eq!(det.total_count(), 2);
+        assert_eq!(det.single_distributions().count(), 2);
+
+        let xml = quick_xml::se::to_string(&det).expect("serialize");
+        let reparsed: Deterministic = quick_xml::de::from_str(&xml).expect("deserialize");
+        assert_eq!(det, reparsed);
+    }
+
+    #[test]
+    fn test_deterministic_interleaved_entries_preserve_order() {
+        // Reproduces the interleaving defect: the crate's old hand-written `Serialize`
+        // collected singles and multis into two separate `Vec`s and re-emitted all of one
+        // kind before the other, so this document came back reordered.
+        let xml = format!(
+            "<Deterministic>{}{}{}</Deterministic>",
+            quick_xml::se::to_string(&DeterministicParameterDistributionGroup::single(
+                sample_single("a")
+            ))
+            .unwrap(),
+            quick_xml::se::to_string(&DeterministicParameterDistributionGroup::multi(
+                sample_multi()
+            ))
+            .unwrap(),
+            quick_xml::se::to_string(&DeterministicParameterDistributionGroup::single(
+                sample_single("b")
+            ))
+            .unwrap(),
+        );
+
+        let det: Deterministic = quick_xml::de::from_str(&xml).expect("deserialize");
+        assert_eq!(det.distributions.len(), 3);
+        assert!(det.distributions[0].is_single());
+        assert!(det.distributions[1].is_multi());
+        assert!(det.distributions[2].is_single());
+
+        let serialized = quick_xml::se::to_string(&det).expect("serialize");
+        assert_eq!(
+            serialized, xml,
+            "document order (single, multi, single) must be preserved on round trip"
+        );
     }
 }

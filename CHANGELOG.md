@@ -127,6 +127,49 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **The geometry and distribution choice groups now hold a choice enum instead of parallel
+  `Option` fields, and `Deterministic` no longer reorders its content.** `Shape`
+  (`Schema/OpenSCENARIO.xsd:2031-2038`) and `DeterministicSingleParameterDistribution`
+  (`:1045-1057`) are each a bare `xsd:choice` with no `minOccurs="0"` anywhere, so exactly one
+  branch is required in both. `Shape::choice` now holds a `ShapeChoice` of `Polyline` |
+  `Clothoid` | `ClothoidSpline` | `Nurbs`; `DeterministicSingleParameterDistribution::distribution`
+  holds a `DeterministicSingleParameterDistributionType` of `DistributionSet` |
+  `DistributionRange` | `UserDefinedDistribution`. `ParameterValueDistribution::distribution`
+  now holds the existing `DistributionDefinition` enum (`Deterministic` | `Stochastic`) directly
+  behind `$value`, replacing two parallel `Option` fields for the same bare choice
+  (`:1086-1091`, group referenced from `:1661-1665` with no `minOccurs`).
+
+  Modeled as parallel fields, `Shape` accepted zero, one or several of its four branches at
+  once and re-serialized whichever were set; the same was true of the other two types. Under
+  `$value` serde reads the branch from the live reader by element name, so the cardinality is a
+  property of the type: zero branches fail with ``missing field `$value` `` and two with
+  ``duplicate field `$value` ``, and no hand-written `validate()` is needed.
+  `DeterministicSingleParameterDistribution::has_distribution_set`/`has_distribution_range`/
+  `has_user_defined_distribution`/`distribution_type()` and `ParameterValueDistribution`'s
+  Option-checking `validate()` are removed as redundant choice-recovery now that the shape
+  enforces the choice structurally. `Shape` gains `polyline`/`clothoid`/`clothoid_spline`/`nurbs`
+  constructors and `as_polyline`/`as_clothoid`/`as_clothoid_spline`/`as_nurbs` accessors in place
+  of the removed fields and the removed `Shape::empty()`; `ParameterValueDistribution` gains
+  `as_deterministic`/`as_stochastic`.
+
+  `Deterministic` (`:1024-1028`) is a sequence of one repeated particle,
+  `<xsd:group ref="DeterministicParameterDistribution" minOccurs="0" maxOccurs="unbounded"/>`,
+  each occurrence independently a `DeterministicMultiParameterDistribution` or
+  `DeterministicSingleParameterDistribution` element — not a choice with exactly one branch, so
+  it keeps a `Vec`, but a single ordered one (`distributions: Vec<DeterministicParameterDistributionGroup>`)
+  rather than the previous two — `single_distributions`, `multi_distributions` — with a
+  hand-written `Serialize` that emitted all of one kind before the other. A document that
+  interleaves the two kinds now round-trips in the order it was written; previously it was
+  silently reordered, invisible to the conformance corpus because no corpus file interleaves
+  them. `single_distributions()`/`multi_distributions()` are now iterator methods over the one
+  `Vec`, not stored fields; `add_single`/`add_multi`/`is_empty`/`total_count` keep their
+  signatures. `DeterministicParameterDistributionGroup`, previously unused scaffolding wired to
+  nothing, is now this per-entry choice type; two duplicate group wrappers that modeled the same
+  choices as the now-wired-in `DistributionDefinition` and
+  `DeterministicSingleParameterDistributionType` (`DistributionDefinitionGroup`,
+  `DeterministicSingleParameterDistributionTypeGroup`) are removed rather than converted, since a
+  second model of the same group is redundant once one of them is reachable.
+
 - **The controller and entity choice groups now hold a choice enum instead of parallel
   `Option` fields.** `ObjectController` (`:1522-1528`), the `EntityObject` group shared by
   `ScenarioObject` and `ScenarioObjectTemplate` (`:1168-1176`, referenced with no `minOccurs`
@@ -452,6 +495,18 @@ Breaking, unless noted.
 
 ### Removed
 
+- **`Shape::empty()`**, replaced by the per-branch constructors `Shape::polyline`/`clothoid`/
+  `clothoid_spline`/`nurbs`; a `Shape` choice has no empty state to construct.
+- **`DeterministicSingleParameterDistribution::distribution_type()`,
+  `has_distribution_set`, `has_distribution_range` and `has_user_defined_distribution`**, the
+  choice-recovery methods `DeterministicSingleParameterDistributionType` makes redundant now
+  that the struct holds the enum directly.
+- **`DistributionDefinitionGroup`**, a duplicate model of the `DistributionDefinition` choice
+  that no parsed field ever held; `ParameterValueDistribution` now holds
+  `DistributionDefinition` directly.
+- **`DeterministicSingleParameterDistributionTypeGroup`**, a duplicate model of
+  `DeterministicSingleParameterDistributionType` that no parsed field ever held;
+  `DeterministicSingleParameterDistribution` now holds that enum directly.
 - **`ObjectController::validate` and `ObjectController::validate_strict`**, the choice-recovery
   methods `ObjectControllerChoice` makes redundant: serde now enforces the choice's cardinality
   structurally, so there is nothing left for a hand-written check to catch. `validate` also

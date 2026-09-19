@@ -112,7 +112,16 @@ impl TrajectoryPosition {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::geometry::shapes::Shape;
+    use crate::types::geometry::shapes::{Polyline, Shape, Vertex};
+    use crate::types::positions::Position;
+
+    /// A minimal schema-valid `Shape` (a one-vertex polyline) for tests that need a
+    /// concrete trajectory shape but do not exercise its content.
+    fn minimal_shape() -> Shape {
+        Shape::polyline(Polyline {
+            vertices: vec![Vertex::new(Position::world_origin())],
+        })
+    }
 
     #[test]
     fn test_trajectory_position_new() {
@@ -121,7 +130,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::empty(),
+                minimal_shape(),
             )),
         );
         assert_eq!(pos.s.as_literal().unwrap(), &50.0);
@@ -137,7 +146,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::empty(),
+                minimal_shape(),
             )),
         );
         assert_eq!(pos.s.as_literal().unwrap(), &100.0);
@@ -151,7 +160,7 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::empty(),
+                minimal_shape(),
             )),
         );
         let xml = quick_xml::se::to_string(&pos).unwrap();

@@ -360,42 +360,85 @@ impl Dimensions {
 
 /// Shape definition for trajectories and paths
 ///
-/// XSD `Shape` is a choice of `Polyline` | `Clothoid` | `ClothoidSpline` | `Nurbs`. The
-/// derived `Default` — all four branches `None` — states nothing about which branch was
-/// chosen and is kept per the container/choice policy; it is not schema-valid content on
-/// its own and exists only as a construction convenience.
+/// XSD `Shape` (`Schema/OpenSCENARIO.xsd:2031-2038`) is a bare `xsd:choice` of `Polyline` |
+/// `Clothoid` | `ClothoidSpline` | `Nurbs`, none of the four branches `minOccurs="0"`. A
+/// document therefore selects exactly one branch, so the choice is required, not nullable:
+/// the field holds the enum directly behind `$value` rather than an `Option<ShapeChoice>`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Shape {
-    #[serde(rename = "Polyline", default, skip_serializing_if = "Option::is_none")]
-    pub polyline: Option<Polyline>,
-    #[serde(rename = "Clothoid", default, skip_serializing_if = "Option::is_none")]
-    pub clothoid: Option<crate::types::positions::trajectory::Clothoid>,
-    #[serde(
-        rename = "ClothoidSpline",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub clothoid_spline: Option<ClothoidSpline>,
-    #[serde(rename = "Nurbs", default, skip_serializing_if = "Option::is_none")]
-    pub nurbs: Option<Nurbs>,
+    /// The chosen branch.
+    #[serde(rename = "$value")]
+    pub choice: ShapeChoice,
+}
+
+/// The four branches of the `Shape` choice (XSD:2031-2038).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum ShapeChoice {
+    Polyline(Polyline),
+    Clothoid(crate::types::positions::trajectory::Clothoid),
+    ClothoidSpline(ClothoidSpline),
+    Nurbs(Nurbs),
 }
 
 impl Shape {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `Shape (`Schema/OpenSCENARIO.xsd:2032-2039`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
+    /// Wraps a polyline branch.
+    pub fn polyline(polyline: Polyline) -> Self {
         Self {
-            polyline: None,
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
+            choice: ShapeChoice::Polyline(polyline),
+        }
+    }
+
+    /// Wraps a clothoid branch.
+    pub fn clothoid(clothoid: crate::types::positions::trajectory::Clothoid) -> Self {
+        Self {
+            choice: ShapeChoice::Clothoid(clothoid),
+        }
+    }
+
+    /// Wraps a clothoid-spline branch.
+    pub fn clothoid_spline(spline: ClothoidSpline) -> Self {
+        Self {
+            choice: ShapeChoice::ClothoidSpline(spline),
+        }
+    }
+
+    /// Wraps a NURBS branch.
+    pub fn nurbs(nurbs: Nurbs) -> Self {
+        Self {
+            choice: ShapeChoice::Nurbs(nurbs),
+        }
+    }
+
+    /// The polyline branch, if that is the one selected.
+    pub fn as_polyline(&self) -> Option<&Polyline> {
+        match &self.choice {
+            ShapeChoice::Polyline(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// The clothoid branch, if that is the one selected.
+    pub fn as_clothoid(&self) -> Option<&crate::types::positions::trajectory::Clothoid> {
+        match &self.choice {
+            ShapeChoice::Clothoid(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    /// The clothoid-spline branch, if that is the one selected.
+    pub fn as_clothoid_spline(&self) -> Option<&ClothoidSpline> {
+        match &self.choice {
+            ShapeChoice::ClothoidSpline(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// The NURBS branch, if that is the one selected.
+    pub fn as_nurbs(&self) -> Option<&Nurbs> {
+        match &self.choice {
+            ShapeChoice::Nurbs(n) => Some(n),
+            _ => None,
         }
     }
 }
@@ -597,17 +640,12 @@ mod tests {
     fn test_shape_serialization() {
         use crate::types::positions::Position;
 
-        let shape = Shape {
-            polyline: Some(Polyline {
-                vertices: vec![Vertex {
-                    time: Some(crate::types::basic::Value::literal(1.0)),
-                    position: Position::world_origin(),
-                }],
-            }),
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
-        };
+        let shape = Shape::polyline(Polyline {
+            vertices: vec![Vertex {
+                time: Some(crate::types::basic::Value::literal(1.0)),
+                position: Position::world_origin(),
+            }],
+        });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(xml.contains("<Polyline"));
@@ -619,17 +657,12 @@ mod tests {
         use crate::types::positions::Position;
 
         // A Vertex without time must not emit a time attribute in XML.
-        let shape = Shape {
-            polyline: Some(Polyline {
-                vertices: vec![Vertex {
-                    time: None,
-                    position: Position::world_origin(),
-                }],
-            }),
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
-        };
+        let shape = Shape::polyline(Polyline {
+            vertices: vec![Vertex {
+                time: None,
+                position: Position::world_origin(),
+            }],
+        });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(
@@ -643,23 +676,18 @@ mod tests {
         use crate::types::positions::trajectory::Clothoid;
         use crate::types::positions::{Position, WorldPosition};
 
-        let shape = Shape {
-            polyline: None,
-            clothoid: Some(Clothoid {
-                curvature: crate::types::basic::Value::literal(0.1),
-                curvature_dot: None,
-                curvature_prime: None,
-                length: crate::types::basic::Value::literal(20.0),
-                start_time: None,
-                stop_time: None,
-                start_position: Position {
-                    world_position: Some(WorldPosition::new(0.0, 0.0)),
-                    ..Position::empty()
-                },
-            }),
-            clothoid_spline: None,
-            nurbs: None,
-        };
+        let shape = Shape::clothoid(Clothoid {
+            curvature: crate::types::basic::Value::literal(0.1),
+            curvature_dot: None,
+            curvature_prime: None,
+            length: crate::types::basic::Value::literal(20.0),
+            start_time: None,
+            stop_time: None,
+            start_position: Position {
+                world_position: Some(WorldPosition::new(0.0, 0.0)),
+                ..Position::empty()
+            },
+        });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(xml.contains("<Clothoid"), "serialized: {xml}");
@@ -671,45 +699,57 @@ mod tests {
     fn test_shape_nurbs_roundtrip() {
         use crate::types::positions::{Position, WorldPosition};
 
-        let shape = Shape {
-            polyline: None,
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: Some(Nurbs {
-                order: crate::types::basic::Value::literal(3),
-                control_points: vec![
-                    ControlPoint {
-                        position: Position {
-                            world_position: Some(WorldPosition::new(0.0, 0.0)),
-                            ..Position::empty()
-                        },
-                        time: None,
-                        weight: None,
+        let shape = Shape::nurbs(Nurbs {
+            order: crate::types::basic::Value::literal(3),
+            control_points: vec![
+                ControlPoint {
+                    position: Position {
+                        world_position: Some(WorldPosition::new(0.0, 0.0)),
+                        ..Position::empty()
                     },
-                    ControlPoint {
-                        position: Position {
-                            world_position: Some(WorldPosition::new(1.0, 1.0)),
-                            ..Position::empty()
-                        },
-                        time: None,
-                        weight: None,
+                    time: None,
+                    weight: None,
+                },
+                ControlPoint {
+                    position: Position {
+                        world_position: Some(WorldPosition::new(1.0, 1.0)),
+                        ..Position::empty()
                     },
-                ],
-                knots: vec![
-                    Knot {
-                        value: crate::types::basic::Value::literal(0.0),
-                    },
-                    Knot {
-                        value: crate::types::basic::Value::literal(1.0),
-                    },
-                ],
-            }),
-        };
+                    time: None,
+                    weight: None,
+                },
+            ],
+            knots: vec![
+                Knot {
+                    value: crate::types::basic::Value::literal(0.0),
+                },
+                Knot {
+                    value: crate::types::basic::Value::literal(1.0),
+                },
+            ],
+        });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
         assert!(xml.contains("<Nurbs"), "serialized: {xml}");
         let deserialized: Shape = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(shape, deserialized);
+    }
+
+    #[test]
+    fn test_shape_zero_branches_rejected() {
+        let xml = r#"<Shape></Shape>"#;
+        let result: std::result::Result<Shape, _> = quick_xml::de::from_str(xml);
+        assert!(result.is_err(), "empty Shape must be rejected: {result:?}");
+    }
+
+    #[test]
+    fn test_shape_two_branches_rejected() {
+        let xml = r#"<Shape><Polyline><Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex><Vertex><Position><WorldPosition x="1" y="1"/></Position></Vertex></Polyline><Nurbs order="1"><ControlPoint><Position><WorldPosition x="0" y="0"/></Position></ControlPoint><Knot value="0"/></Nurbs></Shape>"#;
+        let result: std::result::Result<Shape, _> = quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "two branches on Shape must be rejected: {result:?}"
+        );
     }
 
     #[test]

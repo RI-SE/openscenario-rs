@@ -1481,7 +1481,7 @@ fn analyze_parameter_variation(
         analysis.referenced_scenario_info = Some(referenced_info);
 
         // Analyze deterministic distributions
-        if let Some(deterministic) = &param_dist.deterministic {
+        if let Some(deterministic) = param_dist.as_deterministic() {
             let det_analysis = analyze_deterministic_distributions(deterministic);
             analysis.total_parameters +=
                 det_analysis.single_distributions.len() + det_analysis.multi_distributions_count;
@@ -1490,7 +1490,7 @@ fn analyze_parameter_variation(
         }
 
         // Analyze stochastic distributions
-        if let Some(stochastic) = &param_dist.stochastic {
+        if let Some(stochastic) = param_dist.as_stochastic() {
             let stoch_analysis = StochasticAnalysis {
                 distributions_count: stochastic.distributions.len(),
             };
@@ -3025,100 +3025,4 @@ fn analyze_deterministic_distributions(
         multi_distributions_count: 0,
         total_combinations: 1,
     }
-}
-
-/// Original implementation (commented out due to compilation issues)
-fn _analyze_deterministic_distributions_original(
-    deterministic: &openscenario_rs::types::distributions::Deterministic,
-) -> DeterministicAnalysis {
-    let mut analysis = DeterministicAnalysis {
-        single_distributions: Vec::new(),
-        multi_distributions_count: deterministic.multi_distributions.len(),
-        total_combinations: 1,
-    };
-
-    for dist in &deterministic.single_distributions {
-        let parameter_name = dist
-            .parameter_name
-            .as_literal()
-            .map_or("Unknown".to_string(), |v| v.to_string());
-
-        let mut details = DistributionDetails {
-            parameter_name: parameter_name.clone(),
-            distribution_type: "Unknown".to_string(),
-            value_count: 0,
-            sample_values: Vec::new(),
-            range_info: None,
-        };
-
-        if let Some(set) = &dist.distribution_set {
-            details.distribution_type = "Set".to_string();
-            details.value_count = set.elements.len();
-            details.sample_values = set
-                .elements
-                .iter()
-                .take(5)
-                .map(|e| {
-                    e.value
-                        .as_literal()
-                        .map_or("Unknown".to_string(), |v| v.clone())
-                })
-                .collect();
-            analysis.total_combinations *= set.elements.len();
-        }
-
-        if let Some(dist_range) = &dist.distribution_range {
-            details.distribution_type = "Range".to_string();
-
-            let lower_str = dist_range
-                .range
-                .lower_limit
-                .as_literal()
-                .map_or("Unknown".to_string(), |v| v.to_string());
-            let upper_str = dist_range
-                .range
-                .upper_limit
-                .as_literal()
-                .map_or("Unknown".to_string(), |v| v.to_string());
-            let step_str = dist_range
-                .step_width
-                .as_literal()
-                .map_or("Unknown".to_string(), |v| v.to_string());
-
-            let mut calculated_count = 1;
-            if let (Some(lower), Some(upper), Some(step_val)) = (
-                dist_range.range.lower_limit.as_literal(),
-                dist_range.range.upper_limit.as_literal(),
-                dist_range.step_width.as_literal(),
-            ) {
-                if let Ok(step_f64) = step_val.parse::<f64>() {
-                    if step_f64 > 0.0 {
-                        calculated_count = ((upper - lower) / step_f64 + 1.0) as usize;
-                        details.value_count = calculated_count;
-                        analysis.total_combinations *= calculated_count;
-                    }
-                }
-            }
-
-            details.range_info = Some(RangeInfo {
-                lower_limit: lower_str,
-                upper_limit: upper_str,
-                step_width: step_str,
-                calculated_count,
-            });
-        }
-
-        if let Some(user_def) = &dist.user_defined_distribution {
-            details.distribution_type = "User Defined".to_string();
-            details.sample_values.push(format!(
-                "{} (type: {})",
-                user_def.content, user_def.distribution_type
-            ));
-            details.value_count = 1; // Unknown count for user-defined
-        }
-
-        analysis.single_distributions.push(details);
-    }
-
-    analysis
 }

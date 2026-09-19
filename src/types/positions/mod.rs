@@ -218,7 +218,13 @@ mod tests {
             TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
                 "TestTrajectory",
                 false,
-                crate::types::geometry::shapes::Shape::empty(),
+                crate::types::geometry::shapes::Shape::polyline(
+                    crate::types::geometry::shapes::Polyline {
+                        vertices: vec![crate::types::geometry::shapes::Vertex::new(
+                            Position::world_origin(),
+                        )],
+                    },
+                ),
             )),
         );
         let pos = Position::trajectory(tp.clone());

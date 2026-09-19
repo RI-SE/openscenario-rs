@@ -701,7 +701,7 @@ fn can_parse_routing_actions_in_story_events() {
                         );
 
                         // Verify shape contains vertices
-                        if let Some(polyline) = &trajectory.shape.polyline {
+                        if let Some(polyline) = trajectory.shape.as_polyline() {
                             println!("  - Polyline vertices: {}", polyline.vertices.len());
                             assert!(
                                 !polyline.vertices.is_empty(),

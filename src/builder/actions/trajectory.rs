@@ -118,12 +118,7 @@ impl PolylineBuilder {
         let polyline = Polyline {
             vertices: self.vertices,
         };
-        self.parent.shape = Some(Shape {
-            polyline: Some(polyline),
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
-        });
+        self.parent.shape = Some(Shape::polyline(polyline));
         self.parent
     }
 
@@ -359,11 +354,8 @@ mod tests {
             Some(&"test_trajectory".to_string())
         );
         assert_eq!(trajectory.closed.as_literal(), Some(&false));
-        assert!(trajectory.shape.polyline.is_some());
-        assert_eq!(
-            trajectory.shape.polyline.as_ref().unwrap().vertices.len(),
-            2
-        );
+        assert!(trajectory.shape.as_polyline().is_some());
+        assert_eq!(trajectory.shape.as_polyline().unwrap().vertices.len(), 2);
     }
 
     #[test]
@@ -443,7 +435,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let vertices = &trajectory.shape.polyline.as_ref().unwrap().vertices;
+        let vertices = &trajectory.shape.as_polyline().unwrap().vertices;
         assert_eq!(vertices.len(), 3);
 
         // Check first vertex

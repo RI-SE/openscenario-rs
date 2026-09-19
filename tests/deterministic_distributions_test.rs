@@ -3,13 +3,12 @@ use openscenario_rs::types::distributions::deterministic::*;
 #[test]
 fn test_deterministic_empty_deserializer() {
     let xml = r#"<Deterministic></Deterministic>"#;
-    let result: Result<Deterministic, _> = quick_xml::de::from_str(xml);
+    let result: std::result::Result<Deterministic, _> = quick_xml::de::from_str(xml);
 
     assert!(result.is_ok());
     let det = result.unwrap();
-    let total_count = det.single_distributions.len() + det.multi_distributions.len();
-    assert_eq!(total_count, 0);
-    assert!(det.single_distributions.is_empty() && det.multi_distributions.is_empty());
+    assert_eq!(det.total_count(), 0);
+    assert!(det.is_empty());
 }
 
 #[test]
@@ -25,17 +24,16 @@ fn test_deterministic_single_multi_deserializer() {
         </DeterministicMultiParameterDistribution>
     </Deterministic>"#;
 
-    let result: Result<Deterministic, _> = quick_xml::de::from_str(xml);
+    let result: std::result::Result<Deterministic, _> = quick_xml::de::from_str(xml);
 
     if let Err(e) = &result {
         println!("Error: {:?}", e);
     }
     assert!(result.is_ok());
     let det = result.unwrap();
-    let total_count = det.single_distributions.len() + det.multi_distributions.len();
-    assert_eq!(total_count, 1);
-    assert_eq!(det.multi_distributions.len(), 1);
-    assert_eq!(det.single_distributions.len(), 0);
+    assert_eq!(det.total_count(), 1);
+    assert_eq!(det.multi_distributions().count(), 1);
+    assert_eq!(det.single_distributions().count(), 0);
 }
 
 #[test]
@@ -57,40 +55,38 @@ fn test_deterministic_mixed_deserializer() {
         </DeterministicMultiParameterDistribution>
     </Deterministic>"#;
 
-    let result: Result<Deterministic, _> = quick_xml::de::from_str(xml);
+    let result: std::result::Result<Deterministic, _> = quick_xml::de::from_str(xml);
 
     assert!(result.is_ok());
     let det = result.unwrap();
-    let total_count = det.single_distributions.len() + det.multi_distributions.len();
-    assert_eq!(total_count, 2);
-    assert_eq!(det.single_distributions.len(), 1);
-    assert_eq!(det.multi_distributions.len(), 1);
+    assert_eq!(det.total_count(), 2);
+    assert_eq!(det.single_distributions().count(), 1);
+    assert_eq!(det.multi_distributions().count(), 1);
 
     // Check parameter name
     assert_eq!(
-        format!("{}", det.single_distributions[0].parameter_name),
+        format!(
+            "{}",
+            det.single_distributions().next().unwrap().parameter_name
+        ),
         "speed"
     );
 }
 
 #[test]
-fn test_deterministic_backward_compatibility() {
-    // Test that the new API provides backward compatibility methods
+fn test_deterministic_add_single_and_multi() {
     let mut det = Deterministic::default();
 
-    // Test adding distributions manually
     let single = DeterministicSingleParameterDistribution::new(
         openscenario_rs::types::basic::Value::Literal("speed".to_string()),
-        Some(DistributionSet::new(
+        DeterministicSingleParameterDistributionType::DistributionSet(DistributionSet::new(
             DistributionSetElement::new(openscenario_rs::types::basic::Value::Literal(
                 "30.0".to_string(),
             )),
             vec![],
         )),
-        None,
-        None,
     );
-    det.single_distributions.push(single);
+    det.add_single(single);
 
     let multi = DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
         ParameterValueSet::new(
@@ -102,10 +98,9 @@ fn test_deterministic_backward_compatibility() {
         ),
         vec![],
     ));
-    det.multi_distributions.push(multi);
+    det.add_multi(multi);
 
-    let total_count = det.single_distributions.len() + det.multi_distributions.len();
-    assert_eq!(total_count, 2);
-    assert_eq!(det.single_distributions.len(), 1);
-    assert_eq!(det.multi_distributions.len(), 1);
+    assert_eq!(det.total_count(), 2);
+    assert_eq!(det.single_distributions().count(), 1);
+    assert_eq!(det.multi_distributions().count(), 1);
 }

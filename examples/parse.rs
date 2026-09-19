@@ -450,11 +450,11 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
                 }
 
                 // Analyze distributions
-                if let Some(deterministic) = &param_dist.deterministic {
+                if let Some(deterministic) = param_dist.as_deterministic() {
                     analyze_deterministic_distributions(deterministic);
                 }
 
-                if let Some(stochastic) = &param_dist.stochastic {
+                if let Some(stochastic) = param_dist.as_stochastic() {
                     println!(
                         "   🎲 Stochastic distributions: {} parameters",
                         stochastic.distributions.len()
@@ -694,29 +694,41 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                 let mut total_params = 0;
                 let mut total_combinations = 1;
 
-                if let Some(deterministic) = &param_dist.deterministic {
-                    total_params += deterministic.single_distributions.len();
-                    for dist in &deterministic.single_distributions {
-                        if let Some(set) = &dist.distribution_set {
-                            total_combinations *= set.elements.len();
-                        } else if let Some(range) = &dist.distribution_range {
-                            if let Some(step_val) = range.step_width.as_literal() {
-                                if let (Some(lower), Some(upper)) = (
-                                    range.range.lower_limit.as_literal(),
-                                    range.range.upper_limit.as_literal(),
-                                ) {
-                                    if let Ok(step_f64) = step_val.parse::<f64>() {
-                                        let count = ((upper - lower) / step_f64 + 1.0) as usize;
-                                        total_combinations *= count;
+                if let Some(deterministic) = param_dist.as_deterministic() {
+                    use openscenario_rs::types::distributions::deterministic::DeterministicSingleParameterDistributionType;
+
+                    let single_count = deterministic.single_distributions().count();
+                    total_params += single_count;
+                    for dist in deterministic.single_distributions() {
+                        match &dist.distribution {
+                            DeterministicSingleParameterDistributionType::DistributionSet(set) => {
+                                total_combinations *= set.elements.len();
+                            }
+                            DeterministicSingleParameterDistributionType::DistributionRange(
+                                range,
+                            ) => {
+                                if let Some(step_val) = range.step_width.as_literal() {
+                                    if let (Some(lower), Some(upper)) = (
+                                        range.range.lower_limit.as_literal(),
+                                        range.range.upper_limit.as_literal(),
+                                    ) {
+                                        if let Ok(step_f64) = step_val.parse::<f64>() {
+                                            let count =
+                                                ((upper - lower) / step_f64 + 1.0) as usize;
+                                            total_combinations *= count;
+                                        }
                                     }
                                 }
                             }
+                            DeterministicSingleParameterDistributionType::UserDefinedDistribution(
+                                _,
+                            ) => {}
                         }
                     }
-                    total_params += deterministic.multi_distributions.len();
+                    total_params += deterministic.multi_distributions().count();
                 }
 
-                if let Some(stochastic) = &param_dist.stochastic {
+                if let Some(stochastic) = param_dist.as_stochastic() {
                     total_params += stochastic.distributions.len();
                 }
 
@@ -790,47 +802,48 @@ fn resolve_scenario_path(
 fn analyze_deterministic_distributions(
     deterministic: &openscenario_rs::types::distributions::Deterministic,
 ) {
-    let total_count =
-        deterministic.single_distributions.len() + deterministic.multi_distributions.len();
+    use openscenario_rs::types::distributions::deterministic::DeterministicSingleParameterDistributionType;
+
+    let total_count = deterministic.total_count();
     println!(
         "   🎯 Deterministic distributions: {} parameters",
         total_count
     );
 
-    for dist in &deterministic.single_distributions {
+    for dist in deterministic.single_distributions() {
         println!("      📊 Parameter: {}", dist.parameter_name);
 
-        if let Some(set) = &dist.distribution_set {
-            println!(
-                "         📋 Distribution Set: {} values",
-                set.elements.len()
-            );
-            for (i, element) in set.elements.iter().enumerate().take(5) {
-                println!("            {}. {}", i + 1, element.value);
+        match &dist.distribution {
+            DeterministicSingleParameterDistributionType::DistributionSet(set) => {
+                println!(
+                    "         📋 Distribution Set: {} values",
+                    set.elements.len()
+                );
+                for (i, element) in set.elements.iter().enumerate().take(5) {
+                    println!("            {}. {}", i + 1, element.value);
+                }
+                if set.elements.len() > 5 {
+                    println!("            ... and {} more", set.elements.len() - 5);
+                }
             }
-            if set.elements.len() > 5 {
-                println!("            ... and {} more", set.elements.len() - 5);
+            DeterministicSingleParameterDistributionType::DistributionRange(range) => {
+                println!("         📏 Distribution Range:");
+                println!(
+                    "            Range: {} to {}",
+                    range.range.lower_limit, range.range.upper_limit
+                );
+                println!("            Step: {}", range.step_width);
             }
-        }
-
-        if let Some(range) = &dist.distribution_range {
-            println!("         📏 Distribution Range:");
-            println!(
-                "            Range: {} to {}",
-                range.range.lower_limit, range.range.upper_limit
-            );
-            println!("            Step: {}", range.step_width);
-        }
-
-        if let Some(user_def) = &dist.user_defined_distribution {
-            println!(
-                "         🔧 User Defined: {} (type: {})",
-                user_def.content, user_def.distribution_type
-            );
+            DeterministicSingleParameterDistributionType::UserDefinedDistribution(user_def) => {
+                println!(
+                    "         🔧 User Defined: {} (type: {})",
+                    user_def.content, user_def.distribution_type
+                );
+            }
         }
     }
 
-    let multi_count = deterministic.multi_distributions.len();
+    let multi_count = deterministic.multi_distributions().count();
     if multi_count > 0 {
         println!(
             "   🎯 Multi-parameter distributions: {} groups",

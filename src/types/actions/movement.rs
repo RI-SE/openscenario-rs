@@ -1550,6 +1550,16 @@ mod tests {
     use crate::types::enums::{DynamicsDimension, DynamicsShape};
     use crate::types::positions::Position;
 
+    /// A minimal schema-valid `Shape` (a one-vertex polyline) for tests that need a
+    /// concrete trajectory shape but do not exercise its content.
+    fn minimal_shape() -> Shape {
+        Shape::polyline(crate::types::geometry::shapes::Polyline {
+            vertices: vec![crate::types::geometry::shapes::Vertex::new(
+                Position::world_origin(),
+            )],
+        })
+    }
+
     #[test]
     fn test_lane_change_action_creation() {
         let action = LaneChangeAction::new(
@@ -2081,7 +2091,7 @@ mod tests {
     fn test_follow_trajectory_action_validation() {
         // Test valid action with direct trajectory
         let valid_trajectory = FollowTrajectoryAction {
-            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::empty())),
+            trajectory: Some(Trajectory::new("TestTrajectory", false, minimal_shape())),
             catalog_reference: None,
             time_reference: TimeReference::none(),
             trajectory_ref: None,
@@ -2112,7 +2122,7 @@ mod tests {
             trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
                 "TestTrajectory",
                 false,
-                Shape::empty(),
+                minimal_shape(),
             ))),
             trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
             initial_distance_offset: None,
@@ -2132,7 +2142,7 @@ mod tests {
 
         // Test invalid action with multiple trajectory sources
         let invalid_multiple = FollowTrajectoryAction {
-            trajectory: Some(Trajectory::new("TestTrajectory", false, Shape::empty())),
+            trajectory: Some(Trajectory::new("TestTrajectory", false, minimal_shape())),
             catalog_reference: Some(CatalogReference::new(
                 "catalog".to_string(),
                 "entry".to_string(),

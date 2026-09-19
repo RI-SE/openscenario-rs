@@ -20,7 +20,17 @@ use openscenario_rs::types::controllers::{Controller, ObjectController};
 use openscenario_rs::types::enums::{
     ControllerType, DynamicsDimension, DynamicsShape, FollowingMode, ReferenceContext,
 };
+use openscenario_rs::types::geometry::shapes::{Polyline, Shape, Vertex};
+use openscenario_rs::types::positions::Position;
 use openscenario_rs::types::scenario::init::{LongitudinalAction, PrivateAction};
+
+/// A minimal schema-valid `Shape` (a one-vertex polyline) for tests that need a
+/// concrete trajectory shape but do not exercise its content.
+fn minimal_shape() -> Shape {
+    Shape::polyline(Polyline {
+        vertices: vec![Vertex::new(Position::world_origin())],
+    })
+}
 
 #[test]
 fn test_longitudinal_action_all_types() {
@@ -67,11 +77,7 @@ fn test_longitudinal_action_all_types() {
 fn test_follow_trajectory_action_complete() {
     // Test with direct trajectory
     let trajectory_action = FollowTrajectoryAction {
-        trajectory: Some(Trajectory::new(
-            "TestTrajectory",
-            false,
-            openscenario_rs::types::geometry::shapes::Shape::empty(),
-        )),
+        trajectory: Some(Trajectory::new("TestTrajectory", false, minimal_shape())),
         catalog_reference: None,
         time_reference: TimeReference::timing(Timing {
             domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
@@ -113,7 +119,7 @@ fn test_follow_trajectory_action_complete() {
         trajectory_ref: Some(TrajectoryRef::with_trajectory(Trajectory::new(
             "TestTrajectory",
             false,
-            openscenario_rs::types::geometry::shapes::Shape::empty(),
+            minimal_shape(),
         ))),
         trajectory_following_mode: TrajectoryFollowingMode::new(FollowingMode::Follow),
         initial_distance_offset: None,

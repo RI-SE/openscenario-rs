@@ -243,29 +243,19 @@ impl CatalogTrajectory {
     ) -> crate::error::Result<crate::types::actions::movement::Trajectory> {
         use crate::types::geometry::shapes::{ControlPoint, Knot, Nurbs, Polyline, Shape, Vertex};
 
-        let empty_shape = Shape {
-            polyline: None,
-            clothoid: None,
-            clothoid_spline: None,
-            nurbs: None,
-        };
-
         let shape = match &self.shape.shape {
-            CatalogTrajectoryShape::Polyline(polyline) => Shape {
-                polyline: Some(Polyline {
-                    vertices: polyline
-                        .vertices
-                        .iter()
-                        .map(|v| Vertex {
-                            time: v.time.clone(),
-                            position: v.position.clone(),
-                        })
-                        .collect(),
-                }),
-                ..empty_shape
-            },
-            CatalogTrajectoryShape::Clothoid(clothoid) => Shape {
-                clothoid: Some(crate::types::positions::trajectory::Clothoid {
+            CatalogTrajectoryShape::Polyline(polyline) => Shape::polyline(Polyline {
+                vertices: polyline
+                    .vertices
+                    .iter()
+                    .map(|v| Vertex {
+                        time: v.time.clone(),
+                        position: v.position.clone(),
+                    })
+                    .collect(),
+            }),
+            CatalogTrajectoryShape::Clothoid(clothoid) => {
+                Shape::clothoid(crate::types::positions::trajectory::Clothoid {
                     curvature: Double::literal(clothoid.curvature.resolve(parameters)?),
                     curvature_dot: clothoid.curvature_dot.clone(),
                     curvature_prime: clothoid
@@ -285,13 +275,11 @@ impl CatalogTrajectory {
                         .map(|v| v.resolve(parameters).map(Double::literal))
                         .transpose()?,
                     start_position: clothoid.start_position.clone(),
-                }),
-                ..empty_shape
-            },
-            CatalogTrajectoryShape::ClothoidSpline(spline) => Shape {
-                clothoid_spline: Some(spline.clone()),
-                ..empty_shape
-            },
+                })
+            }
+            CatalogTrajectoryShape::ClothoidSpline(spline) => {
+                Shape::clothoid_spline(spline.clone())
+            }
             CatalogTrajectoryShape::Nurbs(nurbs) => {
                 let order = nurbs.order.resolve(parameters)?;
                 let order: u32 = u32::try_from(order).map_err(|_| {
@@ -302,34 +290,31 @@ impl CatalogTrajectory {
                     )
                 })?;
 
-                Shape {
-                    nurbs: Some(Nurbs {
-                        order: Value::Literal(order),
-                        control_points: nurbs
-                            .control_points
-                            .iter()
-                            .map(|cp| -> crate::error::Result<ControlPoint> {
-                                Ok(ControlPoint {
-                                    position: cp.position.clone(),
-                                    time: cp
-                                        .time
-                                        .as_ref()
-                                        .map(|v| v.resolve(parameters).map(Double::literal))
-                                        .transpose()?,
-                                    weight: cp.weight.clone(),
-                                })
+                Shape::nurbs(Nurbs {
+                    order: Value::Literal(order),
+                    control_points: nurbs
+                        .control_points
+                        .iter()
+                        .map(|cp| -> crate::error::Result<ControlPoint> {
+                            Ok(ControlPoint {
+                                position: cp.position.clone(),
+                                time: cp
+                                    .time
+                                    .as_ref()
+                                    .map(|v| v.resolve(parameters).map(Double::literal))
+                                    .transpose()?,
+                                weight: cp.weight.clone(),
                             })
-                            .collect::<crate::error::Result<Vec<_>>>()?,
-                        knots: nurbs
-                            .knots
-                            .iter()
-                            .map(|k| Knot {
-                                value: k.value.clone(),
-                            })
-                            .collect(),
-                    }),
-                    ..empty_shape
-                }
+                        })
+                        .collect::<crate::error::Result<Vec<_>>>()?,
+                    knots: nurbs
+                        .knots
+                        .iter()
+                        .map(|k| Knot {
+                            value: k.value.clone(),
+                        })
+                        .collect(),
+                })
             }
         };
 
@@ -668,8 +653,7 @@ mod tests {
 
         let polyline = scenario_trajectory
             .shape
-            .polyline
-            .as_ref()
+            .as_polyline()
             .expect("expected polyline shape");
         assert_eq!(polyline.vertices.len(), 2);
         assert_eq!(polyline.vertices[1].time, Some(Value::Literal(5.0)));
@@ -694,15 +678,11 @@ mod tests {
         .into_scenario_entity(std::collections::HashMap::new())
         .unwrap();
 
-        let resolved_nurbs = trajectory
-            .shape
-            .nurbs
-            .as_ref()
-            .expect("expected NURBS shape");
+        let resolved_nurbs = trajectory.shape.as_nurbs().expect("expected NURBS shape");
         assert_eq!(resolved_nurbs.order.as_literal(), Some(&3u32));
         assert_eq!(resolved_nurbs.control_points.len(), 2);
         assert_eq!(resolved_nurbs.knots.len(), 2);
-        assert!(trajectory.shape.polyline.is_none());
+        assert!(trajectory.shape.as_polyline().is_none());
 
         let clothoid_trajectory = CatalogTrajectory::new(
             "ClothoidPath".to_string(),
@@ -720,7 +700,7 @@ mod tests {
         let resolved = clothoid_trajectory
             .into_scenario_entity(parameters)
             .unwrap();
-        let clothoid = resolved.shape.clothoid.as_ref().expect("expected clothoid");
+        let clothoid = resolved.shape.as_clothoid().expect("expected clothoid");
         assert_eq!(clothoid.length.as_literal(), Some(&42.0));
         assert_eq!(clothoid.curvature.as_literal(), Some(&0.1));
     }

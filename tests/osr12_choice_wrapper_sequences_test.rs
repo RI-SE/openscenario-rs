@@ -201,8 +201,7 @@ fn entity_action_with_sequence_below_position_parses() {
         .as_trajectory()
         .expect("Trajectory dropped")
         .shape
-        .polyline
-        .as_ref()
+        .as_polyline()
         .expect("Polyline dropped")
         .vertices;
     assert_eq!(vertices.len(), 2);

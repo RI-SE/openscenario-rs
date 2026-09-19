@@ -1,36 +1,38 @@
-//! `DistributionDefinition` and `DistributionDefinitionGroup` both model XSD group
-//! `DistributionDefinition` (`Schema/OpenSCENARIO.xsd:1086-1091`), a choice between the
-//! `Deterministic` and `Stochastic` elements. Before the fix, both enums carried a
-//! `Deterministic` branch typed as the per-item choice used inside `<Deterministic>`'s
-//! sequence (`DeterministicParameterDistribution`, itself an externally-tagged enum),
-//! rather than the `Deterministic` container itself. Nesting one externally-tagged enum
-//! inside another does not serialize under quick-xml at all: it failed with
+//! `DistributionDefinition` models XSD group `DistributionDefinition`
+//! (`Schema/OpenSCENARIO.xsd:1086-1091`), a choice between the `Deterministic` and
+//! `Stochastic` elements. Before the fix, the enum carried a `Deterministic` branch typed
+//! as the per-item choice used inside `<Deterministic>`'s sequence
+//! (`DeterministicParameterDistribution`, itself an externally-tagged enum), rather than the
+//! `Deterministic` container itself. Nesting one externally-tagged enum inside another does
+//! not serialize under quick-xml at all: it failed with
 //! `Unsupported("cannot serialize enum newtype variant ...")` rather than emitting a
 //! wrong tag, and deserializing the schema's actual element name
 //! (`DeterministicSingleParameterDistribution`) failed with `unknown variant`. This
 //! fixture pins the corrected shape: the branch holds the sequence container directly, so
 //! serializing it produces the element name the schema declares.
+//!
+//! `DistributionDefinitionGroup`, a second enum that used to model this same choice
+//! unreached by any parsed field, was removed once `ParameterValueDistribution` started
+//! holding `DistributionDefinition` directly behind `$value` — a second model of the same
+//! group was redundant scaffolding once one of them was wired in.
 
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::distributions::deterministic::{
-    Deterministic, DeterministicSingleParameterDistribution, DistributionSet,
-    DistributionSetElement,
+    Deterministic, DeterministicSingleParameterDistribution,
+    DeterministicSingleParameterDistributionType, DistributionSet, DistributionSetElement,
 };
-use openscenario_rs::types::distributions::{DistributionDefinition, DistributionDefinitionGroup};
+use openscenario_rs::types::distributions::DistributionDefinition;
 
 fn sample_deterministic() -> Deterministic {
-    Deterministic {
-        single_distributions: vec![DeterministicSingleParameterDistribution::new(
-            Value::literal("speed".to_string()),
-            Some(DistributionSet::new(
-                DistributionSetElement::new(Value::literal("30.0".to_string())),
-                vec![],
-            )),
-            None,
-            None,
-        )],
-        multi_distributions: vec![],
-    }
+    let mut det = Deterministic::default();
+    det.add_single(DeterministicSingleParameterDistribution::new(
+        Value::literal("speed".to_string()),
+        DeterministicSingleParameterDistributionType::DistributionSet(DistributionSet::new(
+            DistributionSetElement::new(Value::literal("30.0".to_string())),
+            vec![],
+        )),
+    ));
+    det
 }
 
 #[test]
@@ -51,23 +53,6 @@ fn distribution_definition_emits_the_schema_element_name() {
     let round_tripped: DistributionDefinition =
         quick_xml::de::from_str(&xml).expect("deserialize DistributionDefinition");
     assert_eq!(def, round_tripped);
-}
-
-#[test]
-fn distribution_definition_group_emits_the_schema_element_name() {
-    let group = DistributionDefinitionGroup::deterministic(sample_deterministic());
-
-    let xml = quick_xml::se::to_string(&group).expect("serialize DistributionDefinitionGroup");
-
-    assert!(
-        xml.starts_with("<Deterministic>"),
-        "expected the element the schema declares, got: {xml}"
-    );
-    assert!(!xml.contains("<Single>"), "got: {xml}");
-
-    let round_tripped: DistributionDefinitionGroup =
-        quick_xml::de::from_str(&xml).expect("deserialize DistributionDefinitionGroup");
-    assert_eq!(group, round_tripped);
 }
 
 #[test]
