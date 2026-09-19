@@ -9,7 +9,10 @@
 //! minimal schema-valid snippet, assert the right field is populated, re-serialize
 //! and assert the branch element survives.
 
-use openscenario_rs::types::actions::appearance::AppearanceAction;
+use openscenario_rs::types::actions::appearance::{
+    AppearanceAction, AppearanceActionChoice, LightState, LightStateAction, LightType,
+    LightTypeChoice, VehicleLight,
+};
 use openscenario_rs::types::actions::trailer::{DisconnectTrailerAction, TrailerAction};
 use openscenario_rs::types::actions::wrappers::{
     EntityActionChoice, ParameterActionChoice, TrafficActionChoice, VariableActionChoice,
@@ -202,8 +205,10 @@ fn private_action_appearance_action_light_state_round_trip() {
         .appearance_action
         .as_ref()
         .expect("AppearanceAction branch must be populated, not silently dropped");
-    assert!(appearance.light_state_action.is_some());
-    assert!(appearance.animation_action.is_none());
+    assert!(matches!(
+        appearance.choice,
+        AppearanceActionChoice::LightStateAction(_)
+    ));
     assert_eq!(action.get_action_type(), Some("AppearanceAction"));
     assert!(action.validate().is_ok());
 
@@ -262,7 +267,16 @@ fn private_action_trailer_action_disconnect_round_trip() {
 #[test]
 fn private_action_choice_cardinality_covers_new_branches() {
     let multiple = PrivateAction {
-        appearance_action: Some(AppearanceAction::empty()),
+        appearance_action: Some(AppearanceAction::new(
+            AppearanceActionChoice::LightStateAction(LightStateAction::new(
+                LightType::new(LightTypeChoice::VehicleLight(VehicleLight {
+                    vehicle_light_type: openscenario_rs::types::basic::Value::Literal(
+                        openscenario_rs::types::enums::VehicleLightType::LowBeam,
+                    ),
+                })),
+                LightState::new(openscenario_rs::types::enums::LightMode::On),
+            )),
+        )),
         trailer_action: Some(TrailerAction {
             connect_trailer_action: None,
             disconnect_trailer_action: Some(DisconnectTrailerAction {}),

@@ -48,32 +48,34 @@ pub struct SensorReference {
 }
 
 /// Appearance actions for visual changes and animations
+///
+/// XSD `AppearanceAction` (`Schema/OpenSCENARIO.xsd:765-770`) is a bare
+/// `xsd:choice` of `LightStateAction` or `AnimationAction`, with no
+/// `minOccurs`/`maxOccurs`, so both default to 1 and exactly one branch is
+/// required. `$value` states that structurally: serde rejects a document
+/// naming no branch with `missing field `$value`` and one naming two with
+/// `duplicate field `$value``. The parallel-`Option` shape this replaces
+/// described `xsd:all` with optional members instead, and accepted both of
+/// those documents, keeping whichever branches it was given.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppearanceAction {
-    /// Light state action for lighting control
-    #[serde(rename = "LightStateAction", skip_serializing_if = "Option::is_none")]
-    pub light_state_action: Option<LightStateAction>,
+    /// The concrete appearance action carried by this element.
+    #[serde(rename = "$value")]
+    pub choice: AppearanceActionChoice,
+}
 
-    /// Animation action for entity animations
-    #[serde(rename = "AnimationAction", skip_serializing_if = "Option::is_none")]
-    pub animation_action: Option<AnimationAction>,
+/// The two branches of the XSD `AppearanceAction` choice (`:765-770`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum AppearanceActionChoice {
+    LightStateAction(LightStateAction),
+    AnimationAction(AnimationAction),
 }
 
 impl AppearanceAction {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `AppearanceAction (`:754-760`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
-        Self {
-            light_state_action: None,
-            animation_action: None,
-        }
+    /// Wraps a branch of the choice in an `AppearanceAction` element.
+    pub fn new(choice: AppearanceActionChoice) -> Self {
+        Self { choice }
     }
 }
 
@@ -98,15 +100,30 @@ pub struct LightStateAction {
 }
 
 /// Choice of the light being addressed: a standard vehicle light or a user-defined one
+///
+/// XSD `LightType` (`Schema/OpenSCENARIO.xsd:1418-1423`) is a bare
+/// `xsd:choice`, so exactly one of `VehicleLight` or `UserDefinedLight` is
+/// required.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LightType {
-    /// Standard vehicle light
-    #[serde(rename = "VehicleLight", skip_serializing_if = "Option::is_none")]
-    pub vehicle_light: Option<VehicleLight>,
+    /// The concrete light identification carried by this element.
+    #[serde(rename = "$value")]
+    pub choice: LightTypeChoice,
+}
 
-    /// User-defined light
-    #[serde(rename = "UserDefinedLight", skip_serializing_if = "Option::is_none")]
-    pub user_defined_light: Option<UserDefinedLight>,
+/// The two branches of the XSD `LightType` choice (`:1418-1423`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum LightTypeChoice {
+    VehicleLight(VehicleLight),
+    UserDefinedLight(UserDefinedLight),
+}
+
+impl LightType {
+    /// Wraps a branch of the choice in a `LightType` element.
+    pub fn new(choice: LightTypeChoice) -> Self {
+        Self { choice }
+    }
 }
 
 /// Standard vehicle light identified by its type
@@ -162,19 +179,38 @@ pub struct LightState {
 }
 
 /// Color definition, either RGB or CMYK, tagged with a coarse color type
+///
+/// XSD `Color` (`Schema/OpenSCENARIO.xsd:929-935`) is a bare `xsd:choice` of
+/// `ColorRgb` or `ColorCmyk` alongside the required `@colorType` attribute,
+/// so the sibling attribute coexists with the `$value` choice field on the
+/// same struct.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Color {
     /// Coarse color classification
     #[serde(rename = "@colorType")]
     pub color_type: Value<ColorType>,
 
-    /// RGB definition of the color
-    #[serde(rename = "ColorRgb", skip_serializing_if = "Option::is_none")]
-    pub color_rgb: Option<ColorRgb>,
+    /// The concrete color definition carried by this element.
+    #[serde(rename = "$value")]
+    pub choice: ColorChoice,
+}
 
-    /// CMYK definition of the color
-    #[serde(rename = "ColorCmyk", skip_serializing_if = "Option::is_none")]
-    pub color_cmyk: Option<ColorCmyk>,
+/// The two branches of the XSD `Color` choice (`:929-935`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum ColorChoice {
+    ColorRgb(ColorRgb),
+    ColorCmyk(ColorCmyk),
+}
+
+impl Color {
+    /// Wraps a branch of the choice with the required `@colorType`.
+    pub fn new(color_type: ColorType, choice: ColorChoice) -> Self {
+        Self {
+            color_type: Value::Literal(color_type),
+            choice,
+        }
+    }
 }
 
 /// RGB color components, each in the range [0..1]
@@ -247,50 +283,58 @@ pub struct AnimationAction {
 
 /// Choice of animation being addressed
 ///
-/// No `Default`: XSD `AnimationType` (`Schema/OpenSCENARIO.xsd:757-764`) is a
-/// bare `xsd:choice` with no `minOccurs="0"`, so an all-`None` value cannot serialize to
-/// valid XML. Use the per-branch constructors below.
+/// XSD `AnimationType` (`Schema/OpenSCENARIO.xsd:757-763`) is a bare
+/// `xsd:choice` with no `minOccurs="0"`, so exactly one of the four branches
+/// is required. `$value` enforces that structurally instead of through a
+/// hand-written `validate()`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnimationType {
-    /// Animation of a vehicle or user-defined component
-    #[serde(rename = "ComponentAnimation", skip_serializing_if = "Option::is_none")]
-    pub component_animation: Option<ComponentAnimation>,
+    /// The concrete animation carried by this element.
+    #[serde(rename = "$value")]
+    pub choice: AnimationTypeChoice,
+}
 
-    /// Animation of a pedestrian
-    #[serde(
-        rename = "PedestrianAnimation",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub pedestrian_animation: Option<PedestrianAnimation>,
-
-    /// Animation loaded from an external file
-    #[serde(rename = "AnimationFile", skip_serializing_if = "Option::is_none")]
-    pub animation_file: Option<AnimationFile>,
-
-    /// User-defined animation
-    #[serde(
-        rename = "UserDefinedAnimation",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub user_defined_animation: Option<UserDefinedAnimation>,
+/// The four branches of the XSD `AnimationType` choice (`:757-763`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum AnimationTypeChoice {
+    ComponentAnimation(ComponentAnimation),
+    PedestrianAnimation(PedestrianAnimation),
+    AnimationFile(AnimationFile),
+    UserDefinedAnimation(UserDefinedAnimation),
 }
 
 /// Choice of component being animated
 ///
-/// No `Default`: XSD `ComponentAnimation` (`Schema/OpenSCENARIO.xsd:947-952`) is a
-/// bare `xsd:choice` with no `minOccurs="0"` — same category 3 as its parent `AnimationType`.
+/// XSD `ComponentAnimation` (`Schema/OpenSCENARIO.xsd:947-952`) is a bare
+/// `xsd:choice` with no `minOccurs="0"` — same shape as its parent
+/// `AnimationType`. Because this struct is itself a `$value` choice wrapper
+/// and also serves as a variant payload of `AnimationTypeChoice`, it is the
+/// element-wrapper-struct pattern `$value` nesting requires: an externally
+/// tagged enum cannot itself be the payload of another externally tagged
+/// enum's variant and still serialize, so the payload here is a struct that
+/// owns its own `$value` rather than `AnimationTypeChoice` embedding
+/// `ComponentAnimationChoice` directly.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComponentAnimation {
-    /// Standard vehicle component
-    #[serde(rename = "VehicleComponent", skip_serializing_if = "Option::is_none")]
-    pub vehicle_component: Option<VehicleComponent>,
+    /// The concrete component identification carried by this element.
+    #[serde(rename = "$value")]
+    pub choice: ComponentAnimationChoice,
+}
 
-    /// User-defined component
-    #[serde(
-        rename = "UserDefinedComponent",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub user_defined_component: Option<UserDefinedComponent>,
+/// The two branches of the XSD `ComponentAnimation` choice (`:947-952`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum ComponentAnimationChoice {
+    VehicleComponent(VehicleComponent),
+    UserDefinedComponent(UserDefinedComponent),
+}
+
+impl ComponentAnimation {
+    /// Wraps a branch of the choice in a `ComponentAnimation` element.
+    pub fn new(choice: ComponentAnimationChoice) -> Self {
+        Self { choice }
+    }
 }
 
 /// Standard vehicle component identified by its type
@@ -391,44 +435,31 @@ impl AnimationAction {
 }
 
 impl AnimationType {
-    fn empty() -> Self {
-        Self {
-            component_animation: None,
-            pedestrian_animation: None,
-            animation_file: None,
-            user_defined_animation: None,
-        }
-    }
-
     /// `ComponentAnimation` branch of the choice.
     pub fn component(component_animation: ComponentAnimation) -> Self {
         Self {
-            component_animation: Some(component_animation),
-            ..Self::empty()
+            choice: AnimationTypeChoice::ComponentAnimation(component_animation),
         }
     }
 
     /// `PedestrianAnimation` branch of the choice.
     pub fn pedestrian(pedestrian_animation: PedestrianAnimation) -> Self {
         Self {
-            pedestrian_animation: Some(pedestrian_animation),
-            ..Self::empty()
+            choice: AnimationTypeChoice::PedestrianAnimation(pedestrian_animation),
         }
     }
 
     /// `AnimationFile` branch of the choice.
     pub fn file(animation_file: AnimationFile) -> Self {
         Self {
-            animation_file: Some(animation_file),
-            ..Self::empty()
+            choice: AnimationTypeChoice::AnimationFile(animation_file),
         }
     }
 
     /// `UserDefinedAnimation` branch of the choice.
     pub fn user_defined(user_defined_animation: UserDefinedAnimation) -> Self {
         Self {
-            user_defined_animation: Some(user_defined_animation),
-            ..Self::empty()
+            choice: AnimationTypeChoice::UserDefinedAnimation(user_defined_animation),
         }
     }
 }
@@ -437,16 +468,14 @@ impl ComponentAnimation {
     /// `VehicleComponent` branch of the choice.
     pub fn vehicle(vehicle_component: VehicleComponent) -> Self {
         Self {
-            vehicle_component: Some(vehicle_component),
-            user_defined_component: None,
+            choice: ComponentAnimationChoice::VehicleComponent(vehicle_component),
         }
     }
 
     /// `UserDefinedComponent` branch of the choice.
     pub fn user_defined(user_defined_component: UserDefinedComponent) -> Self {
         Self {
-            vehicle_component: None,
-            user_defined_component: Some(user_defined_component),
+            choice: ComponentAnimationChoice::UserDefinedComponent(user_defined_component),
         }
     }
 }
@@ -520,13 +549,6 @@ mod tests {
     }
 
     #[test]
-    fn test_appearance_action_default_is_empty() {
-        let aa = AppearanceAction::empty();
-        assert!(aa.light_state_action.is_none());
-        assert!(aa.animation_action.is_none());
-    }
-
-    #[test]
     fn test_sensor_reference_set_default_empty_vec() {
         let srs = SensorReferenceSet {
             sensor_references: Vec::new(),
@@ -538,15 +560,15 @@ mod tests {
     fn test_light_state_action_corpus_roundtrip() {
         let xml = r#"<LightStateAction><LightType><VehicleLight vehicleLightType="lowBeam"/></LightType><LightState mode="on"/></LightStateAction>"#;
         let action: LightStateAction = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(
-            action
-                .light_type
-                .vehicle_light
-                .as_ref()
-                .unwrap()
-                .vehicle_light_type,
-            Value::Literal(VehicleLightType::LowBeam)
-        );
+        match &action.light_type.choice {
+            LightTypeChoice::VehicleLight(v) => {
+                assert_eq!(
+                    v.vehicle_light_type,
+                    Value::Literal(VehicleLightType::LowBeam)
+                );
+            }
+            other => panic!("expected VehicleLight, got {other:?}"),
+        }
         assert_eq!(action.light_state.mode, Value::Literal(LightMode::On));
         assert!(action.transition_time.is_none());
 
@@ -570,10 +592,10 @@ mod tests {
 
         let color = action.light_state.color.as_ref().unwrap();
         assert_eq!(color.color_type, Value::Literal(ColorType::Red));
-        assert_eq!(
-            color.color_rgb.as_ref().unwrap().red.as_literal(),
-            Some(&1.0)
-        );
+        match &color.choice {
+            ColorChoice::ColorRgb(rgb) => assert_eq!(rgb.red.as_literal(), Some(&1.0)),
+            other => panic!("expected ColorRgb, got {other:?}"),
+        }
 
         let serialized = quick_xml::se::to_string(&action).unwrap();
         // `$transition` is the schema's `parameter` production; see `Value`'s `Serialize`.
@@ -586,18 +608,10 @@ mod tests {
     fn test_light_state_with_cmyk_color_roundtrip() {
         let xml = r#"<LightState mode="off"><Color colorType="black"><ColorCmyk cyan="0.0" magenta="0.0" yellow="0.0" key="1.0"/></Color></LightState>"#;
         let state: LightState = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(
-            state
-                .color
-                .as_ref()
-                .unwrap()
-                .color_cmyk
-                .as_ref()
-                .unwrap()
-                .key
-                .as_literal(),
-            Some(&1.0)
-        );
+        match &state.color.as_ref().unwrap().choice {
+            ColorChoice::ColorCmyk(cmyk) => assert_eq!(cmyk.key.as_literal(), Some(&1.0)),
+            other => panic!("expected ColorCmyk, got {other:?}"),
+        }
         let serialized = quick_xml::se::to_string(&state).unwrap();
         let reparsed: LightState = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(state, reparsed);
@@ -608,18 +622,16 @@ mod tests {
         let xml = r#"<AnimationAction loop="true" animationDuration="2.5"><AnimationType><ComponentAnimation><VehicleComponent vehicleComponentType="doorFrontLeft"/></ComponentAnimation></AnimationType><AnimationState state="1.0"/></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(action.r#loop.as_ref().unwrap().as_literal(), Some(&true));
-        assert_eq!(
-            action
-                .animation_type
-                .component_animation
-                .as_ref()
-                .unwrap()
-                .vehicle_component
-                .as_ref()
-                .unwrap()
-                .vehicle_component_type,
-            Value::Literal(VehicleComponentType::DoorFrontLeft)
-        );
+        match &action.animation_type.choice {
+            AnimationTypeChoice::ComponentAnimation(ca) => match &ca.choice {
+                ComponentAnimationChoice::VehicleComponent(v) => assert_eq!(
+                    v.vehicle_component_type,
+                    Value::Literal(VehicleComponentType::DoorFrontLeft)
+                ),
+                other => panic!("expected VehicleComponent, got {other:?}"),
+            },
+            other => panic!("expected ComponentAnimation, got {other:?}"),
+        }
         assert_eq!(
             action.animation_state.as_ref().unwrap().state.as_literal(),
             Some(&1.0)
@@ -633,7 +645,10 @@ mod tests {
     fn test_animation_action_pedestrian_branch_roundtrip() {
         let xml = r#"<AnimationAction><AnimationType><PedestrianAnimation motion="walking" userDefinedPedestrianAnimation="limp"><PedestrianGesture gesture="wavingLeftArm"/><PedestrianGesture gesture="crossArms"/></PedestrianAnimation></AnimationType></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
-        let ped = action.animation_type.pedestrian_animation.as_ref().unwrap();
+        let ped = match &action.animation_type.choice {
+            AnimationTypeChoice::PedestrianAnimation(ped) => ped,
+            other => panic!("expected PedestrianAnimation, got {other:?}"),
+        };
         assert_eq!(
             ped.motion,
             Some(Value::Literal(PedestrianMotionType::Walking))
@@ -652,7 +667,10 @@ mod tests {
     fn test_animation_action_file_branch_roundtrip() {
         let xml = r#"<AnimationAction><AnimationType><AnimationFile timeOffset="0.25"><File filepath="anim/wave.fbx"/></AnimationFile></AnimationType></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
-        let file = action.animation_type.animation_file.as_ref().unwrap();
+        let file = match &action.animation_type.choice {
+            AnimationTypeChoice::AnimationFile(file) => file,
+            other => panic!("expected AnimationFile, got {other:?}"),
+        };
         assert_eq!(file.file.filepath, "anim/wave.fbx");
         let serialized = quick_xml::se::to_string(&action).unwrap();
         let reparsed: AnimationAction = quick_xml::de::from_str(&serialized).unwrap();
@@ -663,17 +681,15 @@ mod tests {
     fn test_animation_action_user_defined_branch_roundtrip() {
         let xml = r#"<AnimationAction><AnimationType><UserDefinedAnimation userDefinedAnimationType="custom"/></AnimationType></AnimationAction>"#;
         let action: AnimationAction = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(
-            action
-                .animation_type
-                .user_defined_animation
-                .as_ref()
-                .unwrap()
-                .user_defined_animation_type
-                .as_literal()
-                .map(|s| s.as_str()),
-            Some("custom")
-        );
+        match &action.animation_type.choice {
+            AnimationTypeChoice::UserDefinedAnimation(ud) => assert_eq!(
+                ud.user_defined_animation_type
+                    .as_literal()
+                    .map(|s| s.as_str()),
+                Some("custom")
+            ),
+            other => panic!("expected UserDefinedAnimation, got {other:?}"),
+        }
         let serialized = quick_xml::se::to_string(&action).unwrap();
         let reparsed: AnimationAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action, reparsed);

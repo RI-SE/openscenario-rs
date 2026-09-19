@@ -154,6 +154,28 @@ Breaking, unless noted.
   or trailer action built through that path was replaced by an action naming nothing. All ten
   branches now map to their counterpart.
 
+- **`AppearanceAction`, `LightType`, `Color`, `AnimationType` and `ComponentAnimation` now hold
+  a choice enum instead of parallel `Option` fields.** XSD `AppearanceAction`
+  (`Schema/OpenSCENARIO.xsd:765-770`), `LightType` (`:1418-1423`), `Color` (`:929-935`),
+  `AnimationType` (`:757-763`) and `ComponentAnimation` (`:947-952`) are each a bare
+  `xsd:choice`, so exactly one branch is required. Modeled as parallel `Option` fields, all
+  five accepted a document naming no branch and a document naming two, keeping both rather
+  than reporting an error. Each now carries its branch in an externally tagged enum behind
+  `#[serde(rename = "$value")]`, so serde rejects zero branches with
+  ``missing field `$value` `` and two with ``duplicate field `$value` ``.
+
+  This breaks field access and struct literals. `AppearanceAction`'s two `Option` fields
+  become one `choice: AppearanceActionChoice`; `LightType`'s two become
+  `choice: LightTypeChoice`; `Color`'s two become `choice: ColorChoice` beside the unchanged
+  `color_type`; `AnimationType`'s four become `choice: AnimationTypeChoice`; and
+  `ComponentAnimation`'s two become `choice: ComponentAnimationChoice`. The five new public
+  enums name their variants after the XSD element names. `AppearanceAction::new`,
+  `LightType::new`, `Color::new`, `ComponentAnimation::new`, and `AnimationType`'s
+  `::component`/`::pedestrian`/`::file`/`::user_defined` and `ComponentAnimation`'s
+  `::vehicle`/`::user_defined` replace the removed all-`None` constructors.
+  `AppearanceAction::empty` and the private `AnimationType::empty`, each a helper that built
+  the all-`None` value, are gone with the shape they built.
+
 - **`Property`'s `@name` and `@value` now accept parameter references.** XSD `Property`
   (`Schema/OpenSCENARIO.xsd:1809-1812`) types both attributes as the schema's `String`, a
   union whose second member is the parameter production, so `<Property name="maxSpeed"
