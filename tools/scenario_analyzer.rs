@@ -726,13 +726,13 @@ fn analyze_entities(document: &OpenScenario) -> EntityAnalysis {
             let entity_name = entity.get_name().unwrap_or("Unknown");
 
             // Analyze entity types
-            if let Some(vehicle) = &entity.vehicle {
+            if let Some(vehicle) = entity.vehicle() {
                 analysis.vehicles += 1;
                 analysis.vehicles_inline += 1;
                 analysis.inline_definitions += 1;
                 let vehicle_analysis = analyze_vehicle(vehicle, entity_name, entity);
                 analysis.vehicle_analyses.push(vehicle_analysis);
-            } else if let Some(pedestrian) = &entity.pedestrian {
+            } else if let Some(pedestrian) = entity.pedestrian() {
                 analysis.pedestrians += 1;
                 analysis.pedestrians_inline += 1;
                 analysis.inline_definitions += 1;
@@ -775,7 +775,7 @@ fn analyze_vehicle(
     axle_count += vehicle.axles.additional_axles.len();
 
     // Determine source
-    let source = if entity.entity_catalog_reference.is_some() {
+    let source = if entity.catalog_reference().is_some() {
         EntitySource::CatalogReference {
             catalog_name: "Catalog".to_string(),
             entry_name: "Unknown".to_string(),
@@ -810,7 +810,7 @@ fn analyze_pedestrian(
     let category = format!("{:?}", pedestrian.pedestrian_category).to_lowercase();
 
     // Determine source
-    let source = if entity.entity_catalog_reference.is_some() {
+    let source = if entity.catalog_reference().is_some() {
         EntitySource::CatalogReference {
             catalog_name: "Catalog".to_string(),
             entry_name: "Unknown".to_string(),
@@ -2714,7 +2714,7 @@ fn resolve_expressions_in_scenario(
             );
 
             // Process vehicle properties if present
-            if let Some(vehicle) = &entity.vehicle {
+            if let Some(vehicle) = entity.vehicle() {
                 resolve_string_value(
                     &vehicle.name,
                     &format!("Vehicle '{}' name", entity_name),
@@ -2745,7 +2745,7 @@ fn resolve_expressions_in_scenario(
             }
 
             // Process pedestrian properties if present
-            if let Some(pedestrian) = &entity.pedestrian {
+            if let Some(pedestrian) = entity.pedestrian() {
                 resolve_string_value(
                     &pedestrian.name,
                     &format!("Pedestrian '{}' name", entity_name),
@@ -2908,7 +2908,7 @@ fn resolve_catalog_references_in_scenario(
 
             // Check controller references
             for object_controller in &entity.object_controller {
-                if let Some(controller_ref) = &object_controller.catalog_reference {
+                if let Some(controller_ref) = object_controller.catalog_reference() {
                     result.resolution_attempts += 1;
 
                     let catalog_name = controller_ref

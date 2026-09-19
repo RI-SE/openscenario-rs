@@ -71,6 +71,26 @@ impl EntityCatalogReference {
     }
 }
 
+/// The XSD `EntityObject` group (`:1168-1176`): a bare `xsd:choice` of
+/// `CatalogReference | Vehicle | Pedestrian | MiscObject |
+/// ExternalObjectReference`. Neither the group reference in `ScenarioObject`
+/// nor in `ScenarioObjectTemplate` carries `minOccurs="0"`, so exactly one
+/// branch is required in both.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum EntityObjectChoice {
+    /// Reference to an entry in a catalog
+    CatalogReference(EntityCatalogReference),
+    /// Vehicle entity
+    Vehicle(Vehicle),
+    /// Pedestrian entity
+    Pedestrian(Pedestrian),
+    /// Miscellaneous object entity
+    MiscObject(MiscObject),
+    /// External object reference
+    ExternalObjectReference(ExternalObjectReference),
+}
+
 /// Wrapper for scenario objects containing entity information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScenarioObject {
@@ -78,36 +98,9 @@ pub struct ScenarioObject {
     #[serde(rename = "@name")]
     pub name: OSString,
 
-    /// Vehicle entity (optional)
-    #[serde(rename = "Vehicle", skip_serializing_if = "Option::is_none")]
-    pub vehicle: Option<Vehicle>,
-
-    /// Pedestrian entity (optional)
-    #[serde(rename = "Pedestrian", skip_serializing_if = "Option::is_none")]
-    pub pedestrian: Option<Pedestrian>,
-
-    /// Miscellaneous object entity (optional)
-    #[serde(
-        rename = "MiscObject",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub misc_object: Option<MiscObject>,
-
-    /// External object reference (optional)
-    #[serde(
-        rename = "ExternalObjectReference",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub external_object_reference: Option<ExternalObjectReference>,
-
-    /// Entity catalog reference
-    ///
-    /// References an entry in an external catalog. Mutually exclusive with the
-    /// direct entity definitions above.
-    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub entity_catalog_reference: Option<EntityCatalogReference>,
+    /// The entity definition, exactly one of the `EntityObject` group's branches.
+    #[serde(rename = "$value")]
+    pub entity: EntityObjectChoice,
 
     /// Object controller configuration (optional, may occur multiple times)
     #[serde(
@@ -143,11 +136,7 @@ impl ScenarioObject {
     pub fn new_vehicle(name: String, vehicle: Vehicle) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle: Some(vehicle),
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
-            entity_catalog_reference: None,
+            entity: EntityObjectChoice::Vehicle(vehicle),
             object_controller: Vec::new(),
         }
     }
@@ -156,11 +145,7 @@ impl ScenarioObject {
     pub fn new_pedestrian(name: String, pedestrian: Pedestrian) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle: None,
-            pedestrian: Some(pedestrian),
-            misc_object: None,
-            external_object_reference: None,
-            entity_catalog_reference: None,
+            entity: EntityObjectChoice::Pedestrian(pedestrian),
             object_controller: Vec::new(),
         }
     }
@@ -169,11 +154,7 @@ impl ScenarioObject {
     pub fn new_misc_object(name: String, misc_object: MiscObject) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle: None,
-            pedestrian: None,
-            misc_object: Some(misc_object),
-            external_object_reference: None,
-            entity_catalog_reference: None,
+            entity: EntityObjectChoice::MiscObject(misc_object),
             object_controller: Vec::new(),
         }
     }
@@ -185,30 +166,79 @@ impl ScenarioObject {
     pub fn new_catalog_reference(name: String, catalog_reference: EntityCatalogReference) -> Self {
         Self {
             name: crate::types::basic::Value::literal(name),
-            vehicle: None,
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
-            entity_catalog_reference: Some(catalog_reference),
+            entity: EntityObjectChoice::CatalogReference(catalog_reference),
             object_controller: Vec::new(),
+        }
+    }
+
+    /// The vehicle, if this object's entity branch is `Vehicle`
+    pub fn vehicle(&self) -> Option<&Vehicle> {
+        match &self.entity {
+            EntityObjectChoice::Vehicle(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// A mutable view of the vehicle, if this object's entity branch is `Vehicle`
+    pub fn vehicle_mut(&mut self) -> Option<&mut Vehicle> {
+        match &mut self.entity {
+            EntityObjectChoice::Vehicle(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The pedestrian, if this object's entity branch is `Pedestrian`
+    pub fn pedestrian(&self) -> Option<&Pedestrian> {
+        match &self.entity {
+            EntityObjectChoice::Pedestrian(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// A mutable view of the pedestrian, if this object's entity branch is `Pedestrian`
+    pub fn pedestrian_mut(&mut self) -> Option<&mut Pedestrian> {
+        match &mut self.entity {
+            EntityObjectChoice::Pedestrian(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// The miscellaneous object, if this object's entity branch is `MiscObject`
+    pub fn misc_object(&self) -> Option<&MiscObject> {
+        match &self.entity {
+            EntityObjectChoice::MiscObject(m) => Some(m),
+            _ => None,
+        }
+    }
+
+    /// The external object reference, if this object's entity branch is `ExternalObjectReference`
+    pub fn external_object_reference(&self) -> Option<&ExternalObjectReference> {
+        match &self.entity {
+            EntityObjectChoice::ExternalObjectReference(r) => Some(r),
+            _ => None,
         }
     }
 
     /// Get the catalog reference if this object is defined by one
     pub fn catalog_reference(&self) -> Option<&EntityCatalogReference> {
-        self.entity_catalog_reference.as_ref()
+        match &self.entity {
+            EntityObjectChoice::CatalogReference(r) => Some(r),
+            _ => None,
+        }
     }
 
     /// Get the entity object as an enum variant
     pub fn get_entity_object(&self) -> Option<EntityObject> {
-        if let Some(vehicle) = &self.vehicle {
-            Some(EntityObject::Vehicle(Box::new(vehicle.clone())))
-        } else if let Some(pedestrian) = &self.pedestrian {
-            Some(EntityObject::Pedestrian(Box::new(pedestrian.clone())))
-        } else {
-            self.misc_object
-                .as_ref()
-                .map(|misc_object| EntityObject::MiscObject(Box::new(misc_object.clone())))
+        match &self.entity {
+            EntityObjectChoice::Vehicle(v) => Some(EntityObject::Vehicle(Box::new(v.clone()))),
+            EntityObjectChoice::Pedestrian(p) => {
+                Some(EntityObject::Pedestrian(Box::new(p.clone())))
+            }
+            EntityObjectChoice::MiscObject(m) => {
+                Some(EntityObject::MiscObject(Box::new(m.clone())))
+            }
+            EntityObjectChoice::CatalogReference(_)
+            | EntityObjectChoice::ExternalObjectReference(_) => None,
         }
     }
 
@@ -253,10 +283,10 @@ mod tests {
 
         assert_eq!(obj.get_name(), Some("TestVehicle"));
 
-        assert!(obj.vehicle.is_some());
-        assert!(obj.pedestrian.is_none());
+        assert!(obj.vehicle().is_some());
+        assert!(obj.pedestrian().is_none());
 
-        if let Some(v) = &obj.vehicle {
+        if let Some(v) = obj.vehicle() {
             assert_eq!(v.name.as_literal().unwrap(), "InnerVehicle");
         }
 
@@ -295,9 +325,9 @@ mod tests {
         );
         let obj = ScenarioObject::new_misc_object("Barrier1".to_string(), misc);
 
-        assert!(obj.misc_object.is_some());
-        assert!(obj.vehicle.is_none());
-        assert!(obj.pedestrian.is_none());
+        assert!(obj.misc_object().is_some());
+        assert!(obj.vehicle().is_none());
+        assert!(obj.pedestrian().is_none());
 
         match obj.get_entity_object() {
             Some(EntityObject::MiscObject(m)) => {
@@ -311,9 +341,14 @@ mod tests {
         assert!(xml.contains("miscObjectCategory=\"barrier\""));
 
         let deserialized: ScenarioObject = quick_xml::de::from_str(&xml).unwrap();
-        assert!(deserialized.misc_object.is_some());
+        assert!(deserialized.misc_object().is_some());
         assert_eq!(
-            deserialized.misc_object.unwrap().name.as_literal().unwrap(),
+            deserialized
+                .misc_object()
+                .unwrap()
+                .name
+                .as_literal()
+                .unwrap(),
             "Barrier1"
         );
     }
@@ -349,11 +384,10 @@ mod tests {
 
         let deserialized: ScenarioObject = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(deserialized.object_controller.len(), 2);
-        assert!(deserialized.object_controller[0].controller.is_some());
+        assert!(deserialized.object_controller[0].controller().is_some());
         assert_eq!(
             deserialized.object_controller[0]
-                .controller
-                .as_ref()
+                .controller()
                 .unwrap()
                 .name
                 .as_literal()
@@ -361,12 +395,11 @@ mod tests {
             "InlineController"
         );
         assert!(deserialized.object_controller[1]
-            .catalog_reference
+            .catalog_reference()
             .is_some());
         assert_eq!(
             deserialized.object_controller[1]
-                .catalog_reference
-                .as_ref()
+                .catalog_reference()
                 .unwrap()
                 .entry_name
                 .as_literal()
@@ -387,5 +420,29 @@ mod tests {
         let xml = quick_xml::se::to_string(&entities).unwrap();
         assert!(xml.contains("ScenarioObject"));
         assert!(xml.contains("name=\"TestVehicle\""));
+    }
+
+    // `ScenarioObject`'s `EntityObject` group (XSD:1168-1176, referenced with
+    // no `minOccurs` from XSD:2000-2005) is a required bare choice: neither
+    // zero nor two branches is constructible.
+
+    #[test]
+    fn test_scenario_object_zero_branches_rejected() {
+        let xml = r#"<ScenarioObject name="Ego"/>"#;
+        let result: Result<ScenarioObject, _> = quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "ScenarioObject with no EntityObject branch must be rejected"
+        );
+    }
+
+    #[test]
+    fn test_scenario_object_two_branches_rejected() {
+        let xml = r#"<ScenarioObject name="Ego"><Vehicle name="car" vehicleCategory="car"><BoundingBox><Center x="0" y="0" z="0"/><Dimensions width="2.0" length="4.5" height="1.8"/></BoundingBox><Performance maxSpeed="10" maxAcceleration="1" maxDeceleration="1"/><Axles><FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="3.1" positionZ="0.3"/><RearAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.8" positionX="0.0" positionZ="0.3"/></Axles></Vehicle><CatalogReference catalogName="Cat" entryName="Entry"/></ScenarioObject>"#;
+        let result: Result<ScenarioObject, _> = quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "Vehicle beside CatalogReference is two branches and must be rejected"
+        );
     }
 }

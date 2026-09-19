@@ -607,7 +607,7 @@ mod tests {
         // Reach past the builder API to plant a parameterized value that nothing declares.
         builder = builder.add_vehicle("ego", |vehicle| vehicle.car());
         if let Some(entities) = &mut builder.data.entities {
-            if let Some(vehicle) = entities.scenario_objects[0].vehicle.as_mut() {
+            if let Some(vehicle) = entities.scenario_objects[0].vehicle_mut() {
                 vehicle.performance.max_speed = Double::parameter("undeclared_speed".to_string());
             }
         }
@@ -639,7 +639,7 @@ mod tests {
 
         builder = builder.add_vehicle("ego", |vehicle| vehicle.car());
         if let Some(entities) = &mut builder.data.entities {
-            if let Some(vehicle) = entities.scenario_objects[0].vehicle.as_mut() {
+            if let Some(vehicle) = entities.scenario_objects[0].vehicle_mut() {
                 vehicle.performance.max_speed = Double::expression("base_speed * 1.1".to_string());
             }
         }

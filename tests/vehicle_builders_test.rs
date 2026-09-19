@@ -28,9 +28,9 @@ mod vehicle_builder_tests {
         assert_eq!(entities.scenario_objects.len(), 1);
 
         let ego = entities.find_object("ego").unwrap();
-        assert!(ego.vehicle.is_some());
+        assert!(ego.vehicle().is_some());
 
-        let vehicle = ego.vehicle.as_ref().unwrap();
+        let vehicle = ego.vehicle().unwrap();
         if let Value::Literal(name) = &vehicle.name {
             assert_eq!(name, "PassengerCar");
         } else {
@@ -63,10 +63,10 @@ mod vehicle_builder_tests {
         assert_eq!(entities.scenario_objects.len(), 2);
 
         let ego = entities.find_object("ego").unwrap();
-        assert!(ego.vehicle.is_some());
+        assert!(ego.vehicle().is_some());
 
         let truck = entities.find_object("truck1").unwrap();
-        assert!(truck.vehicle.is_some());
+        assert!(truck.vehicle().is_some());
     }
 
     #[test]
@@ -96,9 +96,9 @@ mod vehicle_builder_tests {
         assert_eq!(entities.scenario_objects.len(), 1);
 
         let custom = entities.find_object("custom").unwrap();
-        assert!(custom.vehicle.is_some());
+        assert!(custom.vehicle().is_some());
 
-        let vehicle = custom.vehicle.as_ref().unwrap();
+        let vehicle = custom.vehicle().unwrap();
 
         // Check dimensions
         if let Value::Literal(length) = &vehicle.bounding_box.dimensions.length {

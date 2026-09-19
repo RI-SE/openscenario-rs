@@ -41,8 +41,8 @@ fn catalog_reference_is_parsed_without_an_entity_kind() {
         catalog_reference,
         &EntityCatalogReference::new("PedestrianCatalog", "pedestrian_walker")
     );
-    assert!(object.vehicle.is_none());
-    assert!(object.pedestrian.is_none());
+    assert!(object.vehicle().is_none());
+    assert!(object.pedestrian().is_none());
 }
 
 #[test]

@@ -201,71 +201,37 @@ fn test_lane_change_action_serialization_fixes() {
 
 #[test]
 fn test_object_controller_choice_group() {
-    // Test valid ObjectController with direct controller
-    let direct_controller = ObjectController {
-        name: None,
-        controller: Some(Controller::new(
-            "TestController".to_string(),
-            ControllerType::Movement,
-        )),
-        catalog_reference: None,
-    };
-    assert!(direct_controller.validate().is_ok());
+    // XSD:1522-1528 is a bare choice with neither branch `minOccurs="0"`, so
+    // exactly one of `Controller` or `CatalogReference` is constructible;
+    // serde enforces this structurally, and there is no longer a `validate()`
+    // to call. `ObjectControllerChoice` cannot represent zero or both.
+    let direct_controller = ObjectController::with_controller(Controller::new(
+        "TestController".to_string(),
+        ControllerType::Movement,
+    ));
+    assert!(direct_controller.controller().is_some());
 
-    // Test valid ObjectController with catalog reference
-    let catalog_controller = ObjectController {
-        name: None,
-        controller: None,
-        catalog_reference: Some(
-            openscenario_rs::types::catalogs::references::ControllerCatalogReference::new(
-                "ControllerCatalog".to_string(),
-                "DefaultController".to_string(),
-            ),
+    let catalog_controller = ObjectController::with_catalog_reference(
+        openscenario_rs::types::catalogs::references::ControllerCatalogReference::new(
+            "ControllerCatalog".to_string(),
+            "DefaultController".to_string(),
         ),
-    };
-    assert!(catalog_controller.validate().is_ok());
-
-    // Test empty ObjectController (allowed for backward compatibility)
-    let empty_controller = ObjectController {
-        name: None,
-        controller: None,
-        catalog_reference: None,
-    };
-    assert!(empty_controller.validate().is_ok());
-    // But strict validation should fail
-    assert!(empty_controller.validate_strict().is_err());
-
-    // Test invalid ObjectController with both
-    let both_controller = ObjectController {
-        name: None,
-        controller: Some(Controller::new(
-            "TestController".to_string(),
-            ControllerType::Movement,
-        )),
-        catalog_reference: Some(
-            openscenario_rs::types::catalogs::references::ControllerCatalogReference::new(
-                "ControllerCatalog".to_string(),
-                "DefaultController".to_string(),
-            ),
-        ),
-    };
-    assert!(both_controller.validate().is_err());
+    );
+    assert!(catalog_controller.catalog_reference().is_some());
 }
 
 #[test]
 fn test_object_controller_deserialization() {
-    // Test empty ObjectController (should succeed for backward compatibility)
+    // An empty `<ObjectController/>` is schema-invalid (XSD:1522-1528): the
+    // pre-conversion `validate()` accepted it "for backward compatibility",
+    // but zero of the 212-file conformance corpus contains one, and serde
+    // now rejects it directly.
     let empty_xml = r#"<ObjectController />"#;
     let result: Result<ObjectController, _> = quick_xml::de::from_str(empty_xml);
     assert!(
-        result.is_ok(),
-        "Empty ObjectController should succeed for backward compatibility"
+        result.is_err(),
+        "empty ObjectController is schema-invalid and must be rejected"
     );
-    let obj_controller = result.unwrap();
-    assert!(obj_controller.controller.is_none());
-    assert!(obj_controller.catalog_reference.is_none());
-    assert!(obj_controller.validate().is_ok());
-    assert!(obj_controller.validate_strict().is_err());
 
     // Test ObjectController with Controller (should succeed)
     let controller_xml = r#"<ObjectController>
@@ -277,8 +243,8 @@ fn test_object_controller_deserialization() {
         "ObjectController with Controller should succeed"
     );
     let obj_controller = result.unwrap();
-    assert!(obj_controller.controller.is_some());
-    assert!(obj_controller.catalog_reference.is_none());
+    assert!(obj_controller.controller().is_some());
+    assert!(obj_controller.catalog_reference().is_none());
 
     // Test ObjectController with CatalogReference (should succeed)
     let catalog_xml = r#"<ObjectController>
@@ -290,8 +256,8 @@ fn test_object_controller_deserialization() {
         "ObjectController with CatalogReference should succeed"
     );
     let obj_controller = result.unwrap();
-    assert!(obj_controller.controller.is_none());
-    assert!(obj_controller.catalog_reference.is_some());
+    assert!(obj_controller.controller().is_none());
+    assert!(obj_controller.catalog_reference().is_some());
 
     // Test ObjectController with both (should fail during deserialization)
     let both_xml = r#"<ObjectController>

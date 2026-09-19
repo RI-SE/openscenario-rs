@@ -29,9 +29,9 @@ mod pedestrian_builder_tests {
         );
 
         let obj = &scenario.entities.as_ref().unwrap().scenario_objects[0];
-        assert!(obj.pedestrian.is_some());
+        assert!(obj.pedestrian().is_some());
 
-        let ped = obj.pedestrian.as_ref().unwrap();
+        let ped = obj.pedestrian().unwrap();
         assert_eq!(
             ped.pedestrian_category,
             Value::Literal(PedestrianCategory::Pedestrian)
@@ -62,7 +62,7 @@ mod pedestrian_builder_tests {
         assert!(scenario.is_ok());
         let scenario = scenario.unwrap();
         let obj = &scenario.entities.unwrap().scenario_objects[0];
-        let ped = obj.pedestrian.as_ref().unwrap();
+        let ped = obj.pedestrian().unwrap();
 
         assert_eq!(
             ped.pedestrian_category,
@@ -95,7 +95,7 @@ mod pedestrian_builder_tests {
         assert!(scenario.is_ok());
         let scenario = scenario.unwrap();
         let obj = &scenario.entities.unwrap().scenario_objects[0];
-        let ped = obj.pedestrian.as_ref().unwrap();
+        let ped = obj.pedestrian().unwrap();
 
         assert_eq!(
             ped.pedestrian_category,
@@ -128,7 +128,7 @@ mod pedestrian_builder_tests {
         assert!(scenario.is_ok());
         let scenario = scenario.unwrap();
         let obj = &scenario.entities.unwrap().scenario_objects[0];
-        let ped = obj.pedestrian.as_ref().unwrap();
+        let ped = obj.pedestrian().unwrap();
 
         assert_eq!(ped.mass.as_literal().unwrap(), &90.0);
         assert_eq!(

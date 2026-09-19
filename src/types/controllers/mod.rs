@@ -41,116 +41,31 @@ pub struct Controller {
 /// Object controller wrapper that can reference a controller definition or catalog.
 ///
 /// This is the controller structure used in ScenarioObject entities.
-/// It can either contain a direct controller definition or reference a controller catalog.
-/// According to XSD schema, exactly one of Controller or CatalogReference must be present.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+/// XSD `ObjectController` (`Schema/OpenSCENARIO.xsd:1522-1528`) is a bare `xsd:choice` of
+/// `CatalogReference | Controller`; neither branch carries `minOccurs="0"`, so exactly one
+/// must be present. The choice lives in the single `choice` field below rather than as two
+/// parallel `Option`s, so the type cannot hold zero or both at once.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectController {
     /// Optional name attribute for the controller
     #[serde(rename = "@name", skip_serializing_if = "Option::is_none")]
     pub name: Option<OSString>,
 
-    /// Direct controller definition
-    #[serde(rename = "Controller", skip_serializing_if = "Option::is_none")]
-    pub controller: Option<Controller>,
+    /// The controller definition or catalog reference, exactly one of the two.
+    #[serde(rename = "$value")]
+    pub choice: ObjectControllerChoice,
+}
 
+/// The two branches of the `ObjectController` choice (XSD:1522-1528).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum ObjectControllerChoice {
     /// Reference to a controller in a catalog
-    #[serde(rename = "CatalogReference", skip_serializing_if = "Option::is_none")]
-    pub catalog_reference: Option<ControllerCatalogReference>,
+    CatalogReference(ControllerCatalogReference),
+    /// Direct controller definition
+    Controller(Controller),
 }
-
-// Custom deserializer to handle XSD choice group validation
-impl<'de> Deserialize<'de> for ObjectController {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::{self, MapAccess, Visitor};
-        use std::fmt;
-
-        #[derive(Deserialize)]
-        #[serde(field_identifier)]
-        enum Field {
-            #[serde(rename = "@name")]
-            Name,
-            #[serde(rename = "Controller")]
-            Controller,
-            #[serde(rename = "CatalogReference")]
-            CatalogReference,
-        }
-
-        struct ObjectControllerVisitor;
-
-        impl<'de> Visitor<'de> for ObjectControllerVisitor {
-            type Value = ObjectController;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct ObjectController")
-            }
-
-            fn visit_map<V>(self, mut map: V) -> std::result::Result<ObjectController, V::Error>
-            where
-                V: MapAccess<'de>,
-            {
-                let mut name = None;
-                let mut controller = None;
-                let mut catalog_reference = None;
-
-                while let Some(key) = map.next_key()? {
-                    match key {
-                        Field::Name => {
-                            if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
-                            }
-                            name = Some(map.next_value()?);
-                        }
-                        Field::Controller => {
-                            if controller.is_some() {
-                                return Err(de::Error::duplicate_field("Controller"));
-                            }
-                            controller = Some(map.next_value()?);
-                        }
-                        Field::CatalogReference => {
-                            if catalog_reference.is_some() {
-                                return Err(de::Error::duplicate_field("CatalogReference"));
-                            }
-                            catalog_reference = Some(map.next_value()?);
-                        }
-                    }
-                }
-
-                // XSD choice group validation: exactly one of Controller or CatalogReference must be present
-                // However, we allow empty ObjectController elements for backward compatibility
-                match (controller.is_some(), catalog_reference.is_some()) {
-                    (true, false) | (false, true) | (false, false) => {
-                        Ok(ObjectController {
-                            name,
-                            controller,
-                            catalog_reference,
-                        })
-                    }
-                    (true, true) => Err(de::Error::custom(
-                        "ObjectController must contain exactly one of Controller or CatalogReference, found both"
-                    )),
-                }
-            }
-        }
-
-        const FIELDS: &[&str] = &["@name", "Controller", "CatalogReference"];
-        deserializer.deserialize_struct("ObjectController", FIELDS, ObjectControllerVisitor)
-    }
-}
-
-// `Default` removed. XSD `ObjectController`
-// (`Schema/OpenSCENARIO.xsd:1522-1528`) is a bare `xsd:choice` of `CatalogReference |
-// Controller`, neither carrying `minOccurs="0"`, so exactly one must be present. The
-// all-`None` default emitted `<ObjectController />`, which libxml2 rejects with
-// *"Missing child element(s). Expected is one of ( CatalogReference, Controller )"* —
-// category 3, schema-invalid empty. Use `with_controller` / `with_catalog_reference`
-// (or their `with_named_*` forms) below.
-//
-// This one was found by neither of the campaign's two greps nor by the derive sweep:
-// every field is `Option`, so detector 3 cannot see it either. See the report.
 
 /// Catalog location for controller definitions.
 ///
@@ -215,8 +130,7 @@ impl ObjectController {
     pub fn with_controller(controller: Controller) -> Self {
         Self {
             name: None,
-            controller: Some(controller),
-            catalog_reference: None,
+            choice: ObjectControllerChoice::Controller(controller),
         }
     }
 
@@ -224,8 +138,7 @@ impl ObjectController {
     pub fn with_catalog_reference(catalog_reference: ControllerCatalogReference) -> Self {
         Self {
             name: None,
-            controller: None,
-            catalog_reference: Some(catalog_reference),
+            choice: ObjectControllerChoice::CatalogReference(catalog_reference),
         }
     }
 
@@ -233,8 +146,7 @@ impl ObjectController {
     pub fn with_named_controller(name: String, controller: Controller) -> Self {
         Self {
             name: Some(Value::Literal(name)),
-            controller: Some(controller),
-            catalog_reference: None,
+            choice: ObjectControllerChoice::Controller(controller),
         }
     }
 
@@ -245,26 +157,23 @@ impl ObjectController {
     ) -> Self {
         Self {
             name: Some(Value::Literal(name)),
-            controller: None,
-            catalog_reference: Some(catalog_reference),
+            choice: ObjectControllerChoice::CatalogReference(catalog_reference),
         }
     }
 
-    /// Validates that at most one of Controller or CatalogReference is present
-    /// Empty ObjectController elements are allowed for backward compatibility
-    pub fn validate(&self) -> Result<(), String> {
-        match (self.controller.is_some(), self.catalog_reference.is_some()) {
-            (true, false) | (false, true) | (false, false) => Ok(()),
-            (true, true) => Err("ObjectController must contain at most one of Controller or CatalogReference, found both".to_string()),
+    /// The direct controller definition, if this is the `Controller` branch.
+    pub fn controller(&self) -> Option<&Controller> {
+        match &self.choice {
+            ObjectControllerChoice::Controller(c) => Some(c),
+            ObjectControllerChoice::CatalogReference(_) => None,
         }
     }
 
-    /// Validates strict XSD compliance (exactly one of Controller or CatalogReference must be present)
-    pub fn validate_strict(&self) -> Result<(), String> {
-        match (self.controller.is_some(), self.catalog_reference.is_some()) {
-            (true, false) | (false, true) => Ok(()),
-            (true, true) => Err("ObjectController must contain exactly one of Controller or CatalogReference, found both".to_string()),
-            (false, false) => Err("ObjectController must contain exactly one of Controller or CatalogReference, found neither".to_string()),
+    /// The catalog reference, if this is the `CatalogReference` branch.
+    pub fn catalog_reference(&self) -> Option<&ControllerCatalogReference> {
+        match &self.choice {
+            ObjectControllerChoice::CatalogReference(c) => Some(c),
+            ObjectControllerChoice::Controller(_) => None,
         }
     }
 }
@@ -292,8 +201,8 @@ mod tests {
         let controller = Controller::new("DirectController".to_string(), ControllerType::Lateral);
         let object_controller = ObjectController::with_controller(controller);
 
-        assert!(object_controller.controller.is_some());
-        assert!(object_controller.catalog_reference.is_none());
+        assert!(object_controller.controller().is_some());
+        assert!(object_controller.catalog_reference().is_none());
     }
 
     #[test]
@@ -324,10 +233,9 @@ mod tests {
 
     #[test]
     fn test_controller_defaults() {
-        // `ObjectController` no longer has a `Default`: its XSD choice
-        // (`:1522-1528`) requires a branch, so the all-`None` form was schema-invalid.
-        // A controller built via a branch constructor leaves the *other* branch `None`,
-        // which is what this test is actually about.
+        // A controller built via a branch constructor leaves the *other* branch
+        // unreachable: `ObjectControllerChoice` can hold exactly one of the two,
+        // never both and never neither.
         let object_controller =
             ObjectController::with_catalog_reference(ControllerCatalogReference::new(
                 "ControllerCatalog".to_string(),
@@ -335,65 +243,18 @@ mod tests {
             ));
         let properties = Properties::default();
 
-        assert!(object_controller.controller.is_none());
-        assert!(object_controller.catalog_reference.is_some());
+        assert!(object_controller.controller().is_none());
+        assert!(object_controller.catalog_reference().is_some());
         assert!(properties.properties.is_empty());
     }
 
     #[test]
-    fn test_object_controller_validation() {
-        // Test valid controller with direct controller
-        let valid_direct = ObjectController {
-            name: None,
-            controller: Some(Controller::new(
-                "TestController".to_string(),
-                ControllerType::Movement,
-            )),
-            catalog_reference: None,
-        };
-        assert!(valid_direct.validate().is_ok());
-
-        // Test valid controller with catalog reference
-        let valid_catalog = ObjectController {
-            name: None,
-            controller: None,
-            catalog_reference: Some(ControllerCatalogReference::new(
-                "catalog".to_string(),
-                "entry".to_string(),
-            )),
-        };
-        assert!(valid_catalog.validate().is_ok());
-
-        // Test empty controller (allowed for backward compatibility)
-        let empty_controller = ObjectController {
-            name: None,
-            controller: None,
-            catalog_reference: None,
-        };
-        assert!(empty_controller.validate().is_ok());
-        // But strict validation should fail
-        assert!(empty_controller.validate_strict().is_err());
-
-        // Test invalid controller with both controller and reference
-        let invalid_both = ObjectController {
-            name: None,
-            controller: Some(Controller::new(
-                "TestController".to_string(),
-                ControllerType::Movement,
-            )),
-            catalog_reference: Some(ControllerCatalogReference::new(
-                "catalog".to_string(),
-                "entry".to_string(),
-            )),
-        };
-        assert!(invalid_both.validate().is_err());
-
-        // Test named controller
+    fn test_object_controller_named_controller() {
         let named_controller = ObjectController::with_named_controller(
             "TestController".to_string(),
             Controller::new("TestController".to_string(), ControllerType::Movement),
         );
-        assert!(named_controller.validate().is_ok());
+        assert!(named_controller.controller().is_some());
         assert_eq!(
             named_controller
                 .name
@@ -403,5 +264,44 @@ mod tests {
                 .unwrap(),
             "TestController"
         );
+    }
+
+    /// `ObjectControllerChoice` reaching serde is the enforcement: an empty
+    /// `<ObjectController/>` is schema-invalid (XSD:1522-1528, neither branch
+    /// carries `minOccurs="0"`) and must be rejected, not silently accepted as
+    /// the pre-conversion `validate()` did.
+    #[test]
+    fn test_object_controller_zero_branches_rejected() {
+        let xml = r#"<ObjectController/>"#;
+        let result: Result<ObjectController, _> = quick_xml::de::from_str(xml);
+        assert!(result.is_err(), "empty ObjectController must be rejected");
+    }
+
+    #[test]
+    fn test_object_controller_two_branches_rejected() {
+        let xml = r#"<ObjectController><Controller name="C1" controllerType="movement"/><CatalogReference catalogName="Cat" entryName="Entry"/></ObjectController>"#;
+        let result: Result<ObjectController, _> = quick_xml::de::from_str(xml);
+        assert!(
+            result.is_err(),
+            "Controller and CatalogReference together must be rejected"
+        );
+    }
+
+    #[test]
+    fn test_object_controller_controller_round_trips_byte_exact() {
+        let xml = r#"<ObjectController><Controller name="C1" controllerType="movement"/></ObjectController>"#;
+        let parsed: ObjectController = quick_xml::de::from_str(xml).unwrap();
+        assert!(parsed.controller().is_some());
+        let serialized = quick_xml::se::to_string(&parsed).unwrap();
+        assert_eq!(serialized, xml);
+    }
+
+    #[test]
+    fn test_object_controller_catalog_reference_round_trips_byte_exact() {
+        let xml = r#"<ObjectController><CatalogReference catalogName="Cat" entryName="Entry"/></ObjectController>"#;
+        let parsed: ObjectController = quick_xml::de::from_str(xml).unwrap();
+        assert!(parsed.catalog_reference().is_some());
+        let serialized = quick_xml::se::to_string(&parsed).unwrap();
+        assert_eq!(serialized, xml);
     }
 }

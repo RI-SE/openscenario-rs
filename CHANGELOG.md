@@ -127,6 +127,44 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **The controller and entity choice groups now hold a choice enum instead of parallel
+  `Option` fields.** `ObjectController` (`:1522-1528`), the `EntityObject` group shared by
+  `ScenarioObject` and `ScenarioObjectTemplate` (`:1168-1176`, referenced with no `minOccurs`
+  from `:2000-2005` and `:2007-2012`), and `SelectedEntities` (`:2013-2018`) are each a bare
+  `xsd:choice` with no `minOccurs="0"` anywhere on the choice or its branches, so exactly one
+  branch is required in all three. `ObjectController::choice` now holds an
+  `ObjectControllerChoice` of `CatalogReference` | `Controller`; `ScenarioObject::entity` and
+  `ScenarioObjectTemplate::entity` share one `EntityObjectChoice` of `CatalogReference` |
+  `Vehicle` | `Pedestrian` | `MiscObject` | `ExternalObjectReference`; `SelectedEntities::choice`
+  holds a `SelectedEntitiesChoice` of `EntityRef(Vec<EntityRef>)` | `ByType(Vec<ByType>)`. The
+  `Vec` sits inside the variant, since `$value` takes one element name per instance: a document
+  may repeat `<EntityRef>` any number of times within the one branch, but an `<EntityRef>`
+  beside a `<ByType>` is two branches and is rejected.
+
+  Modeled as parallel fields, `ObjectController` accepted an empty `<ObjectController/>` under a
+  `validate()` documented as "allowed for backward compatibility" against a schema that requires
+  a branch; none of the 212-file conformance corpus contains one. `ScenarioObject` and
+  `ScenarioObjectTemplate` accepted a document naming zero, one, or several of the five branches
+  at once and re-serialized whichever were set. `SelectedEntities` accepted a mixture of
+  `EntityRef` and `ByType` and the empty document, which the choice forbids in both cases. Under
+  `$value` serde reads the branch from the live reader by element name, so the cardinality is a
+  property of the type: zero branches fail with ``missing field `$value` `` and two with
+  ``duplicate field `$value` ``, and no hand-written `validate()` is needed.
+
+  Accessor methods replace the removed fields: `ObjectController::controller`/`catalog_reference`;
+  `ScenarioObject::vehicle`/`pedestrian`/`misc_object`/`external_object_reference`/
+  `catalog_reference` and their `_mut` forms for `vehicle`/`pedestrian`;
+  `ScenarioObjectTemplate::vehicle`/`pedestrian`/`misc_object`/`external_object_reference`/
+  `entity_catalog_reference`; `SelectedEntities::entity_refs`/`by_type`. Each returns a
+  reference computed from the enum rather than a stored, independently settable field.
+  `SelectedEntities::from_names` keeps its shape; `SelectedEntities::from_by_type` is added for
+  the `ByType` branch.
+
+  `MiscObject` (`:1474-1484`) and `Pedestrian` (`:1677-1690`) are `xsd:all` of optional members,
+  not choices, and are unconverted. `Entities` (`:1122-1127`) is an `xsd:sequence` of two
+  `Vec`s — `scenario_objects` then `entity_selections` — not a choice between them, and is
+  likewise unconverted.
+
 - **The movement and controller choice groups now hold a choice enum instead of parallel
   `Option` fields.** Seven types are converted, and they fall into two groups that are not
   interchangeable. `SpeedActionTarget` (`:2049-2054`), `TrajectoryRef` (`:2380-2385`),
@@ -413,6 +451,17 @@ Breaking, unless noted.
   the same neighbor-file rule the guide already states for every other test.
 
 ### Removed
+
+- **`ObjectController::validate` and `ObjectController::validate_strict`**, the choice-recovery
+  methods `ObjectControllerChoice` makes redundant: serde now enforces the choice's cardinality
+  structurally, so there is nothing left for a hand-written check to catch. `validate` also
+  contradicted the schema, treating an empty `<ObjectController/>` as valid when
+  `Schema/OpenSCENARIO.xsd:1522-1528` requires a branch.
+- **`SelectedEntities::new`, `SelectedEntities::add_entity` and `SelectedEntities::add_by_type`**,
+  the accumulate-into-empty-container API that assumed a start state (`entity_refs: vec![]`,
+  `by_type: vec![]`) `SelectedEntitiesChoice` cannot represent, since the choice requires a
+  branch from construction. **Surviving constructors:
+  `SelectedEntities::from_names`** (unchanged) **and `SelectedEntities::from_by_type`** (new).
 
 - **Two divergent `Properties` types, folded into the one the schema actually describes.**
   These are breaking changes.

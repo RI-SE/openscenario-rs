@@ -310,7 +310,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("├─────────────────────┼─────────────────────────────────────────┤");
         for obj in &entities.scenario_objects {
             if let Some(name) = obj.name.as_literal() {
-                if let Some(vehicle) = &obj.vehicle {
+                if let Some(vehicle) = obj.vehicle() {
                     let dims = &vehicle.bounding_box.dimensions;
                     let perf = &vehicle.performance;
                     println!(

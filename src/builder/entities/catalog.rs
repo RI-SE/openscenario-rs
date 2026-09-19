@@ -97,11 +97,7 @@ impl<'parent> CatalogVehicleReferenceBuilder<'parent> {
         // Create scenario object
         let scenario_object = ScenarioObject {
             name: OSString::literal(self.parent.name.clone()),
-            entity_catalog_reference: None,
-            vehicle: Some(vehicle),
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
+            entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
             object_controller: Vec::new(),
         };
 
@@ -200,11 +196,7 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
         // Create scenario object
         let scenario_object = ScenarioObject {
             name: OSString::literal(self.parent.name.clone()),
-            entity_catalog_reference: None,
-            vehicle: None,
-            pedestrian: Some(pedestrian),
-            misc_object: None,
-            external_object_reference: None,
+            entity: crate::types::entities::EntityObjectChoice::Pedestrian(pedestrian),
             object_controller: Vec::new(),
         };
 

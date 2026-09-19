@@ -85,7 +85,7 @@ fn can_access_entities() {
     let ego = entities.find_object("Ego").unwrap();
     assert_eq!(ego.get_name(), Some("Ego"));
 
-    if let Some(vehicle) = &ego.vehicle {
+    if let Some(vehicle) = ego.vehicle() {
         assert_eq!(vehicle.name.as_literal().unwrap(), "EgoVehicle");
         assert_eq!(
             vehicle.vehicle_category,
@@ -110,7 +110,7 @@ fn can_access_entities() {
     let ped = entities.find_object("Pedestrian1").unwrap();
     assert_eq!(ped.get_name(), Some("Pedestrian1"));
 
-    if let Some(pedestrian) = &ped.pedestrian {
+    if let Some(pedestrian) = ped.pedestrian() {
         assert_eq!(pedestrian.name.as_literal().unwrap(), "TestPedestrian");
         assert_eq!(
             pedestrian.pedestrian_category,
@@ -384,7 +384,7 @@ mod cut_in_scenario_tests {
             let ego = entities.find_object("Ego").unwrap();
             assert_eq!(ego.get_name(), Some("Ego"));
 
-            if let Some(vehicle) = &ego.vehicle {
+            if let Some(vehicle) = ego.vehicle() {
                 assert_eq!(vehicle.name.as_literal().unwrap(), "Default_car");
                 assert_eq!(
                     vehicle.vehicle_category,

@@ -288,9 +288,9 @@ impl ScenarioValidator {
             for obj in &entities.scenario_objects {
                 let entity_ref = EntityRef {
                     name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
-                    object_type: Value::Literal(if obj.vehicle.is_some() {
+                    object_type: Value::Literal(if obj.vehicle().is_some() {
                         ObjectType::Vehicle
-                    } else if obj.pedestrian.is_some() {
+                    } else if obj.pedestrian().is_some() {
                         ObjectType::Pedestrian
                     } else {
                         ObjectType::MiscellaneousObject
@@ -746,11 +746,7 @@ mod tests {
         let entities = Entities {
             scenario_objects: vec![ScenarioObject {
                 name: Value::literal("TestVehicle".to_string()),
-                vehicle: Some(vehicle),
-                pedestrian: None,
-                misc_object: None,
-                external_object_reference: None,
-                entity_catalog_reference: None,
+                entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
                 object_controller: Default::default(),
             }],
             entity_selections: Vec::new(),
@@ -831,11 +827,7 @@ mod tests {
         let entities = Entities {
             scenario_objects: vec![ScenarioObject {
                 name: Value::literal("TestVehicle".to_string()),
-                vehicle: Some(vehicle),
-                pedestrian: None,
-                misc_object: None,
-                external_object_reference: None,
-                entity_catalog_reference: None,
+                entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
                 object_controller: Default::default(),
             }],
             entity_selections: Vec::new(),
@@ -931,20 +923,12 @@ mod tests {
             scenario_objects: vec![
                 ScenarioObject {
                     name: Value::literal("Car1".to_string()),
-                    vehicle: Some(vehicle1),
-                    pedestrian: None,
-                    misc_object: None,
-                    external_object_reference: None,
-                    entity_catalog_reference: None,
+                    entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle1),
                     object_controller: Default::default(),
                 },
                 ScenarioObject {
                     name: Value::literal("Car1".to_string()),
-                    vehicle: Some(vehicle2),
-                    pedestrian: None,
-                    misc_object: None,
-                    external_object_reference: None,
-                    entity_catalog_reference: None,
+                    entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle2),
                     object_controller: Default::default(),
                 },
             ],
@@ -1043,11 +1027,7 @@ mod tests {
 
         let scenario_object = crate::types::entities::ScenarioObject {
             name: crate::types::basic::Value::literal("TestVehicle".to_string()),
-            vehicle: Some(vehicle),
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: None,
-            entity_catalog_reference: None,
+            entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
             object_controller: Default::default(),
         };
 

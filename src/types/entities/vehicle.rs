@@ -495,7 +495,7 @@ mod tests {
             other => panic!("expected nested scenario object, got {other:?}"),
         };
         assert_eq!(nested.get_name(), Some("Trailer1"));
-        assert!(nested.vehicle.is_some());
+        assert!(nested.vehicle().is_some());
     }
 
     #[test]

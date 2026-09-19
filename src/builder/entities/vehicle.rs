@@ -441,7 +441,7 @@ mod tests {
     #[test]
     fn test_detached_builder_defaults_when_no_preset_called() {
         let obj = DetachedVehicleBuilder::new("ego").build();
-        let v = obj.vehicle.as_ref().unwrap();
+        let v = obj.vehicle().unwrap();
         assert_eq!(v.name.as_literal(), Some(&"DefaultVehicle".to_string()));
         assert_eq!(v.vehicle_category, Value::Literal(VehicleCategory::Car));
     }
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn test_car_preset_sets_category_and_dimensions() {
         let obj = DetachedVehicleBuilder::new("ego").car().build();
-        let v = obj.vehicle.as_ref().unwrap();
+        let v = obj.vehicle().unwrap();
         assert_eq!(v.vehicle_category, Value::Literal(VehicleCategory::Car));
         assert_eq!(v.name.as_literal(), Some(&"PassengerCar".to_string()));
         assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&4.5));
@@ -465,7 +465,7 @@ mod tests {
             .with_category(VehicleCategory::Van)
             .build();
         assert_eq!(
-            literal.vehicle.as_ref().unwrap().vehicle_category,
+            literal.vehicle().unwrap().vehicle_category,
             Value::Literal(VehicleCategory::Van)
         );
 
@@ -474,7 +474,7 @@ mod tests {
             .with_category_param("cat")
             .build();
         assert_eq!(
-            parameterized.vehicle.as_ref().unwrap().vehicle_category,
+            parameterized.vehicle().unwrap().vehicle_category,
             Value::Parameter("cat".to_string())
         );
     }
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_truck_preset_overrides_car_preset() {
         let obj = DetachedVehicleBuilder::new("ego").car().truck().build();
-        let v = obj.vehicle.as_ref().unwrap();
+        let v = obj.vehicle().unwrap();
         assert_eq!(v.vehicle_category, Value::Literal(VehicleCategory::Truck));
         assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&8.0));
         assert_eq!(v.performance.max_speed.as_literal(), Some(&120.0));
@@ -494,7 +494,7 @@ mod tests {
             .car()
             .with_dimensions(5.0, 2.0, 1.6)
             .build();
-        let v = obj.vehicle.as_ref().unwrap();
+        let v = obj.vehicle().unwrap();
         assert_eq!(v.bounding_box.dimensions.length.as_literal(), Some(&5.0));
         assert_eq!(v.bounding_box.dimensions.width.as_literal(), Some(&2.0));
         assert_eq!(v.bounding_box.dimensions.height.as_literal(), Some(&1.6));
@@ -508,7 +508,7 @@ mod tests {
             .truck()
             .with_performance(200.0, 5.0, 10.0)
             .build();
-        let v = obj.vehicle.as_ref().unwrap();
+        let v = obj.vehicle().unwrap();
         assert_eq!(v.performance.max_speed.as_literal(), Some(&200.0));
         assert_eq!(v.performance.max_acceleration.as_literal(), Some(&5.0));
         assert_eq!(v.performance.max_deceleration.as_literal(), Some(&10.0));

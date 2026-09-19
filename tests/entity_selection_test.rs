@@ -14,20 +14,20 @@ use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     entities::{
-        ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntitySelection,
-        ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities, Vehicle,
+        ByObjectType, ByType, EntityDistribution, EntityDistributionEntry, EntityObjectChoice,
+        EntitySelection, ExternalObjectReference, ScenarioObjectTemplate, SelectedEntities,
+        Vehicle,
     },
     enums::ObjectType,
 };
 
 #[test]
 fn test_entity_selection_creation() {
-    let mut members = SelectedEntities::new();
-    members.add_entity("Ego");
+    let members = SelectedEntities::from_names(vec!["Ego"]);
     let selection = EntitySelection::new("Selection1", members);
 
     assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
-    assert_eq!(selection.members.entity_refs.len(), 1);
+    assert_eq!(selection.members.entity_refs().len(), 1);
 
     // Test serialization
     let xml = quick_xml::se::to_string(&selection).unwrap();
@@ -47,8 +47,8 @@ fn test_entity_selection_xml_parsing_entity_refs() {
 
     let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
     assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
-    assert_eq!(selection.members.entity_refs.len(), 1);
-    assert!(selection.members.by_type.is_empty());
+    assert_eq!(selection.members.entity_refs().len(), 1);
+    assert!(selection.members.by_type().is_empty());
 }
 
 #[test]
@@ -62,22 +62,17 @@ fn test_entity_selection_xml_parsing_by_type() {
     "#;
 
     let selection: EntitySelection = quick_xml::de::from_str(xml).unwrap();
-    assert!(selection.members.entity_refs.is_empty());
-    assert_eq!(selection.members.by_type.len(), 1);
+    assert!(selection.members.entity_refs().is_empty());
+    assert_eq!(selection.members.by_type().len(), 1);
     assert_eq!(
-        selection.members.by_type[0].type_spec,
+        selection.members.by_type()[0].type_spec,
         Value::Literal(ObjectType::Vehicle)
     );
 }
 
 #[test]
 fn test_selected_entities_creation() {
-    let mut entities = SelectedEntities::new();
-    assert_eq!(entities.count(), 0);
-
-    entities.add_entity("Ego");
-    entities.add_entity("Target1");
-    entities.add_entity("Target2");
+    let entities = SelectedEntities::from_names(vec!["Ego", "Target1", "Target2"]);
     assert_eq!(entities.count(), 3);
 
     // Test from names
@@ -109,7 +104,7 @@ fn test_selected_entities_xml_parsing() {
     assert_eq!(entities.count(), 3);
 
     let entity_names: Vec<String> = entities
-        .entity_refs
+        .entity_refs()
         .iter()
         .filter_map(|e| e.entity_ref.as_literal().cloned())
         .collect();
@@ -190,7 +185,7 @@ fn test_entity_distribution_xml_parsing() {
         .unwrap();
     assert!(weight_06
         .scenario_object_template
-        .entity_catalog_reference
+        .entity_catalog_reference()
         .is_some());
 
     let weight_04 = distribution
@@ -200,7 +195,7 @@ fn test_entity_distribution_xml_parsing() {
         .unwrap();
     assert!(weight_04
         .scenario_object_template
-        .entity_catalog_reference
+        .entity_catalog_reference()
         .is_some());
 }
 
@@ -208,7 +203,7 @@ fn test_entity_distribution_xml_parsing() {
 fn test_entity_distribution_entry() {
     let template = ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
     let entry = EntityDistributionEntry::new(template, 0.75);
-    assert!(entry.scenario_object_template.vehicle.is_some());
+    assert!(entry.scenario_object_template.vehicle().is_some());
     assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
 
     // Test construction via ::new
@@ -216,26 +211,26 @@ fn test_entity_distribution_entry() {
         ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
         1.0,
     );
-    assert!(default_entry.scenario_object_template.vehicle.is_some());
+    assert!(default_entry.scenario_object_template.vehicle().is_some());
     assert_eq!(default_entry.weight.as_literal().unwrap(), &1.0);
 }
 
 #[test]
 fn test_scenario_object_template_basic() {
     let template = ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
-    assert!(template.vehicle.is_some());
-    assert!(template.pedestrian.is_none());
-    assert!(template.external_object_reference.is_none());
+    assert!(template.vehicle().is_some());
+    assert!(template.pedestrian().is_none());
+    assert!(template.external_object_reference().is_none());
 }
 
 #[test]
 fn test_scenario_object_template_with_external_reference() {
     let template = ScenarioObjectTemplate::with_external_reference("SportsCar");
 
-    assert!(template.vehicle.is_none());
-    assert!(template.external_object_reference.is_some());
+    assert!(template.vehicle().is_none());
+    assert!(template.external_object_reference().is_some());
 
-    let ext_ref = template.external_object_reference.unwrap();
+    let ext_ref = template.external_object_reference().unwrap();
     assert_eq!(ext_ref.name.as_literal().unwrap(), "SportsCar");
 }
 
@@ -255,7 +250,7 @@ fn test_scenario_object_template_xml_parsing() {
     let xml = r#"<ScenarioObjectTemplate><CatalogReference catalogName="VehicleCatalog" entryName="VehicleTemplate"/></ScenarioObjectTemplate>"#;
 
     let template: ScenarioObjectTemplate = quick_xml::de::from_str(xml).unwrap();
-    assert!(template.entity_catalog_reference.is_some());
+    assert!(template.entity_catalog_reference().is_some());
 }
 
 #[test]
@@ -341,8 +336,7 @@ fn test_by_type_xml_parsing() {
 #[test]
 fn test_complex_entity_selection_scenario() {
     // Test a complex scenario with multiple selection types
-    let mut members = SelectedEntities::new();
-    members.add_by_type(ObjectType::Vehicle);
+    let members = SelectedEntities::from_by_type(ObjectType::Vehicle);
     let vehicle_selection = EntitySelection::new("VehicleSelection", members);
 
     let selected_vehicles = SelectedEntities::from_names(vec!["Car1", "Car2", "Truck1"]);
@@ -366,12 +360,12 @@ fn test_complex_entity_selection_scenario() {
         ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
 
     // Verify all components work together
-    assert_eq!(vehicle_selection.members.by_type.len(), 1);
+    assert_eq!(vehicle_selection.members.by_type().len(), 1);
     assert_eq!(selected_vehicles.count(), 3);
     assert_eq!(selected_pedestrians.count(), 2);
     assert_eq!(vehicle_distribution.entries.len(), 3);
     assert_eq!(vehicle_distribution.total_weight(), 1.0);
-    assert!(vehicle_template.vehicle.is_some());
+    assert!(vehicle_template.vehicle().is_some());
 }
 
 #[test]
@@ -380,13 +374,9 @@ fn test_parameter_support_in_entity_selection() {
     let entry = EntityDistributionEntry {
         weight: Double::parameter("VehicleWeight".to_string()),
         scenario_object_template: ScenarioObjectTemplate {
-            vehicle: None,
-            pedestrian: None,
-            misc_object: None,
-            external_object_reference: Some(ExternalObjectReference {
+            entity: EntityObjectChoice::ExternalObjectReference(ExternalObjectReference {
                 name: OSString::parameter("VehicleName".to_string()),
             }),
-            entity_catalog_reference: None,
             object_controller: Vec::new(),
         },
     };
@@ -394,7 +384,7 @@ fn test_parameter_support_in_entity_selection() {
     assert_eq!(
         entry
             .scenario_object_template
-            .external_object_reference
+            .external_object_reference()
             .unwrap()
             .name
             .as_parameter()
@@ -407,10 +397,13 @@ fn test_parameter_support_in_entity_selection() {
 #[test]
 fn test_all_defaults() {
     // these types no longer fabricate content via `Default` — each
-    // requires an explicit, stated value instead. `SelectedEntities` and `EntityDistribution` now offer explicit `new()` constructors instead of a derived `Default`: the
-    // schema requires at least one child of each, so an empty value is category 3.
-    let _entity_selection = EntitySelection::new("Selection1", SelectedEntities::new());
-    let _selected_entities = SelectedEntities::new();
+    // requires an explicit, stated value instead. `SelectedEntities`'s choice
+    // requires at least one branch member, so it is built from names or a
+    // type rather than an empty constructor; `EntityDistribution` keeps its
+    // explicit `new()` for the same reason.
+    let _entity_selection =
+        EntitySelection::new("Selection1", SelectedEntities::from_names(vec!["Ego"]));
+    let _selected_entities = SelectedEntities::from_names(vec!["Ego"]);
     let _entity_distribution = EntityDistribution::new();
     let _entity_distribution_entry = EntityDistributionEntry::new(
         ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
@@ -429,8 +422,7 @@ fn test_all_defaults() {
 #[test]
 fn test_serialization_roundtrip() {
     // Test that all types can be serialized and deserialized
-    let mut members = SelectedEntities::new();
-    members.add_by_type(ObjectType::Vehicle);
+    let members = SelectedEntities::from_by_type(ObjectType::Vehicle);
     let original_selection = EntitySelection::new("Selection1", members);
     let xml = quick_xml::se::to_string(&original_selection).unwrap();
     let parsed_selection: EntitySelection = quick_xml::de::from_str(&xml).unwrap();

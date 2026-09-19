@@ -318,7 +318,7 @@ fn resolve_expressions_in_document(
             }
 
             // Process vehicle properties if present
-            if let Some(vehicle) = &mut entity.vehicle {
+            if let Some(vehicle) = entity.vehicle_mut() {
                 if resolve_string_value(&mut vehicle.name) {
                     resolved_count += 1;
                 }
@@ -326,7 +326,7 @@ fn resolve_expressions_in_document(
             }
 
             // Process pedestrian properties if present
-            if let Some(pedestrian) = &mut entity.pedestrian {
+            if let Some(pedestrian) = entity.pedestrian_mut() {
                 if resolve_string_value(&mut pedestrian.name) {
                     resolved_count += 1;
                 }
@@ -588,7 +588,7 @@ fn resolve_catalog_references_simple(
 
                 // Check controller references
                 for object_controller in &entity.object_controller {
-                    if let Some(controller_ref) = &object_controller.catalog_reference {
+                    if let Some(controller_ref) = object_controller.catalog_reference() {
                         println!("      🎮 Resolving controller reference...");
 
                         match resolve_catalog_reference_simple(
@@ -648,11 +648,11 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                 let mut controller_refs = 0;
 
                 for entity in &entities.scenario_objects {
-                    if entity.entity_catalog_reference.is_some() {
+                    if entity.catalog_reference().is_some() {
                         catalog_refs += 1;
                     }
                     for object_controller in &entity.object_controller {
-                        if object_controller.catalog_reference.is_some() {
+                        if object_controller.catalog_reference().is_some() {
                             controller_refs += 1;
                         }
                     }

@@ -44,18 +44,18 @@ file is invalid on disk, which is the whole point of the fixture.\
 
 [[entry]]
 path = "openscenario1-engine/engine/tests/data/Scenarios/OSC_1_3_test_invalid.xosc"
-gates = ["validate", "validate-input"]
+gates = ["report", "lossy", "validate", "validate-input"]
 assert = "input-schema-invalid"
 reason = """
 Deliberately invalid upstream fixture. Its own comment says so: "XOR was fixed between 1.2 and \
 1.3. Now ScenarioObject must have an EntityObject (Vehicle, Pedestrian...)". The <ScenarioObject \
-name="Ego"> at line 10 has no EntityObject child. The crate models that choice group as parallel \
-Option fields, so it parses, round-trips to a fixed point and reproduces the input losslessly — \
-it stays live on `report` and `lossy` and must keep passing both. Its serialized output then \
-carries exactly the one schema error the input has ("Element 'ScenarioObject': Missing child \
-element(s)..."), which is the crate behaving correctly: garbage in, identical garbage out. Only \
-the two schema gates are exempt: `validate` because the output is invalid, `validate-input` \
-because the input is.\
+name="Ego"> at line 10 has no EntityObject child. `ScenarioObject` used to model that group as \
+parallel Option fields, so the missing child parsed as all-None and the crate reproduced the \
+input losslessly; it lived on `report` and `lossy` under that shape. The group is now a single \
+`$value` enum, so the same document fails to parse with `missing field '$value'`, which is the \
+more direct rejection of the same defect XSD:2000-2005 names. `report` and `lossy` join \
+`validate` and `validate-input` in the exemption for that reason; `validate-input` still asserts \
+the input itself is schema-invalid.\
 """
 
 [[entry]]

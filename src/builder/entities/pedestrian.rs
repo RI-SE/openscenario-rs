@@ -390,7 +390,7 @@ mod tests {
     #[test]
     fn test_detached_builder_defaults() {
         let obj = DetachedPedestrianBuilder::new("ped1").build();
-        let p = obj.pedestrian.as_ref().unwrap();
+        let p = obj.pedestrian().unwrap();
         assert_eq!(p.name.as_literal(), Some(&"DefaultPedestrian".to_string()));
         assert_eq!(
             p.pedestrian_category,
@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn test_pedestrian_preset_sets_dimensions() {
         let obj = DetachedPedestrianBuilder::new("ped1").pedestrian().build();
-        let p = obj.pedestrian.as_ref().unwrap();
+        let p = obj.pedestrian().unwrap();
         assert_eq!(p.name.as_literal(), Some(&"StandardPedestrian".to_string()));
         assert_eq!(p.bounding_box.dimensions.height.as_literal(), Some(&1.8));
         assert_eq!(p.bounding_box.dimensions.width.as_literal(), Some(&0.6));
@@ -413,7 +413,7 @@ mod tests {
     #[test]
     fn test_animal_preset_differs_from_pedestrian() {
         let obj = DetachedPedestrianBuilder::new("dog").animal().build();
-        let p = obj.pedestrian.as_ref().unwrap();
+        let p = obj.pedestrian().unwrap();
         assert_eq!(
             p.pedestrian_category,
             Value::Literal(PedestrianCategory::Animal)
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn test_wheelchair_preset() {
         let obj = DetachedPedestrianBuilder::new("w1").wheelchair().build();
-        let p = obj.pedestrian.as_ref().unwrap();
+        let p = obj.pedestrian().unwrap();
         assert_eq!(
             p.pedestrian_category,
             Value::Literal(PedestrianCategory::Wheelchair)
@@ -441,7 +441,7 @@ mod tests {
             .with_model3d("models/person.fbx")
             .with_dimensions(0.7, 0.7, 1.9)
             .build();
-        let p = obj.pedestrian.as_ref().unwrap();
+        let p = obj.pedestrian().unwrap();
         assert_eq!(p.mass.as_literal(), Some(&90.0));
         assert_eq!(p.role, Some(Value::Literal(Role::Civil)));
         assert_eq!(p.model3d, Some("models/person.fbx".to_string()));

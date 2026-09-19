@@ -40,8 +40,7 @@ fn ego_vehicle(doc: &openscenario_rs::types::OpenScenario) -> &openscenario_rs::
         .iter()
         .find(|o| o.name.as_literal().map(|s| s.as_str()) == Some("Ego"))
         .expect("Ego")
-        .vehicle
-        .as_ref()
+        .vehicle()
         .expect("Ego is a Vehicle")
 }
 
@@ -72,8 +71,7 @@ fn optional_enum_attribute_absent_is_still_none() {
         .iter()
         .find(|o| o.name.as_literal().map(|s| s.as_str()) == Some("Target"))
         .expect("Target")
-        .vehicle
-        .as_ref()
+        .vehicle()
         .unwrap();
     assert_eq!(
         target.vehicle_category,
