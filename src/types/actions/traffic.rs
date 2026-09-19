@@ -332,15 +332,24 @@ pub struct CentralSwarmObject {
 
 /// Traffic area definition as a choice of `Polygon` or a set of `RoadRange`s
 ///
-/// XSD `TrafficArea` (`:2214-2219`): choice of `Polygon` or `RoadRange`
-/// (`maxOccurs="unbounded"`). Modeled as parallel `Option` fields per the
-/// crate's XSD-choice convention.
+/// XSD `TrafficArea` (`:2214-2218`): a bare `xsd:choice` of `Polygon` | `RoadRange`
+/// (`maxOccurs="unbounded"` on the `RoadRange` branch), no occurrence attributes on the
+/// choice itself, so exactly one branch is required. `$value` reads the branch from the
+/// live reader by element name; the `RoadRange` variant holds the whole repeated
+/// sequence, since a schema-valid document selecting this branch may carry more than one
+/// `<RoadRange>` sibling.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficArea {
-    #[serde(rename = "Polygon", default, skip_serializing_if = "Option::is_none")]
-    pub polygon: Option<Polygon>,
-    #[serde(rename = "RoadRange", default, skip_serializing_if = "Vec::is_empty")]
-    pub road_range: Vec<RoadRange>,
+    #[serde(rename = "$value")]
+    pub choice: TrafficAreaChoice,
+}
+
+/// The branch selected by a `TrafficArea`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum TrafficAreaChoice {
+    Polygon(Polygon),
+    RoadRange(Vec<RoadRange>),
 }
 
 /// Closed polygon area defined by at least three positions
@@ -900,8 +909,7 @@ impl TrafficArea {
     /// Create a traffic area bounded by a rectangular polygon
     pub fn rectangle(x: f64, y: f64, width: f64, height: f64) -> Self {
         Self {
-            polygon: Some(Polygon::rectangle(x, y, width, height)),
-            road_range: Vec::new(),
+            choice: TrafficAreaChoice::Polygon(Polygon::rectangle(x, y, width, height)),
         }
     }
 }
@@ -1176,8 +1184,10 @@ mod tests {
 
         assert_eq!(area.number_of_entities.as_literal(), Some(&3));
         assert_eq!(area.continuous.as_literal(), Some(&true));
-        assert_eq!(area.traffic_area.polygon.unwrap().position.len(), 4);
-        assert!(area.traffic_area.road_range.is_empty());
+        match area.traffic_area.choice {
+            TrafficAreaChoice::Polygon(p) => assert_eq!(p.position.len(), 4),
+            other => panic!("expected Polygon, got {other:?}"),
+        }
     }
 
     #[test]
@@ -1258,7 +1268,10 @@ mod tests {
     #[test]
     fn test_traffic_area_shapes() {
         let rect = TrafficArea::rectangle(10.0, 20.0, 30.0, 40.0);
-        let polygon = rect.polygon.expect("rectangle should produce a Polygon");
+        let polygon = match rect.choice {
+            TrafficAreaChoice::Polygon(p) => p,
+            other => panic!("expected Polygon, got {other:?}"),
+        };
         assert_eq!(polygon.position.len(), 4);
 
         let corner0 = polygon.position[0]
@@ -1806,7 +1819,7 @@ mod tests {
         use crate::types::positions::WorldPosition;
 
         let traffic_area = TrafficArea {
-            polygon: Some(Polygon {
+            choice: TrafficAreaChoice::Polygon(Polygon {
                 position: vec![
                     Position {
                         world_position: Some(WorldPosition::new(0.0, 0.0)),
@@ -1822,21 +1835,21 @@ mod tests {
                     },
                 ],
             }),
-            road_range: Vec::new(),
         };
 
         let xml = quick_xml::se::to_string(&traffic_area).unwrap();
         let reparsed: TrafficArea = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(traffic_area, reparsed);
-        assert_eq!(reparsed.polygon.unwrap().position.len(), 3);
-        assert!(reparsed.road_range.is_empty());
+        match reparsed.choice {
+            TrafficAreaChoice::Polygon(p) => assert_eq!(p.position.len(), 3),
+            other => panic!("expected Polygon, got {other:?}"),
+        }
     }
 
     #[test]
     fn test_traffic_area_road_range_round_trip() {
         let traffic_area = TrafficArea {
-            polygon: None,
-            road_range: vec![RoadRange {
+            choice: TrafficAreaChoice::RoadRange(vec![RoadRange {
                 length: Some(Double::literal(50.0)),
                 road_cursor: vec![
                     RoadCursor {
@@ -1852,21 +1865,91 @@ mod tests {
                         lane: Vec::new(),
                     },
                 ],
-            }],
+            }]),
         };
 
         let xml = quick_xml::se::to_string(&traffic_area).unwrap();
         let reparsed: TrafficArea = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(traffic_area, reparsed);
-        assert!(reparsed.polygon.is_none());
-        assert_eq!(reparsed.road_range.len(), 1);
-        assert_eq!(reparsed.road_range[0].road_cursor.len(), 2);
+        let road_ranges = match reparsed.choice {
+            TrafficAreaChoice::RoadRange(rr) => rr,
+            other => panic!("expected RoadRange, got {other:?}"),
+        };
+        assert_eq!(road_ranges.len(), 1);
+        assert_eq!(road_ranges[0].road_cursor.len(), 2);
         assert_eq!(
-            reparsed.road_range[0].road_cursor[0].lane[0]
-                .id
-                .as_literal(),
+            road_ranges[0].road_cursor[0].lane[0].id.as_literal(),
             Some(&-1)
         );
+    }
+
+    #[test]
+    fn test_traffic_area_zero_branches_rejected() {
+        let xml = "<TrafficArea></TrafficArea>";
+        let err = quick_xml::de::from_str::<TrafficArea>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("missing field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_traffic_area_polygon_and_road_range_together_rejected() {
+        // Two *different* branches selected at once — the choice cardinality
+        // violation, not to be confused with a single `RoadRange` branch
+        // that legitimately repeats.
+        let xml = concat!(
+            "<TrafficArea>",
+            "<Polygon>",
+            r#"<Position><WorldPosition x="0" y="0"/></Position>"#,
+            r#"<Position><WorldPosition x="1" y="0"/></Position>"#,
+            r#"<Position><WorldPosition x="1" y="1"/></Position>"#,
+            "</Polygon>",
+            r#"<RoadRange><RoadCursor roadId="R1"/><RoadCursor roadId="R2"/></RoadRange>"#,
+            "</TrafficArea>"
+        );
+        let err = quick_xml::de::from_str::<TrafficArea>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("duplicate field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_traffic_area_two_road_ranges_is_a_single_valid_branch() {
+        // A `RoadRange` branch that repeats is one branch selected twice,
+        // not two branches — the schema's `maxOccurs="unbounded"` on this
+        // element, not a second choice member. This must be accepted, and
+        // the serialized bytes must equal the source document: a `Vec`
+        // directly beneath an externally tagged enum is read from the live
+        // parser rather than buffered into a map, so nothing here should
+        // behave like the `#[serde(flatten)]` failure this campaign exists
+        // to remove.
+        let xml = concat!(
+            "<TrafficArea>",
+            r#"<RoadRange><RoadCursor roadId="R1"/><RoadCursor roadId="R2"/></RoadRange>"#,
+            r#"<RoadRange><RoadCursor roadId="R3"/><RoadCursor roadId="R4"/></RoadRange>"#,
+            "</TrafficArea>"
+        );
+        let area: TrafficArea = quick_xml::de::from_str(xml).unwrap();
+        let road_ranges = match &area.choice {
+            TrafficAreaChoice::RoadRange(rr) => rr,
+            other => panic!("expected RoadRange, got {other:?}"),
+        };
+        assert_eq!(road_ranges.len(), 2);
+        assert_eq!(
+            road_ranges[0].road_cursor[0].road_id.as_literal(),
+            Some(&"R1".to_string())
+        );
+        assert_eq!(
+            road_ranges[1].road_cursor[1].road_id.as_literal(),
+            Some(&"R4".to_string())
+        );
+
+        let serialized = quick_xml::se::to_string(&area).unwrap();
+        assert_eq!(serialized, xml, "byte-exact round trip");
+        let reparsed: TrafficArea = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(area, reparsed);
     }
 
     #[test]

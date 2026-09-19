@@ -205,9 +205,25 @@ Breaking, unless noted.
 
   This breaks field access and struct literals: the two `Option` fields become one
   `choice: ControllerDistributionEntryChoice`, and `ControllerDistribution::single_controller`
-  is updated to the new shape. `TrafficArea` (`:2214-2218`), in the same file, is also a bare
-  `xsd:choice` of `Polygon` | `RoadRange` (`maxOccurs="unbounded"`) modeled as one `Option`
-  field beside a `Vec`, and was found but left unconverted in this pass.
+  is updated to the new shape.
+
+- **`TrafficArea` now holds a choice enum instead of one `Option` field beside a `Vec`.**
+  XSD `TrafficArea` (`Schema/OpenSCENARIO.xsd:2214-2218`) is a bare `xsd:choice` of `Polygon` |
+  `RoadRange`, with `maxOccurs="unbounded"` on the `RoadRange` branch, so a schema-valid
+  document selecting that branch may repeat it. Modeled as `polygon: Option<Polygon>` beside
+  `road_range: Vec<RoadRange>`, it accepted a document naming no branch, and a document naming
+  both `Polygon` and `RoadRange` together, keeping and re-serializing whatever was present. It
+  now carries its branch in an externally tagged enum behind `#[serde(rename = "$value")]`,
+  with the `RoadRange` variant holding the whole repeated sequence rather than a single
+  element, so a `<RoadRange>` sibling repeated any number of times remains one branch selected
+  once. Serde rejects a document naming no branch with ``missing field `$value` `` and one
+  naming both `Polygon` and `RoadRange` with ``duplicate field `$value` ``; a document
+  repeating only `RoadRange` continues to parse and round-trips byte-exactly, since `$value`
+  reads the sequence from the live parser rather than buffering it into a map, unlike the
+  `#[serde(flatten)]` construct this campaign removes.
+
+  This breaks field access and struct literals: `polygon`/`road_range` become one
+  `choice: TrafficAreaChoice`, and `TrafficArea::rectangle` is updated to the new shape.
 
 - **`Property`'s `@name` and `@value` now accept parameter references.** XSD `Property`
   (`Schema/OpenSCENARIO.xsd:1809-1812`) types both attributes as the schema's `String`, a

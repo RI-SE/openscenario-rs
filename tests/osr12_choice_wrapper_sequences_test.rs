@@ -29,7 +29,7 @@
 use openscenario_rs::types::actions::movement::{
     FinalSpeed, LaneChangeTarget, LaneOffsetTarget, LateralAction,
 };
-use openscenario_rs::types::actions::traffic::TrafficSignalAction;
+use openscenario_rs::types::actions::traffic::{TrafficAreaChoice, TrafficSignalAction};
 use openscenario_rs::types::actions::wrappers::{
     EntityAction, EntityActionChoice, GlobalAction, GlobalActionElement, ModifyRule,
     ParameterAction, PrivateAction, PrivateActionElement, TrafficAction, TrafficActionChoice,
@@ -81,8 +81,11 @@ fn traffic_action_variant_a_original_payload_parses() {
         panic!("expected TrafficAreaAction, got {:?}", action.action);
     };
     // `minOccurs="2"` RoadCursor children survived the parse.
-    assert_eq!(area.traffic_area.road_range.len(), 1);
-    assert_eq!(area.traffic_area.road_range[0].road_cursor.len(), 2);
+    let TrafficAreaChoice::RoadRange(road_ranges) = &area.traffic_area.choice else {
+        panic!("expected RoadRange, got {:?}", area.traffic_area.choice);
+    };
+    assert_eq!(road_ranges.len(), 1);
+    assert_eq!(road_ranges[0].road_cursor.len(), 2);
     assert_eq!(
         area.traffic_distribution.traffic_distribution_entry.len(),
         1
@@ -108,7 +111,10 @@ fn traffic_action_variant_c_single_road_cursor_parses() {
     let TrafficActionChoice::TrafficAreaAction(area) = &action.action else {
         panic!("expected TrafficAreaAction");
     };
-    assert_eq!(area.traffic_area.road_range[0].road_cursor.len(), 1);
+    let TrafficAreaChoice::RoadRange(road_ranges) = &area.traffic_area.choice else {
+        panic!("expected RoadRange, got {:?}", area.traffic_area.choice);
+    };
+    assert_eq!(road_ranges[0].road_cursor.len(), 1);
 }
 
 #[test]
