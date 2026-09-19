@@ -20,10 +20,10 @@ fn sparse_scenario_parses() {
         .environment_action
         .as_ref()
         .expect("environment action present");
-    let env = env_action
-        .environment
-        .as_ref()
-        .expect("inline environment branch");
+    let env = match &env_action.action {
+        openscenario_rs::types::scenario::init::EnvironmentActionChoice::Environment(env) => env,
+        other => panic!("expected inline Environment branch, got {other:?}"),
+    };
 
     assert_eq!(env.name.as_literal().unwrap(), "SparseEnvironment");
     // Only @name given: everything else must be None

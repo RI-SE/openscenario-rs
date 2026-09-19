@@ -16,8 +16,8 @@ use openscenario_rs::types::actions::movement::{
 };
 use openscenario_rs::types::actions::traffic::{TrafficSignalAction, TrafficSignalActionChoice};
 use openscenario_rs::types::actions::wrappers::{
-    EntityAction, EntityActionChoice, ModifyRuleChoice, NamedAction, ParameterAction,
-    ParameterActionChoice, TrafficAction, TrafficActionChoice, VariableAction,
+    EntityAction, EntityActionChoice, ModifyRuleChoice, NamedAction, NamedActionChoice,
+    ParameterAction, ParameterActionChoice, TrafficAction, TrafficActionChoice, VariableAction,
     VariableActionChoice, VariableModifyRuleChoice,
 };
 use openscenario_rs::types::routing::RouteRef;
@@ -293,7 +293,10 @@ fn named_action_user_defined_action_round_trip() {
     let xml = r#"<Action name="a1"><UserDefinedAction><CustomCommandAction type="myCommand"/></UserDefinedAction></Action>"#;
     let action: NamedAction = de(xml);
     assert_eq!(action.name.to_string(), "a1");
-    assert!(action.user_defined_action.is_some());
+    assert!(matches!(
+        action.action,
+        NamedActionChoice::UserDefinedAction(_)
+    ));
     let out = ser("Action", &action);
     assert!(out.contains("UserDefinedAction"), "got: {out}");
     assert!(out.contains("name=\"a1\""), "got: {out}");

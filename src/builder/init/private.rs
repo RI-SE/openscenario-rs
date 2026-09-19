@@ -290,10 +290,7 @@ impl GlobalActionBuilder {
 
     /// Add an environment action with custom environment
     pub fn add_environment_action(mut self, environment: Environment) -> Self {
-        self.environment_action = Some(EnvironmentAction {
-            environment: Some(environment),
-            catalog_reference: None,
-        });
+        self.environment_action = Some(EnvironmentAction::environment(environment));
         self
     }
 
@@ -303,10 +300,7 @@ impl GlobalActionBuilder {
     /// schema default, so the caller supplies it rather than getting a silently invented
     /// `"DefaultEnvironment"`.
     pub fn add_named_environment_action(mut self, name: &str) -> Self {
-        self.environment_action = Some(EnvironmentAction {
-            environment: Some(Environment::new(name)),
-            catalog_reference: None,
-        });
+        self.environment_action = Some(EnvironmentAction::environment(Environment::new(name)));
         self
     }
 

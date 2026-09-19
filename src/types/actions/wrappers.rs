@@ -26,7 +26,7 @@ pub enum Action {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum GlobalAction {
-    EnvironmentAction(EnvironmentAction),
+    EnvironmentAction(crate::types::scenario::init::EnvironmentAction),
     EntityAction(EntityAction),
     InfrastructureAction(InfrastructureAction),
     SetMonitorAction(SetMonitorAction),
@@ -192,28 +192,6 @@ impl CustomCommandAction {
             content: content.into(),
         }
     }
-}
-
-/// XSD `EnvironmentAction` (:1195-1200): choice of `Environment` |
-/// `CatalogReference` (to a `CatalogEnvironment` catalog entry).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct EnvironmentAction {
-    #[serde(
-        rename = "Environment",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub environment: Option<crate::types::environment::Environment>,
-    #[serde(
-        rename = "CatalogReference",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub catalog_reference: Option<
-        crate::types::catalogs::references::CatalogReference<
-            crate::types::catalogs::environments::CatalogEnvironment,
-        >,
-    >,
 }
 
 // Monitor Action - Set monitor state
@@ -399,68 +377,56 @@ pub struct PrivateActionElement {
 /// externally-tagged enum whose *variant payloads are themselves* externally-tagged
 /// enums is not serializable by quick-xml — `GlobalAction` and `PrivateAction`
 /// deserialized fine and then failed to write with
-/// `Unsupported("cannot serialize enum newtype variant ...")`. Replaced with the
-/// parallel-`Option` choice shape this crate prefers (see `AGENT_PROMPT.md` and
-/// `StoryAction`, which models the very same XSD type), so each branch now
-/// round-trips.
+/// `Unsupported("cannot serialize enum newtype variant ...")`. The group is a bare
+/// `xsd:choice`, so `minOccurs`/`maxOccurs` both default to 1 and exactly one branch
+/// is required: a bare `$value` states that directly, and serde rejects a document
+/// naming no branch with `missing field $value` and one naming two with
+/// `duplicate field $value`, structurally, with no hand-written validation. The
+/// nesting problem above is why the payload is an enum over element wrapper structs
+/// (`GlobalActionElement`, `PrivateActionElement`) rather than over `GlobalAction`
+/// and `PrivateAction` directly — each wrapper holds its own `$value`, so each level
+/// writes exactly one element name. `StoryAction` (`scenario/story.rs`) models the
+/// same XSD type the same way.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NamedAction {
     #[serde(rename = "@name")]
     pub name: OSString,
 
-    #[serde(
-        rename = "GlobalAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub global_action: Option<GlobalActionElement>,
+    #[serde(rename = "$value")]
+    pub action: NamedActionChoice,
+}
 
-    #[serde(
-        rename = "UserDefinedAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub user_defined_action: Option<UserDefinedAction>,
-
-    #[serde(
-        rename = "PrivateAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub private_action: Option<PrivateActionElement>,
+/// The three branches of the XSD `Action` choice (:705-712).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum NamedActionChoice {
+    GlobalAction(GlobalActionElement),
+    UserDefinedAction(UserDefinedAction),
+    PrivateAction(PrivateActionElement),
 }
 
 impl NamedAction {
-    fn empty(name: impl Into<String>) -> Self {
-        NamedAction {
-            name: OSString::literal(name.into()),
-            global_action: None,
-            user_defined_action: None,
-            private_action: None,
-        }
-    }
-
     /// `<GlobalAction>` branch of the XSD `Action` choice (:705-712).
     pub fn global(name: impl Into<String>, action: GlobalAction) -> Self {
         NamedAction {
-            global_action: Some(GlobalActionElement { action }),
-            ..Self::empty(name)
+            name: OSString::literal(name.into()),
+            action: NamedActionChoice::GlobalAction(GlobalActionElement { action }),
         }
     }
 
     /// `<UserDefinedAction>` branch of the XSD `Action` choice (:705-712).
     pub fn user_defined(name: impl Into<String>, action: UserDefinedAction) -> Self {
         NamedAction {
-            user_defined_action: Some(action),
-            ..Self::empty(name)
+            name: OSString::literal(name.into()),
+            action: NamedActionChoice::UserDefinedAction(action),
         }
     }
 
     /// `<PrivateAction>` branch of the XSD `Action` choice (:705-712).
     pub fn private(name: impl Into<String>, action: PrivateAction) -> Self {
         NamedAction {
-            private_action: Some(PrivateActionElement { action }),
-            ..Self::empty(name)
+            name: OSString::literal(name.into()),
+            action: NamedActionChoice::PrivateAction(PrivateActionElement { action }),
         }
     }
 }
@@ -790,29 +756,7 @@ mod tests {
         assert_eq!(action, reparsed);
     }
 
-    #[test]
-    fn test_environment_action_with_environment_round_trip() {
-        let xml = r#"<EnvironmentAction><Environment name="Env1"/></EnvironmentAction>"#;
-        let action: EnvironmentAction = quick_xml::de::from_str(xml).unwrap();
-        assert!(action.environment.is_some());
-        assert!(action.catalog_reference.is_none());
-
-        let serialized = quick_xml::se::to_string(&action).unwrap();
-        assert!(serialized.contains("<Environment"));
-        let reparsed: EnvironmentAction = quick_xml::de::from_str(&serialized).unwrap();
-        assert_eq!(action, reparsed);
-    }
-
-    #[test]
-    fn test_environment_action_with_catalog_reference_round_trip() {
-        let xml = r#"<EnvironmentAction><CatalogReference catalogName="EnvCatalog" entryName="Sunny"/></EnvironmentAction>"#;
-        let action: EnvironmentAction = quick_xml::de::from_str(xml).unwrap();
-        assert!(action.environment.is_none());
-        assert!(action.catalog_reference.is_some());
-
-        let serialized = quick_xml::se::to_string(&action).unwrap();
-        assert!(serialized.contains("<CatalogReference"));
-        let reparsed: EnvironmentAction = quick_xml::de::from_str(&serialized).unwrap();
-        assert_eq!(action, reparsed);
-    }
+    // `EnvironmentAction` used to be duplicated here; it is now only
+    // `crate::types::scenario::init::EnvironmentAction`, which carries its own
+    // round-trip and cardinality tests in `scenario/init.rs`.
 }

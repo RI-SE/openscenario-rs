@@ -163,25 +163,47 @@ impl GlobalAction {
     }
 }
 
-/// Environment setup action: XSD choice of an inline Environment or a CatalogReference
+/// XSD `EnvironmentAction` (:1195-1200): a bare `xsd:choice` of `Environment` |
+/// `CatalogReference` (to a `CatalogEnvironment` catalog entry). Neither branch
+/// carries `minOccurs`, so both default to 1 and exactly one is required: a bare
+/// `$value` states that directly, and serde rejects a document naming no branch
+/// with `missing field $value` and one naming two with `duplicate field $value`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EnvironmentAction {
-    #[serde(
-        rename = "Environment",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub environment: Option<Environment>,
-    #[serde(
-        rename = "CatalogReference",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub catalog_reference: Option<
+    #[serde(rename = "$value")]
+    pub action: EnvironmentActionChoice,
+}
+
+/// The two branches of the XSD `EnvironmentAction` choice (:1195-1200).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum EnvironmentActionChoice {
+    Environment(Environment),
+    CatalogReference(
         crate::types::catalogs::references::CatalogReference<
             crate::types::catalogs::environments::CatalogEnvironment,
         >,
-    >,
+    ),
+}
+
+impl EnvironmentAction {
+    /// `<Environment>` branch of the XSD `EnvironmentAction` choice (:1195-1200).
+    pub fn environment(environment: Environment) -> Self {
+        Self {
+            action: EnvironmentActionChoice::Environment(environment),
+        }
+    }
+
+    /// `<CatalogReference>` branch of the XSD `EnvironmentAction` choice (:1195-1200).
+    pub fn catalog_reference(
+        catalog_reference: crate::types::catalogs::references::CatalogReference<
+            crate::types::catalogs::environments::CatalogEnvironment,
+        >,
+    ) -> Self {
+        Self {
+            action: EnvironmentActionChoice::CatalogReference(catalog_reference),
+        }
+    }
 }
 
 /// Private actions specific to individual entities
@@ -457,16 +479,13 @@ mod tests {
         let init = Init {
             actions: Actions {
                 global_actions: vec![GlobalAction {
-                    environment_action: Some(EnvironmentAction {
-                        environment: Some(Environment {
-                            name: Value::literal("TestEnvironment".to_string()),
-                            parameter_declarations: None,
-                            time_of_day: None,
-                            weather: None,
-                            road_condition: None,
-                        }),
-                        catalog_reference: None,
-                    }),
+                    environment_action: Some(EnvironmentAction::environment(Environment {
+                        name: Value::literal("TestEnvironment".to_string()),
+                        parameter_declarations: None,
+                        time_of_day: None,
+                        weather: None,
+                        road_condition: None,
+                    })),
                     ..GlobalAction::empty()
                 }],
                 user_defined_actions: Vec::new(),
@@ -563,43 +582,27 @@ mod tests {
 
     #[test]
     fn test_environment_action_creation() {
-        let env_action = EnvironmentAction {
-            environment: Some(Environment {
-                name: Value::literal("TestEnvironment".to_string()),
-                parameter_declarations: None,
-                time_of_day: Some(TimeOfDay {
-                    animation: Value::literal(false),
-                    date_time: "2021-12-10T11:00:00".to_string(),
-                }),
-                weather: Some(Weather::default()),
-                road_condition: Some(RoadCondition {
-                    friction_scale_factor: crate::types::basic::Double::literal(1.0),
-                    wetness: None,
-                    properties: None,
-                }),
+        let env_action = EnvironmentAction::environment(Environment {
+            name: Value::literal("TestEnvironment".to_string()),
+            parameter_declarations: None,
+            time_of_day: Some(TimeOfDay {
+                animation: Value::literal(false),
+                date_time: "2021-12-10T11:00:00".to_string(),
             }),
-            catalog_reference: None,
-        };
+            weather: Some(Weather::default()),
+            road_condition: Some(RoadCondition {
+                friction_scale_factor: crate::types::basic::Double::literal(1.0),
+                wetness: None,
+                properties: None,
+            }),
+        });
 
+        let EnvironmentActionChoice::Environment(environment) = &env_action.action else {
+            panic!("expected Environment branch, got {:?}", env_action.action);
+        };
+        assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(
-            env_action
-                .environment
-                .as_ref()
-                .unwrap()
-                .name
-                .as_literal()
-                .unwrap(),
-            "TestEnvironment"
-        );
-        assert_eq!(
-            env_action
-                .environment
-                .as_ref()
-                .unwrap()
-                .time_of_day
-                .as_ref()
-                .unwrap()
-                .date_time,
+            environment.time_of_day.as_ref().unwrap().date_time,
             "2021-12-10T11:00:00"
         );
     }
@@ -609,16 +612,13 @@ mod tests {
         let init = Init {
             actions: Actions {
                 global_actions: vec![GlobalAction {
-                    environment_action: Some(EnvironmentAction {
-                        environment: Some(Environment {
-                            name: Value::literal("TestEnvironment".to_string()),
-                            parameter_declarations: None,
-                            time_of_day: None,
-                            weather: None,
-                            road_condition: None,
-                        }),
-                        catalog_reference: None,
-                    }),
+                    environment_action: Some(EnvironmentAction::environment(Environment {
+                        name: Value::literal("TestEnvironment".to_string()),
+                        parameter_declarations: None,
+                        time_of_day: None,
+                        weather: None,
+                        road_condition: None,
+                    })),
                     ..GlobalAction::empty()
                 }],
                 user_defined_actions: Vec::new(),

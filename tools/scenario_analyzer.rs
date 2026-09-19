@@ -968,7 +968,10 @@ fn analyze_init_detailed(
     // Analyze global actions (environment setup)
     for global_action in &init.actions.global_actions {
         if let Some(env_action) = &global_action.environment_action {
-            if let Some(environment) = &env_action.environment {
+            if let openscenario_rs::types::scenario::init::EnvironmentActionChoice::Environment(
+                environment,
+            ) = &env_action.action
+            {
                 analysis.environment_setup = Some(EnvironmentSetup {
                     time_of_day: environment
                         .time_of_day

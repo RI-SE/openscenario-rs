@@ -41,10 +41,7 @@ impl EnvironmentActionBuilder {
     pub fn build(self) -> BuilderResult<GlobalAction> {
         self.validate()?;
 
-        let environment_action = EnvironmentAction {
-            environment: Some(self.environment.unwrap()),
-            catalog_reference: None,
-        };
+        let environment_action = EnvironmentAction::environment(self.environment.unwrap());
 
         Ok(GlobalAction {
             environment_action: Some(environment_action),
@@ -301,16 +298,12 @@ mod tests {
 
         // Verify the action was built correctly
         assert!(action.environment_action.is_some());
-        assert_eq!(
-            action
-                .environment_action
-                .unwrap()
-                .environment
-                .unwrap()
-                .name
-                .as_literal()
-                .unwrap(),
-            "TestEnvironment"
-        );
+        let env_action = action.environment_action.unwrap();
+        let crate::types::scenario::init::EnvironmentActionChoice::Environment(environment) =
+            env_action.action
+        else {
+            panic!("expected Environment branch");
+        };
+        assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
     }
 }

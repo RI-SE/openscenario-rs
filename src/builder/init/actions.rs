@@ -29,10 +29,7 @@ impl InitActionBuilder {
     /// `"DefaultEnvironment"`.
     pub fn add_global_environment_action(mut self, name: &str) -> Self {
         let global_action = GlobalAction {
-            environment_action: Some(EnvironmentAction {
-                environment: Some(Environment::new(name)),
-                catalog_reference: None,
-            }),
+            environment_action: Some(EnvironmentAction::environment(Environment::new(name))),
             ..GlobalAction::empty()
         };
         self.global_actions.push(global_action);

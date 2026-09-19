@@ -127,6 +127,24 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **`NamedAction` and `EnvironmentAction` now hold a choice enum instead of parallel `Option`
+  fields.** `Action` (`Schema/OpenSCENARIO.xsd:705-712`, modeled by `wrappers::NamedAction`) and
+  `EnvironmentAction` (`:1195-1200`, modeled by `scenario::init::EnvironmentAction`) are each a
+  bare `xsd:choice` with no `minOccurs="0"` anywhere, so exactly one branch is required in both.
+  `NamedAction::action` now holds a `NamedActionChoice` of `GlobalAction` | `UserDefinedAction` |
+  `PrivateAction`, each `GlobalAction`/`PrivateAction` branch carried by its existing element
+  wrapper (`GlobalActionElement`/`PrivateActionElement`) rather than the bare enum, because an
+  externally-tagged enum whose variant payload is itself an externally-tagged enum deserializes
+  but fails to serialize. `EnvironmentAction::action` now holds an `EnvironmentActionChoice` of
+  `Environment` | `CatalogReference`.
+
+  Modeled as parallel fields, both types accepted zero branches or several at once and
+  re-serialized whichever were set. Under `$value` serde reads the branch from the live reader by
+  element name, so the cardinality is a property of the type: zero branches fail with
+  ``missing field `$value` `` and two with ``duplicate field `$value` ``, with no hand-written
+  `validate()` needed. `NamedAction::global`/`user_defined`/`private` and the new
+  `EnvironmentAction::environment`/`catalog_reference` construct the chosen branch directly.
+
 - **The geometry and distribution choice groups now hold a choice enum instead of parallel
   `Option` fields, and `Deterministic` no longer reorders its content.** `Shape`
   (`Schema/OpenSCENARIO.xsd:2031-2038`) and `DeterministicSingleParameterDistribution`
@@ -495,6 +513,10 @@ Breaking, unless noted.
 
 ### Removed
 
+- **`types::actions::wrappers::EnvironmentAction`**, a duplicate model of the XSD
+  `EnvironmentAction` complexType (`:1195-1200`) that was reachable only from tests, never from a
+  parsed document: `wrappers::GlobalAction::EnvironmentAction` now carries
+  `types::scenario::init::EnvironmentAction`, the type every document-parsing path already used.
 - **`Shape::empty()`**, replaced by the per-branch constructors `Shape::polyline`/`clothoid`/
   `clothoid_spline`/`nurbs`; a `Shape` choice has no empty state to construct.
 - **`DeterministicSingleParameterDistribution::distribution_type()`,

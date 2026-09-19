@@ -197,9 +197,9 @@ describe. Neither is reported. The exactly-one rule then has to be recovered by 
 hand-written `validate()` that every caller must remember to call, hence the invariant stops
 being a property of the type and becomes a convention about its use.
 
-A few types in the crate still carry that older shape, among them `init::GlobalAction`,
-`init::PrivateAction` and `wrappers::NamedAction`. They are not the model to copy; a new
-choice group takes the `$value` enum.
+A few types in the crate still carry that older shape, among them `init::GlobalAction` and
+`init::PrivateAction`. They are not the model to copy; a new choice group takes the `$value`
+enum.
 
 ### Do not use `#[serde(flatten)]`
 
