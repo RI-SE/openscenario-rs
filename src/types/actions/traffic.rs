@@ -299,23 +299,28 @@ pub struct ControllerDistribution {
     pub entries: Vec<ControllerDistributionEntry>,
 }
 
-/// Controller distribution entry
+/// Controller distribution entry: choice of an inline `Controller` or a catalog
+/// reference to one, weighted by `@weight`.
+///
+/// XSD `ControllerDistributionEntry` (`:995-1001`): a bare `xsd:choice` of `Controller` |
+/// `CatalogReference`, no occurrence attributes, so exactly one branch is required,
+/// alongside the required sibling attribute `@weight`. `$value` reads the branch from
+/// the live reader by element name; parallel `Option` fields would let both branches
+/// populate at once and both re-serialize, which no schema-valid document can express.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerDistributionEntry {
     #[serde(rename = "@weight")]
     pub weight: Double,
-    #[serde(
-        rename = "Controller",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub controller: Option<Controller>,
-    #[serde(
-        rename = "CatalogReference",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub catalog_reference: Option<ControllerCatalogReference>,
+    #[serde(rename = "$value")]
+    pub choice: ControllerDistributionEntryChoice,
+}
+
+/// The branch selected by a `ControllerDistributionEntry`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum ControllerDistributionEntryChoice {
+    Controller(Controller),
+    CatalogReference(ControllerCatalogReference),
 }
 
 /// Central swarm object specification
@@ -852,11 +857,10 @@ impl ControllerDistribution {
         Self {
             entries: vec![ControllerDistributionEntry {
                 weight: Double::literal(weight),
-                controller: Some(Controller::new(
+                choice: ControllerDistributionEntryChoice::Controller(Controller::new(
                     controller,
                     crate::types::enums::ControllerType::Movement,
                 )),
-                catalog_reference: None,
             }],
         }
     }
@@ -1023,9 +1027,67 @@ mod tests {
         let distribution: ControllerDistribution = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(distribution.entries.len(), 2);
         assert_eq!(distribution.entries[0].weight.as_literal(), Some(&0.6));
-        assert!(distribution.entries[0].controller.is_some());
+        assert!(matches!(
+            distribution.entries[0].choice,
+            ControllerDistributionEntryChoice::Controller(_)
+        ));
         assert_eq!(distribution.entries[1].weight.as_literal(), Some(&0.4));
-        assert!(distribution.entries[1].catalog_reference.is_some());
+        assert!(matches!(
+            distribution.entries[1].choice,
+            ControllerDistributionEntryChoice::CatalogReference(_)
+        ));
+    }
+
+    #[test]
+    fn test_controller_distribution_entry_zero_branches_rejected() {
+        let xml = r#"<ControllerDistributionEntry weight="1"></ControllerDistributionEntry>"#;
+        let err = quick_xml::de::from_str::<ControllerDistributionEntry>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("missing field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_controller_distribution_entry_two_branches_rejected() {
+        let xml = r#"<ControllerDistributionEntry weight="1"><Controller name="AI"/><CatalogReference catalogName="c" entryName="e"/></ControllerDistributionEntry>"#;
+        let err = quick_xml::de::from_str::<ControllerDistributionEntry>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("duplicate field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_controller_distribution_entry_controller_round_trip() {
+        let xml = r#"<ControllerDistributionEntry weight="0.6"><Controller name="AIController"/></ControllerDistributionEntry>"#;
+        let entry: ControllerDistributionEntry = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(entry.weight.as_literal(), Some(&0.6));
+        match &entry.choice {
+            ControllerDistributionEntryChoice::Controller(c) => {
+                assert_eq!(c.name.as_literal(), Some(&"AIController".to_string()))
+            }
+            other => panic!("expected Controller, got {other:?}"),
+        }
+        let serialized = quick_xml::se::to_string(&entry).unwrap();
+        assert_eq!(serialized, xml);
+        let reparsed: ControllerDistributionEntry = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(entry, reparsed);
+    }
+
+    #[test]
+    fn test_controller_distribution_entry_catalog_reference_round_trip() {
+        let xml = r#"<ControllerDistributionEntry weight="0.4"><CatalogReference catalogName="ControllerCatalog" entryName="Manual"/></ControllerDistributionEntry>"#;
+        let entry: ControllerDistributionEntry = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(entry.weight.as_literal(), Some(&0.4));
+        assert!(matches!(
+            entry.choice,
+            ControllerDistributionEntryChoice::CatalogReference(_)
+        ));
+        let serialized = quick_xml::se::to_string(&entry).unwrap();
+        assert_eq!(serialized, xml);
+        let reparsed: ControllerDistributionEntry = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(entry, reparsed);
     }
 
     #[test]

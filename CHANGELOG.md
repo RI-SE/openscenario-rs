@@ -195,6 +195,20 @@ Breaking, unless noted.
   an empty complex type with no fields at all. `Vehicle` (`:2498-2514`), which holds a
   `Trailer` among five other optional elements, is likewise `xsd:all` and was left as it was.
 
+- **`ControllerDistributionEntry` now holds a choice enum instead of parallel `Option`
+  fields.** XSD `ControllerDistributionEntry` (`Schema/OpenSCENARIO.xsd:995-1001`) is a bare
+  `xsd:choice` of `Controller` | `CatalogReference`, alongside the required sibling attribute
+  `@weight`. Modeled as parallel `Option` fields, it accepted a document naming no branch and
+  a document naming two, keeping and re-serializing both. It now carries its branch in an
+  externally tagged enum behind `#[serde(rename = "$value")]`, so serde rejects zero branches
+  with ``missing field `$value` `` and two with ``duplicate field `$value` ``.
+
+  This breaks field access and struct literals: the two `Option` fields become one
+  `choice: ControllerDistributionEntryChoice`, and `ControllerDistribution::single_controller`
+  is updated to the new shape. `TrafficArea` (`:2214-2218`), in the same file, is also a bare
+  `xsd:choice` of `Polygon` | `RoadRange` (`maxOccurs="unbounded"`) modeled as one `Option`
+  field beside a `Vec`, and was found but left unconverted in this pass.
+
 - **`Property`'s `@name` and `@value` now accept parameter references.** XSD `Property`
   (`Schema/OpenSCENARIO.xsd:1809-1812`) types both attributes as the schema's `String`, a
   union whose second member is the parameter production, so `<Property name="maxSpeed"
