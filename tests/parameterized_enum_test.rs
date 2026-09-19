@@ -92,12 +92,12 @@ fn condition_rule_and_coordinate_system_accept_parameters() {
         .expect("StartTrigger")
         .condition_groups[0]
         .conditions[0];
-    let rel = match &cond
-        .by_entity_condition
-        .as_ref()
-        .expect("ByEntityCondition")
-        .entity_condition
-    {
+    let openscenario_rs::types::scenario::triggers::ConditionChoice::ByEntityCondition(by_entity) =
+        &cond.choice
+    else {
+        panic!("expected ByEntityCondition");
+    };
+    let rel = match &by_entity.entity_condition {
         EntityCondition::RelativeDistance(c) => c,
         other => panic!("expected a RelativeDistanceCondition, got {other:?}"),
     };
@@ -144,7 +144,12 @@ fn parameters_resolve_through_the_existing_value_machinery() {
         .unwrap()
         .condition_groups[0]
         .conditions[0];
-    let rel = match &cond.by_entity_condition.as_ref().unwrap().entity_condition {
+    let openscenario_rs::types::scenario::triggers::ConditionChoice::ByEntityCondition(by_entity) =
+        &cond.choice
+    else {
+        panic!("expected ByEntityCondition");
+    };
+    let rel = match &by_entity.entity_condition {
         EntityCondition::RelativeDistance(c) => c,
         other => panic!("expected a RelativeDistanceCondition, got {other:?}"),
     };

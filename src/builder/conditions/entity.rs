@@ -10,7 +10,7 @@ use crate::types::{
     },
     enums::{ConditionEdge, DirectionalDimension, Rule, TriggeringEntitiesRule},
     positions::Position,
-    scenario::triggers::{Condition, EntityRef, TriggeringEntities},
+    scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
 
 /// Builder for acceleration conditions
@@ -103,8 +103,7 @@ impl AccelerationConditionBuilder {
             name: OSString::literal("AccelerationCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(by_entity_condition),
+            choice: ConditionChoice::ByEntityCondition(by_entity_condition),
         })
     }
 }
@@ -184,8 +183,7 @@ impl EnhancedSpeedConditionBuilder {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(by_entity_condition),
+            choice: ConditionChoice::ByEntityCondition(by_entity_condition),
         })
     }
 }
@@ -262,8 +260,7 @@ impl TraveledDistanceConditionBuilder {
             name: OSString::literal("TraveledDistanceCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(by_entity_condition),
+            choice: ConditionChoice::ByEntityCondition(by_entity_condition),
         })
     }
 }
@@ -333,8 +330,7 @@ impl ReachPositionConditionBuilder {
             name: OSString::literal("ReachPositionCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(by_entity_condition),
+            choice: ConditionChoice::ByEntityCondition(by_entity_condition),
         })
     }
 }
@@ -393,8 +389,7 @@ impl EndOfRoadConditionBuilder {
             name: OSString::literal("EndOfRoadCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(by_entity_condition),
+            choice: ConditionChoice::ByEntityCondition(by_entity_condition),
         })
     }
 }
@@ -411,7 +406,7 @@ mod tests {
             .build()
             .unwrap();
 
-        if let Some(by_entity) = condition.by_entity_condition {
+        if let ConditionChoice::ByEntityCondition(by_entity) = condition.choice {
             if let EntityCondition::Acceleration(acc_condition) = by_entity.entity_condition {
                 assert_eq!(*acc_condition.value.as_literal().unwrap(), 2.0);
                 assert_eq!(acc_condition.rule, Value::Literal(Rule::GreaterThan));
@@ -431,7 +426,7 @@ mod tests {
             .build()
             .unwrap();
 
-        if let Some(by_entity) = condition.by_entity_condition {
+        if let ConditionChoice::ByEntityCondition(by_entity) = condition.choice {
             if let EntityCondition::Speed(speed_condition) = by_entity.entity_condition {
                 assert_eq!(*speed_condition.value.as_literal().unwrap(), 30.0);
                 assert_eq!(speed_condition.rule, Value::Literal(Rule::LessThan));
@@ -451,7 +446,7 @@ mod tests {
             .build()
             .unwrap();
 
-        if let Some(by_entity) = condition.by_entity_condition {
+        if let ConditionChoice::ByEntityCondition(by_entity) = condition.choice {
             if let EntityCondition::TraveledDistance(distance_condition) =
                 by_entity.entity_condition
             {
@@ -496,7 +491,7 @@ mod tests {
             .build()
             .unwrap();
 
-        if let Some(by_entity) = condition.by_entity_condition {
+        if let ConditionChoice::ByEntityCondition(by_entity) = condition.choice {
             if let EntityCondition::ReachPosition(reach_condition) = by_entity.entity_condition {
                 assert_eq!(*reach_condition.tolerance.as_literal().unwrap(), 2.0);
             } else {
@@ -515,7 +510,7 @@ mod tests {
             .build()
             .unwrap();
 
-        if let Some(by_entity) = condition.by_entity_condition {
+        if let ConditionChoice::ByEntityCondition(by_entity) = condition.choice {
             if let EntityCondition::EndOfRoad(end_condition) = by_entity.entity_condition {
                 assert_eq!(*end_condition.duration.as_literal().unwrap(), 1.0);
             } else {

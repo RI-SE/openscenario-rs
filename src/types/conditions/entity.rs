@@ -85,35 +85,23 @@ pub struct StandStillCondition {
     pub duration: Double,
 }
 
-/// Condition for detecting collisions
+/// Condition for detecting collisions. XSD `CollisionCondition` (`:923-928`) is a bare
+/// `xsd:choice` between a specific target entity and a target entity type, so exactly one
+/// branch is present; there is no "any collision" state.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CollisionCondition {
-    /// Specific target entity (optional) — XSD child `<EntityRef entityRef="..."/>`
-    #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
-    pub target: Option<EntityRef>,
-
-    /// Collision detection by entity type — XSD:926 child `<ByType type="..."/>`
-    /// (element name `ByType`, of XSD type `ByObjectType`)
-    #[serde(rename = "ByType", skip_serializing_if = "Option::is_none")]
-    pub by_type: Option<CollisionTarget>,
+    #[serde(rename = "$value")]
+    pub choice: CollisionConditionChoice,
 }
 
-impl CollisionCondition {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `CollisionCondition (`:924-930`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
-        Self {
-            target: None,
-            by_type: None,
-        }
-    }
+/// The two `CollisionCondition` branches. XSD:924-926.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum CollisionConditionChoice {
+    /// Specific target entity — XSD child `<EntityRef entityRef="..."/>`
+    EntityRef(EntityRef),
+    /// Collision detection by entity type — XSD:926 child `<ByType type="..."/>`
+    /// (element name `ByType`, of XSD type `ByObjectType`)
+    ByType(CollisionTarget),
 }
 
 /// Target specification for collision detection — wraps XSD `<ByType type="..."/>`
@@ -210,16 +198,21 @@ pub struct TimeToCollisionCondition {
     pub target: TimeToCollisionTarget,
 }
 
-/// Target for time to collision condition - matches XSD TimeToCollisionConditionTarget
+/// Target for time to collision condition - matches XSD TimeToCollisionConditionTarget.
+/// XSD `TimeToCollisionConditionTarget` (`:2193-2198`) is a bare `xsd:choice`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeToCollisionTarget {
-    /// Target entity reference — XSD child `<EntityRef>`
-    #[serde(rename = "EntityRef", skip_serializing_if = "Option::is_none")]
-    pub entity_ref: Option<EntityRef>,
+    #[serde(rename = "$value")]
+    pub choice: TimeToCollisionTargetChoice,
+}
 
+/// The two `TimeToCollisionConditionTarget` branches. XSD:2194-2196.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TimeToCollisionTargetChoice {
     /// Target position — XSD child `<Position>`
-    #[serde(rename = "Position", skip_serializing_if = "Option::is_none")]
-    pub position: Option<Position>,
+    Position(Position),
+    /// Target entity reference — XSD child `<EntityRef>`
+    EntityRef(EntityRef),
 }
 
 /// Angle condition for entity orientation/direction triggering
@@ -691,28 +684,18 @@ impl CollisionCondition {
     /// Create a new collision condition with specific target
     pub fn with_target(target: &str) -> Self {
         Self {
-            target: Some(EntityRef {
+            choice: CollisionConditionChoice::EntityRef(EntityRef {
                 entity_ref: OSString::literal(target.to_string()),
             }),
-            by_type: None,
         }
     }
 
     /// Create collision condition for entity type
     pub fn with_type(entity_type: ObjectType) -> Self {
         Self {
-            target: None,
-            by_type: Some(CollisionTarget {
+            choice: CollisionConditionChoice::ByType(CollisionTarget {
                 target_type: Value::Literal(entity_type),
             }),
-        }
-    }
-
-    /// Create general collision condition (any collision)
-    pub fn any_collision() -> Self {
-        Self {
-            target: None,
-            by_type: None,
         }
     }
 }
@@ -793,10 +776,9 @@ impl TimeToCollisionCondition {
     /// Create a new time to collision condition with entity target
     pub fn with_entity_target(entity_ref: &str, value: f64, rule: Rule, freespace: bool) -> Self {
         let target = TimeToCollisionTarget {
-            entity_ref: Some(EntityRef {
+            choice: TimeToCollisionTargetChoice::EntityRef(EntityRef {
                 entity_ref: OSString::literal(entity_ref.to_string()),
             }),
-            position: None,
         };
 
         Self {
@@ -819,8 +801,7 @@ impl TimeToCollisionCondition {
         freespace: bool,
     ) -> Self {
         let target = TimeToCollisionTarget {
-            entity_ref: None,
-            position: Some(position),
+            choice: TimeToCollisionTargetChoice::Position(position),
         };
 
         Self {
@@ -976,18 +957,16 @@ impl TimeToCollisionTarget {
     /// Create target with entity reference
     pub fn entity(entity_ref: &str) -> Self {
         Self {
-            entity_ref: Some(EntityRef {
+            choice: TimeToCollisionTargetChoice::EntityRef(EntityRef {
                 entity_ref: OSString::literal(entity_ref.to_string()),
             }),
-            position: None,
         }
     }
 
     /// Create target with position
     pub fn position(position: Position) -> Self {
         Self {
-            entity_ref: None,
-            position: Some(position),
+            choice: TimeToCollisionTargetChoice::Position(position),
         }
     }
 }
@@ -1116,14 +1095,6 @@ impl ByEntityCondition {
         Self::new(
             triggering_entities,
             EntityCondition::Collision(CollisionCondition::with_type(entity_type)),
-        )
-    }
-
-    /// Create a general collision condition
-    pub fn collision(triggering_entities: TriggeringEntities) -> Self {
-        Self::new(
-            triggering_entities,
-            EntityCondition::Collision(CollisionCondition::any_collision()),
         )
     }
 
@@ -1482,36 +1453,22 @@ mod tests {
     fn test_collision_condition_new_with_target() {
         let condition = CollisionCondition::with_target("vehicle1");
         assert_eq!(
-            condition.target,
-            Some(EntityRef {
+            condition.choice,
+            CollisionConditionChoice::EntityRef(EntityRef {
                 entity_ref: OSString::literal("vehicle1".to_string())
             })
         );
-        assert_eq!(condition.by_type, None);
     }
 
     #[test]
     fn test_collision_condition_with_type() {
         let condition = CollisionCondition::with_type(ObjectType::Pedestrian);
-        assert_eq!(condition.target, None);
-        assert!(condition.by_type.is_some());
-        if let Some(by_type) = condition.by_type {
-            assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
+        match condition.choice {
+            CollisionConditionChoice::ByType(by_type) => {
+                assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
+            }
+            CollisionConditionChoice::EntityRef(_) => panic!("Expected ByType variant"),
         }
-    }
-
-    #[test]
-    fn test_collision_condition_any_collision() {
-        let condition = CollisionCondition::any_collision();
-        assert_eq!(condition.target, None);
-        assert_eq!(condition.by_type, None);
-    }
-
-    #[test]
-    fn test_collision_condition_default() {
-        let condition = CollisionCondition::empty();
-        assert_eq!(condition.target, None);
-        assert_eq!(condition.by_type, None);
     }
 
     #[test]
@@ -1555,17 +1512,14 @@ mod tests {
         let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
         let collision_target =
             ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
-        let collision_type = ByEntityCondition::collision_with_type(
-            triggering_entities.clone(),
-            ObjectType::Pedestrian,
-        );
-        let collision_any = ByEntityCondition::collision(triggering_entities);
+        let collision_type =
+            ByEntityCondition::collision_with_type(triggering_entities, ObjectType::Pedestrian);
 
         match collision_target.entity_condition {
             EntityCondition::Collision(condition) => {
                 assert_eq!(
-                    condition.target,
-                    Some(EntityRef {
+                    condition.choice,
+                    CollisionConditionChoice::EntityRef(EntityRef {
                         entity_ref: OSString::literal("vehicle1".to_string())
                     })
                 );
@@ -1575,13 +1529,11 @@ mod tests {
 
         match collision_type.entity_condition {
             EntityCondition::Collision(condition) => {
-                assert!(condition.by_type.is_some());
+                assert!(matches!(
+                    condition.choice,
+                    CollisionConditionChoice::ByType(_)
+                ));
             }
-            _ => panic!("Expected Collision variant"),
-        }
-
-        match collision_any.entity_condition {
-            EntityCondition::Collision(_) => (),
             _ => panic!("Expected Collision variant"),
         }
     }

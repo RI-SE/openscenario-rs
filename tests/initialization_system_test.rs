@@ -134,12 +134,17 @@ mod tests {
 
         // Condition should be a time condition
         let condition = &trigger.condition_groups[0].conditions[0];
-        assert!(condition.by_value_condition.is_some());
-
-        let by_value = condition.by_value_condition.as_ref().unwrap();
-        assert!(by_value.simulation_time_condition.is_some());
-
-        let time_condition = by_value.simulation_time_condition.as_ref().unwrap();
+        let openscenario_rs::types::scenario::triggers::ConditionChoice::ByValueCondition(by_value) =
+            &condition.choice
+        else {
+            panic!("Expected ByValueCondition");
+        };
+        let openscenario_rs::types::conditions::value::ByValueConditionChoice::SimulationTimeCondition(
+            time_condition,
+        ) = &by_value.choice
+        else {
+            panic!("Expected SimulationTimeCondition branch");
+        };
         assert_eq!(*time_condition.value.as_literal().unwrap(), 5.0);
     }
 

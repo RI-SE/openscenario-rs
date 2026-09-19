@@ -23,7 +23,7 @@ use crate::types::{
     enums::{
         ConditionEdge, Rule, StoryboardElementState, StoryboardElementType, TriggeringEntitiesRule,
     },
-    scenario::triggers::{Condition, EntityRef, TriggeringEntities},
+    scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
 
 /// Builder for simulation time conditions
@@ -75,20 +75,12 @@ impl TimeConditionBuilder {
             name: OSString::literal("TimeCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: Some(ByValueCondition {
-                parameter_condition: None,
-                time_of_day_condition: None,
-                simulation_time_condition: Some(SimulationTimeCondition {
+            choice: ConditionChoice::ByValueCondition(ByValueCondition::simulation_time(
+                SimulationTimeCondition {
                     value: Double::literal(self.time.unwrap()),
                     rule: self.rule,
-                }),
-                storyboard_element_state_condition: None,
-                user_defined_value_condition: None,
-                traffic_signal_condition: None,
-                traffic_signal_controller_condition: None,
-                variable_condition: None,
-            }),
-            by_entity_condition: None,
+                },
+            )),
         })
     }
 }
@@ -164,8 +156,7 @@ impl SpeedConditionBuilder {
             name: OSString::literal("SpeedCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(ByEntityCondition {
+            choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
                     triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                     entity_refs: vec![EntityRef {
@@ -243,21 +234,13 @@ impl ParameterConditionBuilder {
             name: OSString::literal("ParameterCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: Some(ByValueCondition {
-                parameter_condition: Some(ParameterCondition {
+            choice: ConditionChoice::ByValueCondition(ByValueCondition::parameter(
+                ParameterCondition {
                     parameter_ref: OSString::literal(self.parameter_ref.unwrap()),
                     value: OSString::literal(self.value.unwrap().to_string()),
                     rule,
-                }),
-                time_of_day_condition: None,
-                simulation_time_condition: None,
-                storyboard_element_state_condition: None,
-                user_defined_value_condition: None,
-                traffic_signal_condition: None,
-                traffic_signal_controller_condition: None,
-                variable_condition: None,
-            }),
-            by_entity_condition: None,
+                },
+            )),
         })
     }
 }
@@ -321,21 +304,13 @@ impl VariableConditionBuilder {
             name: OSString::literal("VariableCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: Some(ByValueCondition {
-                parameter_condition: None,
-                time_of_day_condition: None,
-                simulation_time_condition: None,
-                storyboard_element_state_condition: None,
-                user_defined_value_condition: None,
-                traffic_signal_condition: None,
-                traffic_signal_controller_condition: None,
-                variable_condition: Some(VariableCondition {
+            choice: ConditionChoice::ByValueCondition(ByValueCondition::variable(
+                VariableCondition {
                     variable_ref: OSString::literal(self.variable_ref.unwrap()),
                     value: OSString::literal(self.value.unwrap().to_string()),
                     rule,
-                }),
-            }),
-            by_entity_condition: None,
+                },
+            )),
         })
     }
 }
@@ -413,21 +388,13 @@ impl StoryboardElementStateConditionBuilder {
             name: OSString::literal("StoryboardElementStateCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: Some(ByValueCondition {
-                parameter_condition: None,
-                time_of_day_condition: None,
-                simulation_time_condition: None,
-                storyboard_element_state_condition: Some(StoryboardElementStateCondition {
+            choice: ConditionChoice::ByValueCondition(ByValueCondition::storyboard_element_state(
+                StoryboardElementStateCondition {
                     storyboard_element_type: self.storyboard_element_type.unwrap(),
                     storyboard_element_ref: OSString::literal(self.storyboard_element_ref.unwrap()),
                     state: self.state.unwrap(),
-                }),
-                user_defined_value_condition: None,
-                traffic_signal_condition: None,
-                traffic_signal_controller_condition: None,
-                variable_condition: None,
-            }),
-            by_entity_condition: None,
+                },
+            )),
         })
     }
 }
@@ -436,16 +403,19 @@ impl StoryboardElementStateConditionBuilder {
 mod tests {
     use super::*;
     use crate::types::basic::Value;
+    use crate::types::conditions::value::ByValueConditionChoice;
 
     #[test]
     fn test_time_condition_builder() {
         let condition = TimeConditionBuilder::new().at_time(5.0).build().unwrap();
 
-        assert!(condition.by_value_condition.is_some());
-        let by_value = condition.by_value_condition.unwrap();
-        assert!(by_value.simulation_time_condition.is_some());
-
-        let time_condition = by_value.simulation_time_condition.unwrap();
+        let ConditionChoice::ByValueCondition(by_value) = condition.choice else {
+            panic!("Expected ByValueCondition");
+        };
+        let ByValueConditionChoice::SimulationTimeCondition(time_condition) = by_value.choice
+        else {
+            panic!("Expected SimulationTimeCondition branch");
+        };
         assert_eq!(time_condition.value.as_literal().unwrap(), &5.0);
         assert_eq!(time_condition.rule, Value::Literal(Rule::GreaterThan));
     }
@@ -457,8 +427,13 @@ mod tests {
             .build()
             .unwrap();
 
-        let by_value = condition.by_value_condition.unwrap();
-        let time_condition = by_value.simulation_time_condition.unwrap();
+        let ConditionChoice::ByValueCondition(by_value) = condition.choice else {
+            panic!("Expected ByValueCondition");
+        };
+        let ByValueConditionChoice::SimulationTimeCondition(time_condition) = by_value.choice
+        else {
+            panic!("Expected SimulationTimeCondition branch");
+        };
         assert_eq!(time_condition.value.as_literal().unwrap(), &10.0);
         assert_eq!(time_condition.rule, Value::Literal(Rule::LessThan));
     }
@@ -471,8 +446,9 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(condition.by_entity_condition.is_some());
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
 
         assert_eq!(
             by_entity.triggering_entities.entity_refs[0]
@@ -499,7 +475,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
         match by_entity.entity_condition {
             EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &15.0);

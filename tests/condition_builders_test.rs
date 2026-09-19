@@ -5,19 +5,23 @@ mod condition_builder_tests {
     };
     use openscenario_rs::types::{
         basic::{Double, Value},
+        conditions::value::ByValueConditionChoice,
         enums::Rule,
         positions::{Position, WorldPosition},
+        scenario::triggers::ConditionChoice,
     };
 
     #[test]
     fn test_time_condition_builder() {
         let condition = TimeConditionBuilder::new().at_time(5.0).build().unwrap();
 
-        assert!(condition.by_value_condition.is_some());
-        let by_value = condition.by_value_condition.unwrap();
-        assert!(by_value.simulation_time_condition.is_some());
-
-        let time_condition = by_value.simulation_time_condition.unwrap();
+        let ConditionChoice::ByValueCondition(by_value) = condition.choice else {
+            panic!("Expected ByValueCondition");
+        };
+        let ByValueConditionChoice::SimulationTimeCondition(time_condition) = by_value.choice
+        else {
+            panic!("Expected SimulationTimeCondition branch");
+        };
         assert_eq!(time_condition.value.as_literal().unwrap(), &5.0);
         assert_eq!(time_condition.rule, Value::Literal(Rule::GreaterThan));
     }
@@ -29,8 +33,13 @@ mod condition_builder_tests {
             .build()
             .unwrap();
 
-        let by_value = condition.by_value_condition.unwrap();
-        let time_condition = by_value.simulation_time_condition.unwrap();
+        let ConditionChoice::ByValueCondition(by_value) = condition.choice else {
+            panic!("Expected ByValueCondition");
+        };
+        let ByValueConditionChoice::SimulationTimeCondition(time_condition) = by_value.choice
+        else {
+            panic!("Expected SimulationTimeCondition branch");
+        };
         assert_eq!(time_condition.value.as_literal().unwrap(), &10.0);
         assert_eq!(time_condition.rule, Value::Literal(Rule::LessThan));
     }
@@ -43,8 +52,9 @@ mod condition_builder_tests {
             .build()
             .unwrap();
 
-        assert!(condition.by_entity_condition.is_some());
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
 
         // Check triggering entities
         assert_eq!(by_entity.triggering_entities.entity_refs.len(), 1);
@@ -74,7 +84,9 @@ mod condition_builder_tests {
             .build()
             .unwrap();
 
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
         match by_entity.entity_condition {
             openscenario_rs::types::conditions::entity::EntityCondition::Speed(speed_condition) => {
                 assert_eq!(speed_condition.value.as_literal().unwrap(), &15.0);
@@ -113,8 +125,9 @@ mod condition_builder_tests {
             .build()
             .unwrap();
 
-        assert!(condition.by_entity_condition.is_some());
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
 
         match by_entity.entity_condition {
             openscenario_rs::types::conditions::entity::EntityCondition::Distance(

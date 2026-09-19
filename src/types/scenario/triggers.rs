@@ -47,6 +47,9 @@ pub struct ConditionGroup {
 ///
 /// A Condition defines when a specific state or event should trigger,
 /// with support for edge detection and timing delays.
+///
+/// XSD `Condition` (`:953-960`) is a bare `xsd:choice` between `ByEntityCondition` and
+/// `ByValueCondition`, alongside the three required attributes below.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Condition {
     /// Name of the condition for identification
@@ -61,29 +64,18 @@ pub struct Condition {
     #[serde(rename = "@delay")]
     pub delay: Double,
 
-    /// Value-based condition (time, parameter, variable, etc.)
-    #[serde(rename = "ByValueCondition", skip_serializing_if = "Option::is_none")]
-    pub by_value_condition: Option<ByValueCondition>,
-
-    /// Entity-based condition (collision, distance, speed, etc.)
-    #[serde(rename = "ByEntityCondition", skip_serializing_if = "Option::is_none")]
-    pub by_entity_condition: Option<ByEntityCondition>,
+    /// The entity- or value-based condition branch
+    #[serde(rename = "$value")]
+    pub choice: ConditionChoice,
 }
 
-/// Type of condition - either entity-based or value-based
-///
-/// This enum is a constructor argument for `Condition`, not a serde field: XSD
-/// `Condition` places the choice directly in the element, which `Condition` models with
-/// parallel `Option` fields. Hence it derives no `Serialize` or `Deserialize`. An
-/// untagged enum over two structurally distinct conditions would resolve by trial order
-/// rather than by element name, so deriving them here would sanction a shape that cannot
-/// parse reliably.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ConditionType {
+/// The two `Condition` branches. XSD:954-956.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ConditionChoice {
     /// Entity-based condition (collision, distance, speed, etc.)
-    ByEntity(ByEntityCondition),
+    ByEntityCondition(ByEntityCondition),
     /// Value-based condition (time, parameter, variable, etc.)
-    ByValue(ByValueCondition),
+    ByValueCondition(ByValueCondition),
 }
 
 /// Triggering entities specification for entity-based conditions
@@ -154,18 +146,12 @@ impl ConditionGroup {
 
 impl Condition {
     /// Create a new condition with default edge detection
-    pub fn new(name: impl Into<String>, condition_type: ConditionType) -> Self {
-        let (by_value_condition, by_entity_condition) = match condition_type {
-            ConditionType::ByValue(cond) => (Some(cond), None),
-            ConditionType::ByEntity(cond) => (None, Some(cond)),
-        };
-
+    pub fn new(name: impl Into<String>, choice: ConditionChoice) -> Self {
         Self {
             name: OSString::literal(name.into()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition,
-            by_entity_condition,
+            choice,
         }
     }
 
@@ -218,11 +204,9 @@ mod tests {
     use crate::types::conditions::value::SimulationTimeCondition;
     use crate::types::enums::{ConditionEdge, Rule};
 
-    /// A stand-in `ConditionType` for tests that don't care which branch is used.
-    /// `ConditionType::default()` was removed — it silently picked
-    /// the `ByValue`/`SimulationTimeCondition` branch of an `xsd:choice`.
-    fn test_condition_type() -> ConditionType {
-        ConditionType::ByValue(ByValueCondition::simulation_time(
+    /// A stand-in `ConditionChoice` for tests that don't care which branch is used.
+    fn test_condition_type() -> ConditionChoice {
+        ConditionChoice::ByValueCondition(ByValueCondition::simulation_time(
             SimulationTimeCondition::new(10.0, Rule::GreaterThan),
         ))
     }

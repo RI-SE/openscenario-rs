@@ -86,55 +86,33 @@ pub struct VariableCondition {
     pub value: OSString,
 }
 
-/// Value-based condition types - implements all OpenSCENARIO ByValueCondition variants
+/// Value-based condition types - implements all OpenSCENARIO ByValueCondition variants.
+/// XSD `ByValueCondition` (`:837-847`) is a bare `xsd:choice` over the eight branches below.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ByValueCondition {
+    #[serde(rename = "$value")]
+    pub choice: ByValueConditionChoice,
+}
+
+/// The eight `ByValueCondition` branches. XSD:838-845.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ByValueConditionChoice {
     /// Parameter-based condition
-    #[serde(rename = "ParameterCondition", skip_serializing_if = "Option::is_none")]
-    pub parameter_condition: Option<ParameterCondition>,
-
+    ParameterCondition(ParameterCondition),
     /// Time-of-day condition
-    #[serde(rename = "TimeOfDayCondition", skip_serializing_if = "Option::is_none")]
-    pub time_of_day_condition: Option<TimeOfDayCondition>,
-
+    TimeOfDayCondition(TimeOfDayCondition),
     /// Simulation time-based condition
-    #[serde(
-        rename = "SimulationTimeCondition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub simulation_time_condition: Option<SimulationTimeCondition>,
-
+    SimulationTimeCondition(SimulationTimeCondition),
     /// Storyboard element state condition
-    #[serde(
-        rename = "StoryboardElementStateCondition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub storyboard_element_state_condition: Option<StoryboardElementStateCondition>,
-
+    StoryboardElementStateCondition(StoryboardElementStateCondition),
     /// User-defined condition
-    #[serde(
-        rename = "UserDefinedValueCondition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub user_defined_value_condition: Option<UserDefinedValueCondition>,
-
+    UserDefinedValueCondition(UserDefinedValueCondition),
     /// Traffic signal condition
-    #[serde(
-        rename = "TrafficSignalCondition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub traffic_signal_condition: Option<TrafficSignalCondition>,
-
+    TrafficSignalCondition(TrafficSignalCondition),
     /// Traffic signal controller condition
-    #[serde(
-        rename = "TrafficSignalControllerCondition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub traffic_signal_controller_condition: Option<TrafficSignalControllerCondition>,
-
+    TrafficSignalControllerCondition(TrafficSignalControllerCondition),
     /// Variable condition
-    #[serde(rename = "VariableCondition", skip_serializing_if = "Option::is_none")]
-    pub variable_condition: Option<VariableCondition>,
+    VariableCondition(VariableCondition),
 }
 
 // Constructors — see the module-level XSD notes on each type for the required attributes.
@@ -233,85 +211,64 @@ impl VariableCondition {
     }
 }
 
-/// Per-branch constructors for the `ByValueCondition` XSD:837-848 choice group. No `Default`:
+/// Per-branch constructors for the `ByValueCondition` XSD:837-847 choice group. No `Default`:
 /// `xsd:choice` requires exactly one child, so any default would silently pick a branch — the
 /// worst case for a value that "states nothing". Follows `RouteRef::direct`/`::catalog` and
 /// `SpeedActionTarget::absolute`/`::relative`.
 impl ByValueCondition {
-    fn empty() -> Self {
-        Self {
-            parameter_condition: None,
-            time_of_day_condition: None,
-            simulation_time_condition: None,
-            storyboard_element_state_condition: None,
-            user_defined_value_condition: None,
-            traffic_signal_condition: None,
-            traffic_signal_controller_condition: None,
-            variable_condition: None,
-        }
-    }
-
     /// Wrap a `ParameterCondition` branch
     pub fn parameter(condition: ParameterCondition) -> Self {
         Self {
-            parameter_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::ParameterCondition(condition),
         }
     }
 
     /// Wrap a `TimeOfDayCondition` branch
     pub fn time_of_day(condition: TimeOfDayCondition) -> Self {
         Self {
-            time_of_day_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::TimeOfDayCondition(condition),
         }
     }
 
     /// Wrap a `SimulationTimeCondition` branch
     pub fn simulation_time(condition: SimulationTimeCondition) -> Self {
         Self {
-            simulation_time_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::SimulationTimeCondition(condition),
         }
     }
 
     /// Wrap a `StoryboardElementStateCondition` branch
     pub fn storyboard_element_state(condition: StoryboardElementStateCondition) -> Self {
         Self {
-            storyboard_element_state_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::StoryboardElementStateCondition(condition),
         }
     }
 
     /// Wrap a `UserDefinedValueCondition` branch
     pub fn user_defined_value(condition: UserDefinedValueCondition) -> Self {
         Self {
-            user_defined_value_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::UserDefinedValueCondition(condition),
         }
     }
 
     /// Wrap a `TrafficSignalCondition` branch
     pub fn traffic_signal(condition: TrafficSignalCondition) -> Self {
         Self {
-            traffic_signal_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::TrafficSignalCondition(condition),
         }
     }
 
     /// Wrap a `TrafficSignalControllerCondition` branch
     pub fn traffic_signal_controller(condition: TrafficSignalControllerCondition) -> Self {
         Self {
-            traffic_signal_controller_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::TrafficSignalControllerCondition(condition),
         }
     }
 
     /// Wrap a `VariableCondition` branch
     pub fn variable(condition: VariableCondition) -> Self {
         Self {
-            variable_condition: Some(condition),
-            ..Self::empty()
+            choice: ByValueConditionChoice::VariableCondition(condition),
         }
     }
 }
@@ -363,9 +320,10 @@ mod tests {
             10.0,
             Rule::GreaterThan,
         ));
-        assert!(cond.simulation_time_condition.is_some());
-        assert!(cond.parameter_condition.is_none());
-        assert!(cond.variable_condition.is_none());
+        assert!(matches!(
+            cond.choice,
+            ByValueConditionChoice::SimulationTimeCondition(_)
+        ));
     }
 
     #[test]

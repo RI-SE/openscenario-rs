@@ -80,19 +80,21 @@ fn main() {
     };
     println!("8. Variable Condition: trigger when fuelLevel < 10");
 
-    // Create a comprehensive ByValueCondition with multiple conditions
-    let comprehensive_condition = ByValueCondition {
-        parameter_condition: Some(param_condition),
-        time_of_day_condition: Some(time_of_day_condition),
-        simulation_time_condition: Some(sim_time_condition),
-        storyboard_element_state_condition: Some(storyboard_condition),
-        user_defined_value_condition: Some(user_defined_condition),
-        traffic_signal_condition: Some(traffic_signal_condition),
-        traffic_signal_controller_condition: Some(traffic_controller_condition),
-        variable_condition: Some(variable_condition),
-    };
+    // `ByValueCondition` is an `xsd:choice`: exactly one branch is present per instance,
+    // never several at once. Each condition built above becomes its own
+    // `ByValueCondition`, selecting the matching branch constructor.
+    let _parameter = ByValueCondition::parameter(param_condition);
+    let _time_of_day = ByValueCondition::time_of_day(time_of_day_condition);
+    let _simulation_time = ByValueCondition::simulation_time(sim_time_condition);
+    let _storyboard_element_state =
+        ByValueCondition::storyboard_element_state(storyboard_condition);
+    let _user_defined_value = ByValueCondition::user_defined_value(user_defined_condition);
+    let _traffic_signal = ByValueCondition::traffic_signal(traffic_signal_condition);
+    let _traffic_signal_controller =
+        ByValueCondition::traffic_signal_controller(traffic_controller_condition);
+    let _variable = ByValueCondition::variable(variable_condition);
 
-    println!("\nComprehensive ByValueCondition created with all 8 condition types!");
+    println!("\nBuilt all 8 ByValueCondition branches, one condition at a time.");
     println!("This demonstrates the complete implementation of ByValueCondition.");
 
     // Show parameter reference usage

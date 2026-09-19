@@ -12,16 +12,17 @@ pub use spatial::{DistanceCondition, ReachPositionCondition, RelativeDistanceCon
 
 // Keep entity-specific re-exports
 pub use entity::{
-    AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition, CollisionTarget,
-    EndOfRoadCondition, EntityCondition, OffroadCondition, RelativeAngleCondition,
-    RelativeClearanceCondition, RelativeLaneRange, RelativeSpeedCondition, SpeedCondition,
-    StandStillCondition, TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
+    AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition,
+    CollisionConditionChoice, CollisionTarget, EndOfRoadCondition, EntityCondition,
+    OffroadCondition, RelativeAngleCondition, RelativeClearanceCondition, RelativeLaneRange,
+    RelativeSpeedCondition, SpeedCondition, StandStillCondition, TimeHeadwayCondition,
+    TimeToCollisionCondition, TimeToCollisionTarget, TimeToCollisionTargetChoice,
     TraveledDistanceCondition,
 };
 pub use value::{
-    ByValueCondition, ParameterCondition, SimulationTimeCondition, StoryboardElementStateCondition,
-    TimeOfDayCondition, TrafficSignalCondition, TrafficSignalControllerCondition,
-    UserDefinedValueCondition, VariableCondition,
+    ByValueCondition, ByValueConditionChoice, ParameterCondition, SimulationTimeCondition,
+    StoryboardElementStateCondition, TimeOfDayCondition, TrafficSignalCondition,
+    TrafficSignalControllerCondition, UserDefinedValueCondition, VariableCondition,
 };
 
 // The XSD `Condition` (`:953-961`) is modelled by `scenario::triggers::Condition`, which

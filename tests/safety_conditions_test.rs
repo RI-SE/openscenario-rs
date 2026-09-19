@@ -4,11 +4,10 @@ use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::{Double, OSString},
     conditions::{
-        ByEntityCondition, CollisionCondition, CollisionTarget, EndOfRoadCondition,
-        EntityCondition, OffroadCondition,
+        ByEntityCondition, CollisionCondition, CollisionConditionChoice, CollisionTarget,
+        EndOfRoadCondition, EntityCondition, OffroadCondition,
     },
     enums::ObjectType,
-    positions::Position,
     scenario::triggers::{EntityRef, TriggeringEntities},
 };
 
@@ -16,36 +15,22 @@ use openscenario_rs::types::{
 fn test_collision_condition_with_target() {
     let condition = CollisionCondition::with_target("vehicle1");
     assert_eq!(
-        condition.target,
-        Some(EntityRef {
+        condition.choice,
+        CollisionConditionChoice::EntityRef(EntityRef {
             entity_ref: OSString::literal("vehicle1".to_string())
         })
     );
-    assert_eq!(condition.by_type, None);
 }
 
 #[test]
 fn test_collision_condition_with_type() {
     let condition = CollisionCondition::with_type(ObjectType::Pedestrian);
-    assert_eq!(condition.target, None);
-    assert!(condition.by_type.is_some());
-    if let Some(by_type) = condition.by_type {
-        assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
+    match condition.choice {
+        CollisionConditionChoice::ByType(by_type) => {
+            assert_eq!(by_type.target_type, Value::Literal(ObjectType::Pedestrian));
+        }
+        CollisionConditionChoice::EntityRef(_) => panic!("Expected ByType variant"),
     }
-}
-
-#[test]
-fn test_collision_condition_any_collision() {
-    let condition = CollisionCondition::any_collision();
-    assert_eq!(condition.target, None);
-    assert_eq!(condition.by_type, None);
-}
-
-#[test]
-fn test_collision_condition_default() {
-    let condition = CollisionCondition::empty();
-    assert_eq!(condition.target, None);
-    assert_eq!(condition.by_type, None);
 }
 
 #[test]
@@ -96,14 +81,13 @@ fn test_by_entity_condition_collision_variants() {
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
     let collision_type =
-        ByEntityCondition::collision_with_type(triggering_entities.clone(), ObjectType::Pedestrian);
-    let collision_any = ByEntityCondition::collision(triggering_entities);
+        ByEntityCondition::collision_with_type(triggering_entities, ObjectType::Pedestrian);
 
     match collision_target.entity_condition {
         EntityCondition::Collision(condition) => {
             assert_eq!(
-                condition.target,
-                Some(EntityRef {
+                condition.choice,
+                CollisionConditionChoice::EntityRef(EntityRef {
                     entity_ref: OSString::literal("vehicle1".to_string())
                 })
             );
@@ -113,13 +97,11 @@ fn test_by_entity_condition_collision_variants() {
 
     match collision_type.entity_condition {
         EntityCondition::Collision(condition) => {
-            assert!(condition.by_type.is_some());
+            assert!(matches!(
+                condition.choice,
+                CollisionConditionChoice::ByType(_)
+            ));
         }
-        _ => panic!("Expected Collision variant"),
-    }
-
-    match collision_any.entity_condition {
-        EntityCondition::Collision(_) => (),
         _ => panic!("Expected Collision variant"),
     }
 }
@@ -173,7 +155,7 @@ fn test_by_entity_condition_enum_completeness() {
     // Test that all variants can be matched
     let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
     let conditions = vec![
-        ByEntityCondition::collision(triggering_entities.clone()),
+        ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1"),
         ByEntityCondition::off_road(triggering_entities.clone(), 1.0),
         ByEntityCondition::end_of_road(triggering_entities, 2.0),
     ];
@@ -209,7 +191,6 @@ fn test_by_entity_condition_safety_integration() {
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
     let collision_type =
         ByEntityCondition::collision_with_type(triggering_entities.clone(), ObjectType::Pedestrian);
-    let collision_any = ByEntityCondition::collision(triggering_entities.clone());
 
     // Test safety conditions
     let off_road = ByEntityCondition::off_road(triggering_entities.clone(), 2.0);
@@ -222,10 +203,6 @@ fn test_by_entity_condition_safety_integration() {
     ));
     assert!(matches!(
         collision_type.entity_condition,
-        EntityCondition::Collision(_)
-    ));
-    assert!(matches!(
-        collision_any.entity_condition,
         EntityCondition::Collision(_)
     ));
     assert!(matches!(

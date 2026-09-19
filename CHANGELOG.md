@@ -225,6 +225,30 @@ Breaking, unless noted.
   This breaks field access and struct literals: `polygon`/`road_range` become one
   `choice: TrafficAreaChoice`, and `TrafficArea::rectangle` is updated to the new shape.
 
+- **`CollisionCondition`, `TimeToCollisionTarget`, `ByValueCondition`, and `Condition` now
+  hold a choice enum instead of parallel `Option` fields.** All four are bare `xsd:choice`
+  groups: `CollisionCondition` (`Schema/OpenSCENARIO.xsd:923-928`) chooses between `EntityRef`
+  and `ByType`; `TimeToCollisionConditionTarget` (`:2193-2198`) between `Position` and
+  `EntityRef`; `ByValueCondition` (`:837-847`) among eight condition types; and `Condition`
+  (`:953-960`) between `ByEntityCondition` and `ByValueCondition`, alongside its three required
+  sibling attributes. Modeled as parallel `Option` fields, each accepted a document naming no
+  branch and a document naming two, keeping and re-serializing both — `Condition` in particular
+  is the type a `<Trigger>` is built from, so the defect reached every start and stop condition
+  in a scenario. Each now carries its branch in an externally tagged enum behind
+  `#[serde(rename = "$value")]`, so serde rejects zero branches with
+  ``missing field `$value` `` and two with ``duplicate field `$value` ``.
+
+  This breaks field access and struct literals: `CollisionCondition`'s `target`/`by_type`
+  become `choice: CollisionConditionChoice`; `TimeToCollisionTarget`'s `entity_ref`/`position`
+  become `choice: TimeToCollisionTargetChoice`; `ByValueCondition`'s eight `Option` fields
+  become `choice: ByValueConditionChoice`; and `Condition`'s `by_value_condition`/
+  `by_entity_condition` become `choice: ConditionChoice`. `CollisionCondition::any_collision`
+  and `CollisionCondition::empty` are removed along with `ByEntityCondition::collision`: the
+  schema has no "no branch selected" state for a collision condition, so there was no valid
+  value for them to construct. `CollisionConditionBuilder::build` now returns a validation
+  error instead of silently emitting an invalid zero-branch document when neither a target
+  entity nor a collision type was set.
+
 - **`Property`'s `@name` and `@value` now accept parameter references.** XSD `Property`
   (`Schema/OpenSCENARIO.xsd:1809-1812`) types both attributes as the schema's `String`, a
   union whose second member is the parameter production, so `<Property name="maxSpeed"

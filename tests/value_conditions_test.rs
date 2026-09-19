@@ -75,18 +75,12 @@ fn test_byvalue_condition_simulation_time_branch() {
     let condition =
         ByValueCondition::simulation_time(SimulationTimeCondition::new(10.0, Rule::GreaterThan));
 
-    // Should have simulation time condition on the branch we asked for
-    assert!(condition.simulation_time_condition.is_some());
-
-    // All others should be None — `ByValueCondition` is an XSD `xsd:choice`, so exactly one
-    // branch is populated.
-    assert!(condition.parameter_condition.is_none());
-    assert!(condition.time_of_day_condition.is_none());
-    assert!(condition.storyboard_element_state_condition.is_none());
-    assert!(condition.user_defined_value_condition.is_none());
-    assert!(condition.traffic_signal_condition.is_none());
-    assert!(condition.traffic_signal_controller_condition.is_none());
-    assert!(condition.variable_condition.is_none());
+    // `ByValueCondition` is now a single `$value` field over `ByValueConditionChoice`, so the
+    // choice between the eight branches is structural: exactly one variant can be present.
+    assert!(matches!(
+        condition.choice,
+        ByValueConditionChoice::SimulationTimeCondition(_)
+    ));
 }
 
 #[test]
@@ -102,18 +96,16 @@ fn test_byvalue_condition_with_specific_conditions() {
         value: OSString::literal("5".to_string()),
     });
 
-    // Verify each branch is set correctly and the other branches stay empty
-    assert!(parameter_condition.parameter_condition.is_some());
-    assert!(parameter_condition.variable_condition.is_none());
-    assert!(variable_condition.variable_condition.is_some());
-    assert!(variable_condition.parameter_condition.is_none());
+    // Each construction selects exactly one branch of the `xsd:choice`.
+    let ByValueConditionChoice::ParameterCondition(param_cond) = &parameter_condition.choice else {
+        panic!("Expected ParameterCondition branch");
+    };
+    assert_eq!(param_cond.rule, Value::Literal(Rule::GreaterThan));
 
-    if let Some(param_cond) = &parameter_condition.parameter_condition {
-        assert_eq!(param_cond.rule, Value::Literal(Rule::GreaterThan));
-    }
-    if let Some(var_cond) = &variable_condition.variable_condition {
-        assert_eq!(var_cond.rule, Value::Literal(Rule::LessThan));
-    }
+    let ByValueConditionChoice::VariableCondition(var_cond) = &variable_condition.choice else {
+        panic!("Expected VariableCondition branch");
+    };
+    assert_eq!(var_cond.rule, Value::Literal(Rule::LessThan));
 }
 
 #[cfg(feature = "chrono")]

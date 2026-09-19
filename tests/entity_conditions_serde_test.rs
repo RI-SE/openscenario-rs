@@ -95,13 +95,6 @@ fn test_collision_condition_with_object_type_xml_round_trip() {
 }
 
 #[test]
-fn test_collision_condition_any_xml_round_trip() {
-    let original = CollisionCondition::any_collision();
-    let deserialized: CollisionCondition = round_trip(&original);
-    assert_eq!(original, deserialized);
-}
-
-#[test]
 fn test_collision_condition_serializes_entity_ref_element() {
     let condition = CollisionCondition::with_target("ego");
     let xml = quick_xml::se::to_string(&condition).expect("serialize failed");

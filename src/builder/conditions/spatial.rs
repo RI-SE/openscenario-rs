@@ -9,7 +9,7 @@ use crate::types::{
     conditions::entity::{ByEntityCondition, DistanceCondition, EntityCondition},
     enums::{ConditionEdge, RelativeDistanceType, Rule, TriggeringEntitiesRule},
     positions::Position,
-    scenario::triggers::{Condition, EntityRef, TriggeringEntities},
+    scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
 /// Builder for distance conditions
 ///
@@ -103,8 +103,7 @@ impl DistanceConditionBuilder {
             name: OSString::literal("DistanceCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(ByEntityCondition {
+            choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
                     triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                     entity_refs: vec![EntityRef {
@@ -229,8 +228,7 @@ impl RelativeDistanceConditionBuilder {
             name: OSString::literal("RelativeDistanceCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(ByEntityCondition {
+            choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
                     triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                     entity_refs: vec![EntityRef {
@@ -285,7 +283,10 @@ impl CollisionConditionBuilder {
         self
     }
 
-    /// Build the condition
+    /// Build the condition. `CollisionCondition` (XSD:923-928) is a bare `xsd:choice`
+    /// between a target entity and a target entity type, so exactly one of `with_entity`
+    /// or `collision_type` must have been set; the entity branch takes precedence when
+    /// both are given.
     pub fn build(self) -> BuilderResult<Condition> {
         if self.entity_ref.is_none() {
             return Err(BuilderError::validation_error(
@@ -293,12 +294,31 @@ impl CollisionConditionBuilder {
             ));
         }
 
+        let choice = match (self.target_entity, self.collision_type) {
+            (Some(target), _) => {
+                crate::types::conditions::entity::CollisionConditionChoice::EntityRef(EntityRef {
+                    entity_ref: OSString::literal(target),
+                })
+            }
+            (None, Some(collision_type)) => {
+                crate::types::conditions::entity::CollisionConditionChoice::ByType(
+                    crate::types::conditions::entity::CollisionTarget {
+                        target_type: Value::Literal(collision_type),
+                    },
+                )
+            }
+            (None, None) => {
+                return Err(BuilderError::validation_error(
+                    "Either a target entity or a collision type is required",
+                ));
+            }
+        };
+
         Ok(Condition {
             name: OSString::literal("CollisionCondition".to_string()),
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
-            by_value_condition: None,
-            by_entity_condition: Some(ByEntityCondition {
+            choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
                 triggering_entities: TriggeringEntities {
                     triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
                     entity_refs: vec![EntityRef {
@@ -306,16 +326,7 @@ impl CollisionConditionBuilder {
                     }],
                 },
                 entity_condition: EntityCondition::Collision(
-                    crate::types::conditions::entity::CollisionCondition {
-                        target: self.target_entity.map(|s| EntityRef {
-                            entity_ref: OSString::literal(s),
-                        }),
-                        by_type: self.collision_type.map(|collision_type| {
-                            crate::types::conditions::entity::CollisionTarget {
-                                target_type: Value::Literal(collision_type),
-                            }
-                        }),
-                    },
+                    crate::types::conditions::entity::CollisionCondition { choice },
                 ),
             }),
         })
@@ -363,8 +374,9 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(condition.by_entity_condition.is_some());
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
 
         match by_entity.entity_condition {
             EntityCondition::Distance(distance_condition) => {
@@ -387,7 +399,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
         match by_entity.entity_condition {
             EntityCondition::Distance(distance_condition) => {
                 assert_eq!(distance_condition.value.as_literal().unwrap(), &50.0);
@@ -409,7 +423,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
         match by_entity.entity_condition {
             EntityCondition::Distance(distance_condition) => {
                 assert_eq!(distance_condition.freespace.as_literal().unwrap(), &true);
@@ -467,7 +483,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let by_entity = condition.by_entity_condition.unwrap();
+        let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
+            panic!("Expected ByEntityCondition");
+        };
         match by_entity.entity_condition {
             EntityCondition::Distance(distance_condition) => {
                 assert_eq!(distance_condition.value.as_literal().unwrap(), &25.0);

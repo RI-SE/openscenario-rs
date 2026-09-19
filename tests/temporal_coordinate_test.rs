@@ -6,7 +6,7 @@ use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::basic::{Boolean, Double};
 use openscenario_rs::types::conditions::entity::{
     ByEntityCondition, EntityCondition, TimeHeadwayCondition, TimeToCollisionCondition,
-    TimeToCollisionTarget,
+    TimeToCollisionTarget, TimeToCollisionTargetChoice,
 };
 use openscenario_rs::types::enums::{
     CoordinateSystem, RelativeDistanceType, RoutingAlgorithm, Rule,
@@ -82,19 +82,10 @@ fn test_time_to_collision_condition_entity_target() {
     assert_eq!(condition.value, Double::literal(5.0));
     assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
     assert_eq!(condition.freespace, Boolean::literal(true));
-    assert!(condition.target.entity_ref.is_some());
-    assert_eq!(
-        condition
-            .target
-            .entity_ref
-            .as_ref()
-            .unwrap()
-            .entity_ref
-            .as_literal()
-            .unwrap(),
-        "vehicle1"
-    );
-    assert!(condition.target.position.is_none());
+    let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &condition.target.choice else {
+        panic!("Expected EntityRef branch");
+    };
+    assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "vehicle1");
 }
 
 #[test]
@@ -110,8 +101,10 @@ fn test_time_to_collision_condition_position_target() {
     assert_eq!(condition.value, Double::literal(3.5));
     assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(condition.freespace, Boolean::literal(false));
-    assert!(condition.target.entity_ref.is_none());
-    assert!(condition.target.position.is_some());
+    assert!(matches!(
+        condition.target.choice,
+        TimeToCollisionTargetChoice::Position(_)
+    ));
 }
 
 #[test]
@@ -121,17 +114,10 @@ fn test_time_to_collision_condition_entity_less_than() {
     assert_eq!(condition.value, Double::literal(2.0));
     assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
     assert_eq!(condition.freespace, Boolean::literal(true));
-    assert_eq!(
-        condition
-            .target
-            .entity_ref
-            .as_ref()
-            .unwrap()
-            .entity_ref
-            .as_literal()
-            .unwrap(),
-        "obstacle"
-    );
+    let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &condition.target.choice else {
+        panic!("Expected EntityRef branch");
+    };
+    assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "obstacle");
 }
 
 #[test]
@@ -141,17 +127,10 @@ fn test_time_to_collision_condition_entity_greater_than() {
     assert_eq!(condition.value, Double::literal(4.0));
     assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(condition.freespace, Boolean::literal(false));
-    assert_eq!(
-        condition
-            .target
-            .entity_ref
-            .as_ref()
-            .unwrap()
-            .entity_ref
-            .as_literal()
-            .unwrap(),
-        "pedestrian"
-    );
+    let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &condition.target.choice else {
+        panic!("Expected EntityRef branch");
+    };
+    assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "pedestrian");
 }
 
 #[test]
@@ -162,7 +141,10 @@ fn test_time_to_collision_condition_position_less_than() {
     assert_eq!(condition.value, Double::literal(1.5));
     assert_eq!(condition.rule, Value::Literal(Rule::LessThan));
     assert_eq!(condition.freespace, Boolean::literal(true));
-    assert!(condition.target.position.is_some());
+    assert!(matches!(
+        condition.target.choice,
+        TimeToCollisionTargetChoice::Position(_)
+    ));
 }
 
 #[test]
@@ -173,7 +155,10 @@ fn test_time_to_collision_condition_position_greater_than() {
     assert_eq!(condition.value, Double::literal(6.0));
     assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
     assert_eq!(condition.freespace, Boolean::literal(false));
-    assert!(condition.target.position.is_some());
+    assert!(matches!(
+        condition.target.choice,
+        TimeToCollisionTargetChoice::Position(_)
+    ));
 }
 
 #[test]
@@ -201,18 +186,13 @@ fn test_time_to_collision_condition_with_options() {
 fn test_time_to_collision_target_entity() {
     let target = TimeToCollisionTarget::entity("target_vehicle");
 
-    assert!(target.entity_ref.is_some());
+    let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &target.choice else {
+        panic!("Expected EntityRef branch");
+    };
     assert_eq!(
-        target
-            .entity_ref
-            .as_ref()
-            .unwrap()
-            .entity_ref
-            .as_literal()
-            .unwrap(),
+        entity_ref.entity_ref.as_literal().unwrap(),
         "target_vehicle"
     );
-    assert!(target.position.is_none());
 }
 
 #[test]
@@ -220,8 +200,10 @@ fn test_time_to_collision_target_position() {
     let position = Position::world_origin();
     let target = TimeToCollisionTarget::position(position.clone());
 
-    assert!(target.entity_ref.is_none());
-    assert!(target.position.is_some());
+    assert!(matches!(
+        target.choice,
+        TimeToCollisionTargetChoice::Position(_)
+    ));
 }
 
 // ========== By Entity Condition Integration Tests ==========
@@ -259,18 +241,11 @@ fn test_by_entity_condition_time_to_collision_entity() {
             assert_eq!(ttc_condition.value, Double::literal(3.0));
             assert_eq!(ttc_condition.rule, Value::Literal(Rule::GreaterThan));
             assert_eq!(ttc_condition.freespace, Boolean::literal(false));
-            assert!(ttc_condition.target.entity_ref.is_some());
-            assert_eq!(
-                ttc_condition
-                    .target
-                    .entity_ref
-                    .as_ref()
-                    .unwrap()
-                    .entity_ref
-                    .as_literal()
-                    .unwrap(),
-                "obstacle"
-            );
+            let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &ttc_condition.target.choice
+            else {
+                panic!("Expected EntityRef branch");
+            };
+            assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "obstacle");
         }
         _ => panic!("Expected TimeToCollision variant"),
     }
@@ -293,7 +268,10 @@ fn test_by_entity_condition_time_to_collision_position() {
             assert_eq!(ttc_condition.value, Double::literal(4.5));
             assert_eq!(ttc_condition.rule, Value::Literal(Rule::EqualTo));
             assert_eq!(ttc_condition.freespace, Boolean::literal(true));
-            assert!(ttc_condition.target.position.is_some());
+            assert!(matches!(
+                ttc_condition.target.choice,
+                TimeToCollisionTargetChoice::Position(_)
+            ));
         }
         _ => panic!("Expected TimeToCollision variant"),
     }
@@ -314,31 +292,16 @@ fn test_temporal_condition_constructors() {
     assert_eq!(ttc.value, Double::literal(5.0));
     assert_eq!(ttc.rule, Value::Literal(Rule::LessThan));
     assert_eq!(ttc.freespace, Boolean::literal(true));
-    assert!(ttc.target.entity_ref.is_some());
-    assert_eq!(
-        ttc.target
-            .entity_ref
-            .as_ref()
-            .unwrap()
-            .entity_ref
-            .as_literal()
-            .unwrap(),
-        "DefaultEntity"
-    );
+    let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &ttc.target.choice else {
+        panic!("Expected EntityRef branch");
+    };
+    assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "DefaultEntity");
 
     let target = TimeToCollisionTarget::entity("DefaultEntity");
-    assert!(target.entity_ref.is_some());
-    assert_eq!(
-        target
-            .entity_ref
-            .as_ref()
-            .unwrap()
-            .entity_ref
-            .as_literal()
-            .unwrap(),
-        "DefaultEntity"
-    );
-    assert!(target.position.is_none());
+    let TimeToCollisionTargetChoice::EntityRef(entity_ref) = &target.choice else {
+        panic!("Expected EntityRef branch");
+    };
+    assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "DefaultEntity");
 }
 
 // ========== Serialization Tests ==========

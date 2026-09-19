@@ -899,8 +899,10 @@ fn tdd_can_parse_simulation_time_conditions() {
     let condition = &condition_group.conditions[0];
 
     // Verify condition type is parsed correctly
-    if let Some(by_value) = &condition.by_value_condition {
-        if let Some(sim_time) = &by_value.simulation_time_condition {
+    use openscenario_rs::types::conditions::value::ByValueConditionChoice;
+    use openscenario_rs::types::scenario::triggers::ConditionChoice;
+    if let ConditionChoice::ByValueCondition(by_value) = &condition.choice {
+        if let ByValueConditionChoice::SimulationTimeCondition(sim_time) = &by_value.choice {
             println!(
                 "✅ Found SimulationTimeCondition with value: {}",
                 sim_time.value.as_literal().unwrap_or(&0.0)
@@ -968,7 +970,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         scenario::story::{
             StoryAction, StoryActionChoice, StoryPrivateAction, StoryPrivateActionChoice,
         },
-        scenario::triggers::{Condition, ConditionGroup, Trigger},
+        scenario::triggers::{Condition, ConditionChoice, ConditionGroup, Trigger},
         scenario::{Act, Actors, EntityRef, Event, Maneuver, ManeuverGroup, ScenarioStory},
     };
 
@@ -983,17 +985,9 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         name: Value::literal("StartCondition".to_string()),
         condition_edge: Value::Literal(ConditionEdge::Rising),
         delay: Value::literal(1.0),
-        by_value_condition: Some(ByValueCondition {
-            simulation_time_condition: Some(time_condition),
-            parameter_condition: None,
-            time_of_day_condition: None,
-            storyboard_element_state_condition: None,
-            user_defined_value_condition: None,
-            traffic_signal_condition: None,
-            traffic_signal_controller_condition: None,
-            variable_condition: None,
-        }),
-        by_entity_condition: None,
+        choice: ConditionChoice::ByValueCondition(ByValueCondition::simulation_time(
+            time_condition,
+        )),
     };
 
     // Create a condition group (AND logic)
