@@ -176,6 +176,25 @@ Breaking, unless noted.
   `AppearanceAction::empty` and the private `AnimationType::empty`, each a helper that built
   the all-`None` value, are gone with the shape they built.
 
+- **`TrailerAction` and `Trailer` now hold a choice enum instead of parallel `Option`
+  fields.** XSD `TrailerAction` (`Schema/OpenSCENARIO.xsd:2342-2347`) is a bare `xsd:choice`
+  of `ConnectTrailerAction` | `DisconnectTrailerAction`, and `Trailer` (`:2336-2341`) is a
+  bare `xsd:choice` of an inline `Trailer` (type `ScenarioObject`) or a `TrailerRef`.
+  Neither carries `minOccurs`/`maxOccurs`, so exactly one branch is required. Modeled as
+  parallel `Option` fields, both accepted a document naming no branch and a document naming
+  two, with no diagnostic in either direction. Each now carries its branch in an externally
+  tagged enum behind `#[serde(rename = "$value")]`, so serde rejects zero branches with
+  ``missing field `$value` `` and two with ``duplicate field `$value` ``.
+
+  This breaks field access and struct literals. `TrailerAction`'s two `Option` fields become
+  one `choice: TrailerActionChoice`; `Trailer`'s two become one `choice: TrailerChoice`. Three
+  sibling types in the same traffic-and-trailer group were checked and left unconverted:
+  `TrafficSourceAction` and `TrafficSwarmAction` (`:2300-2314`, `:2317-2334`) are each an
+  `xsd:all` of required attributes and optional elements, not a choice, so their parallel
+  `Option` fields already state the schema correctly; `TrafficStopAction` (`:2315-2316`) is
+  an empty complex type with no fields at all. `Vehicle` (`:2498-2514`), which holds a
+  `Trailer` among five other optional elements, is likewise `xsd:all` and was left as it was.
+
 - **`Property`'s `@name` and `@value` now accept parameter references.** XSD `Property`
   (`Schema/OpenSCENARIO.xsd:1809-1812`) types both attributes as the schema's `String`, a
   union whose second member is the parameter production, so `<Property name="maxSpeed"

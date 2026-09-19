@@ -50,19 +50,26 @@ pub struct TrailerCoupler {
 
 /// Trailer attached to a vehicle: either an inline nested ScenarioObject or a
 /// reference to an existing entity acting as the trailer.
+///
+/// XSD `Trailer` (`:2336-2341`): a bare `xsd:choice` of `Trailer` (type `ScenarioObject`) |
+/// `TrailerRef` (type `EntityRef`), no occurrence attributes, so exactly one branch is
+/// required. `$value` reads the branch from the live reader by element name; parallel
+/// `Option` fields would let both branches populate at once and both re-serialize, which
+/// no schema-valid document can express.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Trailer {
-    /// Inline scenario object defining the trailer (boxed to break recursion)
-    #[serde(rename = "Trailer", default, skip_serializing_if = "Option::is_none")]
-    pub trailer: Option<Box<crate::types::entities::ScenarioObject>>,
+    #[serde(rename = "$value")]
+    pub choice: TrailerChoice,
+}
 
+/// The branch selected by a `Trailer`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum TrailerChoice {
+    /// Inline scenario object defining the trailer (boxed to break recursion)
+    Trailer(Box<crate::types::entities::ScenarioObject>),
     /// Reference to an existing entity acting as the trailer
-    #[serde(
-        rename = "TrailerRef",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub trailer_ref: Option<EntityRef>,
+    TrailerRef(EntityRef),
 }
 
 /// Vehicle properties container
@@ -425,8 +432,7 @@ mod tests {
     fn test_vehicle_trailer_ref_roundtrip() {
         let mut car = Vehicle::new_car("TowCar".to_string());
         car.trailer = Some(Trailer {
-            trailer: None,
-            trailer_ref: Some(EntityRef {
+            choice: TrailerChoice::TrailerRef(EntityRef {
                 entity_ref: crate::types::basic::Value::literal("trailer1".to_string()),
             }),
         });
@@ -438,9 +444,31 @@ mod tests {
 
         let deserialized: Vehicle = quick_xml::de::from_str(&xml).unwrap();
         let trailer = deserialized.trailer.expect("expected trailer");
-        assert!(trailer.trailer.is_none());
-        let trailer_ref = trailer.trailer_ref.expect("expected trailer ref");
+        let trailer_ref = match trailer.choice {
+            TrailerChoice::TrailerRef(r) => r,
+            other => panic!("expected TrailerRef, got {other:?}"),
+        };
         assert_eq!(trailer_ref.entity_ref.as_literal().unwrap(), "trailer1");
+    }
+
+    #[test]
+    fn test_vehicle_trailer_zero_branches_rejected() {
+        let xml = "<Trailer></Trailer>";
+        let err = quick_xml::de::from_str::<Trailer>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("missing field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_vehicle_trailer_two_branches_rejected() {
+        let xml = r#"<Trailer><TrailerRef entityRef="e1"/><TrailerRef entityRef="e2"/></Trailer>"#;
+        let err = quick_xml::de::from_str::<Trailer>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("duplicate field `$value`"),
+            "got: {err}"
+        );
     }
 
     #[test]
@@ -453,8 +481,7 @@ mod tests {
 
         let mut tow_car = Vehicle::new_car("TowCar".to_string());
         tow_car.trailer = Some(Trailer {
-            trailer: Some(Box::new(nested_scenario_object)),
-            trailer_ref: None,
+            choice: TrailerChoice::Trailer(Box::new(nested_scenario_object)),
         });
 
         let xml = quick_xml::se::to_string(&tow_car).unwrap();
@@ -463,8 +490,10 @@ mod tests {
 
         let deserialized: Vehicle = quick_xml::de::from_str(&xml).unwrap();
         let trailer = deserialized.trailer.expect("expected trailer");
-        assert!(trailer.trailer_ref.is_none());
-        let nested = trailer.trailer.expect("expected nested scenario object");
+        let nested = match trailer.choice {
+            TrailerChoice::Trailer(nested) => nested,
+            other => panic!("expected nested scenario object, got {other:?}"),
+        };
         assert_eq!(nested.get_name(), Some("Trailer1"));
         assert!(nested.vehicle.is_some());
     }

@@ -13,7 +13,9 @@ use openscenario_rs::types::actions::appearance::{
     AppearanceAction, AppearanceActionChoice, LightState, LightStateAction, LightType,
     LightTypeChoice, VehicleLight,
 };
-use openscenario_rs::types::actions::trailer::{DisconnectTrailerAction, TrailerAction};
+use openscenario_rs::types::actions::trailer::{
+    DisconnectTrailerAction, TrailerAction, TrailerActionChoice,
+};
 use openscenario_rs::types::actions::wrappers::{
     EntityActionChoice, ParameterActionChoice, TrafficActionChoice, VariableActionChoice,
 };
@@ -228,16 +230,12 @@ fn private_action_trailer_action_connect_round_trip() {
         .trailer_action
         .as_ref()
         .expect("TrailerAction branch must be populated, not silently dropped");
-    assert_eq!(
-        trailer
-            .connect_trailer_action
-            .as_ref()
-            .unwrap()
-            .trailer_ref
-            .to_string(),
-        "trailer1"
-    );
-    assert!(trailer.disconnect_trailer_action.is_none());
+    match &trailer.choice {
+        TrailerActionChoice::ConnectTrailerAction(c) => {
+            assert_eq!(c.trailer_ref.to_string(), "trailer1")
+        }
+        other => panic!("expected ConnectTrailerAction, got {other:?}"),
+    }
     assert_eq!(action.get_action_type(), Some("TrailerAction"));
     assert!(action.validate().is_ok());
 
@@ -256,8 +254,10 @@ fn private_action_trailer_action_disconnect_round_trip() {
         .trailer_action
         .as_ref()
         .expect("TrailerAction branch");
-    assert!(trailer.connect_trailer_action.is_none());
-    assert!(trailer.disconnect_trailer_action.is_some());
+    assert!(matches!(
+        trailer.choice,
+        TrailerActionChoice::DisconnectTrailerAction(_)
+    ));
     assert!(action.validate().is_ok());
 
     let out = ser("PrivateAction", &action);
@@ -278,8 +278,7 @@ fn private_action_choice_cardinality_covers_new_branches() {
             )),
         )),
         trailer_action: Some(TrailerAction {
-            connect_trailer_action: None,
-            disconnect_trailer_action: Some(DisconnectTrailerAction {}),
+            choice: TrailerActionChoice::DisconnectTrailerAction(DisconnectTrailerAction {}),
         }),
         ..PrivateAction::empty()
     };

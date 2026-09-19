@@ -5,21 +5,24 @@ use crate::types::basic::OSString;
 use serde::{Deserialize, Serialize};
 
 /// Main trailer action wrapper containing all trailer action types
+///
+/// XSD `TrailerAction` (`:2342-2347`): a bare `xsd:choice` of `ConnectTrailerAction` |
+/// `DisconnectTrailerAction`, no occurrence attributes, so exactly one branch is required.
+/// `$value` reads the branch from the live reader by element name; parallel `Option`
+/// fields would let both branches populate at once and both re-serialize, which no
+/// schema-valid document can express.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrailerAction {
-    /// Connect trailer action
-    #[serde(
-        rename = "ConnectTrailerAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub connect_trailer_action: Option<ConnectTrailerAction>,
+    #[serde(rename = "$value")]
+    pub choice: TrailerActionChoice,
+}
 
-    /// Disconnect trailer action
-    #[serde(
-        rename = "DisconnectTrailerAction",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub disconnect_trailer_action: Option<DisconnectTrailerAction>,
+/// The branch selected by a `TrailerAction`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum TrailerActionChoice {
+    ConnectTrailerAction(ConnectTrailerAction),
+    DisconnectTrailerAction(DisconnectTrailerAction),
 }
 
 /// Connect trailer action for attaching trailers to vehicles
@@ -64,12 +67,63 @@ mod tests {
     #[test]
     fn test_trailer_action_serialization() {
         let action = TrailerAction {
-            connect_trailer_action: Some(ConnectTrailerAction::new("DefaultTrailer")),
-            disconnect_trailer_action: None,
+            choice: TrailerActionChoice::ConnectTrailerAction(ConnectTrailerAction::new(
+                "DefaultTrailer",
+            )),
         };
 
         let serialized = quick_xml::se::to_string(&action).expect("Serialization should succeed");
         assert!(serialized.contains("ConnectTrailerAction"));
         assert!(serialized.contains("DefaultTrailer"));
+    }
+
+    #[test]
+    fn test_trailer_action_zero_branches_rejected() {
+        let xml = "<TrailerAction></TrailerAction>";
+        let err = quick_xml::de::from_str::<TrailerAction>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("missing field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_trailer_action_two_branches_rejected() {
+        let xml = r#"<TrailerAction><ConnectTrailerAction trailerRef="t1"/><DisconnectTrailerAction/></TrailerAction>"#;
+        let err = quick_xml::de::from_str::<TrailerAction>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("duplicate field `$value`"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_trailer_action_connect_round_trip() {
+        let xml = r#"<TrailerAction><ConnectTrailerAction trailerRef="trailer1"/></TrailerAction>"#;
+        let action: TrailerAction = quick_xml::de::from_str(xml).unwrap();
+        match &action.choice {
+            TrailerActionChoice::ConnectTrailerAction(c) => {
+                assert_eq!(c.trailer_ref.as_literal(), Some(&"trailer1".to_string()))
+            }
+            other => panic!("expected ConnectTrailerAction, got {other:?}"),
+        }
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert_eq!(serialized, xml);
+        let reparsed: TrailerAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
+    }
+
+    #[test]
+    fn test_trailer_action_disconnect_round_trip() {
+        let xml = "<TrailerAction><DisconnectTrailerAction/></TrailerAction>";
+        let action: TrailerAction = quick_xml::de::from_str(xml).unwrap();
+        assert!(matches!(
+            action.choice,
+            TrailerActionChoice::DisconnectTrailerAction(_)
+        ));
+        let serialized = quick_xml::se::to_string(&action).unwrap();
+        assert_eq!(serialized, xml);
+        let reparsed: TrailerAction = quick_xml::de::from_str(&serialized).unwrap();
+        assert_eq!(action, reparsed);
     }
 }
