@@ -111,6 +111,17 @@ The conformance ledger, including what the test corpus does and does not prove, 
 - **`EntitySelection`**, rebuilt to the schema shape with a required `name` and `Members`.
   `Entities` now carries its selection collection; selections were previously dropped on read.
 - The remaining action types, the complete `Action` choice, and the `SteadyState` group.
+- **`MinVec<T, MIN>` in `types::basic`, a vector that carries its schema lower bound in its
+  type.** Several `xsd:sequence` particles in `Schema/OpenSCENARIO.xsd` declare `minOccurs`
+  above one: `Vertex` and `Waypoint` require two children, `Position` inside `Polygon`
+  requires three. `Vec<T>` cannot state such a bound and no serde attribute states it either,
+  so dropping `#[serde(default)]` rejects only the empty case and a `<Polyline>` holding a
+  single `<Vertex>` still parses and is written back out in the same schema-invalid shape.
+  `MinVec` checks the length after deserializing a `Vec<T>` and keeps its inner field
+  private, with no `DerefMut` and no `Default` for `MIN > 0`. Hence a value shorter than
+  `MIN` is unconstructable rather than merely detectable, which closes the serialization
+  side as well as the parse side. The type is additive: no field changes type in this
+  release entry, and the fields that will adopt it are converted separately.
 
 ### Changed
 

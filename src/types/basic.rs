@@ -1031,3 +1031,121 @@ impl Range {
         })
     }
 }
+
+/// A vector that carries its schema lower bound in its type.
+///
+/// Several `xsd:sequence` particles in `Schema/OpenSCENARIO.xsd` declare a `minOccurs`
+/// above one: `Vertex` and `Waypoint` require two children, `Position` inside `Polygon`
+/// requires three. `Vec<T>` cannot state such a bound, and no serde attribute states it
+/// either. Removing `#[serde(default)]` only rejects the empty case, so a `<Polyline>`
+/// with a single `<Vertex>` parses and is written back out in the same schema-invalid
+/// shape.
+///
+/// `MinVec<T, MIN>` closes both directions at once. `Deserialize` reads a `Vec<T>` and
+/// then checks the length, so a short document fails to parse. The inner field is
+/// private and there is no `DerefMut`, so a value shorter than `MIN` cannot be
+/// constructed at all and the serializer has nothing invalid to write. Hence the bound
+/// is a property of the type rather than a check every caller has to remember.
+///
+/// A mutable slice deref would be sound, since a slice cannot shrink a vector. However
+/// `DerefMut` also exposes `Vec`'s own inherent methods through auto-deref, `clear` and
+/// `truncate` among them, which is why it is left out. Mutation goes through
+/// [`MinVec::new`] on a rebuilt vector.
+///
+/// There is deliberately no `Default` for `MIN > 0`: the empty vector is exactly the
+/// value the type exists to reject.
+///
+/// ```
+/// use openscenario_rs::types::basic::MinVec;
+///
+/// let two: MinVec<u8, 2> = MinVec::new(vec![1, 2]).unwrap();
+/// assert_eq!(two.as_slice(), &[1, 2]);
+/// assert!(MinVec::<u8, 2>::new(vec![1]).is_err());
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MinVec<T, const MIN: usize>(Vec<T>);
+
+impl<T, const MIN: usize> MinVec<T, MIN> {
+    /// Build a `MinVec` from a vector, rejecting one shorter than `MIN`.
+    pub fn new(items: Vec<T>) -> Result<Self> {
+        if items.len() < MIN {
+            return Err(Error::validation_error(
+                "MinVec",
+                &format!("expected at least {} items, got {}", MIN, items.len()),
+            ));
+        }
+        Ok(Self(items))
+    }
+
+    /// Borrow the contents as a slice.
+    #[inline]
+    pub fn as_slice(&self) -> &[T] {
+        &self.0
+    }
+
+    /// Consume the wrapper and return the underlying vector.
+    ///
+    /// The bound is checked on construction, so handing back an owned `Vec` cannot
+    /// invalidate a live `MinVec`.
+    #[inline]
+    pub fn into_inner(self) -> Vec<T> {
+        self.0
+    }
+}
+
+impl<T, const MIN: usize> std::ops::Deref for MinVec<T, MIN> {
+    type Target = [T];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T, const MIN: usize> TryFrom<Vec<T>> for MinVec<T, MIN> {
+    type Error = Error;
+
+    fn try_from(items: Vec<T>) -> Result<Self> {
+        Self::new(items)
+    }
+}
+
+impl<T, const MIN: usize> IntoIterator for MinVec<T, MIN> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a, T, const MIN: usize> IntoIterator for &'a MinVec<T, MIN> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<T: Serialize, const MIN: usize> Serialize for MinVec<T, MIN> {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de, T, const MIN: usize> Deserialize<'de> for MinVec<T, MIN>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let items = Vec::<T>::deserialize(deserializer)?;
+        Self::new(items).map_err(serde::de::Error::custom)
+    }
+}
