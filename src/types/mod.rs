@@ -51,8 +51,8 @@ pub use scenario::init::{
     Actions, EnvironmentAction, GlobalAction, Init, LongitudinalAction, Private, PrivateAction,
 };
 pub use scenario::storyboard::{
-    CatalogDefinition, FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition,
-    Storyboard, DEFAULT_REV_MAJOR, DEFAULT_REV_MINOR,
+    FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition, Storyboard,
+    DEFAULT_REV_MAJOR, DEFAULT_REV_MINOR,
 };
 
 // Re-export distribution types

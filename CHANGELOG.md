@@ -556,6 +556,21 @@ Breaking, unless noted.
 
 ### Removed
 
+- **`CatalogDefinition` and the duplicate `ScenarioDefinition` in `crate::types::scenario`.**
+  Breaking. `CatalogDefinition` wrapped `CatalogContent` behind a `Catalog` field, and it was the
+  type of `OpenScenario::catalog`. The XSD group `CatalogDefinition` (`Schema/OpenSCENARIO.xsd:862`)
+  contributes a single element `<Catalog>` of type `Catalog`, which `CatalogContent` already models
+  directly, so the wrapper made the document root expect a `<Catalog>` child inside the `<Catalog>`
+  element. An equivalent wrapper was removed from `CatalogFile` earlier in this campaign; the
+  document root was missed at the time. `OpenScenario::catalog` is now
+  `Option<CatalogContent>`, and the surviving type for catalog content is `CatalogContent`.
+  `crate::types::scenario::ScenarioDefinition` was a second, field-for-field copy of
+  `crate::types::scenario::storyboard::ScenarioDefinition` with additional constructors. Nothing in
+  the crate, its tools, its examples or its tests referenced it, which is not by itself an argument
+  that removing it is non-breaking, since a downstream consumer could name the path. The surviving
+  type is `storyboard::ScenarioDefinition`, which is what `lib.rs` and `types::mod` already
+  re-exported under that name.
+
 - **`Position::empty()` and `InRoutePosition::empty()`.** Breaking. Each was a constructor whose
   only product was a value the schema forbids: an element naming none of its choice's branches.
   Both were public, and `Position::empty()` serialized to `<Position/>`. The branch now
@@ -1158,6 +1173,32 @@ Breaking, unless noted.
     `CatalogReference<T>` and the untyped `EntityCatalogReference`.
 
 ### Fixed
+
+- **A catalog document could not be parsed through the document root, and serializing one emitted
+  two nested `<Catalog>` elements.** `OpenScenario::catalog` held a `CatalogDefinition` wrapper
+  that the schema does not declare, so `parse_from_file` on any catalog document failed with
+  ``missing field `Catalog` `` and `OpenScenarioDocumentType::Catalog` was unreachable from
+  parsing. The conformance corpus did not show this: its sixteen catalog files are routed to
+  `CatalogFile`, a separate root type that models the same production correctly, so the root's own
+  catalog branch was never exercised. The field is now `Option<CatalogContent>`, matching the XSD
+  group at `:862`. All sixteen corpus catalog files now also parse through `parse_from_file`.
+
+- **`OpenScenario::document_type` classified a document naming two root branches as whichever
+  branch it tested first.** The root choice `OpenScenarioCategory` (`:1538`) selects exactly one of
+  three groups. However, the branches are modeled as parallel `Option` fields, so a value naming
+  two of them can be constructed, and the previous implementation returned `Scenario` for a
+  document that also carried a `<Catalog>`. It now counts the branches named and returns
+  `Unknown` unless exactly one is. Single-branch documents are classified as before.
+
+  The parallel `Option` fields are kept here rather than replaced by the `$value` enum used for
+  every other choice in this crate, and the reason is structural. A `$value` field takes the
+  element name from the serialized variant and thus writes one element per instance. Two of the
+  three branches are single elements, but `ScenarioDefinition` (`:1989`) is a sequence of seven
+  sibling elements inlined into the root, so making it a variant emits a wrapping
+  `<ScenarioDefinition>` element the schema never declares, and deserializing a real document then
+  fails with ``unknown variant `CatalogLocations` ``. Hence the root cannot enforce its own choice
+  cardinality through the type, and `document_type` reports what the type cannot reject. This is
+  recorded on `OpenScenario` itself so the next reader does not retry the conversion.
 
 - **An init private action built through `PrivateActionBuilder` from the activate-controller,
   appearance or trailer branch was silently discarded.** `convert_to_init_action` mapped seven of

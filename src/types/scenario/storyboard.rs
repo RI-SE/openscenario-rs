@@ -8,9 +8,26 @@ use crate::types::scenario::monitors::MonitorDeclarations;
 use crate::types::scenario::variables::VariableDeclarations;
 use serde::{Deserialize, Serialize};
 
-/// Root OpenSCENARIO document structure supporting all document types
-/// This represents the flattened XSD group structure where OpenScenarioCategory
-/// is a choice between ScenarioDefinition, CatalogDefinition, and ParameterValueDistributionDefinition groups
+/// Root OpenSCENARIO document.
+///
+/// `OpenScenario` (`Schema/OpenSCENARIO.xsd:1532`) is an `xsd:sequence` of `FileHeader`
+/// followed by the group `OpenScenarioCategory` (`:1538`), which is a real
+/// `xsd:choice` over three further groups: `ScenarioDefinition` (`:1989`),
+/// `CatalogDefinition` (`:862`) and `ParameterValueDistributionDefinition` (`:1667`).
+///
+/// The branches are therefore kept as parallel `Option` fields rather than as the
+/// `$value` enum used for every other choice in this crate, and the reason is
+/// structural rather than historical. A `$value` field takes the element name from
+/// the serialized variant, so it writes exactly one element per instance. Two of the
+/// three branches are single elements and would fit, but `ScenarioDefinition` is a
+/// sequence of seven sibling elements inlined directly into the root. Modeling it as
+/// a variant makes serde emit a wrapping `<ScenarioDefinition>` element, which the
+/// schema does not declare and no document contains, and deserialization of a real
+/// document then fails with `unknown variant `CatalogLocations``.
+///
+/// The consequence is that the root cannot enforce its own choice cardinality: a value
+/// naming zero branches or two can be constructed, and [`Self::document_type`] reports
+/// both as [`OpenScenarioDocumentType::Unknown`] rather than silently picking one.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "OpenSCENARIO")]
 pub struct OpenScenario {
@@ -55,14 +72,50 @@ pub struct OpenScenario {
     )]
     pub parameter_value_distribution: Option<ParameterValueDistribution>,
 
-    // CatalogDefinition group elements (optional - present for catalog documents)
+    // CatalogDefinition group (`:862`): the group contributes the single element
+    // `<Catalog>` of type `Catalog`, which `CatalogContent` already models. An
+    // intermediate wrapper struct here would make the root expect a `<Catalog>` child
+    // inside the `<Catalog>` element.
     #[serde(rename = "Catalog", skip_serializing_if = "Option::is_none")]
-    pub catalog: Option<CatalogDefinition>,
+    pub catalog: Option<CatalogContent>,
 }
 
 impl OpenScenario {
-    /// Determine the document type based on which elements are present
+    /// Whether any member of the `ScenarioDefinition` group (`:1989`) is present.
+    ///
+    /// All seven count, not only the required four, because naming any one of them
+    /// selects that branch of the root choice.
+    fn names_scenario_group(&self) -> bool {
+        self.parameter_declarations.is_some()
+            || self.variable_declarations.is_some()
+            || self.monitor_declarations.is_some()
+            || self.catalog_locations.is_some()
+            || self.road_network.is_some()
+            || self.entities.is_some()
+            || self.storyboard.is_some()
+    }
+
+    /// Determine which branch of the root `xsd:choice` this document names.
+    ///
+    /// The branches are mutually exclusive, so a value naming two of them is not a
+    /// document of either kind and is reported as
+    /// [`OpenScenarioDocumentType::Unknown`]. This check has to live here because the
+    /// parallel `Option` fields cannot express the exclusivity themselves; see the type
+    /// documentation for why they cannot be replaced by a `$value` enum.
     pub fn document_type(&self) -> OpenScenarioDocumentType {
+        let branches_named = [
+            self.names_scenario_group(),
+            self.catalog.is_some(),
+            self.parameter_value_distribution.is_some(),
+        ]
+        .into_iter()
+        .filter(|named| *named)
+        .count();
+
+        if branches_named != 1 {
+            return OpenScenarioDocumentType::Unknown;
+        }
+
         if self.entities.is_some() && self.storyboard.is_some() {
             OpenScenarioDocumentType::Scenario
         } else if self.parameter_value_distribution.is_some() {
@@ -138,24 +191,6 @@ pub struct ScenarioDefinition {
 
     #[serde(rename = "Storyboard")]
     pub storyboard: Storyboard,
-}
-
-/// Catalog definition for catalog files
-///
-/// No `Default`: it wrapped `CatalogContent`, whose `@name` is `use="required"`
-/// with no XSD `default="…"`. The derive here used to piggy-back on
-/// `CatalogContent`'s own (now-removed) fabricating `Default`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct CatalogDefinition {
-    #[serde(rename = "Catalog")]
-    pub catalog: CatalogContent,
-}
-
-impl CatalogDefinition {
-    /// Create a new catalog definition wrapping the given catalog content.
-    pub fn new(catalog: CatalogContent) -> Self {
-        Self { catalog }
-    }
 }
 
 /// The OpenSCENARIO revision this crate targets, as declared in `FileHeader`.
@@ -272,14 +307,19 @@ mod tests {
         assert_eq!(doc.document_type(), OpenScenarioDocumentType::Unknown);
     }
 
+    /// A catalog document names the catalog branch and nothing else. This test used to
+    /// leave the scenario group's `ParameterDeclarations`, `CatalogLocations` and
+    /// `RoadNetwork` in place while asserting the result was a catalog, which is the
+    /// two-branch document the schema forbids.
     #[test]
     fn test_document_type_catalog() {
         let mut doc = test_scenario_document();
+        doc.parameter_declarations = None;
+        doc.catalog_locations = None;
+        doc.road_network = None;
         doc.entities = None;
         doc.storyboard = None;
-        doc.catalog = Some(CatalogDefinition::new(CatalogContent::new(
-            "TestCatalog".to_string(),
-        )));
+        doc.catalog = Some(CatalogContent::new("TestCatalog".to_string()));
         assert_eq!(doc.document_type(), OpenScenarioDocumentType::Catalog);
         assert!(doc.is_catalog());
     }
