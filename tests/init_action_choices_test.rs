@@ -1,25 +1,22 @@
 //! Round-trip tests for the `<Storyboard><Init><Actions>` choice groups.
 //!
-//! `init::GlobalAction` (XSD `GlobalAction`, :1282-1296) and `init::PrivateAction`
-//! (XSD `PrivateAction`, :1777-1790) are both `xsd:choice` groups modelled as a
-//! struct of parallel `Option` fields. Neither uses `deny_unknown_fields`, so an
-//! unmodelled branch does not fail to parse — it silently deserializes to an
-//! all-`None` struct and re-serializes as an empty element, which violates the
-//! choice (exactly one child required). These tests pin every branch: parse a
-//! minimal schema-valid snippet, assert the right field is populated, re-serialize
-//! and assert the branch element survives.
+//! `init::GlobalAction` (XSD `GlobalAction`, :1282-1295) and `init::PrivateAction`
+//! (XSD `PrivateAction`, :1777-1791) are both `xsd:choice` groups, each modelled as a
+//! single `$value` field holding an externally-tagged enum. These tests pin every branch
+//! the file covers: parse a minimal schema-valid snippet, assert the right variant was
+//! selected, re-serialize and assert the branch element survives. Cardinality is enforced
+//! by the type rather than by a `validate()` call, so the tests that used to construct an
+//! all-`None` or two-branch value now assert that the corresponding documents are rejected
+//! at parse time.
 
-use openscenario_rs::types::actions::appearance::{
-    AppearanceAction, AppearanceActionChoice, LightState, LightStateAction, LightType,
-    LightTypeChoice, VehicleLight,
-};
-use openscenario_rs::types::actions::trailer::{
-    DisconnectTrailerAction, TrailerAction, TrailerActionChoice,
-};
+use openscenario_rs::types::actions::appearance::AppearanceActionChoice;
+use openscenario_rs::types::actions::trailer::TrailerActionChoice;
 use openscenario_rs::types::actions::wrappers::{
     EntityActionChoice, ParameterActionChoice, TrafficActionChoice, VariableActionChoice,
 };
-use openscenario_rs::types::scenario::init::{GlobalAction, PrivateAction};
+use openscenario_rs::types::scenario::init::{
+    GlobalAction, GlobalActionChoice, PrivateAction, PrivateActionChoice,
+};
 
 fn de<T: serde::de::DeserializeOwned>(xml: &str) -> T {
     quick_xml::de::from_str(xml).unwrap_or_else(|e| panic!("deserialize failed for {xml}: {e}"))
@@ -36,9 +33,11 @@ fn ser<T: serde::Serialize>(root: &str, v: &T) -> String {
 fn global_action_environment_action_round_trip() {
     let xml = r#"<GlobalAction><EnvironmentAction><Environment name="Env1"/></EnvironmentAction></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    assert!(action.environment_action.is_some());
-    assert_eq!(action.get_action_type(), Some("EnvironmentAction"));
-    assert!(action.validate().is_ok());
+    assert!(matches!(
+        action.action,
+        GlobalActionChoice::EnvironmentAction(_)
+    ));
+    assert_eq!(action.action_type(), "EnvironmentAction");
 
     let out = ser("GlobalAction", &action);
     assert!(out.contains("<EnvironmentAction"), "got: {out}");
@@ -51,17 +50,15 @@ fn global_action_entity_action_round_trip() {
     // XSD EntityAction (:1128-1134): @entityRef + choice(AddEntityAction | DeleteEntityAction)
     let xml = r#"<GlobalAction><EntityAction entityRef="npc1"><DeleteEntityAction/></EntityAction></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    let entity = action
-        .entity_action
-        .as_ref()
-        .expect("EntityAction branch must be populated, not silently dropped");
+    let GlobalActionChoice::EntityAction(entity) = &action.action else {
+        panic!("expected the EntityAction branch, got {:?}", action.action);
+    };
     assert_eq!(entity.entity_ref.to_string(), "npc1");
     assert!(matches!(
         entity.action,
         EntityActionChoice::DeleteEntityAction(_)
     ));
-    assert_eq!(action.get_action_type(), Some("EntityAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "EntityAction");
 
     let out = ser("GlobalAction", &action);
     assert!(out.contains("<EntityAction"), "got: {out}");
@@ -74,12 +71,11 @@ fn global_action_infrastructure_action_round_trip() {
     // XSD InfrastructureAction: sequence with a required TrafficSignalAction.
     let xml = r#"<GlobalAction><InfrastructureAction><TrafficSignalAction><TrafficSignalStateAction name="sig1" state="green"/></TrafficSignalAction></InfrastructureAction></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    assert!(
-        action.infrastructure_action.is_some(),
-        "InfrastructureAction branch must be populated"
-    );
-    assert_eq!(action.get_action_type(), Some("InfrastructureAction"));
-    assert!(action.validate().is_ok());
+    assert!(matches!(
+        action.action,
+        GlobalActionChoice::InfrastructureAction(_)
+    ));
+    assert_eq!(action.action_type(), "InfrastructureAction");
 
     let out = ser("GlobalAction", &action);
     assert!(out.contains("<InfrastructureAction"), "got: {out}");
@@ -91,18 +87,21 @@ fn global_action_set_monitor_action_round_trip() {
     // XSD SetMonitorAction: required @monitorRef and @value.
     let xml = r#"<GlobalAction><SetMonitorAction monitorRef="speedMonitor" value="true"/></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    let monitor = action
-        .set_monitor_action
-        .as_ref()
-        .expect("SetMonitorAction branch must be populated");
+    let GlobalActionChoice::SetMonitorAction(monitor) = &action.action else {
+        panic!(
+            "expected the SetMonitorAction branch, got {:?}",
+            action.action
+        );
+    };
     assert_eq!(monitor.monitor_ref.to_string(), "speedMonitor");
     assert_eq!(monitor.value.as_literal().unwrap(), &true);
-    assert_eq!(action.get_action_type(), Some("SetMonitorAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "SetMonitorAction");
 
     let out = ser("GlobalAction", &action);
-    assert!(out.contains("<SetMonitorAction"), "got: {out}");
-    assert!(out.contains(r#"monitorRef="speedMonitor""#), "got: {out}");
+    assert_eq!(
+        out, xml,
+        "the serialized bytes must equal the source document"
+    );
     let reparsed: GlobalAction = de(&out);
     assert_eq!(action, reparsed);
 }
@@ -112,17 +111,18 @@ fn global_action_parameter_action_round_trip() {
     // XSD ParameterAction (:1288) is deprecated but still a valid choice branch.
     let xml = r#"<GlobalAction><ParameterAction parameterRef="p1"><SetAction value="100"/></ParameterAction></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    let param = action
-        .parameter_action
-        .as_ref()
-        .expect("ParameterAction branch must be populated");
+    let GlobalActionChoice::ParameterAction(param) = &action.action else {
+        panic!(
+            "expected the ParameterAction branch, got {:?}",
+            action.action
+        );
+    };
     assert_eq!(param.parameter_ref.to_string(), "p1");
     match &param.action {
         ParameterActionChoice::ParameterSetAction(s) => assert_eq!(s.value.to_string(), "100"),
         other => panic!("expected ParameterSetAction, got {other:?}"),
     }
-    assert_eq!(action.get_action_type(), Some("ParameterAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "ParameterAction");
 
     let out = ser("GlobalAction", &action);
     assert!(out.contains("<ParameterAction"), "got: {out}");
@@ -133,10 +133,9 @@ fn global_action_parameter_action_round_trip() {
 fn global_action_traffic_action_round_trip() {
     let xml = r#"<GlobalAction><TrafficAction trafficName="t1"><TrafficStopAction/></TrafficAction></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    let traffic = action
-        .traffic_action
-        .as_ref()
-        .expect("TrafficAction branch must be populated");
+    let GlobalActionChoice::TrafficAction(traffic) = &action.action else {
+        panic!("expected the TrafficAction branch, got {:?}", action.action);
+    };
     assert_eq!(
         traffic.traffic_name.as_ref().unwrap().to_string(),
         "t1".to_string()
@@ -145,8 +144,7 @@ fn global_action_traffic_action_round_trip() {
         traffic.action,
         TrafficActionChoice::TrafficStopAction(_)
     ));
-    assert_eq!(action.get_action_type(), Some("TrafficAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "TrafficAction");
 
     let out = ser("GlobalAction", &action);
     assert!(out.contains("<TrafficAction"), "got: {out}");
@@ -157,43 +155,45 @@ fn global_action_traffic_action_round_trip() {
 fn global_action_variable_action_round_trip() {
     let xml = r#"<GlobalAction><VariableAction variableRef="v1"><SetAction value="42"/></VariableAction></GlobalAction>"#;
     let action: GlobalAction = de(xml);
-    let var = action
-        .variable_action
-        .as_ref()
-        .expect("VariableAction branch must be populated");
+    let GlobalActionChoice::VariableAction(var) = &action.action else {
+        panic!(
+            "expected the VariableAction branch, got {:?}",
+            action.action
+        );
+    };
     assert_eq!(var.variable_ref.to_string(), "v1");
     match &var.action {
         VariableActionChoice::VariableSetAction(s) => assert_eq!(s.value.to_string(), "42"),
         other => panic!("expected VariableSetAction, got {other:?}"),
     }
-    assert_eq!(action.get_action_type(), Some("VariableAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "VariableAction");
 
     let out = ser("GlobalAction", &action);
     assert!(out.contains("<VariableAction"), "got: {out}");
     assert!(out.contains("<SetAction"), "got: {out}");
 }
 
+/// A `<GlobalAction/>` naming no branch used to deserialize to an all-`None` struct and
+/// re-serialize unchanged, which violates the XSD choice. The `$value` shape rejects it.
 #[test]
-fn global_action_choice_cardinality_is_validated() {
-    // An all-`None` GlobalAction is what an unmodelled branch used to produce:
-    // it serializes to `<GlobalAction/>`, which violates the XSD choice.
-    let empty = GlobalAction::empty();
-    assert!(empty.validate().is_err());
-    assert_eq!(empty.get_action_type(), None);
+fn global_action_with_no_branch_is_rejected() {
+    let err = quick_xml::de::from_str::<GlobalAction>("<GlobalAction/>").unwrap_err();
+    assert!(
+        err.to_string().contains("$value"),
+        "expected a missing-$value error, got {err}"
+    );
+}
 
-    let multiple = GlobalAction {
-        set_monitor_action: Some(
-            openscenario_rs::types::actions::wrappers::SetMonitorAction::new("monitor1", true),
-        ),
-        traffic_action: Some(
-            openscenario_rs::types::actions::wrappers::TrafficAction::new(
-                TrafficActionChoice::TrafficStopAction(Default::default()),
-            ),
-        ),
-        ..GlobalAction::empty()
-    };
-    assert!(multiple.validate().is_err());
+/// Asserted separately from the zero-branch case: a single test covering both would stop at
+/// the first failure, and this is the case that used to keep both branches.
+#[test]
+fn global_action_with_two_branches_is_rejected() {
+    let xml = r#"<GlobalAction><SetMonitorAction monitorRef="monitor1" value="true"/><TrafficAction><TrafficStopAction/></TrafficAction></GlobalAction>"#;
+    let err = quick_xml::de::from_str::<GlobalAction>(xml).unwrap_err();
+    assert!(
+        err.to_string().contains("$value"),
+        "expected a duplicate-$value error, got {err}"
+    );
 }
 
 // ─── init::PrivateAction branches ───────────────────────────────────────────
@@ -203,16 +203,17 @@ fn private_action_appearance_action_light_state_round_trip() {
     // XSD AppearanceAction := choice(LightStateAction | AnimationAction)
     let xml = r#"<PrivateAction><AppearanceAction><LightStateAction><LightType><VehicleLight vehicleLightType="brakeLights"/></LightType><LightState mode="on"/></LightStateAction></AppearanceAction></PrivateAction>"#;
     let action: PrivateAction = de(xml);
-    let appearance = action
-        .appearance_action
-        .as_ref()
-        .expect("AppearanceAction branch must be populated, not silently dropped");
+    let PrivateActionChoice::AppearanceAction(appearance) = &action.action else {
+        panic!(
+            "expected the AppearanceAction branch, got {:?}",
+            action.action
+        );
+    };
     assert!(matches!(
         appearance.choice,
         AppearanceActionChoice::LightStateAction(_)
     ));
-    assert_eq!(action.get_action_type(), Some("AppearanceAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "AppearanceAction");
 
     let out = ser("PrivateAction", &action);
     assert!(out.contains("<AppearanceAction"), "got: {out}");
@@ -226,22 +227,22 @@ fn private_action_trailer_action_connect_round_trip() {
     // XSD TrailerAction := choice(ConnectTrailerAction | DisconnectTrailerAction)
     let xml = r#"<PrivateAction><TrailerAction><ConnectTrailerAction trailerRef="trailer1"/></TrailerAction></PrivateAction>"#;
     let action: PrivateAction = de(xml);
-    let trailer = action
-        .trailer_action
-        .as_ref()
-        .expect("TrailerAction branch must be populated, not silently dropped");
+    let PrivateActionChoice::TrailerAction(trailer) = &action.action else {
+        panic!("expected the TrailerAction branch, got {:?}", action.action);
+    };
     match &trailer.choice {
         TrailerActionChoice::ConnectTrailerAction(c) => {
             assert_eq!(c.trailer_ref.to_string(), "trailer1")
         }
         other => panic!("expected ConnectTrailerAction, got {other:?}"),
     }
-    assert_eq!(action.get_action_type(), Some("TrailerAction"));
-    assert!(action.validate().is_ok());
+    assert_eq!(action.action_type(), "TrailerAction");
 
     let out = ser("PrivateAction", &action);
-    assert!(out.contains("<TrailerAction"), "got: {out}");
-    assert!(out.contains(r#"trailerRef="trailer1""#), "got: {out}");
+    assert_eq!(
+        out, xml,
+        "the serialized bytes must equal the source document"
+    );
     let reparsed: PrivateAction = de(&out);
     assert_eq!(action, reparsed);
 }
@@ -250,41 +251,36 @@ fn private_action_trailer_action_connect_round_trip() {
 fn private_action_trailer_action_disconnect_round_trip() {
     let xml = r#"<PrivateAction><TrailerAction><DisconnectTrailerAction/></TrailerAction></PrivateAction>"#;
     let action: PrivateAction = de(xml);
-    let trailer = action
-        .trailer_action
-        .as_ref()
-        .expect("TrailerAction branch");
+    let PrivateActionChoice::TrailerAction(trailer) = &action.action else {
+        panic!("expected the TrailerAction branch, got {:?}", action.action);
+    };
     assert!(matches!(
         trailer.choice,
         TrailerActionChoice::DisconnectTrailerAction(_)
     ));
-    assert!(action.validate().is_ok());
 
     let out = ser("PrivateAction", &action);
     assert!(out.contains("DisconnectTrailerAction"), "got: {out}");
 }
 
+/// The appearance and trailer branches were the two this file was written to pin, so the
+/// cardinality cases use that pair.
 #[test]
-fn private_action_choice_cardinality_covers_new_branches() {
-    let multiple = PrivateAction {
-        appearance_action: Some(AppearanceAction::new(
-            AppearanceActionChoice::LightStateAction(LightStateAction::new(
-                LightType::new(LightTypeChoice::VehicleLight(VehicleLight {
-                    vehicle_light_type: openscenario_rs::types::basic::Value::Literal(
-                        openscenario_rs::types::enums::VehicleLightType::LowBeam,
-                    ),
-                })),
-                LightState::new(openscenario_rs::types::enums::LightMode::On),
-            )),
-        )),
-        trailer_action: Some(TrailerAction {
-            choice: TrailerActionChoice::DisconnectTrailerAction(DisconnectTrailerAction {}),
-        }),
-        ..PrivateAction::empty()
-    };
+fn private_action_with_no_branch_is_rejected() {
+    let err = quick_xml::de::from_str::<PrivateAction>("<PrivateAction/>").unwrap_err();
     assert!(
-        multiple.validate().is_err(),
-        "two branches set must fail the choice check"
+        err.to_string().contains("$value"),
+        "expected a missing-$value error, got {err}"
+    );
+}
+
+#[test]
+fn private_action_with_two_branches_is_rejected() {
+    let xml = r#"<PrivateAction><AppearanceAction><LightStateAction><LightType><VehicleLight vehicleLightType="lowBeam"/></LightType><LightState mode="on"/></LightStateAction></AppearanceAction><TrailerAction><DisconnectTrailerAction/></TrailerAction></PrivateAction>"#;
+    let err = quick_xml::de::from_str::<PrivateAction>(xml).unwrap_err();
+    assert!(
+        err.to_string().contains("$value"),
+        "expected a duplicate-$value error, got {err}"
     );
 }
 
@@ -304,24 +300,18 @@ fn init_actions_carry_non_environment_global_actions() {
     </Actions></Init>"#;
     let init: openscenario_rs::types::scenario::init::Init = de(xml);
     assert_eq!(init.actions.global_actions.len(), 2);
-    for ga in &init.actions.global_actions {
-        assert!(
-            ga.validate().is_ok(),
-            "each GlobalAction must hold a branch"
-        );
-    }
     assert_eq!(
-        init.actions.global_actions[0].get_action_type(),
-        Some("VariableAction")
+        init.actions.global_actions[0].action_type(),
+        "VariableAction"
     );
     assert_eq!(
-        init.actions.global_actions[1].get_action_type(),
-        Some("SetMonitorAction")
+        init.actions.global_actions[1].action_type(),
+        "SetMonitorAction"
     );
     assert_eq!(init.actions.private_actions.len(), 1);
     assert_eq!(
-        init.actions.private_actions[0].private_actions[0].get_action_type(),
-        Some("TrailerAction")
+        init.actions.private_actions[0].private_actions[0].action_type(),
+        "TrailerAction"
     );
 
     let out = quick_xml::se::to_string_with_root("Init", &init).expect("serialize failed");

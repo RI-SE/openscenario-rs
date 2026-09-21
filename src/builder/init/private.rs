@@ -6,11 +6,12 @@ use crate::builder::actions::{
     AssignRouteActionBuilder, LongitudinalDistanceActionBuilder, SpeedProfileActionBuilder,
     SynchronizeActionBuilder, VisibilityActionBuilder,
 };
-use crate::builder::BuilderResult;
+use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Value;
 use crate::types::{
     actions::movement::{
-        LongitudinalAction as LongitudinalActionType, SpeedAction, SpeedActionTarget,
+        LongitudinalAction as LongitudinalActionType,
+        LongitudinalActionChoice as MovementLongitudinalChoice, SpeedAction, SpeedActionTarget,
         TeleportAction, TransitionDynamics,
     },
     actions::wrappers::PrivateAction as PrivateActionWrapper,
@@ -67,8 +68,7 @@ impl PrivateActionBuilder {
         };
 
         let action = PrivateActionWrapper::LongitudinalAction(LongitudinalActionType {
-            longitudinal_action_choice:
-                crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(speed_action),
+            longitudinal_action_choice: MovementLongitudinalChoice::SpeedAction(speed_action),
         });
         self.actions.push(action);
         self
@@ -180,65 +180,38 @@ impl PrivateActionBuilder {
 
     // ========== INTERNAL HELPER ==========
 
-    /// Convert from builder PrivateAction to init PrivateAction
+    /// Convert from the builder's `PrivateAction` enum to the `Init` block's `PrivateAction`.
+    ///
+    /// The match is exhaustive by construction. An earlier version mapped seven of the ten
+    /// branches and sent the rest to a catch-all that produced an action naming no branch at
+    /// all, so an activate-controller, appearance or trailer action built through this builder
+    /// was silently discarded and re-serialized as an empty `<PrivateAction/>`. The `$value`
+    /// shape of `PrivateAction` makes that value unconstructible, hence the catch-all could
+    /// not survive the conversion.
     fn convert_to_init_action(action: PrivateActionWrapper) -> PrivateAction {
         match action {
             PrivateActionWrapper::LongitudinalAction(long_action) => {
-                PrivateAction {
-                    longitudinal_action: Some(LongitudinalAction {
-                        speed_action: match &long_action.longitudinal_action_choice {
-                            crate::types::actions::movement::LongitudinalActionChoice::SpeedAction(a) => Some(a.clone()),
-                            _ => None,
-                        },
-                        longitudinal_distance_action: match &long_action.longitudinal_action_choice {
-                            crate::types::actions::movement::LongitudinalActionChoice::LongitudinalDistanceAction(a) => Some(a.clone()),
-                            _ => None,
-                        },
-                        speed_profile_action: match &long_action.longitudinal_action_choice {
-                            crate::types::actions::movement::LongitudinalActionChoice::SpeedProfileAction(a) => Some(a.clone()),
-                            _ => None,
-                        },
-                    }),
-                    ..PrivateAction::empty()
-                }
+                PrivateAction::longitudinal(match long_action.longitudinal_action_choice {
+                    MovementLongitudinalChoice::SpeedAction(a) => LongitudinalAction::speed(a),
+                    MovementLongitudinalChoice::LongitudinalDistanceAction(a) => {
+                        LongitudinalAction::longitudinal_distance(a)
+                    }
+                    MovementLongitudinalChoice::SpeedProfileAction(a) => {
+                        LongitudinalAction::speed_profile(a)
+                    }
+                })
             }
-            PrivateActionWrapper::LateralAction(lateral_action) => {
-                PrivateAction {
-                    lateral_action: Some(lateral_action),
-                    ..PrivateAction::empty()
-                }
+            PrivateActionWrapper::LateralAction(a) => PrivateAction::lateral(a),
+            PrivateActionWrapper::VisibilityAction(a) => PrivateAction::visibility(a),
+            PrivateActionWrapper::SynchronizeAction(a) => PrivateAction::synchronize(a),
+            PrivateActionWrapper::ActivateControllerAction(a) => {
+                PrivateAction::activate_controller(a)
             }
-            PrivateActionWrapper::RoutingAction(routing_action) => {
-                PrivateAction {
-                    routing_action: Some(routing_action),
-                    ..PrivateAction::empty()
-                }
-            }
-            PrivateActionWrapper::VisibilityAction(visibility_action) => {
-                PrivateAction {
-                    visibility_action: Some(visibility_action),
-                    ..PrivateAction::empty()
-                }
-            }
-            PrivateActionWrapper::SynchronizeAction(sync_action) => {
-                PrivateAction {
-                    synchronize_action: Some(sync_action),
-                    ..PrivateAction::empty()
-                }
-            }
-            PrivateActionWrapper::TeleportAction(teleport_action) => {
-                PrivateAction {
-                    teleport_action: Some(teleport_action),
-                    ..PrivateAction::empty()
-                }
-            }
-            PrivateActionWrapper::ControllerAction(controller_action) => {
-                PrivateAction {
-                    controller_action: Some(controller_action),
-                    ..PrivateAction::empty()
-                }
-            }
-            _ => PrivateAction::empty(),
+            PrivateActionWrapper::ControllerAction(a) => PrivateAction::controller(a),
+            PrivateActionWrapper::TeleportAction(a) => PrivateAction::teleport(a),
+            PrivateActionWrapper::RoutingAction(a) => PrivateAction::routing(a),
+            PrivateActionWrapper::AppearanceAction(a) => PrivateAction::appearance(a),
+            PrivateActionWrapper::TrailerAction(a) => PrivateAction::trailer(a),
         }
     }
 
@@ -304,21 +277,33 @@ impl GlobalActionBuilder {
         self
     }
 
-    /// Finish building and return to parent
+    /// Finish building and return to parent.
+    ///
+    /// XSD `GlobalAction` (`Schema/OpenSCENARIO.xsd:1282-1295`) is a bare `xsd:choice`, so a
+    /// global action naming no branch does not exist. This method has no error channel, hence
+    /// a builder on which no branch was selected contributes nothing instead of contributing
+    /// an empty `<GlobalAction/>`, which is what the previous shape emitted. Use
+    /// [`Self::build`] where the omission should be reported.
     pub fn finish(self) -> InitActionBuilder {
-        let global_action = GlobalAction {
-            environment_action: self.environment_action,
-            ..GlobalAction::empty()
-        };
-        self.parent.add_global(global_action)
+        match self.environment_action {
+            Some(environment_action) => self
+                .parent
+                .add_global(GlobalAction::environment(environment_action)),
+            None => self.parent,
+        }
     }
 
-    /// Build the global action
+    /// Build the global action.
+    ///
+    /// Fails when no branch was selected, since the schema's choice requires exactly one.
     pub fn build(self) -> BuilderResult<GlobalAction> {
-        Ok(GlobalAction {
-            environment_action: self.environment_action,
-            ..GlobalAction::empty()
-        })
+        let environment_action = self.environment_action.ok_or_else(|| {
+            BuilderError::missing_field(
+                "environment_action",
+                ".add_environment_action(environment) or .add_named_environment_action(name)",
+            )
+        })?;
+        Ok(GlobalAction::environment(environment_action))
     }
 }
 
@@ -326,6 +311,7 @@ impl GlobalActionBuilder {
 mod tests {
     use super::*;
     use crate::builder::positions::WorldPositionBuilder;
+    use crate::types::scenario::init::{LongitudinalActionChoice, PrivateActionChoice};
 
     #[test]
     fn test_private_action_builder() {
@@ -344,23 +330,69 @@ mod tests {
         assert_eq!(private.private_actions.len(), 2);
 
         // First action should be teleport
-        assert!(private.private_actions[0].teleport_action.is_some());
+        assert_eq!(private.private_actions[0].action_type(), "TeleportAction");
 
         // Second action should be speed
-        assert!(private.private_actions[1].longitudinal_action.is_some());
-        let longitudinal = private.private_actions[1]
-            .longitudinal_action
-            .as_ref()
-            .unwrap();
-        assert!(longitudinal.speed_action.is_some());
-
-        let speed_action = longitudinal.speed_action.as_ref().unwrap();
+        let PrivateActionChoice::LongitudinalAction(longitudinal) =
+            &private.private_actions[1].action
+        else {
+            panic!("expected the LongitudinalAction branch");
+        };
+        let LongitudinalActionChoice::SpeedAction(speed_action) = &longitudinal.action else {
+            panic!("expected the SpeedAction branch");
+        };
         let crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(absolute) =
             &speed_action.speed_action_target.target
         else {
             panic!("Expected AbsoluteTargetSpeed branch");
         };
         assert_eq!(absolute.value.as_literal().unwrap(), &30.0);
+    }
+
+    /// The three branches a catch-all used to swallow. Each was turned into a private action
+    /// naming no branch, which re-serialized as an empty `<PrivateAction/>` and dropped the
+    /// payload. One assertion per branch, so a regression in one does not hide the others.
+    #[test]
+    fn builder_preserves_the_branches_the_catch_all_used_to_swallow() {
+        for (wrapper, expected) in [
+            (
+                PrivateActionWrapper::ActivateControllerAction(
+                    crate::types::actions::control::ActivateControllerAction::default(),
+                ),
+                "ActivateControllerAction",
+            ),
+            (
+                PrivateActionWrapper::TrailerAction(
+                    crate::types::actions::trailer::TrailerAction {
+                        choice: crate::types::actions::trailer::TrailerActionChoice::DisconnectTrailerAction(
+                            crate::types::actions::trailer::DisconnectTrailerAction {},
+                        ),
+                    },
+                ),
+                "TrailerAction",
+            ),
+        ] {
+            let private = PrivateActionBuilder::new(InitActionBuilder::new(), "ego")
+                .add_action(wrapper)
+                .build()
+                .unwrap();
+
+            assert_eq!(private.private_actions.len(), 1);
+            assert_eq!(private.private_actions[0].action_type(), expected);
+
+            let xml =
+                quick_xml::se::to_string_with_root("Private", &private).expect("serialize failed");
+            assert!(xml.contains(expected), "expected <{expected}> in {xml}");
+        }
+    }
+
+    #[test]
+    fn global_action_builder_reports_a_missing_branch_instead_of_emitting_an_empty_element() {
+        let result = GlobalActionBuilder::new(InitActionBuilder::new()).build();
+        assert!(
+            matches!(result, Err(BuilderError::MissingField { ref field, .. }) if field == "environment_action"),
+            "a global action with no branch selected must be reported, got {result:?}"
+        );
     }
 
     #[test]
@@ -396,7 +428,7 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(global.environment_action.is_some());
+        assert_eq!(global.action_type(), "EnvironmentAction");
     }
 
     #[test]
@@ -409,7 +441,10 @@ mod tests {
             .unwrap();
 
         assert_eq!(init.actions.global_actions.len(), 1);
-        assert!(init.actions.global_actions[0].environment_action.is_some());
+        assert_eq!(
+            init.actions.global_actions[0].action_type(),
+            "EnvironmentAction"
+        );
     }
 
     #[test]

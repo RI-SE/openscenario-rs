@@ -10,6 +10,7 @@ use openscenario_rs::parse_str;
 use openscenario_rs::types::actions::movement::RoutingActionChoice;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
+use openscenario_rs::types::scenario::init::{LongitudinalActionChoice, PrivateActionChoice};
 use openscenario_rs::types::scenario::story::{StoryActionChoice, StoryPrivateActionChoice};
 use openscenario_rs::types::OpenScenario;
 use std::fs;
@@ -678,13 +679,14 @@ fn can_parse_routing_actions_in_story_events() {
     // Check that private actions can be parsed (including RoutingAction type)
     for private in &init.actions.private_actions {
         for action_wrapper in &private.private_actions {
-            if let Some(_) = &action_wrapper.longitudinal_action {
-                println!("✓ LongitudinalAction parsed");
+            match &action_wrapper.action {
+                PrivateActionChoice::LongitudinalAction(_) => {
+                    println!("✓ LongitudinalAction parsed")
+                }
+                PrivateActionChoice::TeleportAction(_) => println!("✓ TeleportAction parsed"),
+                _ => {}
             }
-            if let Some(_) = &action_wrapper.teleport_action {
-                println!("✓ TeleportAction parsed");
-            }
-            if let Some(routing) = &action_wrapper.routing_action {
+            if let PrivateActionChoice::RoutingAction(routing) = &action_wrapper.action {
                 if let RoutingActionChoice::FollowTrajectoryAction(follow_action) =
                     &routing.routing_choice
                 {
@@ -1024,11 +1026,9 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         actions: vec![StoryAction {
             name: Value::literal("SpeedAction1".to_string()),
             action: StoryActionChoice::PrivateAction(StoryPrivateAction {
-                action: StoryPrivateActionChoice::LongitudinalAction(LongitudinalAction {
-                    speed_action: Some(speed_action),
-                    longitudinal_distance_action: None,
-                    speed_profile_action: None,
-                }),
+                action: StoryPrivateActionChoice::LongitudinalAction(LongitudinalAction::speed(
+                    speed_action,
+                )),
             }),
         }],
         start_trigger: Some(trigger),
@@ -1128,7 +1128,8 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         if let StoryPrivateActionChoice::LongitudinalAction(longitudinal_action) =
             &private_action.action
         {
-            if let Some(speed_action) = &longitudinal_action.speed_action {
+            if let LongitudinalActionChoice::SpeedAction(speed_action) = &longitudinal_action.action
+            {
                 assert_eq!(
                     speed_action.speed_action_dynamics.dynamics_dimension,
                     Value::Literal(DynamicsDimension::Time)

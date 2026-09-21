@@ -127,6 +127,24 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **The three `Init` action choice groups now hold a choice enum instead of parallel `Option`
+  fields.** `GlobalAction` (`Schema/OpenSCENARIO.xsd:1282-1295`, seven branches),
+  `PrivateAction` (`:1777-1791`, ten branches) and `LongitudinalAction` (`:1431-1437`, three
+  branches) are each a bare `xsd:choice`. Nothing on the choice or on any of its branches
+  carries `minOccurs`, so every branch defaults to 1 and exactly one must be selected. Each type
+  now holds a single `action` field behind `$value`, typed `GlobalActionChoice`,
+  `PrivateActionChoice` or `LongitudinalActionChoice`; the enums list the branches in schema
+  order and include the two the schema marks deprecated and still declares, `ParameterAction`
+  and `ActivateControllerAction`. Under the previous shape a document naming no branch parsed to
+  an all-`None` value and a document naming two kept both and re-serialized both, producing XML
+  no schema-valid tool accepts. Serde now reports these as `missing field $value` and
+  `duplicate field $value` while deserializing.
+
+  Per-branch constructors (`GlobalAction::environment`, `PrivateAction::teleport`,
+  `LongitudinalAction::speed` and so on) and an `action_type()` accessor replace the removed
+  field access. `From<actions::movement::LongitudinalAction> for scenario::init::LongitudinalAction`
+  converts between the two types the crate uses for the same XSD complexType.
+
 - **`NamedAction` and `EnvironmentAction` now hold a choice enum instead of parallel `Option`
   fields.** `Action` (`Schema/OpenSCENARIO.xsd:705-712`, modeled by `wrappers::NamedAction`) and
   `EnvironmentAction` (`:1195-1200`, modeled by `scenario::init::EnvironmentAction`) are each a
@@ -512,6 +530,14 @@ Breaking, unless noted.
   the same neighbor-file rule the guide already states for every other test.
 
 ### Removed
+
+- **`GlobalAction::validate`, `PrivateAction::validate`, `LongitudinalAction::validate`,
+  their `get_action_type` counterparts, and the `empty()` constructor on each.** Breaking. The
+  choice cardinality these recovered at run time is now structural, so there is nothing left for
+  them to report. `action_type()` returns the selected branch's XSD element name as a
+  `&'static str` and replaces `get_action_type()`, which returned `Option<&str>` because the
+  older shape could name nothing. `FollowTrajectoryAction::validate` survives: XSD
+  `FollowTrajectoryAction` is `xsd:all`, not a choice.
 
 - **`types::actions::wrappers::EnvironmentAction`**, a duplicate model of the XSD
   `EnvironmentAction` complexType (`:1195-1200`) that was reachable only from tests, never from a
@@ -1099,6 +1125,14 @@ Breaking, unless noted.
     `CatalogReference<T>` and the untyped `EntityCatalogReference`.
 
 ### Fixed
+
+- **An init private action built through `PrivateActionBuilder` from the activate-controller,
+  appearance or trailer branch was silently discarded.** `convert_to_init_action` mapped seven of
+  the ten branches and sent the other three to a catch-all producing an action that named no
+  branch, which re-serialized as an empty `<PrivateAction/>`. The match is now exhaustive over
+  all ten. `GlobalActionBuilder::build` likewise returned a global action naming no branch when
+  no branch had been selected; it now reports a missing field, and `GlobalActionBuilder::finish`,
+  which has no error channel, contributes nothing instead of contributing an empty element.
 
 - **Three override actions accepted a document carrying two branches of a choice group, and
   discarded the second.** `OverrideBrakeAction`, `OverrideGearAction` and

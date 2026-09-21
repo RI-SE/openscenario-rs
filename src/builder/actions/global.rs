@@ -41,12 +41,9 @@ impl EnvironmentActionBuilder {
     pub fn build(self) -> BuilderResult<GlobalAction> {
         self.validate()?;
 
-        let environment_action = EnvironmentAction::environment(self.environment.unwrap());
-
-        Ok(GlobalAction {
-            environment_action: Some(environment_action),
-            ..GlobalAction::empty()
-        })
+        Ok(GlobalAction::environment(EnvironmentAction::environment(
+            self.environment.unwrap(),
+        )))
     }
 
     fn validate(&self) -> BuilderResult<()> {
@@ -133,13 +130,10 @@ impl EntityActionBuilder {
             }
         };
 
-        Ok(GlobalAction {
-            entity_action: Some(EntityAction {
-                entity_ref: OSString::literal(entity_ref),
-                action,
-            }),
-            ..GlobalAction::empty()
-        })
+        Ok(GlobalAction::entity(EntityAction {
+            entity_ref: OSString::literal(entity_ref),
+            action,
+        }))
     }
 }
 
@@ -188,15 +182,12 @@ impl VariableActionBuilder {
             BuilderError::missing_field("variable_value", ".set_variable(name, value)")
         })?;
 
-        Ok(GlobalAction {
-            variable_action: Some(VariableAction {
-                variable_ref: OSString::literal(variable_ref),
-                action: VariableActionChoice::VariableSetAction(VariableSetAction {
-                    value: OSString::literal(value.to_string()),
-                }),
+        Ok(GlobalAction::variable(VariableAction {
+            variable_ref: OSString::literal(variable_ref),
+            action: VariableActionChoice::VariableSetAction(VariableSetAction {
+                value: OSString::literal(value.to_string()),
             }),
-            ..GlobalAction::empty()
-        })
+        }))
     }
 }
 
@@ -207,6 +198,7 @@ mod tests {
     use super::*;
     use crate::types::basic::Value;
     use crate::types::environment::{RoadCondition, TimeOfDay, Weather};
+    use crate::types::scenario::init::GlobalActionChoice;
 
     /// The XSD models EntityAction as a global action, so the built value must land in
     /// `GlobalAction::entity_action` and serialize under the schema's element names.
@@ -227,7 +219,9 @@ mod tests {
             ),
         ] {
             let action = builder.build().unwrap();
-            let entity_action = action.entity_action.as_ref().unwrap();
+            let GlobalActionChoice::EntityAction(entity_action) = &action.action else {
+                panic!("expected the EntityAction branch, got {:?}", action.action);
+            };
 
             let xml = quick_xml::se::to_string_with_root("EntityAction", entity_action).unwrap();
             assert!(
@@ -263,7 +257,12 @@ mod tests {
             .build()
             .unwrap();
 
-        let variable_action = action.variable_action.as_ref().unwrap();
+        let GlobalActionChoice::VariableAction(variable_action) = &action.action else {
+            panic!(
+                "expected the VariableAction branch, got {:?}",
+                action.action
+            );
+        };
         assert_eq!(
             variable_action.variable_ref.as_literal().unwrap(),
             "speed_limit"
@@ -297,8 +296,9 @@ mod tests {
             .unwrap();
 
         // Verify the action was built correctly
-        assert!(action.environment_action.is_some());
-        let env_action = action.environment_action.unwrap();
+        let GlobalActionChoice::EnvironmentAction(env_action) = action.action else {
+            panic!("expected the EnvironmentAction branch");
+        };
         let crate::types::scenario::init::EnvironmentActionChoice::Environment(environment) =
             env_action.action
         else {

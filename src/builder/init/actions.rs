@@ -28,10 +28,8 @@ impl InitActionBuilder {
     /// schema default, so the caller supplies it rather than getting a silently invented
     /// `"DefaultEnvironment"`.
     pub fn add_global_environment_action(mut self, name: &str) -> Self {
-        let global_action = GlobalAction {
-            environment_action: Some(EnvironmentAction::environment(Environment::new(name))),
-            ..GlobalAction::empty()
-        };
+        let global_action =
+            GlobalAction::environment(EnvironmentAction::environment(Environment::new(name)));
         self.global_actions.push(global_action);
         self
     }
@@ -59,109 +57,57 @@ impl InitActionBuilder {
         PrivateActionBuilder::new(self, entity_ref)
     }
 
-    /// Add a teleport action for an entity (convenience method)
-    pub fn add_teleport_action(mut self, entity_ref: &str, position: Position) -> Self {
-        // Find existing private action or create new one
-        let private_index = self
+    /// Append one already-built private action to `entity_ref`, reusing that entity's
+    /// `<Private>` container when it already exists.
+    fn push_private_action(
+        &mut self,
+        entity_ref: &str,
+        action: crate::types::scenario::init::PrivateAction,
+    ) {
+        let existing = self
             .private_actions
             .iter()
             .position(|p| p.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref);
 
-        if let Some(index) = private_index {
-            // Add to existing private action
-            let teleport_action = crate::types::scenario::init::PrivateAction {
-                teleport_action: Some(crate::types::actions::movement::TeleportAction { position }),
-                ..crate::types::scenario::init::PrivateAction::empty()
-            };
-            self.private_actions[index]
+        match existing {
+            Some(index) => self.private_actions[index].private_actions.push(action),
+            None => self
                 .private_actions
-                .push(teleport_action);
-        } else {
-            // Create new private action
-            let teleport_action = crate::types::scenario::init::PrivateAction {
-                teleport_action: Some(crate::types::actions::movement::TeleportAction { position }),
-                ..crate::types::scenario::init::PrivateAction::empty()
-            };
-            let private = Private::new(entity_ref).add_action(teleport_action);
-            self.private_actions.push(private);
+                .push(Private::new(entity_ref).add_action(action)),
         }
+    }
 
+    /// Add a teleport action for an entity (convenience method)
+    pub fn add_teleport_action(mut self, entity_ref: &str, position: Position) -> Self {
+        let action = crate::types::scenario::init::PrivateAction::teleport(
+            crate::types::actions::movement::TeleportAction { position },
+        );
+        self.push_private_action(entity_ref, action);
         self
     }
 
     /// Add a speed action for an entity (convenience method)
     pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> Self {
-        // Find existing private action or create new one
-        let private_index = self
-            .private_actions
-            .iter()
-            .position(|p| p.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref);
-
-        if let Some(index) = private_index {
-            // Add to existing private action
-            let speed_action = crate::types::scenario::init::PrivateAction {
-                longitudinal_action: Some(crate::types::scenario::init::LongitudinalAction {
-                    speed_action: Some(crate::types::actions::movement::SpeedAction {
-                        speed_action_dynamics:
-                            crate::types::actions::movement::TransitionDynamics {
-                                dynamics_dimension: Value::Literal(
-                                    crate::types::enums::DynamicsDimension::Time,
-                                ),
-                                dynamics_shape: Value::Literal(
-                                    crate::types::enums::DynamicsShape::Step,
-                                ),
-                                following_mode: None,
-                                value: crate::types::basic::Double::literal(1.0),
-                            },
-                        speed_action_target: crate::types::actions::movement::SpeedActionTarget {
-                            target: crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(
-                                crate::types::actions::movement::AbsoluteTargetSpeed {
-                                    value: crate::types::basic::Double::literal(speed),
-                                },
-                            ),
+        let speed_action = crate::types::actions::movement::SpeedAction {
+            speed_action_dynamics: crate::types::actions::movement::TransitionDynamics {
+                dynamics_dimension: Value::Literal(crate::types::enums::DynamicsDimension::Time),
+                dynamics_shape: Value::Literal(crate::types::enums::DynamicsShape::Step),
+                following_mode: None,
+                value: crate::types::basic::Double::literal(1.0),
+            },
+            speed_action_target: crate::types::actions::movement::SpeedActionTarget {
+                target:
+                    crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(
+                        crate::types::actions::movement::AbsoluteTargetSpeed {
+                            value: crate::types::basic::Double::literal(speed),
                         },
-                    }),
-                    longitudinal_distance_action: None,
-                    speed_profile_action: None,
-                }),
-                ..crate::types::scenario::init::PrivateAction::empty()
-            };
-            self.private_actions[index]
-                .private_actions
-                .push(speed_action);
-        } else {
-            // Create new private action
-            let speed_action = crate::types::scenario::init::PrivateAction {
-                longitudinal_action: Some(crate::types::scenario::init::LongitudinalAction {
-                    speed_action: Some(crate::types::actions::movement::SpeedAction {
-                        speed_action_dynamics:
-                            crate::types::actions::movement::TransitionDynamics {
-                                dynamics_dimension: Value::Literal(
-                                    crate::types::enums::DynamicsDimension::Time,
-                                ),
-                                dynamics_shape: Value::Literal(
-                                    crate::types::enums::DynamicsShape::Step,
-                                ),
-                                following_mode: None,
-                                value: crate::types::basic::Double::literal(1.0),
-                            },
-                        speed_action_target: crate::types::actions::movement::SpeedActionTarget {
-                            target: crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(
-                                crate::types::actions::movement::AbsoluteTargetSpeed {
-                                    value: crate::types::basic::Double::literal(speed),
-                                },
-                            ),
-                        },
-                    }),
-                    longitudinal_distance_action: None,
-                    speed_profile_action: None,
-                }),
-                ..crate::types::scenario::init::PrivateAction::empty()
-            };
-            let private = Private::new(entity_ref).add_action(speed_action);
-            self.private_actions.push(private);
-        }
-
+                    ),
+            },
+        };
+        let action = crate::types::scenario::init::PrivateAction::longitudinal(
+            crate::types::scenario::init::LongitudinalAction::speed(speed_action),
+        );
+        self.push_private_action(entity_ref, action);
         self
     }
 
@@ -193,6 +139,7 @@ impl InitActionBuilder {
 mod tests {
     use super::*;
     use crate::builder::positions::WorldPositionBuilder;
+    use crate::types::scenario::init::{LongitudinalActionChoice, PrivateActionChoice};
 
     #[test]
     fn test_init_action_builder_empty() {
@@ -210,7 +157,10 @@ mod tests {
             .unwrap();
 
         assert_eq!(init.actions.global_actions.len(), 1);
-        assert!(init.actions.global_actions[0].environment_action.is_some());
+        assert_eq!(
+            init.actions.global_actions[0].action_type(),
+            "EnvironmentAction"
+        );
     }
 
     #[test]
@@ -234,9 +184,10 @@ mod tests {
             "ego"
         );
         assert_eq!(init.actions.private_actions[0].private_actions.len(), 1);
-        assert!(init.actions.private_actions[0].private_actions[0]
-            .teleport_action
-            .is_some());
+        assert_eq!(
+            init.actions.private_actions[0].private_actions[0].action_type(),
+            "TeleportAction"
+        );
     }
 
     #[test]
@@ -255,17 +206,14 @@ mod tests {
             "ego"
         );
         assert_eq!(init.actions.private_actions[0].private_actions.len(), 1);
-        assert!(init.actions.private_actions[0].private_actions[0]
-            .longitudinal_action
-            .is_some());
-
-        let longitudinal = &init.actions.private_actions[0].private_actions[0]
-            .longitudinal_action
-            .as_ref()
-            .unwrap();
-        assert!(longitudinal.speed_action.is_some());
-
-        let speed_action = longitudinal.speed_action.as_ref().unwrap();
+        let PrivateActionChoice::LongitudinalAction(longitudinal) =
+            &init.actions.private_actions[0].private_actions[0].action
+        else {
+            panic!("expected the LongitudinalAction branch");
+        };
+        let LongitudinalActionChoice::SpeedAction(speed_action) = &longitudinal.action else {
+            panic!("expected the SpeedAction branch");
+        };
         let crate::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(absolute) =
             &speed_action.speed_action_target.target
         else {
@@ -298,13 +246,15 @@ mod tests {
         assert_eq!(init.actions.private_actions[0].private_actions.len(), 2);
 
         // First action should be teleport
-        assert!(init.actions.private_actions[0].private_actions[0]
-            .teleport_action
-            .is_some());
+        assert_eq!(
+            init.actions.private_actions[0].private_actions[0].action_type(),
+            "TeleportAction"
+        );
         // Second action should be speed
-        assert!(init.actions.private_actions[0].private_actions[1]
-            .longitudinal_action
-            .is_some());
+        assert_eq!(
+            init.actions.private_actions[0].private_actions[1].action_type(),
+            "LongitudinalAction"
+        );
     }
 
     #[test]

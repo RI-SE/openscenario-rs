@@ -16,10 +16,11 @@ fn sparse_scenario_parses() {
         .as_ref()
         .expect("storyboard present")
         .init;
-    let env_action = init.actions.global_actions[0]
-        .environment_action
-        .as_ref()
-        .expect("environment action present");
+    let openscenario_rs::types::scenario::init::GlobalActionChoice::EnvironmentAction(env_action) =
+        &init.actions.global_actions[0].action
+    else {
+        panic!("expected the EnvironmentAction branch");
+    };
     let env = match &env_action.action {
         openscenario_rs::types::scenario::init::EnvironmentActionChoice::Environment(env) => env,
         other => panic!("expected inline Environment branch, got {other:?}"),

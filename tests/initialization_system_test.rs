@@ -24,7 +24,10 @@ mod tests {
 
         // Should have environment action
         assert_eq!(init.actions.global_actions.len(), 1);
-        assert!(init.actions.global_actions[0].environment_action.is_some());
+        assert_eq!(
+            init.actions.global_actions[0].action_type(),
+            "EnvironmentAction"
+        );
 
         // Should have empty private actions initially
         assert!(init.actions.private_actions.is_empty());
@@ -58,17 +61,24 @@ mod tests {
         assert_eq!(ego_private.private_actions.len(), 2);
 
         // First action should be teleport
-        assert!(ego_private.private_actions[0].teleport_action.is_some());
+        assert_eq!(
+            ego_private.private_actions[0].action_type(),
+            "TeleportAction"
+        );
 
         // Second action should be speed
-        assert!(ego_private.private_actions[1].longitudinal_action.is_some());
-        let longitudinal = ego_private.private_actions[1]
-            .longitudinal_action
-            .as_ref()
-            .unwrap();
-        assert!(longitudinal.speed_action.is_some());
-
-        let speed_action = longitudinal.speed_action.as_ref().unwrap();
+        let openscenario_rs::types::scenario::init::PrivateActionChoice::LongitudinalAction(
+            longitudinal,
+        ) = &ego_private.private_actions[1].action
+        else {
+            panic!("expected the LongitudinalAction branch");
+        };
+        let openscenario_rs::types::scenario::init::LongitudinalActionChoice::SpeedAction(
+            speed_action,
+        ) = &longitudinal.action
+        else {
+            panic!("expected the SpeedAction branch");
+        };
         let openscenario_rs::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(
             absolute,
         ) = &speed_action.speed_action_target.target
@@ -234,8 +244,14 @@ mod tests {
         assert_eq!(ego_private.private_actions.len(), 2);
 
         // Should have teleport and speed actions
-        assert!(ego_private.private_actions[0].teleport_action.is_some());
-        assert!(ego_private.private_actions[1].longitudinal_action.is_some());
+        assert_eq!(
+            ego_private.private_actions[0].action_type(),
+            "TeleportAction"
+        );
+        assert_eq!(
+            ego_private.private_actions[1].action_type(),
+            "LongitudinalAction"
+        );
     }
 
     #[test]
@@ -267,7 +283,10 @@ mod tests {
 
         // Should have environment setup
         assert!(!init.actions.global_actions.is_empty());
-        assert!(init.actions.global_actions[0].environment_action.is_some());
+        assert_eq!(
+            init.actions.global_actions[0].action_type(),
+            "EnvironmentAction"
+        );
 
         // Should have entity initialization
         assert!(!init.actions.private_actions.is_empty());

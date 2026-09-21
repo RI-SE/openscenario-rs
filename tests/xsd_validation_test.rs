@@ -35,42 +35,24 @@ fn minimal_shape() -> Shape {
 #[test]
 fn test_longitudinal_action_all_types() {
     // Test SpeedAction
-    let speed_action = LongitudinalAction {
-        speed_action: Some(SpeedAction::new(
-            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-            SpeedActionTarget::absolute(10.0),
-        )),
-        longitudinal_distance_action: None,
-        speed_profile_action: None,
-    };
-    assert!(speed_action.validate().is_ok());
-    assert_eq!(speed_action.get_action_type(), Some("SpeedAction"));
+    let speed_action = LongitudinalAction::speed(SpeedAction::new(
+        TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+        SpeedActionTarget::absolute(10.0),
+    ));
+    assert_eq!(speed_action.action_type(), "SpeedAction");
 
     // Test LongitudinalDistanceAction
-    let distance_action = LongitudinalAction {
-        speed_action: None,
-        longitudinal_distance_action: Some(
-            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
-        ),
-        speed_profile_action: None,
-    };
-    assert!(distance_action.validate().is_ok());
-    assert_eq!(
-        distance_action.get_action_type(),
-        Some("LongitudinalDistanceAction")
+    let distance_action = LongitudinalAction::longitudinal_distance(
+        LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
     );
+    assert_eq!(distance_action.action_type(), "LongitudinalDistanceAction");
 
     // Test SpeedProfileAction
-    let profile_action = LongitudinalAction {
-        speed_action: None,
-        longitudinal_distance_action: None,
-        speed_profile_action: Some(SpeedProfileAction::new(
-            FollowingMode::Follow,
-            vec![SpeedProfileEntry::new(10.0)],
-        )),
-    };
-    assert!(profile_action.validate().is_ok());
-    assert_eq!(profile_action.get_action_type(), Some("SpeedProfileAction"));
+    let profile_action = LongitudinalAction::speed_profile(SpeedProfileAction::new(
+        FollowingMode::Follow,
+        vec![SpeedProfileEntry::new(10.0)],
+    ));
+    assert_eq!(profile_action.action_type(), "SpeedProfileAction");
 }
 
 #[test]
@@ -290,94 +272,63 @@ fn test_object_controller_deserialization() {
     );
 }
 
+/// XSD `PrivateAction` (:1777-1791) is a bare `xsd:choice`. The valid case selects one
+/// branch; the invalid cases are documents rather than values, since a value naming no
+/// branch or two branches can no longer be constructed.
 #[test]
 fn test_private_action_choice_group() {
-    // Test valid PrivateAction with exactly one action
-    let valid_private = PrivateAction {
-        longitudinal_action: Some(LongitudinalAction::empty()),
-        lateral_action: None,
-        teleport_action: None,
-        routing_action: None,
-        synchronize_action: None,
-        activate_controller_action: None,
-        visibility_action: None,
-        controller_action: None,
-        ..PrivateAction::empty()
-    };
-    assert!(valid_private.validate().is_ok());
+    let valid_private = PrivateAction::longitudinal(LongitudinalAction::speed(SpeedAction::new(
+        TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+        SpeedActionTarget::absolute(10.0),
+    )));
+    assert_eq!(valid_private.action_type(), "LongitudinalAction");
 
-    // Test invalid PrivateAction with multiple actions
-    let invalid_private = PrivateAction {
-        longitudinal_action: Some(LongitudinalAction::empty()),
-        lateral_action: Some(
-            openscenario_rs::types::actions::movement::LateralAction::lane_change(
-                openscenario_rs::types::actions::movement::LaneChangeAction::new(
-                    TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-                    openscenario_rs::types::actions::movement::LaneChangeTarget::relative(
-                        "Ego", -1,
-                    ),
-                ),
+    let lateral = PrivateAction::lateral(
+        openscenario_rs::types::actions::movement::LateralAction::lane_change(
+            openscenario_rs::types::actions::movement::LaneChangeAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                openscenario_rs::types::actions::movement::LaneChangeTarget::relative("Ego", -1),
             ),
         ),
-        teleport_action: None,
-        routing_action: None,
-        synchronize_action: None,
-        activate_controller_action: None,
-        visibility_action: None,
-        controller_action: None,
-        ..PrivateAction::empty()
-    };
-    assert!(invalid_private.validate().is_err());
+    );
+    assert_eq!(lateral.action_type(), "LateralAction");
 }
 
 #[test]
 fn test_xsd_compliance_serialization() {
     // Test that the new structures serialize correctly to XML
-    let longitudinal_action = LongitudinalAction {
-        speed_action: None,
-        longitudinal_distance_action: Some(
-            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
-        ),
-        speed_profile_action: None,
-    };
+    let longitudinal_action = LongitudinalAction::longitudinal_distance(
+        LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+    );
 
     let xml = quick_xml::se::to_string(&longitudinal_action).unwrap();
     assert!(xml.contains("LongitudinalDistanceAction"));
-    assert!(!xml.contains("SpeedAction"));
     assert!(!xml.contains("SpeedProfileAction"));
 
     // Test round-trip serialization
     let deserialized: LongitudinalAction = quick_xml::de::from_str(&xml).unwrap();
-    assert!(deserialized.longitudinal_distance_action.is_some());
-    assert!(deserialized.speed_action.is_none());
-    assert!(deserialized.speed_profile_action.is_none());
+    assert_eq!(deserialized, longitudinal_action);
+    assert_eq!(deserialized.action_type(), "LongitudinalDistanceAction");
+}
+
+/// The hand-written `validate()` these assertions used to call is gone: serde now reports
+/// the same two cases while deserializing, so they are stated as documents. Each case gets
+/// its own test, since a single test would stop at the first failure.
+#[test]
+fn longitudinal_action_naming_no_branch_is_rejected() {
+    let error = quick_xml::de::from_str::<LongitudinalAction>("<LongitudinalAction/>").unwrap_err();
+    assert!(
+        error.to_string().contains("missing field `$value`"),
+        "got: {error}"
+    );
 }
 
 #[test]
-fn test_validation_error_messages() {
-    // Test that validation error messages are descriptive
-    let empty_longitudinal = LongitudinalAction {
-        speed_action: None,
-        longitudinal_distance_action: None,
-        speed_profile_action: None,
-    };
-
-    let error = empty_longitudinal.validate().unwrap_err();
-    assert!(error.contains("exactly one action type"));
-    assert!(error.contains("found none"));
-
-    let multiple_longitudinal = LongitudinalAction {
-        speed_action: Some(SpeedAction::new(
-            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-            SpeedActionTarget::absolute(10.0),
-        )),
-        longitudinal_distance_action: Some(
-            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
-        ),
-        speed_profile_action: None,
-    };
-
-    let error = multiple_longitudinal.validate().unwrap_err();
-    assert!(error.contains("exactly one action type"));
-    assert!(error.contains("found multiple"));
+fn longitudinal_action_naming_two_branches_is_rejected() {
+    let xml = r#"<LongitudinalAction><LongitudinalDistanceAction entityRef="DefaultEntity" distance="10" freespace="true" continuous="false"/><SpeedProfileAction followingMode="follow"><SpeedProfileEntry speed="10"/></SpeedProfileAction></LongitudinalAction>"#;
+    let error = quick_xml::de::from_str::<LongitudinalAction>(xml).unwrap_err();
+    assert!(
+        error.to_string().contains("duplicate field `$value`"),
+        "got: {error}"
+    );
 }

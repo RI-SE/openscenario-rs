@@ -38,127 +38,101 @@ pub struct Actions {
     pub private_actions: Vec<Private>,
 }
 
-/// Global actions that affect the entire scenario
+/// Global actions that affect the entire scenario.
 ///
-/// XSD `GlobalAction` (:1282-1296) is a choice of exactly one of:
-/// `EnvironmentAction | EntityAction | InfrastructureAction | SetMonitorAction |
-/// ParameterAction (deprecated) | TrafficAction | VariableAction`.
-///
-/// Modelled as parallel `Option` fields (crate convention for choice groups);
-/// exactly one must be `Some` — see [`GlobalAction::validate`].
+/// XSD `GlobalAction` (:1282-1295) is a bare `xsd:choice` of `EnvironmentAction |
+/// EntityAction | InfrastructureAction | SetMonitorAction | ParameterAction (deprecated) |
+/// TrafficAction | VariableAction`. Neither the choice nor any of its branches carries
+/// `minOccurs`, so every branch defaults to 1 and exactly one must be selected. A bare
+/// `$value` states that directly: serde rejects a document naming no branch with
+/// `missing field $value` and one naming two with `duplicate field $value`, hence the
+/// cardinality is a property of the type rather than a convention its callers must
+/// remember to check.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GlobalAction {
-    #[serde(
-        rename = "EnvironmentAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub environment_action: Option<EnvironmentAction>,
-    #[serde(
-        rename = "EntityAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub entity_action: Option<crate::types::actions::wrappers::EntityAction>,
-    #[serde(
-        rename = "InfrastructureAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub infrastructure_action: Option<crate::types::actions::wrappers::InfrastructureAction>,
-    #[serde(
-        rename = "SetMonitorAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub set_monitor_action: Option<crate::types::actions::wrappers::SetMonitorAction>,
+    #[serde(rename = "$value")]
+    pub action: GlobalActionChoice,
+}
+
+/// The seven branches of the XSD `GlobalAction` choice (:1282-1295), in schema order.
+///
+/// Each payload is a struct, not another externally-tagged enum. An enum nested directly
+/// inside an enum deserializes and then fails to serialize, since each level would have to
+/// write its own element name from one position.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum GlobalActionChoice {
+    EnvironmentAction(EnvironmentAction),
+    EntityAction(crate::types::actions::wrappers::EntityAction),
+    InfrastructureAction(crate::types::actions::wrappers::InfrastructureAction),
+    SetMonitorAction(crate::types::actions::wrappers::SetMonitorAction),
     /// Deprecated in the schema (XSD:1288) but still valid OpenSCENARIO 1.3.
-    #[serde(
-        rename = "ParameterAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub parameter_action: Option<crate::types::actions::wrappers::ParameterAction>,
-    #[serde(
-        rename = "TrafficAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub traffic_action: Option<crate::types::actions::wrappers::TrafficAction>,
-    #[serde(
-        rename = "VariableAction",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub variable_action: Option<crate::types::actions::wrappers::VariableAction>,
+    ParameterAction(crate::types::actions::wrappers::ParameterAction),
+    TrafficAction(crate::types::actions::wrappers::TrafficAction),
+    VariableAction(crate::types::actions::wrappers::VariableAction),
 }
 
 impl GlobalAction {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `GlobalAction (`:1257-1266`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
+    /// `<EnvironmentAction>` branch of the XSD `GlobalAction` choice (:1283).
+    pub fn environment(action: EnvironmentAction) -> Self {
         Self {
-            environment_action: None,
-            entity_action: None,
-            infrastructure_action: None,
-            set_monitor_action: None,
-            parameter_action: None,
-            traffic_action: None,
-            variable_action: None,
-        }
-    }
-}
-
-impl GlobalAction {
-    /// Get the action type contained in this GlobalAction
-    pub fn get_action_type(&self) -> Option<&str> {
-        if self.environment_action.is_some() {
-            Some("EnvironmentAction")
-        } else if self.entity_action.is_some() {
-            Some("EntityAction")
-        } else if self.infrastructure_action.is_some() {
-            Some("InfrastructureAction")
-        } else if self.set_monitor_action.is_some() {
-            Some("SetMonitorAction")
-        } else if self.parameter_action.is_some() {
-            Some("ParameterAction")
-        } else if self.traffic_action.is_some() {
-            Some("TrafficAction")
-        } else if self.variable_action.is_some() {
-            Some("VariableAction")
-        } else {
-            None
+            action: GlobalActionChoice::EnvironmentAction(action),
         }
     }
 
-    /// Validates that exactly one action type is present (XSD choice group requirement)
-    pub fn validate(&self) -> Result<(), String> {
-        let action_count = [
-            self.environment_action.is_some(),
-            self.entity_action.is_some(),
-            self.infrastructure_action.is_some(),
-            self.set_monitor_action.is_some(),
-            self.parameter_action.is_some(),
-            self.traffic_action.is_some(),
-            self.variable_action.is_some(),
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
+    /// `<EntityAction>` branch of the XSD `GlobalAction` choice (:1284).
+    pub fn entity(action: crate::types::actions::wrappers::EntityAction) -> Self {
+        Self {
+            action: GlobalActionChoice::EntityAction(action),
+        }
+    }
 
-        match action_count {
-            1 => Ok(()),
-            0 => Err("GlobalAction must contain exactly one action type, found none".to_string()),
-            _ => {
-                Err("GlobalAction must contain exactly one action type, found multiple".to_string())
-            }
+    /// `<InfrastructureAction>` branch of the XSD `GlobalAction` choice (:1285).
+    pub fn infrastructure(action: crate::types::actions::wrappers::InfrastructureAction) -> Self {
+        Self {
+            action: GlobalActionChoice::InfrastructureAction(action),
+        }
+    }
+
+    /// `<SetMonitorAction>` branch of the XSD `GlobalAction` choice (:1286).
+    pub fn set_monitor(action: crate::types::actions::wrappers::SetMonitorAction) -> Self {
+        Self {
+            action: GlobalActionChoice::SetMonitorAction(action),
+        }
+    }
+
+    /// `<ParameterAction>` branch of the XSD `GlobalAction` choice (:1287-1289).
+    /// The schema marks this branch deprecated and still declares it.
+    pub fn parameter(action: crate::types::actions::wrappers::ParameterAction) -> Self {
+        Self {
+            action: GlobalActionChoice::ParameterAction(action),
+        }
+    }
+
+    /// `<TrafficAction>` branch of the XSD `GlobalAction` choice (:1290).
+    pub fn traffic(action: crate::types::actions::wrappers::TrafficAction) -> Self {
+        Self {
+            action: GlobalActionChoice::TrafficAction(action),
+        }
+    }
+
+    /// `<VariableAction>` branch of the XSD `GlobalAction` choice (:1291).
+    pub fn variable(action: crate::types::actions::wrappers::VariableAction) -> Self {
+        Self {
+            action: GlobalActionChoice::VariableAction(action),
+        }
+    }
+
+    /// The XSD element name of the selected branch.
+    pub fn action_type(&self) -> &'static str {
+        match &self.action {
+            GlobalActionChoice::EnvironmentAction(_) => "EnvironmentAction",
+            GlobalActionChoice::EntityAction(_) => "EntityAction",
+            GlobalActionChoice::InfrastructureAction(_) => "InfrastructureAction",
+            GlobalActionChoice::SetMonitorAction(_) => "SetMonitorAction",
+            GlobalActionChoice::ParameterAction(_) => "ParameterAction",
+            GlobalActionChoice::TrafficAction(_) => "TrafficAction",
+            GlobalActionChoice::VariableAction(_) => "VariableAction",
         }
     }
 }
@@ -215,235 +189,196 @@ pub struct Private {
     pub private_actions: Vec<PrivateAction>,
 }
 
-/// Private actions that can be applied to individual entities
-/// XSD requires exactly one child element (choice group)
-/// The PrivateAction element in XML contains one of these action types
+/// A private action applied to one entity.
+///
+/// XSD `PrivateAction` (:1777-1791) is a bare `xsd:choice` of ten branches. Nothing on the
+/// choice or on any branch carries `minOccurs`, so exactly one branch must be selected and a
+/// bare `$value` is the shape that says so. The previous parallel-`Option` shape said
+/// something weaker: ten independent optional slots, narrowed back to the schema's meaning by
+/// a `validate()` every caller had to remember to invoke. A document selecting no branch and a
+/// document selecting two were both accepted, and the second kept both branches and
+/// re-serialized them.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivateAction {
-    /// Exactly one of these fields should be present (XML choice group)
-    #[serde(
-        rename = "LongitudinalAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub longitudinal_action: Option<LongitudinalAction>,
-    #[serde(
-        rename = "LateralAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub lateral_action: Option<crate::types::actions::movement::LateralAction>,
-    #[serde(
-        rename = "TeleportAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub teleport_action: Option<TeleportAction>,
-    #[serde(
-        rename = "RoutingAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub routing_action: Option<RoutingAction>,
-    #[serde(
-        rename = "SynchronizeAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub synchronize_action: Option<SynchronizeAction>,
-    #[serde(
-        rename = "ActivateControllerAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub activate_controller_action: Option<ActivateControllerAction>,
-    #[serde(
-        rename = "VisibilityAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub visibility_action: Option<VisibilityAction>,
-    #[serde(
-        rename = "ControllerAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub controller_action: Option<ControllerAction>,
-    #[serde(
-        rename = "AppearanceAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub appearance_action: Option<AppearanceAction>,
-    #[serde(
-        rename = "TrailerAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub trailer_action: Option<TrailerAction>,
+    #[serde(rename = "$value")]
+    pub action: PrivateActionChoice,
 }
 
-impl PrivateAction {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `PrivateAction (`:1777-1791`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
-        Self {
-            longitudinal_action: None,
-            lateral_action: None,
-            teleport_action: None,
-            routing_action: None,
-            synchronize_action: None,
-            activate_controller_action: None,
-            visibility_action: None,
-            controller_action: None,
-            appearance_action: None,
-            trailer_action: None,
-        }
-    }
-}
-
-impl PrivateAction {
-    /// Get the action type contained in this PrivateAction
-    pub fn get_action_type(&self) -> Option<&str> {
-        if self.longitudinal_action.is_some() {
-            Some("LongitudinalAction")
-        } else if self.lateral_action.is_some() {
-            Some("LateralAction")
-        } else if self.teleport_action.is_some() {
-            Some("TeleportAction")
-        } else if self.routing_action.is_some() {
-            Some("RoutingAction")
-        } else if self.synchronize_action.is_some() {
-            Some("SynchronizeAction")
-        } else if self.activate_controller_action.is_some() {
-            Some("ActivateControllerAction")
-        } else if self.visibility_action.is_some() {
-            Some("VisibilityAction")
-        } else if self.controller_action.is_some() {
-            Some("ControllerAction")
-        } else if self.appearance_action.is_some() {
-            Some("AppearanceAction")
-        } else if self.trailer_action.is_some() {
-            Some("TrailerAction")
-        } else {
-            None
-        }
-    }
-
-    /// Validates that exactly one action type is present (XSD choice group requirement)
-    pub fn validate(&self) -> Result<(), String> {
-        let action_count = [
-            self.longitudinal_action.is_some(),
-            self.lateral_action.is_some(),
-            self.teleport_action.is_some(),
-            self.routing_action.is_some(),
-            self.synchronize_action.is_some(),
-            self.activate_controller_action.is_some(),
-            self.visibility_action.is_some(),
-            self.controller_action.is_some(),
-            self.appearance_action.is_some(),
-            self.trailer_action.is_some(),
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
-
-        match action_count {
-            1 => Ok(()),
-            0 => Err("PrivateAction must contain exactly one action type, found none".to_string()),
-            _ => Err(
-                "PrivateAction must contain exactly one action type, found multiple".to_string(),
-            ),
-        }
-    }
-}
-
-/// Longitudinal movement actions (speed control, etc.)
+/// The ten branches of the XSD `PrivateAction` choice (:1778-1790), in schema order.
 ///
-/// XSD `LongitudinalAction` (`:1431-1437`): a bare `xsd:choice` of `SpeedAction` |
-/// `LongitudinalDistanceAction` | `SpeedProfileAction`, no `minOccurs="0"` wrapper — but
-/// modelled here as parallel `Option`s per the crate's choice-group convention (see
-/// `PrivateAction` above). The derived `Default` — all three branches `None` — states
-/// nothing about which branch was chosen and is kept per the container/choice policy,
-/// consistent with `PrivateAction`'s and `GlobalAction`'s derived defaults in this file.
+/// Every payload is a struct. `LongitudinalAction` is itself a choice, and it appears here as
+/// its wrapper struct rather than as the bare `LongitudinalActionChoice`, because an
+/// externally-tagged enum nested directly inside another fails to serialize. The wrapper holds
+/// its own `$value`, so each level writes exactly one element name.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum PrivateActionChoice {
+    LongitudinalAction(LongitudinalAction),
+    LateralAction(crate::types::actions::movement::LateralAction),
+    VisibilityAction(VisibilityAction),
+    SynchronizeAction(SynchronizeAction),
+    /// Deprecated in the schema (XSD:1782-1784) but still valid OpenSCENARIO 1.3.
+    ActivateControllerAction(ActivateControllerAction),
+    ControllerAction(ControllerAction),
+    TeleportAction(TeleportAction),
+    RoutingAction(RoutingAction),
+    AppearanceAction(AppearanceAction),
+    TrailerAction(TrailerAction),
+}
+
+impl PrivateAction {
+    /// `<LongitudinalAction>` branch of the XSD `PrivateAction` choice (:1778).
+    pub fn longitudinal(action: LongitudinalAction) -> Self {
+        Self {
+            action: PrivateActionChoice::LongitudinalAction(action),
+        }
+    }
+
+    /// `<LateralAction>` branch of the XSD `PrivateAction` choice (:1779).
+    pub fn lateral(action: crate::types::actions::movement::LateralAction) -> Self {
+        Self {
+            action: PrivateActionChoice::LateralAction(action),
+        }
+    }
+
+    /// `<VisibilityAction>` branch of the XSD `PrivateAction` choice (:1780).
+    pub fn visibility(action: VisibilityAction) -> Self {
+        Self {
+            action: PrivateActionChoice::VisibilityAction(action),
+        }
+    }
+
+    /// `<SynchronizeAction>` branch of the XSD `PrivateAction` choice (:1781).
+    pub fn synchronize(action: SynchronizeAction) -> Self {
+        Self {
+            action: PrivateActionChoice::SynchronizeAction(action),
+        }
+    }
+
+    /// `<ActivateControllerAction>` branch of the XSD `PrivateAction` choice (:1782-1784).
+    /// The schema marks this branch deprecated and still declares it.
+    pub fn activate_controller(action: ActivateControllerAction) -> Self {
+        Self {
+            action: PrivateActionChoice::ActivateControllerAction(action),
+        }
+    }
+
+    /// `<ControllerAction>` branch of the XSD `PrivateAction` choice (:1785).
+    pub fn controller(action: ControllerAction) -> Self {
+        Self {
+            action: PrivateActionChoice::ControllerAction(action),
+        }
+    }
+
+    /// `<TeleportAction>` branch of the XSD `PrivateAction` choice (:1786).
+    pub fn teleport(action: TeleportAction) -> Self {
+        Self {
+            action: PrivateActionChoice::TeleportAction(action),
+        }
+    }
+
+    /// `<RoutingAction>` branch of the XSD `PrivateAction` choice (:1787).
+    pub fn routing(action: RoutingAction) -> Self {
+        Self {
+            action: PrivateActionChoice::RoutingAction(action),
+        }
+    }
+
+    /// `<AppearanceAction>` branch of the XSD `PrivateAction` choice (:1788).
+    pub fn appearance(action: AppearanceAction) -> Self {
+        Self {
+            action: PrivateActionChoice::AppearanceAction(action),
+        }
+    }
+
+    /// `<TrailerAction>` branch of the XSD `PrivateAction` choice (:1789).
+    pub fn trailer(action: TrailerAction) -> Self {
+        Self {
+            action: PrivateActionChoice::TrailerAction(action),
+        }
+    }
+
+    /// The XSD element name of the selected branch.
+    pub fn action_type(&self) -> &'static str {
+        match &self.action {
+            PrivateActionChoice::LongitudinalAction(_) => "LongitudinalAction",
+            PrivateActionChoice::LateralAction(_) => "LateralAction",
+            PrivateActionChoice::VisibilityAction(_) => "VisibilityAction",
+            PrivateActionChoice::SynchronizeAction(_) => "SynchronizeAction",
+            PrivateActionChoice::ActivateControllerAction(_) => "ActivateControllerAction",
+            PrivateActionChoice::ControllerAction(_) => "ControllerAction",
+            PrivateActionChoice::TeleportAction(_) => "TeleportAction",
+            PrivateActionChoice::RoutingAction(_) => "RoutingAction",
+            PrivateActionChoice::AppearanceAction(_) => "AppearanceAction",
+            PrivateActionChoice::TrailerAction(_) => "TrailerAction",
+        }
+    }
+}
+
+/// Longitudinal movement actions (speed control and longitudinal distance keeping).
+///
+/// XSD `LongitudinalAction` (:1431-1437) is a bare `xsd:choice` of `SpeedAction |
+/// LongitudinalDistanceAction | SpeedProfileAction`, with no `minOccurs` on the choice and
+/// none on any branch, hence exactly one branch is required.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LongitudinalAction {
-    /// Exactly one of these fields should be present (XML choice group)
-    #[serde(
-        rename = "SpeedAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub speed_action: Option<SpeedAction>,
-    #[serde(
-        rename = "LongitudinalDistanceAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub longitudinal_distance_action: Option<LongitudinalDistanceAction>,
-    #[serde(
-        rename = "SpeedProfileAction",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub speed_profile_action: Option<SpeedProfileAction>,
+    #[serde(rename = "$value")]
+    pub action: LongitudinalActionChoice,
+}
+
+/// The three branches of the XSD `LongitudinalAction` choice (:1432-1435), in schema order.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum LongitudinalActionChoice {
+    SpeedAction(SpeedAction),
+    LongitudinalDistanceAction(LongitudinalDistanceAction),
+    SpeedProfileAction(SpeedProfileAction),
 }
 
 impl LongitudinalAction {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `LongitudinalAction (`:1411-1417`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
+    /// `<SpeedAction>` branch of the XSD `LongitudinalAction` choice (:1432).
+    pub fn speed(action: SpeedAction) -> Self {
         Self {
-            speed_action: None,
-            longitudinal_distance_action: None,
-            speed_profile_action: None,
+            action: LongitudinalActionChoice::SpeedAction(action),
+        }
+    }
+
+    /// `<LongitudinalDistanceAction>` branch of the XSD `LongitudinalAction` choice (:1433).
+    pub fn longitudinal_distance(action: LongitudinalDistanceAction) -> Self {
+        Self {
+            action: LongitudinalActionChoice::LongitudinalDistanceAction(action),
+        }
+    }
+
+    /// `<SpeedProfileAction>` branch of the XSD `LongitudinalAction` choice (:1434).
+    pub fn speed_profile(action: SpeedProfileAction) -> Self {
+        Self {
+            action: LongitudinalActionChoice::SpeedProfileAction(action),
+        }
+    }
+
+    /// The XSD element name of the selected branch.
+    pub fn action_type(&self) -> &'static str {
+        match &self.action {
+            LongitudinalActionChoice::SpeedAction(_) => "SpeedAction",
+            LongitudinalActionChoice::LongitudinalDistanceAction(_) => "LongitudinalDistanceAction",
+            LongitudinalActionChoice::SpeedProfileAction(_) => "SpeedProfileAction",
         }
     }
 }
 
-impl LongitudinalAction {
-    /// Get the action type contained in this LongitudinalAction
-    pub fn get_action_type(&self) -> Option<&str> {
-        if self.speed_action.is_some() {
-            Some("SpeedAction")
-        } else if self.longitudinal_distance_action.is_some() {
-            Some("LongitudinalDistanceAction")
-        } else if self.speed_profile_action.is_some() {
-            Some("SpeedProfileAction")
-        } else {
-            None
-        }
-    }
-
-    /// Validates that exactly one action type is present (XSD choice group requirement)
-    pub fn validate(&self) -> Result<(), String> {
-        let action_count = [
-            self.speed_action.is_some(),
-            self.longitudinal_distance_action.is_some(),
-            self.speed_profile_action.is_some(),
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
-
-        match action_count {
-            1 => Ok(()),
-            0 => Err("LongitudinalAction must contain exactly one action type (SpeedAction, LongitudinalDistanceAction, or SpeedProfileAction), found none".to_string()),
-            _ => Err("LongitudinalAction must contain exactly one action type (SpeedAction, LongitudinalDistanceAction, or SpeedProfileAction), found multiple".to_string()),
+/// The `movement` module models the same XSD `LongitudinalAction` choice (:1431-1437) under
+/// its own type. Converting between them is a branch-for-branch rename, and having it in one
+/// place keeps the six builder call sites that need it from each re-deriving the mapping; the
+/// hand-written versions they replace each ran three `match`es over the same value and
+/// recovered the branch through `Option`.
+impl From<crate::types::actions::movement::LongitudinalAction> for LongitudinalAction {
+    fn from(action: crate::types::actions::movement::LongitudinalAction) -> Self {
+        use crate::types::actions::movement::LongitudinalActionChoice as Movement;
+        match action.longitudinal_action_choice {
+            Movement::SpeedAction(a) => Self::speed(a),
+            Movement::LongitudinalDistanceAction(a) => Self::longitudinal_distance(a),
+            Movement::SpeedProfileAction(a) => Self::speed_profile(a),
         }
     }
 }
@@ -478,16 +413,15 @@ mod tests {
     fn test_init_creation() {
         let init = Init {
             actions: Actions {
-                global_actions: vec![GlobalAction {
-                    environment_action: Some(EnvironmentAction::environment(Environment {
+                global_actions: vec![GlobalAction::environment(EnvironmentAction::environment(
+                    Environment {
                         name: Value::literal("TestEnvironment".to_string()),
                         parameter_declarations: None,
                         time_of_day: None,
                         weather: None,
                         road_condition: None,
-                    })),
-                    ..GlobalAction::empty()
-                }],
+                    },
+                ))],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
             },
@@ -507,46 +441,25 @@ mod tests {
     #[test]
     fn test_private_action_builder() {
         let private = Private::new("TestEntity")
-            .add_action(PrivateAction {
-                longitudinal_action: Some(LongitudinalAction {
-                    speed_action: Some(SpeedAction::new(
-                        TransitionDynamics::new(
-                            DynamicsDimension::Time,
-                            DynamicsShape::Linear,
-                            1.0,
-                        ),
-                        SpeedActionTarget::absolute(10.0),
-                    )),
-                    longitudinal_distance_action: None,
-                    speed_profile_action: None,
-                }),
-                lateral_action: None,
-                teleport_action: None,
-                routing_action: None,
-                synchronize_action: None,
-                activate_controller_action: None,
-                visibility_action: None,
-                controller_action: None,
-                ..PrivateAction::empty()
-            })
-            .add_action(PrivateAction {
-                longitudinal_action: None,
-                lateral_action: None,
-                teleport_action: Some(TeleportAction::new(
-                    crate::types::positions::Position::world(
-                        crate::types::positions::WorldPosition::new(1.0, 2.0),
-                    ),
-                )),
-                routing_action: None,
-                synchronize_action: None,
-                activate_controller_action: None,
-                visibility_action: None,
-                controller_action: None,
-                ..PrivateAction::empty()
-            });
+            .add_action(PrivateAction::longitudinal(LongitudinalAction::speed(
+                SpeedAction::new(
+                    TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                    SpeedActionTarget::absolute(10.0),
+                ),
+            )))
+            .add_action(PrivateAction::teleport(TeleportAction::new(
+                crate::types::positions::Position::world(
+                    crate::types::positions::WorldPosition::new(1.0, 2.0),
+                ),
+            )));
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
         assert_eq!(private.private_actions.len(), 2);
+        assert_eq!(
+            private.private_actions[0].action_type(),
+            "LongitudinalAction"
+        );
+        assert_eq!(private.private_actions[1].action_type(), "TeleportAction");
     }
 
     #[test]
@@ -611,16 +524,15 @@ mod tests {
     fn test_init_serialization() {
         let init = Init {
             actions: Actions {
-                global_actions: vec![GlobalAction {
-                    environment_action: Some(EnvironmentAction::environment(Environment {
+                global_actions: vec![GlobalAction::environment(EnvironmentAction::environment(
+                    Environment {
                         name: Value::literal("TestEnvironment".to_string()),
                         parameter_declarations: None,
                         time_of_day: None,
                         weather: None,
                         road_condition: None,
-                    })),
-                    ..GlobalAction::empty()
-                }],
+                    },
+                ))],
                 user_defined_actions: Vec::new(),
                 private_actions: vec![Private::new("Ego")],
             },
@@ -634,99 +546,44 @@ mod tests {
     }
 
     #[test]
-    fn test_longitudinal_action_validation() {
-        // Test valid action with SpeedAction
-        let valid_speed = LongitudinalAction {
-            speed_action: Some(SpeedAction::new(
-                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-                SpeedActionTarget::absolute(10.0),
-            )),
-            longitudinal_distance_action: None,
-            speed_profile_action: None,
-        };
-        assert!(valid_speed.validate().is_ok());
+    fn test_longitudinal_action_branch_selection() {
+        // XSD `LongitudinalAction` (:1431-1437) is a bare `xsd:choice`, so the type names one
+        // branch and cannot name none or two. The hand-written `validate()` this replaces
+        // reported the same three cases at run time, after a value had already been built.
+        let speed = LongitudinalAction::speed(SpeedAction::new(
+            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+            SpeedActionTarget::absolute(10.0),
+        ));
+        assert_eq!(speed.action_type(), "SpeedAction");
 
-        // Test valid action with LongitudinalDistanceAction
-        let valid_distance = LongitudinalAction {
-            speed_action: None,
-            longitudinal_distance_action: Some(
-                LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
-            ),
-            speed_profile_action: None,
-        };
-        assert!(valid_distance.validate().is_ok());
+        let distance = LongitudinalAction::longitudinal_distance(
+            LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
+        );
+        assert_eq!(distance.action_type(), "LongitudinalDistanceAction");
 
-        // Test valid action with SpeedProfileAction
-        let valid_profile = LongitudinalAction {
-            speed_action: None,
-            longitudinal_distance_action: None,
-            speed_profile_action: Some(SpeedProfileAction::new(
-                FollowingMode::Follow,
-                vec![SpeedProfileEntry::new(10.0)],
-            )),
-        };
-        assert!(valid_profile.validate().is_ok());
-
-        // Test invalid action with no actions
-        let invalid_none = LongitudinalAction {
-            speed_action: None,
-            longitudinal_distance_action: None,
-            speed_profile_action: None,
-        };
-        assert!(invalid_none.validate().is_err());
-
-        // Test invalid action with multiple actions
-        let invalid_multiple = LongitudinalAction {
-            speed_action: Some(SpeedAction::new(
-                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-                SpeedActionTarget::absolute(10.0),
-            )),
-            longitudinal_distance_action: Some(
-                LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
-            ),
-            speed_profile_action: None,
-        };
-        assert!(invalid_multiple.validate().is_err());
+        let profile = LongitudinalAction::speed_profile(SpeedProfileAction::new(
+            FollowingMode::Follow,
+            vec![SpeedProfileEntry::new(10.0)],
+        ));
+        assert_eq!(profile.action_type(), "SpeedProfileAction");
     }
 
     #[test]
-    fn test_private_action_validation() {
-        // Test valid action with LongitudinalAction
-        let valid_longitudinal = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction::empty()),
-            lateral_action: None,
-            teleport_action: None,
-            routing_action: None,
-            synchronize_action: None,
-            activate_controller_action: None,
-            visibility_action: None,
-            controller_action: None,
-            ..PrivateAction::empty()
-        };
-        assert!(valid_longitudinal.validate().is_ok());
+    fn test_private_action_branch_selection() {
+        let longitudinal =
+            PrivateAction::longitudinal(LongitudinalAction::speed(SpeedAction::new(
+                TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
+                SpeedActionTarget::absolute(10.0),
+            )));
+        assert_eq!(longitudinal.action_type(), "LongitudinalAction");
 
-        // Test invalid action with no actions
-        let invalid_none = PrivateAction::empty();
-        // Default has no actions (all None), so validation should fail
-        assert!(invalid_none.validate().is_err());
-
-        // Test invalid action with multiple actions
-        let invalid_multiple = PrivateAction {
-            longitudinal_action: Some(LongitudinalAction::empty()),
-            lateral_action: Some(crate::types::actions::movement::LateralAction::lane_change(
+        let lateral =
+            PrivateAction::lateral(crate::types::actions::movement::LateralAction::lane_change(
                 crate::types::actions::movement::LaneChangeAction::new(
                     TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
                     crate::types::actions::movement::LaneChangeTarget::relative("Ego", -1),
                 ),
-            )),
-            teleport_action: None,
-            routing_action: None,
-            synchronize_action: None,
-            activate_controller_action: None,
-            visibility_action: None,
-            controller_action: None,
-            ..PrivateAction::empty()
-        };
-        assert!(invalid_multiple.validate().is_err());
+            ));
+        assert_eq!(lateral.action_type(), "LateralAction");
     }
 }

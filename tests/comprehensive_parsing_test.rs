@@ -131,7 +131,7 @@ mod tests {
             entity_action.is_ok(),
             "Entity action should build successfully"
         );
-        assert!(entity_action.unwrap().entity_action.is_some());
+        assert_eq!(entity_action.unwrap().action_type(), "EntityAction");
         println!("✅ EntityAction built successfully");
 
         // Test VariableAction - also a global action
@@ -143,7 +143,7 @@ mod tests {
             variable_action.is_ok(),
             "Variable action should build successfully"
         );
-        assert!(variable_action.unwrap().variable_action.is_some());
+        assert_eq!(variable_action.unwrap().action_type(), "VariableAction");
         println!("✅ VariableAction built successfully");
     }
 

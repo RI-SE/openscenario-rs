@@ -76,7 +76,10 @@ mod tests {
             .unwrap();
 
         assert_eq!(init.actions.global_actions.len(), 1);
-        assert!(init.actions.global_actions[0].environment_action.is_some());
+        assert_eq!(
+            init.actions.global_actions[0].action_type(),
+            "EnvironmentAction"
+        );
     }
 
     #[test]

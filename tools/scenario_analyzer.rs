@@ -967,7 +967,10 @@ fn analyze_init_detailed(
 
     // Analyze global actions (environment setup)
     for global_action in &init.actions.global_actions {
-        if let Some(env_action) = &global_action.environment_action {
+        if let openscenario_rs::types::scenario::init::GlobalActionChoice::EnvironmentAction(
+            env_action,
+        ) = &global_action.action
+        {
             if let openscenario_rs::types::scenario::init::EnvironmentActionChoice::Environment(
                 environment,
             ) = &env_action.action
@@ -1000,7 +1003,10 @@ fn analyze_init_detailed(
         };
 
         for action in &private_action.private_actions {
-            if let Some(teleport_action) = &action.teleport_action {
+            if let openscenario_rs::types::scenario::init::PrivateActionChoice::TeleportAction(
+                teleport_action,
+            ) = &action.action
+            {
                 if let Some(world_pos) = &teleport_action.position.world_position {
                     entity_init.position_info = Some(PositionInfo {
                         position_type: "WorldPosition".to_string(),
@@ -1055,8 +1061,14 @@ fn analyze_init_detailed(
                 });
             }
 
-            if let Some(longitudinal_action) = &action.longitudinal_action {
-                if let Some(speed_action) = &longitudinal_action.speed_action {
+            if let openscenario_rs::types::scenario::init::PrivateActionChoice::LongitudinalAction(
+                longitudinal_action,
+            ) = &action.action
+            {
+                if let openscenario_rs::types::scenario::init::LongitudinalActionChoice::SpeedAction(
+                    speed_action,
+                ) = &longitudinal_action.action
+                {
                     if let Some(absolute) = speed_action.speed_action_target.target.as_absolute() {
                         // Try to get literal value first, then check for parameter/expression
                         let speed_value = if let Some(literal_val) = absolute.value.as_literal() {
@@ -2770,7 +2782,10 @@ fn resolve_expressions_in_scenario(
 
             // Process position actions
             for action in &private_action.private_actions {
-                if let Some(teleport_action) = &action.teleport_action {
+                if let openscenario_rs::types::scenario::init::PrivateActionChoice::TeleportAction(
+                    teleport_action,
+                ) = &action.action
+                {
                     // Process position coordinates
                     if let Some(world_position) = &teleport_action.position.world_position {
                         resolve_numeric_value(
@@ -2805,8 +2820,14 @@ fn resolve_expressions_in_scenario(
                 }
 
                 // Process speed actions
-                if let Some(speed_action) = &action.longitudinal_action {
-                    if let Some(speed_action) = &speed_action.speed_action {
+                if let openscenario_rs::types::scenario::init::PrivateActionChoice::LongitudinalAction(
+                    longitudinal_action,
+                ) = &action.action
+                {
+                    if let openscenario_rs::types::scenario::init::LongitudinalActionChoice::SpeedAction(
+                        speed_action,
+                    ) = &longitudinal_action.action
+                    {
                         let target = &speed_action.speed_action_target;
                         if let Some(absolute_speed) = target.target.as_absolute() {
                             resolve_numeric_value(

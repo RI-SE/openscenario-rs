@@ -559,10 +559,9 @@ fn empty_position_choice_is_schema_invalid() {
     let mut storyboard = Storyboard::default();
     storyboard.init.actions.private_actions.push(Private {
         entity_ref: Value::literal("ego".to_string()),
-        private_actions: vec![PrivateAction {
-            teleport_action: Some(TeleportAction::new(Position::empty())),
-            ..PrivateAction::empty()
-        }],
+        private_actions: vec![PrivateAction::teleport(TeleportAction::new(
+            Position::empty(),
+        ))],
     });
     let errors = validate(&document_with(storyboard));
     assert!(
@@ -578,12 +577,9 @@ fn teleport_action_with_a_selected_branch_is_schema_valid() {
     let mut storyboard = Storyboard::default();
     storyboard.init.actions.private_actions.push(Private {
         entity_ref: Value::literal("ego".to_string()),
-        private_actions: vec![PrivateAction {
-            teleport_action: Some(TeleportAction::new(Position::world(WorldPosition::new(
-                1.0, 2.0,
-            )))),
-            ..PrivateAction::empty()
-        }],
+        private_actions: vec![PrivateAction::teleport(TeleportAction::new(
+            Position::world(WorldPosition::new(1.0, 2.0)),
+        ))],
     });
     let errors = validate(&document_with(storyboard));
     assert!(
