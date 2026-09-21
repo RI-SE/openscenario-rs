@@ -50,12 +50,14 @@ impl TriggerBuilder {
     }
 
     /// Add a single condition as its own group (convenience method)
-    pub fn add_condition(mut self, condition: Condition) -> Self {
-        let group = ConditionGroup {
-            conditions: vec![condition],
-        };
-        self.condition_groups.push(group);
-        self
+    ///
+    /// `ConditionGroup` now states its `minOccurs="1"` in its field type, so building one
+    /// returns a `Result`. One condition always satisfies that bound; the `Result` is
+    /// propagated rather than unwrapped so that no panic path exists here.
+    pub fn add_condition(mut self, condition: Condition) -> BuilderResult<Self> {
+        self.condition_groups
+            .push(ConditionGroup::new(vec![condition])?);
+        Ok(self)
     }
 
     /// Build the trigger
@@ -112,14 +114,14 @@ impl ConditionGroupBuilder {
     }
 
     /// Finish this group and return to trigger builder
+    ///
+    /// A group that collected no condition contributes nothing, as before. The emptiness
+    /// test is now `ConditionGroup::new` refusing the short list rather than a separate
+    /// `is_empty` check, so the two cannot drift apart.
     pub fn finish_group(self) -> TriggerBuilder {
-        if !self.conditions.is_empty() {
-            let group = ConditionGroup {
-                conditions: self.conditions,
-            };
-            self.parent.add_group(group)
-        } else {
-            self.parent
+        match ConditionGroup::new(self.conditions) {
+            Ok(group) => self.parent.add_group(group),
+            Err(_) => self.parent,
         }
     }
 
@@ -194,6 +196,7 @@ mod tests {
 
         let trigger = TriggerBuilder::new()
             .add_condition(time_condition)
+            .unwrap()
             .build()
             .unwrap();
 

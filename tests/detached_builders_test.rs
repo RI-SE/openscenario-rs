@@ -1,8 +1,6 @@
 #[cfg(feature = "builder")]
 mod detached_builders_tests {
-    use openscenario_rs::builder::storyboard::{
-        DetachedActBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
-    };
+    use openscenario_rs::builder::storyboard::{DetachedActBuilder, DetachedManeuverBuilder};
     use openscenario_rs::builder::{ScenarioBuilder, StoryboardBuilder};
 
     use openscenario_rs::types::catalogs::locations::CatalogLocations;
@@ -29,11 +27,9 @@ mod detached_builders_tests {
                 condition_groups: vec![],
             });
 
-        // Attach to story builder
-        detached_act.attach_to(&mut story_builder);
-
-        // Test passes if no compilation errors occur
-        assert!(true);
+        // An act with no maneuver group is refused: XSD Act declares ManeuverGroup with
+        // the default minOccurs="1". This used to succeed and attach an empty act.
+        assert!(detached_act.attach_to(&mut story_builder).is_err());
     }
 
     #[test]
@@ -44,11 +40,11 @@ mod detached_builders_tests {
         // Create detached maneuver builder
         let detached_maneuver = detached_act.create_maneuver("maneuver1", "vehicle1");
 
-        // Attach to detached act
-        detached_maneuver.attach_to_detached(&mut detached_act);
-
-        // Test passes if no compilation errors occur
-        assert!(true);
+        // A maneuver with no event is refused: XSD Maneuver declares Event with the
+        // default minOccurs="1".
+        assert!(detached_maneuver
+            .attach_to_detached(&mut detached_act)
+            .is_err());
     }
 
     #[test]
@@ -92,8 +88,10 @@ mod detached_builders_tests {
         detached_speed
             .attach_to_detached(&mut detached_maneuver)
             .unwrap();
-        detached_maneuver.attach_to_detached(&mut detached_act);
-        detached_act.attach_to(&mut story_builder);
+        detached_maneuver
+            .attach_to_detached(&mut detached_act)
+            .unwrap();
+        detached_act.attach_to(&mut story_builder).unwrap();
 
         // Test passes if no compilation errors occur
         assert!(true);
@@ -118,7 +116,9 @@ mod detached_builders_tests {
         let result = detached_speed.attach_to_detached(&mut detached_maneuver);
         assert!(result.is_ok());
 
-        detached_maneuver.attach_to_detached(&mut detached_act);
+        detached_maneuver
+            .attach_to_detached(&mut detached_act)
+            .unwrap();
 
         // Test passes if no compilation errors occur
         assert!(true);

@@ -210,7 +210,7 @@ fn test_time_to_collision_target_position() {
 
 #[test]
 fn test_by_entity_condition_time_headway() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let condition =
         ByEntityCondition::time_headway(triggering_entities, "vehicle1", 2.0, Rule::LessThan, true);
 
@@ -227,7 +227,7 @@ fn test_by_entity_condition_time_headway() {
 
 #[test]
 fn test_by_entity_condition_time_to_collision_entity() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let condition = ByEntityCondition::time_to_collision_entity(
         triggering_entities,
         "obstacle",
@@ -253,7 +253,7 @@ fn test_by_entity_condition_time_to_collision_entity() {
 
 #[test]
 fn test_by_entity_condition_time_to_collision_position() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let position = Position::world_origin();
     let condition = ByEntityCondition::time_to_collision_position(
         triggering_entities,

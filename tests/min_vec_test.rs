@@ -273,3 +273,57 @@ mod builder_plumbing {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// `MIN = 1`
+//
+// Every test above uses `MIN = 2`, because that is the value the mechanism was built
+// for. Most schema particles that adopt `MinVec` are `minOccurs="1"` instead, and the
+// length check is `items.len() < MIN`, so `MIN = 1` follows from the same arithmetic.
+// That is a reading of the code rather than a measurement, hence these tests.
+// ---------------------------------------------------------------------------
+
+/// Mirrors `ConditionGroup`, whose XSD `Condition` particle takes the default
+/// `minOccurs="1"`.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "Group")]
+struct AtLeastOne {
+    #[serde(rename = "Item")]
+    items: MinVec<OSString, 1>,
+}
+
+#[test]
+fn a_single_item_round_trips_byte_for_byte_at_min_one() {
+    let xml = "<Group><Item>only</Item></Group>";
+    let parsed: AtLeastOne = parse(xml).expect("one item satisfies MIN = 1");
+    assert_eq!(parsed.items.as_slice().len(), 1);
+    assert_eq!(to_xml(&parsed), xml);
+}
+
+#[test]
+fn several_items_round_trip_byte_for_byte_at_min_one() {
+    let xml = "<Group><Item>first</Item><Item>second</Item></Group>";
+    let parsed: AtLeastOne = parse(xml).expect("two items satisfy MIN = 1");
+    assert_eq!(parsed.items.as_slice().len(), 2);
+    assert_eq!(to_xml(&parsed), xml);
+}
+
+/// At `MIN = 1` the empty document never reaches the length check. A field with no
+/// `#[serde(default)]` fails earlier, in serde, with `missing field`, because there is no
+/// vector to measure. The document is still rejected, so the bound holds; only the
+/// diagnostic differs from the `MIN >= 2` case. Hence what `MinVec` adds at `MIN = 1` is
+/// the construction side: an empty value cannot be built, so no serializer can emit one.
+#[test]
+fn an_empty_document_is_rejected_at_min_one() {
+    let err = parse::<AtLeastOne>("<Group/>").expect_err("zero items violate MIN = 1");
+    assert!(
+        err.to_string().contains("missing field"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn a_zero_length_value_cannot_be_constructed_at_min_one() {
+    assert!(MinVec::<OSString, 1>::new(Vec::new()).is_err());
+    assert!(MinVec::<OSString, 1>::new(vec![Value::literal("one".to_string())]).is_ok());
+}

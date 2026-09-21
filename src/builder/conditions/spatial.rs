@@ -7,7 +7,7 @@ use crate::types::basic::Value;
 use crate::types::{
     basic::{Double, OSString},
     conditions::entity::{ByEntityCondition, DistanceCondition, EntityCondition},
-    enums::{ConditionEdge, RelativeDistanceType, Rule, TriggeringEntitiesRule},
+    enums::{ConditionEdge, RelativeDistanceType, Rule},
     positions::Position,
     scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
@@ -104,12 +104,9 @@ impl DistanceConditionBuilder {
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
-                triggering_entities: TriggeringEntities {
-                    triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                    entity_refs: vec![EntityRef {
-                        entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                    }],
-                },
+                triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
+                }])?,
                 entity_condition: EntityCondition::Distance(DistanceCondition {
                     position: self.target_position.unwrap(),
                     value: Double::literal(self.distance.unwrap()),
@@ -229,12 +226,9 @@ impl RelativeDistanceConditionBuilder {
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
-                triggering_entities: TriggeringEntities {
-                    triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                    entity_refs: vec![EntityRef {
-                        entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                    }],
-                },
+                triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
+                }])?,
                 entity_condition: EntityCondition::RelativeDistance(
                     crate::types::conditions::entity::RelativeDistanceCondition {
                         entity_ref: OSString::literal(self.target_entity.unwrap()),
@@ -319,12 +313,9 @@ impl CollisionConditionBuilder {
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
-                triggering_entities: TriggeringEntities {
-                    triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                    entity_refs: vec![EntityRef {
-                        entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                    }],
-                },
+                triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
+                }])?,
                 entity_condition: EntityCondition::Collision(
                     crate::types::conditions::entity::CollisionCondition { choice },
                 ),

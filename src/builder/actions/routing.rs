@@ -5,9 +5,20 @@
 //!
 //! ```rust
 //! use openscenario_rs::builder::actions::routing::AssignRouteActionBuilder;
-//! use openscenario_rs::types::routing::Route;
+//! use openscenario_rs::types::enums::RouteStrategy;
+//! use openscenario_rs::types::routing::{Route, Waypoint};
 //!
-//! let route = Route::new("my_route", false);
+//! // XSD `Route` declares `Waypoint` with `minOccurs="2"`, so the waypoints are
+//! // supplied at construction and a shorter list is refused.
+//! let route = Route::new(
+//!     "my_route",
+//!     false,
+//!     vec![
+//!         Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+//!         Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Shortest),
+//!     ],
+//! )
+//! .unwrap();
 //! let assign_action = AssignRouteActionBuilder::new()
 //!     .for_entity("ego_vehicle")
 //!     .with_direct_route(route);
@@ -105,12 +116,17 @@ mod tests {
 
     #[test]
     fn test_assign_route_direct() {
-        let route = Route::new("test_route", false).add_waypoint(Waypoint::world_position(
-            0.0,
-            0.0,
-            0.0,
-            RouteStrategy::Shortest,
-        ));
+        let route = Route::new(
+            "test_route",
+            false,
+            // XSD `Route` requires two waypoints. This test used to build one and pass,
+            // because nothing checked the count.
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Shortest),
+            ],
+        )
+        .unwrap();
 
         let builder = AssignRouteActionBuilder::new()
             .for_entity("ego")

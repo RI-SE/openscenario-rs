@@ -8,7 +8,7 @@ use crate::builder::{
 };
 use crate::types::basic::Value;
 use crate::types::{
-    basic::OSString,
+    basic::{MinVec, OSString},
     enums::Priority,
     positions::Position,
     scenario::{
@@ -16,7 +16,7 @@ use crate::types::{
             Event, Maneuver, StoryAction, StoryActionChoice, StoryPrivateAction,
             StoryPrivateActionChoice,
         },
-        triggers::{ConditionGroup, Trigger},
+        triggers::Trigger,
     },
 };
 
@@ -104,16 +104,20 @@ impl<'parent> ManeuverBuilder<'parent> {
     }
 
     /// Finish this maneuver
-    pub fn finish(self) -> &'parent mut super::story::ActBuilder<'parent> {
+    ///
+    /// XSD `Maneuver` (`Schema/OpenSCENARIO.xsd:1453`) requires at least one `Event`, so
+    /// a maneuver that collected none is reported rather than attached. The `Result` is
+    /// what the previous signature lacked.
+    pub fn finish(self) -> BuilderResult<&'parent mut super::story::ActBuilder<'parent>> {
         let maneuver = Maneuver {
             name: OSString::literal(self.maneuver_name),
-            events: self.events,
+            events: MinVec::new(self.events)?,
             parameter_declarations: None,
         };
 
         self.parent
             .add_maneuver_to_group(maneuver, &self.entity_ref);
-        self.parent
+        Ok(self.parent)
     }
 }
 
@@ -195,13 +199,13 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         self.parent.events.push(event);
@@ -294,17 +298,17 @@ impl<'parent> TeleportPositionEventBuilder<'parent> {
             ),
             maximum_execution_count: None,
             priority: Value::Literal(Priority::Override),
-            start_trigger: self.parent.start_trigger.or_else(|| {
-                Some(Trigger {
-                    condition_groups: vec![ConditionGroup {
-                        conditions: Vec::new(),
-                    }],
-                })
-            }),
-            actions: vec![StoryAction {
+            // `StartTrigger` is `minOccurs="0"` in XSD `Event`
+            // (`Schema/OpenSCENARIO.xsd:1209`), so an event with no trigger simply omits
+            // the element. This used to fall back to a `Trigger` holding one empty
+            // `ConditionGroup`, which XSD `ConditionGroup` (`:964`) rejects: `Condition`
+            // carries the default `minOccurs="1"`. The fallback therefore turned a valid
+            // omission into an invalid element.
+            start_trigger: self.parent.start_trigger,
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         self.parent.parent.events.push(event);
@@ -332,7 +336,9 @@ impl<P> EventTriggerBuilder<P> {
             .at_time(time)
             .build()
             .unwrap();
-        self.trigger_builder = self.trigger_builder.add_condition(condition);
+        // A group of exactly one condition always meets `ConditionGroup`'s
+        // `minOccurs="1"`, so this cannot fail.
+        self.trigger_builder = self.trigger_builder.add_condition(condition).unwrap();
         self
     }
 
@@ -343,7 +349,9 @@ impl<P> EventTriggerBuilder<P> {
             .speed_above(speed)
             .build()
             .unwrap();
-        self.trigger_builder = self.trigger_builder.add_condition(condition);
+        // A group of exactly one condition always meets `ConditionGroup`'s
+        // `minOccurs="1"`, so this cannot fail.
+        self.trigger_builder = self.trigger_builder.add_condition(condition).unwrap();
         self
     }
 }
@@ -405,32 +413,39 @@ impl DetachedManeuverBuilder {
     }
 
     /// Attach this maneuver to an act builder
-    pub fn attach_to(self, act: &mut super::story::ActBuilder<'_>) {
+    pub fn attach_to(self, act: &mut super::story::ActBuilder<'_>) -> BuilderResult<()> {
         let maneuver = Maneuver {
             name: OSString::literal(self.maneuver_name),
-            events: self.events,
+            events: MinVec::new(self.events)?,
             parameter_declarations: None,
         };
         act.add_maneuver_to_group(maneuver, &self.entity_ref);
+        Ok(())
     }
 
     /// Attach this maneuver to a detached act builder
-    pub fn attach_to_detached(self, act: &mut super::story::DetachedActBuilder) {
+    pub fn attach_to_detached(
+        self,
+        act: &mut super::story::DetachedActBuilder,
+    ) -> BuilderResult<()> {
         let maneuver = Maneuver {
             name: OSString::literal(self.maneuver_name),
-            events: self.events,
+            events: MinVec::new(self.events)?,
             parameter_declarations: None,
         };
         act.add_completed_maneuver(maneuver, &self.entity_ref);
+        Ok(())
     }
 
     /// Build the final Maneuver object
-    pub fn build(self) -> Maneuver {
-        Maneuver {
+    ///
+    /// XSD `Maneuver` (`Schema/OpenSCENARIO.xsd:1453`) requires at least one `Event`.
+    pub fn build(self) -> BuilderResult<Maneuver> {
+        Ok(Maneuver {
             name: OSString::literal(self.maneuver_name),
-            events: self.events,
+            events: MinVec::new(self.events)?,
             parameter_declarations: None,
-        }
+        })
     }
 }
 
@@ -478,7 +493,7 @@ impl DetachedSpeedActionBuilder {
                 crate::builder::conditions::TimeConditionBuilder::new()
                     .at_time(time)
                     .build()?,
-            )
+            )?
             .build()?;
         self.start_trigger = Some(trigger);
         Ok(self)
@@ -521,13 +536,13 @@ impl DetachedSpeedActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         maneuver.events.push(event);
@@ -566,13 +581,13 @@ impl DetachedSpeedActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         maneuver.add_event(event);
@@ -611,13 +626,13 @@ impl DetachedSpeedActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         })
     }
 }
@@ -690,13 +705,13 @@ impl DetachedTeleportActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         maneuver.events.push(event);
@@ -735,13 +750,13 @@ impl DetachedTeleportActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         maneuver.add_event(event);
@@ -780,13 +795,13 @@ impl DetachedTeleportActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         })
     }
 }
@@ -874,7 +889,7 @@ impl DetachedFollowTrajectoryActionBuilder {
                 crate::builder::conditions::TimeConditionBuilder::new()
                     .at_time(time)
                     .build()?,
-            )
+            )?
             .build()?;
         self.start_trigger = Some(trigger);
         Ok(self)
@@ -919,13 +934,13 @@ impl DetachedFollowTrajectoryActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         maneuver.events.push(event);
@@ -966,13 +981,13 @@ impl DetachedFollowTrajectoryActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         };
 
         maneuver.events.push(event);
@@ -1013,13 +1028,13 @@ impl DetachedFollowTrajectoryActionBuilder {
                             .build()
                             .unwrap(),
                     )
-                    .build()
                     .ok()
+                    .and_then(|b| b.build().ok())
             }),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         })
     }
 }
@@ -1077,10 +1092,10 @@ impl DetachedLongitudinalDistanceActionBuilder {
             maximum_execution_count: None,
             priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("LongitudinalDistanceAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         });
         Ok(())
     }
@@ -1132,10 +1147,10 @@ impl DetachedSpeedProfileActionBuilder {
             maximum_execution_count: None,
             priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedProfileAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         });
         Ok(())
     }
@@ -1193,10 +1208,10 @@ impl DetachedAssignRouteActionBuilder {
             maximum_execution_count: None,
             priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("AssignRouteAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         });
         Ok(())
     }
@@ -1258,10 +1273,10 @@ impl DetachedSynchronizeActionBuilder {
             maximum_execution_count: None,
             priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SynchronizeAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         });
         Ok(())
     }
@@ -1323,10 +1338,10 @@ impl DetachedVisibilityActionBuilder {
             maximum_execution_count: None,
             priority: Value::Literal(Priority::Override),
             start_trigger: self.start_trigger.or_else(default_trigger),
-            actions: vec![StoryAction {
+            actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("VisibilityAction".to_string()),
                 action: StoryActionChoice::PrivateAction(story_private_action),
-            }],
+            }])?,
         });
         Ok(())
     }
@@ -1341,6 +1356,7 @@ fn default_trigger() -> Option<Trigger> {
                 .build()
                 .ok()?,
         )
+        .ok()?
         .build()
         .ok()
 }

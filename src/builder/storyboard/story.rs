@@ -4,7 +4,7 @@ use crate::builder::{
     init::InitActionBuilder, scenario::HasEntities, scenario::ScenarioBuilder, BuilderResult,
 };
 use crate::types::{
-    basic::{OSString, ParameterDeclarations, UnsignedInt},
+    basic::{MinVec, OSString, ParameterDeclarations, UnsignedInt},
     scenario::{
         init::Init,
         story::{Act, Actors, ManeuverGroup, ScenarioStory},
@@ -43,15 +43,14 @@ impl StoryboardBuilder {
     }
 
     /// Add a story using closure-based configuration
-    pub fn add_story<F>(mut self, name: &str, config: F) -> Self
+    pub fn add_story<F>(mut self, name: &str, config: F) -> BuilderResult<Self>
     where
         F: FnOnce(DetachedStoryBuilder) -> DetachedStoryBuilder,
     {
         let story_builder = DetachedStoryBuilder::new(name);
         let configured_builder = config(story_builder);
-        let story = configured_builder.build();
-        self.stories.push(story);
-        self
+        self.stories.push(configured_builder.build()?);
+        Ok(self)
     }
 
     /// Add a story to the storyboard (simple method)
@@ -208,15 +207,19 @@ impl<'parent> StoryBuilder<'parent> {
     }
 
     /// Finish this story
-    pub fn finish(self) -> &'parent mut StoryboardBuilder {
+    ///
+    /// XSD `Story` (`Schema/OpenSCENARIO.xsd:2108`) requires at least one `Act`, so a
+    /// story that collected none is reported here rather than pushed. That is the reason
+    /// for the `Result`: the previous signature had no way to say it.
+    pub fn finish(self) -> BuilderResult<&'parent mut StoryboardBuilder> {
         let story = ScenarioStory {
             name: OSString::literal(self.name),
             parameter_declarations: self.parameter_declarations,
-            acts: self.acts,
+            acts: MinVec::new(self.acts)?,
         };
 
         self.parent.stories.push(story);
-        self.parent
+        Ok(self.parent)
     }
 }
 
@@ -340,16 +343,18 @@ impl<'parent> ActBuilder<'parent> {
     }
 
     /// Finish this act
-    pub fn finish(self) -> &'parent mut StoryBuilder<'parent> {
+    ///
+    /// XSD `Act` (`Schema/OpenSCENARIO.xsd:699`) requires at least one `ManeuverGroup`.
+    pub fn finish(self) -> BuilderResult<&'parent mut StoryBuilder<'parent>> {
         let act = Act {
             name: OSString::literal(self.name),
-            maneuver_groups: self.maneuver_groups,
+            maneuver_groups: MinVec::new(self.maneuver_groups)?,
             start_trigger: self.start_trigger,
             stop_trigger: self.stop_trigger,
         };
 
         self.parent.acts.push(act);
-        self.parent
+        Ok(self.parent)
     }
 }
 
@@ -388,7 +393,7 @@ impl DetachedActBuilder {
     }
 
     /// Add a maneuver using closure-based configuration
-    pub fn add_maneuver<F>(mut self, name: &str, entity_ref: &str, config: F) -> Self
+    pub fn add_maneuver<F>(mut self, name: &str, entity_ref: &str, config: F) -> BuilderResult<Self>
     where
         F: FnOnce(
             crate::builder::storyboard::maneuver::DetachedManeuverBuilder,
@@ -397,7 +402,7 @@ impl DetachedActBuilder {
         let maneuver_builder =
             crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref);
         let configured_builder = config(maneuver_builder);
-        let maneuver = configured_builder.build();
+        let maneuver = configured_builder.build()?;
 
         // Find or create maneuver group
         if self.maneuver_groups.is_empty() {
@@ -432,7 +437,7 @@ impl DetachedActBuilder {
         }
 
         self.maneuver_groups[0].maneuvers.push(maneuver);
-        self
+        Ok(self)
     }
 
     /// Create a detached maneuver builder
@@ -486,24 +491,22 @@ impl DetachedActBuilder {
     }
 
     /// Attach this act to a story builder
-    pub fn attach_to(self, story: &mut StoryBuilder<'_>) {
-        let act = Act {
-            name: OSString::literal(self.name),
-            maneuver_groups: self.maneuver_groups,
-            start_trigger: self.start_trigger,
-            stop_trigger: self.stop_trigger,
-        };
-        story.acts.push(act);
+    pub fn attach_to(self, story: &mut StoryBuilder<'_>) -> BuilderResult<()> {
+        story.acts.push(self.build()?);
+        Ok(())
     }
 
     /// Build the final Act object
-    pub fn build(self) -> Act {
-        Act {
+    ///
+    /// XSD `Act` (`Schema/OpenSCENARIO.xsd:699`) requires at least one `ManeuverGroup`,
+    /// so an act with none is an error rather than an empty element.
+    pub fn build(self) -> BuilderResult<Act> {
+        Ok(Act {
             name: OSString::literal(self.name),
-            maneuver_groups: self.maneuver_groups,
+            maneuver_groups: MinVec::new(self.maneuver_groups)?,
             start_trigger: self.start_trigger,
             stop_trigger: self.stop_trigger,
-        }
+        })
     }
 }
 
@@ -535,15 +538,17 @@ impl InitActionBuilderForStoryboard {
         mut self,
         entity_ref: &str,
         position: crate::types::positions::Position,
-    ) -> Self {
-        self.init_builder = self.init_builder.add_teleport_action(entity_ref, position);
-        self
+    ) -> BuilderResult<Self> {
+        self.init_builder = self
+            .init_builder
+            .add_teleport_action(entity_ref, position)?;
+        Ok(self)
     }
 
     /// Add a speed action for an entity (convenience method)
-    pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> Self {
-        self.init_builder = self.init_builder.add_speed_action(entity_ref, speed);
-        self
+    pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> BuilderResult<Self> {
+        self.init_builder = self.init_builder.add_speed_action(entity_ref, speed)?;
+        Ok(self)
     }
 
     /// Create a private action builder for an entity
@@ -582,24 +587,25 @@ impl DetachedStoryBuilder {
     }
 
     /// Add an act using closure-based configuration
-    pub fn add_act<F>(mut self, name: &str, config: F) -> Self
+    pub fn add_act<F>(mut self, name: &str, config: F) -> BuilderResult<Self>
     where
         F: FnOnce(DetachedActBuilder) -> DetachedActBuilder,
     {
         let act_builder = DetachedActBuilder::new(name);
         let configured_builder = config(act_builder);
-        let act = configured_builder.build();
-        self.acts.push(act);
-        self
+        self.acts.push(configured_builder.build()?);
+        Ok(self)
     }
 
     /// Build the final story
-    pub fn build(self) -> ScenarioStory {
-        ScenarioStory {
+    ///
+    /// XSD `Story` (`Schema/OpenSCENARIO.xsd:2108`) requires at least one `Act`.
+    pub fn build(self) -> BuilderResult<ScenarioStory> {
+        Ok(ScenarioStory {
             name: OSString::literal(self.name),
             parameter_declarations: self.parameter_declarations,
-            acts: self.acts,
-        }
+            acts: MinVec::new(self.acts)?,
+        })
     }
 }
 
@@ -637,11 +643,11 @@ impl PrivateActionBuilderForStoryboard {
     }
 
     /// Finish this private action and return to init builder
-    pub fn finish(self) -> InitActionBuilderForStoryboard {
-        InitActionBuilderForStoryboard {
+    pub fn finish(self) -> BuilderResult<InitActionBuilderForStoryboard> {
+        Ok(InitActionBuilderForStoryboard {
             storyboard_builder: self.parent.storyboard_builder,
-            init_builder: self.private_builder.finish(),
-        }
+            init_builder: self.private_builder.finish()?,
+        })
     }
 }
 
@@ -649,6 +655,29 @@ impl PrivateActionBuilderForStoryboard {
 mod tests {
     use super::*;
     use crate::builder::scenario::ScenarioBuilder;
+
+    /// A maneuver carrying one event, since XSD `Maneuver` requires at least one and
+    /// `DetachedManeuverBuilder::build` now refuses a maneuver with none.
+    fn built_maneuver(name: &str, entity_ref: &str) -> crate::types::scenario::story::Maneuver {
+        use crate::types::enums::Priority;
+        use crate::types::scenario::story::{Event, StoryAction, StoryPrivateAction};
+        let mut builder =
+            crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(name, entity_ref);
+        builder.add_event(
+            Event::new(
+                "Event1",
+                Priority::Override,
+                vec![StoryAction::private(
+                    "Action1",
+                    StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
+                        true, true, true,
+                    )),
+                )],
+            )
+            .unwrap(),
+        );
+        builder.build().unwrap()
+    }
 
     #[test]
     fn test_storyboard_builder_creation() {
@@ -679,11 +708,7 @@ mod tests {
         let mut act = DetachedActBuilder::new("test_act");
 
         // Create a simple maneuver
-        let maneuver = crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new(
-            "test_maneuver",
-            "ego",
-        )
-        .build();
+        let maneuver = built_maneuver("test_maneuver", "ego");
 
         act.add_completed_maneuver(maneuver, "ego");
 
@@ -702,13 +727,9 @@ mod tests {
         let mut act = DetachedActBuilder::new("test_act");
 
         // Add two maneuvers with different actors
-        let maneuver1 =
-            crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new("maneuver1", "ego")
-                .build();
+        let maneuver1 = built_maneuver("maneuver1", "ego");
 
-        let maneuver2 =
-            crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new("maneuver2", "npc")
-                .build();
+        let maneuver2 = built_maneuver("maneuver2", "npc");
 
         act.add_completed_maneuver(maneuver1, "ego");
         act.add_completed_maneuver(maneuver2, "npc");
@@ -733,13 +754,9 @@ mod tests {
         let mut act = DetachedActBuilder::new("test_act");
 
         // Add two maneuvers with same actor
-        let maneuver1 =
-            crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new("maneuver1", "ego")
-                .build();
+        let maneuver1 = built_maneuver("maneuver1", "ego");
 
-        let maneuver2 =
-            crate::builder::storyboard::maneuver::DetachedManeuverBuilder::new("maneuver2", "ego")
-                .build();
+        let maneuver2 = built_maneuver("maneuver2", "ego");
 
         act.add_completed_maneuver(maneuver1, "ego");
         act.add_completed_maneuver(maneuver2, "ego");

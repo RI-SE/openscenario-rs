@@ -2,7 +2,7 @@
 //!
 //! Each level carries its own parameter scope and its own triggers. A `ManeuverGroup`
 //! binds maneuvers to actors; an `Act` starts and stops on triggers of its own.
-use crate::types::basic::{OSString, UnsignedInt, Value};
+use crate::types::basic::{MinVec, OSString, UnsignedInt, Value};
 use crate::types::enums::Priority;
 use serde::{Deserialize, Serialize};
 
@@ -140,7 +140,7 @@ pub struct ScenarioStory {
 
     /// Sequence of acts within this story
     #[serde(rename = "Act")]
-    pub acts: Vec<Act>,
+    pub acts: MinVec<Act, 1>,
 }
 
 /// Act definition with maneuver groups and execution triggers
@@ -155,7 +155,7 @@ pub struct Act {
 
     /// ManeuverGroups defining coordinated entity behaviors
     #[serde(rename = "ManeuverGroup")]
-    pub maneuver_groups: Vec<ManeuverGroup>,
+    pub maneuver_groups: MinVec<ManeuverGroup, 1>,
 
     /// Trigger conditions to start this act
     #[serde(rename = "StartTrigger", skip_serializing_if = "Option::is_none")]
@@ -216,7 +216,7 @@ pub struct Maneuver {
 
     /// Sequence of events within this maneuver
     #[serde(rename = "Event")]
-    pub events: Vec<Event>,
+    pub events: MinVec<Event, 1>,
 }
 
 /// Event definition with action and trigger
@@ -242,7 +242,7 @@ pub struct Event {
 
     /// The actions to execute when this event triggers
     #[serde(rename = "Action")]
-    pub actions: Vec<StoryAction>,
+    pub actions: MinVec<StoryAction, 1>,
 
     /// Trigger conditions to start this event
     #[serde(rename = "StartTrigger", skip_serializing_if = "Option::is_none")]
@@ -341,25 +341,38 @@ impl StoryPrivateAction {
 }
 
 impl ScenarioStory {
-    /// Create a new, empty story with the given name
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
+    /// Create a story with the given name and acts.
+    ///
+    /// The acts are a parameter rather than something the caller appends afterwards
+    /// because XSD `Story` (`Schema/OpenSCENARIO.xsd:2108`) declares `Act` with the
+    /// default `minOccurs="1"`. An empty story is not a story the schema can describe,
+    /// so there is no state in which this type is legitimately empty and no reason to
+    /// offer a constructor that produces one.
+    pub fn new(name: impl Into<String>, acts: Vec<Act>) -> crate::Result<Self> {
+        Ok(Self {
             name: OSString::literal(name.into()),
             parameter_declarations: None,
-            acts: Vec::new(),
-        }
+            acts: MinVec::new(acts)?,
+        })
     }
 }
 
 impl Act {
-    /// Create a new, empty act with the given name
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
+    /// Create an act with the given name and maneuver groups.
+    ///
+    /// XSD `Act` (`Schema/OpenSCENARIO.xsd:699`) declares `ManeuverGroup` with the
+    /// default `minOccurs="1"`, so the groups are supplied here rather than appended
+    /// later.
+    pub fn new(
+        name: impl Into<String>,
+        maneuver_groups: Vec<ManeuverGroup>,
+    ) -> crate::Result<Self> {
+        Ok(Self {
             name: OSString::literal(name.into()),
-            maneuver_groups: Vec::new(),
+            maneuver_groups: MinVec::new(maneuver_groups)?,
             start_trigger: None,
             stop_trigger: None,
-        }
+        })
     }
 }
 
@@ -388,29 +401,39 @@ impl ManeuverGroup {
 }
 
 impl Maneuver {
-    /// Create a new, empty maneuver with the given name
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
+    /// Create a maneuver with the given name and events.
+    ///
+    /// XSD `Maneuver` (`Schema/OpenSCENARIO.xsd:1453`) declares `Event` with the default
+    /// `minOccurs="1"`, so the events are supplied here rather than appended later.
+    pub fn new(name: impl Into<String>, events: Vec<Event>) -> crate::Result<Self> {
+        Ok(Self {
             name: OSString::literal(name.into()),
             parameter_declarations: None,
-            events: Vec::new(),
-        }
+            events: MinVec::new(events)?,
+        })
     }
 }
 
 impl Event {
-    /// Create a new event with the given name, priority, and no actions.
+    /// Create an event with the given name, priority and actions.
     ///
     /// `@priority` is `use="required"` in the XSD with no `default="…"`, so it
     /// must be supplied explicitly.
-    pub fn new(name: impl Into<String>, priority: Priority) -> Self {
-        Self {
+    /// `Action` carries the default `minOccurs="1"` in XSD `Event`
+    /// (`Schema/OpenSCENARIO.xsd:1208`), so the actions are supplied here. An event that
+    /// triggers nothing is not a document the schema admits.
+    pub fn new(
+        name: impl Into<String>,
+        priority: Priority,
+        actions: Vec<StoryAction>,
+    ) -> crate::Result<Self> {
+        Ok(Self {
             name: OSString::literal(name.into()),
             maximum_execution_count: None,
             priority: Value::Literal(priority),
-            actions: Vec::new(),
+            actions: MinVec::new(actions)?,
             start_trigger: None,
-        }
+        })
     }
 }
 
@@ -428,12 +451,40 @@ mod tests {
     use super::*;
     use crate::types::basic::Value;
 
+    /// One minimal action, for the tests that need an `Event` to be well formed.
+    fn one_action() -> Vec<StoryAction> {
+        vec![StoryAction::private(
+            "TestAction",
+            StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
+                true, true, true,
+            )),
+        )]
+    }
+
+    fn one_event(name: &str) -> Event {
+        Event::new(name, Priority::Override, one_action()).unwrap()
+    }
+
+    fn one_maneuver(name: &str) -> Maneuver {
+        Maneuver::new(name, vec![one_event("Event1")]).unwrap()
+    }
+
+    fn one_group(name: &str) -> ManeuverGroup {
+        let mut group = ManeuverGroup::new(name, 1, Actors::named(Vec::new()));
+        group.maneuvers.push(one_maneuver("Maneuver1"));
+        group
+    }
+
+    fn one_act(name: &str) -> Act {
+        Act::new(name, vec![one_group("Group1")]).unwrap()
+    }
+
     #[test]
     fn test_story_creation() {
         let story = ScenarioStory {
             name: Value::literal("TestStory".to_string()),
             parameter_declarations: None,
-            acts: vec![Act::new("Act1")],
+            acts: MinVec::new(vec![one_act("Act1")]).unwrap(),
         };
 
         assert_eq!(story.name.as_literal().unwrap(), "TestStory");
@@ -445,7 +496,7 @@ mod tests {
     fn test_act_with_triggers() {
         let act = Act {
             name: Value::literal("TestAct".to_string()),
-            maneuver_groups: vec![ManeuverGroup::new("Group1", 1, Actors::named(Vec::new()))],
+            maneuver_groups: MinVec::new(vec![one_group("Group1")]).unwrap(),
             start_trigger: None, // Will add proper trigger tests when Trigger is implemented
             stop_trigger: None,
         };
@@ -473,7 +524,7 @@ mod tests {
             maximum_execution_count: Value::literal(3),
             actors,
             catalog_reference: Vec::new(),
-            maneuvers: vec![Maneuver::new("Maneuver1")],
+            maneuvers: vec![one_maneuver("Maneuver1")],
         };
 
         assert_eq!(maneuver_group.name.as_literal().unwrap(), "TestGroup");
@@ -490,32 +541,35 @@ mod tests {
         let maneuver = Maneuver {
             name: Value::literal("TestManeuver".to_string()),
             parameter_declarations: None,
-            events: vec![
+            events: MinVec::new(vec![
                 Event {
                     name: Value::literal("Event1".to_string()),
                     maximum_execution_count: Some(Value::literal(1)),
                     priority: Value::Literal(Priority::Override),
-                    actions: vec![StoryAction::private(
+                    actions: MinVec::new(vec![StoryAction::private(
                         "TestAction",
                         StoryPrivateAction::visibility(
                             crate::types::actions::VisibilityAction::new(true, true, true),
                         ),
-                    )],
+                    )])
+                    .unwrap(),
                     start_trigger: None,
                 },
                 Event {
                     name: Value::literal("Event2".to_string()),
                     maximum_execution_count: None,
                     priority: Value::Literal(Priority::Overwrite),
-                    actions: vec![StoryAction::private(
+                    actions: MinVec::new(vec![StoryAction::private(
                         "TestAction",
                         StoryPrivateAction::visibility(
                             crate::types::actions::VisibilityAction::new(true, true, true),
                         ),
-                    )],
+                    )])
+                    .unwrap(),
                     start_trigger: None,
                 },
-            ],
+            ])
+            .unwrap(),
         };
 
         assert_eq!(maneuver.name.as_literal().unwrap(), "TestManeuver");
@@ -530,12 +584,13 @@ mod tests {
             name: Value::literal("TestEvent".to_string()),
             maximum_execution_count: Some(Value::literal(5)),
             priority: Value::Literal(Priority::Parallel),
-            actions: vec![StoryAction::private(
+            actions: MinVec::new(vec![StoryAction::private(
                 "TestAction",
                 StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
                     true, true, true,
                 )),
-            )],
+            )])
+            .unwrap(),
             start_trigger: None,
         };
 
@@ -571,7 +626,7 @@ mod tests {
 
     #[test]
     fn test_story_serialization() {
-        let story = ScenarioStory::new("TestStory");
+        let story = ScenarioStory::new("TestStory", vec![one_act("Act1")]).unwrap();
         let serialized = quick_xml::se::to_string(&story).expect("Serialization should succeed");
         assert!(serialized.contains("TestStory"));
     }

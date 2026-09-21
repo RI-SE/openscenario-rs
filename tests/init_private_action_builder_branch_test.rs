@@ -27,6 +27,7 @@ fn init_with(action: PrivateActionWrapper) -> openscenario_rs::types::scenario::
         .create_private_action("Ego")
         .add_action(action)
         .finish()
+        .unwrap()
         .build()
         .unwrap()
 }

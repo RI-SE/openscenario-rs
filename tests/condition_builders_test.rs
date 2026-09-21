@@ -136,6 +136,7 @@ mod condition_builder_tests {
 
         let trigger = TriggerBuilder::new()
             .add_condition(time_condition)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -173,7 +174,9 @@ mod condition_builder_tests {
 
         let trigger = TriggerBuilder::new()
             .add_condition(time_condition1)
+            .unwrap()
             .add_condition(time_condition2)
+            .unwrap()
             .build()
             .unwrap();
 

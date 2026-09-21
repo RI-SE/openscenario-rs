@@ -231,7 +231,7 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
                 .parameter_declarations
                 .map(route_parameter_declarations)
                 .transpose()?,
-            waypoints,
+            waypoints: crate::types::basic::MinVec::new(waypoints)?,
         })
     }
 

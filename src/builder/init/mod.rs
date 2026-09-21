@@ -14,7 +14,9 @@
 //!             .build()
 //!             .unwrap()
 //!     )
+//!     .unwrap()
 //!     .add_speed_action("ego", 30.0)
+//!     .unwrap()
 //!     .build()
 //!     .unwrap();
 //! ```
@@ -36,30 +38,18 @@ impl InitActionBuilder {
         Self::new().add_global_environment_action(environment_name)
     }
 
-    /// Create initialization for a single vehicle scenario
-    pub fn for_single_vehicle(entity_ref: &str, environment_name: &str) -> Self {
-        Self::new()
-            .add_global_environment_action(environment_name)
-            .add_private_action(entity_ref)
-    }
-
-    /// Create initialization for multi-vehicle scenario
-    pub fn for_multiple_vehicles(entity_refs: &[&str], environment_name: &str) -> Self {
-        let mut builder = Self::new().add_global_environment_action(environment_name);
-
-        for entity_ref in entity_refs {
-            builder = builder.add_private_action(entity_ref);
-        }
-
-        builder
-    }
+    // `for_single_vehicle` and `for_multiple_vehicles` are gone with
+    // `add_private_action`. Each named an entity and opened a `<Private>` container for
+    // it with no action inside, and nothing later filled the container. XSD `Private`
+    // (`Schema/OpenSCENARIO.xsd:1773`) requires at least one `PrivateAction`, so every
+    // document these produced was invalid at the point they produced it. There is no
+    // useful replacement: an entity's private actions have to be known before its
+    // container can be opened, which is what `create_private_action` already does.
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::builder::positions::WorldPositionBuilder;
-    use crate::types::positions::Position;
 
     #[test]
     fn test_init_builder_basic() {
@@ -82,41 +72,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_init_builder_single_vehicle() {
-        let init = InitActionBuilder::for_single_vehicle("ego", "TestEnvironment")
-            .build()
-            .unwrap();
-
-        assert_eq!(init.actions.global_actions.len(), 1);
-        assert_eq!(init.actions.private_actions.len(), 1);
-        assert_eq!(
-            init.actions.private_actions[0]
-                .entity_ref
-                .as_literal()
-                .unwrap(),
-            "ego"
-        );
-    }
-
-    #[test]
-    fn test_init_builder_multiple_vehicles() {
-        let vehicles = ["ego", "target", "obstacle"];
-        let init = InitActionBuilder::for_multiple_vehicles(&vehicles, "TestEnvironment")
-            .build()
-            .unwrap();
-
-        assert_eq!(init.actions.global_actions.len(), 1);
-        assert_eq!(init.actions.private_actions.len(), 3);
-
-        for (i, vehicle) in vehicles.iter().enumerate() {
-            assert_eq!(
-                init.actions.private_actions[i]
-                    .entity_ref
-                    .as_literal()
-                    .unwrap(),
-                *vehicle
-            );
-        }
-    }
+    // `test_init_builder_single_vehicle` and `test_init_builder_multiple_vehicles`
+    // covered the two removed convenience constructors. Both asserted a `<Private>`
+    // count while every container they counted was empty, which XSD `Private` forbids.
 }

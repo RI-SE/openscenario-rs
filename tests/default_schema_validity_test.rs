@@ -35,6 +35,7 @@
 #![cfg(feature = "validation")]
 
 use openscenario_rs::types::actions::movement::TeleportAction;
+use openscenario_rs::types::basic::MinVec;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::positions::{Position, WorldPosition};
 use openscenario_rs::types::scenario::init::{Private, PrivateAction};
@@ -555,9 +556,10 @@ fn teleport_action_with_a_selected_branch_is_schema_valid() {
     let mut storyboard = Storyboard::default();
     storyboard.init.actions.private_actions.push(Private {
         entity_ref: Value::literal("ego".to_string()),
-        private_actions: vec![PrivateAction::teleport(TeleportAction::new(
+        private_actions: MinVec::new(vec![PrivateAction::teleport(TeleportAction::new(
             Position::world(WorldPosition::new(1.0, 2.0)),
-        ))],
+        ))])
+        .unwrap(),
     });
     let errors = validate(&document_with(storyboard));
     assert!(

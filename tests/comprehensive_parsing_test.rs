@@ -311,7 +311,9 @@ mod tests {
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                 )),
             )
+            .unwrap()
             .add_speed_action("ego", 15.0)
+            .unwrap()
             .finish()
             .unwrap()
             .stop_after_time(60.0)

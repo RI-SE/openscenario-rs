@@ -8,7 +8,7 @@ use crate::types::{
         AccelerationCondition, ByEntityCondition, EndOfRoadCondition, EntityCondition,
         ReachPositionCondition, SpeedCondition, TraveledDistanceCondition,
     },
-    enums::{ConditionEdge, DirectionalDimension, Rule, TriggeringEntitiesRule},
+    enums::{ConditionEdge, DirectionalDimension, Rule},
     positions::Position,
     scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
@@ -90,12 +90,9 @@ impl AccelerationConditionBuilder {
         };
 
         let by_entity_condition = ByEntityCondition {
-            triggering_entities: TriggeringEntities {
-                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                entity_refs: vec![EntityRef {
-                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                }],
-            },
+            triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                entity_ref: OSString::literal(self.entity_ref.unwrap()),
+            }])?,
             entity_condition: EntityCondition::Acceleration(acceleration_condition),
         };
 
@@ -170,12 +167,9 @@ impl EnhancedSpeedConditionBuilder {
         };
 
         let by_entity_condition = ByEntityCondition {
-            triggering_entities: TriggeringEntities {
-                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                entity_refs: vec![EntityRef {
-                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                }],
-            },
+            triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                entity_ref: OSString::literal(self.entity_ref.unwrap()),
+            }])?,
             entity_condition: EntityCondition::Speed(speed_condition),
         };
 
@@ -247,12 +241,9 @@ impl TraveledDistanceConditionBuilder {
         };
 
         let by_entity_condition = ByEntityCondition {
-            triggering_entities: TriggeringEntities {
-                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                entity_refs: vec![EntityRef {
-                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                }],
-            },
+            triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                entity_ref: OSString::literal(self.entity_ref.unwrap()),
+            }])?,
             entity_condition: EntityCondition::TraveledDistance(traveled_distance_condition),
         };
 
@@ -317,12 +308,9 @@ impl ReachPositionConditionBuilder {
         };
 
         let by_entity_condition = ByEntityCondition {
-            triggering_entities: TriggeringEntities {
-                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                entity_refs: vec![EntityRef {
-                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                }],
-            },
+            triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                entity_ref: OSString::literal(self.entity_ref.unwrap()),
+            }])?,
             entity_condition: EntityCondition::ReachPosition(reach_position_condition),
         };
 
@@ -376,12 +364,9 @@ impl EndOfRoadConditionBuilder {
         };
 
         let by_entity_condition = ByEntityCondition {
-            triggering_entities: TriggeringEntities {
-                triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                entity_refs: vec![EntityRef {
-                    entity_ref: OSString::literal(self.entity_ref.unwrap()),
-                }],
-            },
+            triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                entity_ref: OSString::literal(self.entity_ref.unwrap()),
+            }])?,
             entity_condition: EntityCondition::EndOfRoad(end_of_road_condition),
         };
 

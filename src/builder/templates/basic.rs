@@ -45,7 +45,9 @@ impl BasicScenarioTemplate {
         let init = InitActionBuilder::new()
             .add_global_environment_action("Environment")
             .add_teleport_action(vehicle_name, position)
+            .unwrap()
             .add_speed_action(vehicle_name, 30.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -70,9 +72,13 @@ impl BasicScenarioTemplate {
         let init = InitActionBuilder::new()
             .add_global_environment_action("Environment")
             .add_teleport_action("ego", ego_position)
+            .unwrap()
             .add_speed_action("ego", 30.0)
+            .unwrap()
             .add_teleport_action("target", target_position)
+            .unwrap()
             .add_speed_action("target", 25.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -99,9 +105,13 @@ impl BasicScenarioTemplate {
         let init = InitActionBuilder::new()
             .add_global_environment_action("Environment")
             .add_teleport_action("Ego", ego_position)
-            .add_speed_action("Ego", 16.67) // 60 km/h
+            .unwrap()
+            .add_speed_action("Ego", 16.67)
+            .unwrap() // 60 km/h
             .add_teleport_action("TargetVehicle", target_position)
-            .add_speed_action("TargetVehicle", 13.89) // 50 km/h
+            .unwrap()
+            .add_speed_action("TargetVehicle", 13.89)
+            .unwrap() // 50 km/h
             .build()
             .unwrap();
 

@@ -127,6 +127,41 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **The storyboard spine's eight required-repeated elements now state their `minOccurs` in
+  their field types.** Breaking. `ScenarioStory::acts`, `Act::maneuver_groups`,
+  `Maneuver::events`, `Event::actions`, `Private::private_actions`,
+  `ConditionGroup::conditions` and `TriggeringEntities::entity_refs` become
+  `MinVec<T, 1>`; `Route::waypoints` becomes `MinVec<Waypoint, 2>`. The schema values are
+  `Schema/OpenSCENARIO.xsd:2108`, `:699`, `:1453`, `:1208`, `:1773`, `:964`, `:2402` and
+  `:1958` respectively, the first seven taking the default `minOccurs="1"` and `Waypoint`
+  declaring `minOccurs="2"` explicitly.
+
+  `Route.waypoints` is the field that required a type rather than an attribute. It never
+  carried `#[serde(default)]`, so the element was already required and a document with one
+  waypoint parsed, kept its single waypoint and was re-serialized in the same
+  schema-invalid shape. No serde attribute expresses "at least two". The other seven were
+  already rejected on the way in, since they carry no `default` either; what the type adds
+  for them is the other direction. `MinVec` has a private inner field, so a value shorter
+  than the minimum cannot be constructed, and therefore `<ConditionGroup/>` and
+  `<Private entityRef="Ego"/>` — both of which this crate could build and emit while being
+  unable to read them back — no longer exist as values.
+
+  Consequently the constructors that produced those values changed shape.
+  `ScenarioStory::new`, `Act::new`, `Maneuver::new`, `Event::new`, `Maneuver::new`,
+  `Private::new`, `ConditionGroup::new`, `TriggeringEntities::new`/`any`/`all` and
+  `Route::new` now take the repeated content as a parameter and return `Result`. The
+  builder methods that assembled such content, among them
+  `DetachedActBuilder::build`, `DetachedStoryBuilder::build`, `DetachedManeuverBuilder::build`,
+  `ManeuverBuilder::finish`, `StoryBuilder::finish`, `ActBuilder::finish` and
+  `PrivateActionBuilder::finish`, gained a `Result` return for the same reason: they had no
+  way to report a container with nothing in it, so they emitted one.
+
+- **`Route::add_waypoint` and `Route::add_position` are gone.** Breaking. A route was built
+  by `Route::new(name, closed)` and then grown one waypoint at a time, so a route holding a
+  single waypoint was a reachable intermediate state that nothing distinguished from a
+  finished one. `Route::new` now takes the waypoints, and `Route::from_positions` covers the
+  case where they come from positions paired with a strategy.
+
 - **The two position choice groups now hold a choice enum instead of parallel `Option`
   fields.** `Position` (`Schema/OpenSCENARIO.xsd:1738-1749`, ten branches) and
   `InRoutePosition` (`:1323-1329`, three branches) are each a bare `xsd:choice`. Nothing on
@@ -555,6 +590,28 @@ Breaking, unless noted.
   the same neighbor-file rule the guide already states for every other test.
 
 ### Removed
+
+- **`Route::validate_continuity`.** Breaking. Its only check was that the route held at
+  least two waypoints, which `MinVec<Waypoint, 2>` now makes a property of the type. A
+  validation method that restates an invariant the type already guarantees can only drift
+  away from it.
+
+- **`ConditionGroup::empty` and `ConditionGroup::add_condition`.** Breaking. `empty()`
+  produced `<ConditionGroup/>`, which XSD `ConditionGroup` (`Schema/OpenSCENARIO.xsd:964`)
+  rejects, and `add_condition` existed to repair the value afterwards. `ConditionGroup::new`
+  takes the conditions and checks them once.
+
+- **`Private::add_action`.** Breaking. It was the second half of a two-step construction
+  whose first step, `Private::new(entity_ref)`, produced a container the schema forbids.
+
+- **`InitActionBuilder::add_private_action`, `InitActionBuilder::for_single_vehicle` and
+  `InitActionBuilder::for_multiple_vehicles`.** Breaking, and each was a live defect. All
+  three named an entity and opened a `<Private>` container for it with no `PrivateAction`
+  inside, and nothing later filled the container, so every document they produced violated
+  XSD `Private` (`Schema/OpenSCENARIO.xsd:1773`) at the point of production. Two tests
+  asserted the resulting `<Private>` count as the expected result. Use
+  `InitActionBuilder::create_private_action`, which collects the actions before building the
+  container.
 
 - **`CatalogDefinition` and the duplicate `ScenarioDefinition` in `crate::types::scenario`.**
   Breaking. `CatalogDefinition` wrapped `CatalogContent` behind a `Catalog` field, and it was the

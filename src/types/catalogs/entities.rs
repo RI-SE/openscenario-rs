@@ -656,20 +656,14 @@ impl CatalogEntity for CatalogManeuver {
         self,
         parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
-        if self.events.is_empty() {
-            return Err(crate::error::Error::validation_error(
-                "Maneuver",
-                &format!(
-                    "maneuver '{}' has no <Event>; the XSD requires at least one",
-                    self.name
-                ),
-            ));
-        }
-
+        // The hand-written "has no <Event>" guard that used to stand here is gone.
+        // `Maneuver::events` is a `MinVec<Event, 1>`, so the same check happens on
+        // construction and cannot be bypassed by a caller who builds the `Maneuver`
+        // some other way.
         Ok(crate::types::scenario::story::Maneuver {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
             parameter_declarations: self.parameter_declarations,
-            events: self.events,
+            events: crate::types::basic::MinVec::new(self.events)?,
         })
     }
 

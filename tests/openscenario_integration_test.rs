@@ -8,6 +8,7 @@
 
 use openscenario_rs::parse_str;
 use openscenario_rs::types::actions::movement::RoutingActionChoice;
+use openscenario_rs::types::basic::MinVec;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::{PedestrianCategory, VehicleCategory};
 use openscenario_rs::types::scenario::init::{LongitudinalActionChoice, PrivateActionChoice};
@@ -948,7 +949,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
 
     // Create a condition group (AND logic)
     let condition_group = ConditionGroup {
-        conditions: vec![condition],
+        conditions: MinVec::new(vec![condition]).unwrap(),
     };
 
     // Create a trigger (OR logic between condition groups)
@@ -976,14 +977,15 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
         name: Value::literal("SpeedEvent".to_string()),
         maximum_execution_count: Some(Value::literal(1)),
         priority: Value::Literal(Priority::Override),
-        actions: vec![StoryAction {
+        actions: MinVec::new(vec![StoryAction {
             name: Value::literal("SpeedAction1".to_string()),
             action: StoryActionChoice::PrivateAction(StoryPrivateAction {
                 action: StoryPrivateActionChoice::LongitudinalAction(LongitudinalAction::speed(
                     speed_action,
                 )),
             }),
-        }],
+        }])
+        .unwrap(),
         start_trigger: Some(trigger),
     };
 
@@ -991,7 +993,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let maneuver = Maneuver {
         name: Value::literal("SpeedManeuver".to_string()),
         parameter_declarations: Some(ParameterDeclarations::default()),
-        events: vec![event],
+        events: MinVec::new(vec![event]).unwrap(),
     };
 
     // Create actors for the maneuver group
@@ -1014,7 +1016,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     // Create an act with the maneuver group
     let act = Act {
         name: Value::literal("MainAct".to_string()),
-        maneuver_groups: vec![maneuver_group],
+        maneuver_groups: MinVec::new(vec![maneuver_group]).unwrap(),
         start_trigger: None,
         stop_trigger: None,
     };
@@ -1033,7 +1035,7 @@ fn can_create_complete_scenario_structure_with_story_hierarchy() {
     let story = ScenarioStory {
         name: Value::literal("MainStory".to_string()),
         parameter_declarations: Some(parameter_declarations),
-        acts: vec![act],
+        acts: MinVec::new(vec![act]).unwrap(),
     };
 
     // Verify the complete hierarchy is accessible

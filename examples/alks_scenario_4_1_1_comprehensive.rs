@@ -143,7 +143,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     ego_entry_action.attach_to_detached(&mut ego_entry_maneuver)?;
-    ego_entry_maneuver.attach_to_detached(&mut act1);
+    ego_entry_maneuver.attach_to_detached(&mut act1)?;
 
     // Target vehicle cruise establishment
     let mut target_cruise_maneuver = act1.create_maneuver("TargetEstablishCruise", "Target");
@@ -155,7 +155,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     target_cruise_action.attach_to_detached(&mut target_cruise_maneuver)?;
-    target_cruise_maneuver.attach_to_detached(&mut act1);
+    target_cruise_maneuver.attach_to_detached(&mut act1)?;
 
     // Background traffic flow
     let mut background_flow_maneuver = act1.create_maneuver("BackgroundTrafficFlow", "Background");
@@ -167,9 +167,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     background_flow_action.attach_to_detached(&mut background_flow_maneuver)?;
-    background_flow_maneuver.attach_to_detached(&mut act1);
+    background_flow_maneuver.attach_to_detached(&mut act1)?;
 
-    act1.attach_to(&mut story_builder);
+    act1.attach_to(&mut story_builder)?;
 
     // Act II: Adaptive Following Behavior (ALKS Core Functionality)
     let mut act2 = story_builder.create_act("Act2_AdaptiveFollowing");
@@ -184,7 +184,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     ego_alks_action.attach_to_detached(&mut ego_alks_maneuver)?;
-    ego_alks_maneuver.attach_to_detached(&mut act2);
+    ego_alks_maneuver.attach_to_detached(&mut act2)?;
 
     // Target speed variation
     let mut target_variation_maneuver = act2.create_maneuver("TargetSpeedVariation", "Target");
@@ -196,9 +196,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     target_variation_action.attach_to_detached(&mut target_variation_maneuver)?;
-    target_variation_maneuver.attach_to_detached(&mut act2);
+    target_variation_maneuver.attach_to_detached(&mut act2)?;
 
-    act2.attach_to(&mut story_builder);
+    act2.attach_to(&mut story_builder)?;
 
     // Act III: Steady State Validation (Compliance Testing)
     let mut act3 = story_builder.create_act("Act3_SteadyStateValidation");
@@ -213,7 +213,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     ego_steady_action.attach_to_detached(&mut ego_steady_maneuver)?;
-    ego_steady_maneuver.attach_to_detached(&mut act3);
+    ego_steady_maneuver.attach_to_detached(&mut act3)?;
 
     // Target steady cruise
     let mut target_steady_maneuver = act3.create_maneuver("TargetSteadyCruise", "Target");
@@ -225,9 +225,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             condition_groups: vec![],
         });
     target_steady_action.attach_to_detached(&mut target_steady_maneuver)?;
-    target_steady_maneuver.attach_to_detached(&mut act3);
+    target_steady_maneuver.attach_to_detached(&mut act3)?;
 
-    act3.attach_to(&mut story_builder);
+    act3.attach_to(&mut story_builder)?;
 
     // Finish the story and complete the scenario
     story_builder.finish();

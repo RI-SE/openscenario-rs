@@ -45,13 +45,6 @@ impl InitActionBuilder {
         GlobalActionBuilder::new(self)
     }
 
-    /// Add a private action container for an entity
-    pub fn add_private_action(mut self, entity_ref: &str) -> Self {
-        let private = Private::new(entity_ref);
-        self.private_actions.push(private);
-        self
-    }
-
     /// Create a private action builder for an entity
     pub fn create_private_action(self, entity_ref: &str) -> PrivateActionBuilder {
         PrivateActionBuilder::new(self, entity_ref)
@@ -63,31 +56,52 @@ impl InitActionBuilder {
         &mut self,
         entity_ref: &str,
         action: crate::types::scenario::init::PrivateAction,
-    ) {
+    ) -> BuilderResult<()> {
         let existing = self
             .private_actions
             .iter()
             .position(|p| p.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref);
 
         match existing {
-            Some(index) => self.private_actions[index].private_actions.push(action),
+            Some(index) => {
+                // `private_actions` is a `MinVec`, so it cannot be pushed into through a
+                // shared reference. The container is taken out, grown and rebuilt, which
+                // re-checks the minimum. Growing a list that already satisfies the bound
+                // cannot break it, so the `?` here never fires in practice.
+                let existing_private = self.private_actions.remove(index);
+                let entity = existing_private.entity_ref;
+                let mut actions = existing_private.private_actions.into_inner();
+                actions.push(action);
+                self.private_actions.insert(
+                    index,
+                    Private {
+                        entity_ref: entity,
+                        private_actions: crate::types::basic::MinVec::new(actions)?,
+                    },
+                );
+            }
             None => self
                 .private_actions
-                .push(Private::new(entity_ref).add_action(action)),
+                .push(Private::new(entity_ref, vec![action])?),
         }
+        Ok(())
     }
 
     /// Add a teleport action for an entity (convenience method)
-    pub fn add_teleport_action(mut self, entity_ref: &str, position: Position) -> Self {
+    pub fn add_teleport_action(
+        mut self,
+        entity_ref: &str,
+        position: Position,
+    ) -> BuilderResult<Self> {
         let action = crate::types::scenario::init::PrivateAction::teleport(
             crate::types::actions::movement::TeleportAction { position },
         );
-        self.push_private_action(entity_ref, action);
-        self
+        self.push_private_action(entity_ref, action)?;
+        Ok(self)
     }
 
     /// Add a speed action for an entity (convenience method)
-    pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> Self {
+    pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> BuilderResult<Self> {
         let speed_action = crate::types::actions::movement::SpeedAction {
             speed_action_dynamics: crate::types::actions::movement::TransitionDynamics {
                 dynamics_dimension: Value::Literal(crate::types::enums::DynamicsDimension::Time),
@@ -107,8 +121,8 @@ impl InitActionBuilder {
         let action = crate::types::scenario::init::PrivateAction::longitudinal(
             crate::types::scenario::init::LongitudinalAction::speed(speed_action),
         );
-        self.push_private_action(entity_ref, action);
-        self
+        self.push_private_action(entity_ref, action)?;
+        Ok(self)
     }
 
     /// Internal method to add a completed private action
@@ -172,6 +186,7 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -194,6 +209,7 @@ mod tests {
     fn test_init_action_builder_with_speed() {
         let init = InitActionBuilder::new()
             .add_speed_action("ego", 30.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -231,7 +247,9 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position)
+            .unwrap()
             .add_speed_action("ego", 30.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -271,9 +289,13 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position1)
+            .unwrap()
             .add_speed_action("ego", 30.0)
+            .unwrap()
             .add_teleport_action("target", position2)
+            .unwrap()
             .add_speed_action("target", 25.0)
+            .unwrap()
             .build()
             .unwrap();
 

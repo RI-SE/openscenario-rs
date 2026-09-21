@@ -41,19 +41,15 @@ fn demo_simple_route() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(40));
 
     // Create a simple route from origin to destination
-    let route = Route::new("SimpleRoute", false)
-        .add_waypoint(Waypoint::world_position(
-            0.0,
-            0.0,
-            0.0,
-            RouteStrategy::Shortest,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            1000.0,
-            500.0,
-            0.0,
-            RouteStrategy::Fastest,
-        ));
+    let route = Route::new(
+        "SimpleRoute",
+        false,
+        vec![
+            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+            Waypoint::world_position(1000.0, 500.0, 0.0, RouteStrategy::Fastest),
+        ],
+    )
+    .unwrap();
 
     println!("Route name: {}", route.name.resolve(&HashMap::new())?);
     println!("Waypoint count: {}", route.waypoint_count());
@@ -68,32 +64,23 @@ fn demo_complex_route() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(40));
 
     // Create a complex route with different position types
-    let route = Route::new("ComplexRoute", true)
-        .add_waypoint(Waypoint::world_position(
-            0.0,
-            0.0,
-            0.0,
-            RouteStrategy::Shortest,
-        ))
-        .add_waypoint(Waypoint::lane_position(
-            "highway_1",
-            "lane_2",
-            500.0,
-            RouteStrategy::Fastest,
-        ))
-        .add_waypoint(Waypoint::relative_world_position(
-            "lead_vehicle",
-            50.0,
-            0.0,
-            0.0,
-            RouteStrategy::LeastIntersections,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            2000.0,
-            1000.0,
-            0.0,
-            RouteStrategy::Random,
-        ));
+    let route = Route::new(
+        "ComplexRoute",
+        true,
+        vec![
+            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+            Waypoint::lane_position("highway_1", "lane_2", 500.0, RouteStrategy::Fastest),
+            Waypoint::relative_world_position(
+                "lead_vehicle",
+                50.0,
+                0.0,
+                0.0,
+                RouteStrategy::LeastIntersections,
+            ),
+            Waypoint::world_position(2000.0, 1000.0, 0.0, RouteStrategy::Random),
+        ],
+    )
+    .unwrap();
 
     println!("Route name: {}", route.name.resolve(&HashMap::new())?);
     println!("Waypoint count: {}", route.waypoint_count());
@@ -123,25 +110,16 @@ fn demo_route_analytics() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(40));
 
     // Create a route for analytics demonstration
-    let route = Route::new("AnalyticsRoute", false)
-        .add_waypoint(Waypoint::world_position(
-            0.0,
-            0.0,
-            0.0,
-            RouteStrategy::Shortest,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            300.0,
-            400.0,
-            0.0,
-            RouteStrategy::Fastest,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            600.0,
-            0.0,
-            0.0,
-            RouteStrategy::LeastIntersections,
-        ));
+    let route = Route::new(
+        "AnalyticsRoute",
+        false,
+        vec![
+            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+            Waypoint::world_position(300.0, 400.0, 0.0, RouteStrategy::Fastest),
+            Waypoint::world_position(600.0, 0.0, 0.0, RouteStrategy::LeastIntersections),
+        ],
+    )
+    .unwrap();
 
     println!(
         "Route Analytics for '{}':",
@@ -182,19 +160,15 @@ fn demo_route_references() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(40));
 
     // Create a route for reference demonstration
-    let route = Route::new("ReferenceRoute", false)
-        .add_waypoint(Waypoint::world_position(
-            0.0,
-            0.0,
-            0.0,
-            RouteStrategy::Shortest,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            1500.0,
-            800.0,
-            0.0,
-            RouteStrategy::Fastest,
-        ));
+    let route = Route::new(
+        "ReferenceRoute",
+        false,
+        vec![
+            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+            Waypoint::world_position(1500.0, 800.0, 0.0, RouteStrategy::Fastest),
+        ],
+    )
+    .unwrap();
 
     // Create direct route reference
     let direct_ref = RouteRef::direct(route.clone());
@@ -236,44 +210,42 @@ fn demo_route_validation() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n✅ Demo 5: Route Validation");
     println!("{}", "-".repeat(40));
 
-    // Test valid route
-    let valid_route = Route::new("ValidRoute", false)
-        .add_waypoint(Waypoint::world_position(
+    // XSD `Route` declares `Waypoint` with `minOccurs="2"`, and `Route::waypoints` is a
+    // `MinVec<Waypoint, 2>`, so the check happens when the route is constructed. There is
+    // no separate validation step to call and no way to hold a route that would fail it.
+    let valid_route = Route::new(
+        "ValidRoute",
+        false,
+        vec![
+            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+            Waypoint::world_position(100.0, 100.0, 0.0, RouteStrategy::Fastest),
+        ],
+    );
+    match valid_route {
+        Ok(route) => println!(
+            "✅ Two waypoints accepted: {} total",
+            route.waypoint_count()
+        ),
+        Err(e) => println!("❌ Two waypoints rejected: {}", e),
+    }
+
+    match Route::new("EmptyRoute", false, vec![]) {
+        Ok(_) => println!("❌ Empty route should have been refused"),
+        Err(e) => println!("✅ Empty route refused at construction: {}", e),
+    }
+
+    match Route::new(
+        "SingleRoute",
+        false,
+        vec![Waypoint::world_position(
             0.0,
             0.0,
             0.0,
             RouteStrategy::Shortest,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            100.0,
-            100.0,
-            0.0,
-            RouteStrategy::Fastest,
-        ));
-
-    match valid_route.validate_continuity() {
-        Ok(()) => println!("✅ Valid route passed validation"),
-        Err(e) => println!("❌ Valid route failed validation: {}", e),
-    }
-
-    // Test invalid route (empty)
-    let empty_route = Route::new("EmptyRoute", false);
-    match empty_route.validate_continuity() {
-        Ok(()) => println!("❌ Empty route should have failed validation"),
-        Err(e) => println!("✅ Empty route correctly failed validation: {}", e),
-    }
-
-    // Test invalid route (single waypoint)
-    let single_waypoint_route = Route::new("SingleRoute", false).add_waypoint(
-        Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
-    );
-
-    match single_waypoint_route.validate_continuity() {
-        Ok(()) => println!("❌ Single waypoint route should have failed validation"),
-        Err(e) => println!(
-            "✅ Single waypoint route correctly failed validation: {}",
-            e
-        ),
+        )],
+    ) {
+        Ok(_) => println!("❌ Single-waypoint route should have been refused"),
+        Err(e) => println!("✅ Single-waypoint route refused at construction: {}", e),
     }
 
     Ok(())
@@ -284,25 +256,16 @@ fn demo_xml_serialization() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(40));
 
     // Create a route for serialization
-    let route = Route::new("SerializationDemo", false)
-        .add_waypoint(Waypoint::world_position(
-            0.0,
-            0.0,
-            0.0,
-            RouteStrategy::Shortest,
-        ))
-        .add_waypoint(Waypoint::lane_position(
-            "road_1",
-            "lane_1",
-            250.0,
-            RouteStrategy::Fastest,
-        ))
-        .add_waypoint(Waypoint::world_position(
-            500.0,
-            300.0,
-            0.0,
-            RouteStrategy::LeastIntersections,
-        ));
+    let route = Route::new(
+        "SerializationDemo",
+        false,
+        vec![
+            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+            Waypoint::lane_position("road_1", "lane_1", 250.0, RouteStrategy::Fastest),
+            Waypoint::world_position(500.0, 300.0, 0.0, RouteStrategy::LeastIntersections),
+        ],
+    )
+    .unwrap();
 
     // Serialize to XML
     let xml = quick_xml::se::to_string(&route)?;

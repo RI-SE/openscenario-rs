@@ -20,9 +20,7 @@ use crate::types::{
         ByValueCondition, ParameterCondition, SimulationTimeCondition,
         StoryboardElementStateCondition, VariableCondition,
     },
-    enums::{
-        ConditionEdge, Rule, StoryboardElementState, StoryboardElementType, TriggeringEntitiesRule,
-    },
+    enums::{ConditionEdge, Rule, StoryboardElementState, StoryboardElementType},
     scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
 
@@ -157,12 +155,9 @@ impl SpeedConditionBuilder {
             condition_edge: Value::Literal(ConditionEdge::Rising),
             delay: Double::literal(0.0),
             choice: ConditionChoice::ByEntityCondition(ByEntityCondition {
-                triggering_entities: TriggeringEntities {
-                    triggering_entities_rule: Value::Literal(TriggeringEntitiesRule::Any),
-                    entity_refs: vec![EntityRef {
-                        entity_ref: OSString::literal(entity_ref.clone()),
-                    }],
-                },
+                triggering_entities: TriggeringEntities::any(vec![EntityRef {
+                    entity_ref: OSString::literal(entity_ref.clone()),
+                }])?,
                 entity_condition: EntityCondition::Speed(EntitySpeedCondition {
                     value: Double::literal(self.speed.unwrap()),
                     rule,

@@ -9,7 +9,7 @@ use crate::types::actions::movement::{
     TeleportAction,
 };
 use crate::types::actions::trailer::TrailerAction;
-use crate::types::basic::OSString;
+use crate::types::basic::{MinVec, OSString};
 use crate::types::environment::Environment;
 use serde::{Deserialize, Serialize};
 
@@ -186,7 +186,7 @@ pub struct Private {
     #[serde(rename = "@entityRef")]
     pub entity_ref: OSString,
     #[serde(rename = "PrivateAction")]
-    pub private_actions: Vec<PrivateAction>,
+    pub private_actions: MinVec<PrivateAction, 1>,
 }
 
 /// A private action applied to one entity.
@@ -384,18 +384,18 @@ impl From<crate::types::actions::movement::LongitudinalAction> for LongitudinalA
 }
 
 impl Private {
-    /// Create a new Private action container for the specified entity
-    pub fn new(entity_ref: &str) -> Self {
-        Self {
+    /// Create a `Private` container for one entity, holding the given actions.
+    ///
+    /// XSD `Private` (`Schema/OpenSCENARIO.xsd:1773`) declares `PrivateAction` with the
+    /// default `minOccurs="1"`. The previous constructor took only the entity reference
+    /// and started with an empty action list, which serialized as
+    /// `<Private entityRef="…"/>` — an element the schema rejects. The actions are
+    /// therefore a parameter, and a container with nothing in it cannot be built.
+    pub fn new(entity_ref: &str, actions: Vec<PrivateAction>) -> crate::Result<Self> {
+        Ok(Self {
             entity_ref: crate::types::basic::Value::literal(entity_ref.to_string()),
-            private_actions: Vec::new(),
-        }
-    }
-
-    /// Add a private action to this entity's initialization
-    pub fn add_action(mut self, action: PrivateAction) -> Self {
-        self.private_actions.push(action);
-        self
+            private_actions: MinVec::new(actions)?,
+        })
     }
 }
 
@@ -423,7 +423,15 @@ mod tests {
                     },
                 ))],
                 user_defined_actions: Vec::new(),
-                private_actions: vec![Private::new("Ego")],
+                private_actions: vec![Private::new(
+                    "Ego",
+                    vec![PrivateAction::teleport(TeleportAction::new(
+                        crate::types::positions::Position::world(
+                            crate::types::positions::WorldPosition::new(0.0, 0.0),
+                        ),
+                    ))],
+                )
+                .unwrap()],
             },
         };
 
@@ -440,18 +448,21 @@ mod tests {
 
     #[test]
     fn test_private_action_builder() {
-        let private = Private::new("TestEntity")
-            .add_action(PrivateAction::longitudinal(LongitudinalAction::speed(
-                SpeedAction::new(
+        let private = Private::new(
+            "TestEntity",
+            vec![
+                PrivateAction::longitudinal(LongitudinalAction::speed(SpeedAction::new(
                     TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
                     SpeedActionTarget::absolute(10.0),
-                ),
-            )))
-            .add_action(PrivateAction::teleport(TeleportAction::new(
-                crate::types::positions::Position::world(
-                    crate::types::positions::WorldPosition::new(1.0, 2.0),
-                ),
-            )));
+                ))),
+                PrivateAction::teleport(TeleportAction::new(
+                    crate::types::positions::Position::world(
+                        crate::types::positions::WorldPosition::new(1.0, 2.0),
+                    ),
+                )),
+            ],
+        )
+        .unwrap();
 
         assert_eq!(private.entity_ref.as_literal().unwrap(), "TestEntity");
         assert_eq!(private.private_actions.len(), 2);
@@ -534,7 +545,15 @@ mod tests {
                     },
                 ))],
                 user_defined_actions: Vec::new(),
-                private_actions: vec![Private::new("Ego")],
+                private_actions: vec![Private::new(
+                    "Ego",
+                    vec![PrivateAction::teleport(TeleportAction::new(
+                        crate::types::positions::Position::world(
+                            crate::types::positions::WorldPosition::new(0.0, 0.0),
+                        ),
+                    ))],
+                )
+                .unwrap()],
             },
         };
 
@@ -585,5 +604,12 @@ mod tests {
                 ),
             ));
         assert_eq!(lateral.action_type(), "LateralAction");
+    }
+
+    #[test]
+    fn a_private_container_with_no_action_is_refused() {
+        // XSD Private declares PrivateAction with the default minOccurs="1", so
+        // <Private entityRef="Ego"/> is not a document the schema admits.
+        assert!(Private::new("Ego", Vec::new()).is_err());
     }
 }

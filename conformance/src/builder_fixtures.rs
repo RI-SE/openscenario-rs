@@ -192,15 +192,24 @@ fn story_with_speed_action() -> BuilderResult<OpenScenario> {
         .add_vehicle("ego", |vehicle| vehicle.car())
         .add_vehicle("target", |vehicle| vehicle.car())
         .with_storyboard(|storyboard| {
-            storyboard.add_story("main_story", |story| {
-                story.add_act("acceleration_act", |act| {
-                    act.add_maneuver("speed_up", "ego", |maneuver| {
-                        maneuver
-                            .add_speed_action(|speed| speed.named("accelerate").to_speed(30.0))
+            // Each of these closure steps now returns a `Result`, because the container it
+            // builds has a schema minimum it can fail to reach.
+            storyboard
+                .add_story("main_story", |story| {
+                    story
+                        .add_act("acceleration_act", |act| {
+                            act.add_maneuver("speed_up", "ego", |maneuver| {
+                                maneuver
+                                    .add_speed_action(|speed| {
+                                        speed.named("accelerate").to_speed(30.0)
+                                    })
+                                    .unwrap()
+                            })
                             .unwrap()
-                    })
+                        })
+                        .unwrap()
                 })
-            })
+                .unwrap()
         })
         .build()
 }

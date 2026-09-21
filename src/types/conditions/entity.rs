@@ -1360,7 +1360,7 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_acceleration() {
-        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
         let condition =
             ByEntityCondition::acceleration(triggering_entities, 3.0, Rule::GreaterThan);
         match condition.entity_condition {
@@ -1375,7 +1375,7 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_acceleration_with_direction() {
-        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
         let condition = ByEntityCondition::acceleration_with_direction(
             triggering_entities,
             2.5,
@@ -1397,7 +1397,7 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_standstill() {
-        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
         let condition = ByEntityCondition::standstill(triggering_entities, 4.0);
         match condition.entity_condition {
             EntityCondition::StandStill(standstill_condition) => {
@@ -1433,7 +1433,7 @@ mod tests {
     #[test]
     fn test_by_entity_condition_enum_variants() {
         // Test that all variants can be created and matched
-        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
         let acceleration =
             ByEntityCondition::acceleration(triggering_entities.clone(), 1.0, Rule::GreaterThan);
         let standstill = ByEntityCondition::standstill(triggering_entities, 2.0);
@@ -1509,7 +1509,7 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_collision_variants() {
-        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
         let collision_target =
             ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
         let collision_type =
@@ -1540,7 +1540,7 @@ mod tests {
 
     #[test]
     fn test_by_entity_condition_safety_variants() {
-        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+        let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
         let off_road = ByEntityCondition::off_road(triggering_entities.clone(), 2.0);
         let end_of_road = ByEntityCondition::end_of_road(triggering_entities, 3.0);
 

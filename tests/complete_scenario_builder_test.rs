@@ -15,15 +15,22 @@ mod complete_scenario_tests {
             .add_vehicle("ego", |vehicle| vehicle.car())
             .add_vehicle("target", |vehicle| vehicle.car())
             .with_storyboard(|storyboard| {
-                storyboard.add_story("main_story", |story| {
-                    story.add_act("acceleration_act", |act| {
-                        act.add_maneuver("speed_up", "ego", |maneuver| {
-                            maneuver
-                                .add_speed_action(|speed| speed.named("accelerate").to_speed(30.0))
+                storyboard
+                    .add_story("main_story", |story| {
+                        story
+                            .add_act("acceleration_act", |act| {
+                                act.add_maneuver("speed_up", "ego", |maneuver| {
+                                    maneuver
+                                        .add_speed_action(|speed| {
+                                            speed.named("accelerate").to_speed(30.0)
+                                        })
+                                        .unwrap()
+                                })
                                 .unwrap()
-                        })
+                            })
+                            .unwrap()
                     })
-                })
+                    .unwrap()
             })
             .build()
             .unwrap();
@@ -51,7 +58,7 @@ mod complete_scenario_tests {
             actions: Actions {
                 global_actions: vec![],
                 user_defined_actions: vec![],
-                private_actions: vec![],
+                private_actions: Vec::new(),
             },
         };
 

@@ -60,8 +60,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Chain the attachments using the detached pattern
     detached_speed.attach_to_detached(&mut detached_maneuver)?;
-    detached_maneuver.attach_to_detached(&mut detached_act);
-    detached_act.attach_to(&mut story_builder);
+    detached_maneuver.attach_to_detached(&mut detached_act)?;
+    detached_act.attach_to(&mut story_builder)?;
     println!("✅ Created act with speed action using detached builders");
 
     // Step 4: Build the final scenario

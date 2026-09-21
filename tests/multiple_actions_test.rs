@@ -1,5 +1,6 @@
 use openscenario_rs::parser::xml::parse_from_str;
 use openscenario_rs::types::actions::VisibilityAction;
+use openscenario_rs::types::basic::MinVec;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::Priority;
 use openscenario_rs::types::scenario::story::{
@@ -13,7 +14,7 @@ fn test_event_multiple_actions_struct() {
         name: Value::literal("MultiActionEvent".to_string()),
         maximum_execution_count: Some(Value::literal(1)),
         priority: Value::Literal(Priority::Override),
-        actions: vec![
+        actions: MinVec::new(vec![
             StoryAction::private(
                 "Action1",
                 StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
@@ -22,7 +23,8 @@ fn test_event_multiple_actions_struct() {
                 "Action2",
                 StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
             ),
-        ],
+        ])
+        .unwrap(),
         start_trigger: None,
     };
 
@@ -75,19 +77,28 @@ fn test_event_multiple_actions_xml_parsing() {
 }
 
 #[test]
-fn test_event_new_starts_with_no_actions() {
-    // Event no longer has a Default impl (it used to fabricate a name,
-    // a Priority::Overwrite, and a whole StoryAction nobody wrote). Event::new
-    // requires name and priority explicitly and starts with zero actions —
-    // callers must state what action(s) the event actually performs.
-    let mut event = Event::new("MyEvent", Priority::Override);
-    assert_eq!(event.actions.len(), 0, "New event should have no actions");
-    event.actions.push(StoryAction::private(
-        "Action1",
-        StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
-    ));
+fn test_event_new_requires_the_actions_it_will_perform() {
+    // Event has no Default impl (it used to fabricate a name, a
+    // Priority::Overwrite, and a whole StoryAction nobody wrote), and its actions are
+    // now a constructor parameter rather than a list the caller fills afterwards. The
+    // XSD declares Action with the default minOccurs="1", so there is no valid state in
+    // which a freshly built event has none.
+    let event = Event::new(
+        "MyEvent",
+        Priority::Override,
+        vec![StoryAction::private(
+            "Action1",
+            StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
+        )],
+    )
+    .expect("one action satisfies the schema minimum");
     assert_eq!(event.actions.len(), 1);
     assert_eq!(event.actions[0].name.as_literal().unwrap(), "Action1");
+}
+
+#[test]
+fn test_event_new_refuses_an_event_with_no_action() {
+    assert!(Event::new("MyEvent", Priority::Override, Vec::new()).is_err());
 }
 
 #[test]
@@ -96,7 +107,7 @@ fn test_event_serialization_with_multiple_actions() {
         name: Value::literal("TestEvent".to_string()),
         maximum_execution_count: None,
         priority: Value::Literal(Priority::Parallel),
-        actions: vec![
+        actions: MinVec::new(vec![
             StoryAction::private(
                 "FirstAction",
                 StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
@@ -105,7 +116,8 @@ fn test_event_serialization_with_multiple_actions() {
                 "SecondAction",
                 StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
             ),
-        ],
+        ])
+        .unwrap(),
         start_trigger: None,
     };
 

@@ -1,6 +1,6 @@
 //! `Route` and `Waypoint`, and the `RouteRef` choice between an inline route and a
 //! catalog reference to one. `types::positions::route` reuses both.
-use crate::types::basic::{Boolean, Double, OSString, Value};
+use crate::types::basic::{Boolean, Double, MinVec, OSString, Value};
 use crate::types::enums::{ParameterType, RouteStrategy};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
@@ -69,7 +69,7 @@ pub struct Route {
 
     /// Waypoints defining the route (minimum 2 required per XSD)
     #[serde(rename = "Waypoint")]
-    pub waypoints: Vec<Waypoint>,
+    pub waypoints: MinVec<Waypoint, 2>,
 
     /// Whether the route is closed (forms a loop)
     #[serde(rename = "@closed")]
@@ -124,26 +124,39 @@ pub enum RouteRef {
 
 // Implementation methods for Route
 impl Route {
-    /// Create a new route with the given name and closure setting
-    pub fn new(name: impl Into<String>, closed: bool) -> Self {
-        Self {
+    /// Create a route with the given name, closure setting and waypoints.
+    ///
+    /// XSD `Route` (`Schema/OpenSCENARIO.xsd:1958`) declares
+    /// `<xsd:element name="Waypoint" minOccurs="2" maxOccurs="unbounded"/>`. That bound
+    /// is the reason this constructor takes the waypoints and returns a `Result`: the
+    /// previous `new(name, closed)` plus `add_waypoint` chain could stop after one
+    /// waypoint, and nothing between there and the serializer would notice. The
+    /// `add_waypoint` and `add_position` chain methods are gone for the same reason;
+    /// build the vector first and hand it over once.
+    pub fn new(
+        name: impl Into<String>,
+        closed: bool,
+        waypoints: Vec<Waypoint>,
+    ) -> crate::Result<Self> {
+        Ok(Self {
             parameter_declarations: None,
-            waypoints: Vec::new(),
+            waypoints: MinVec::new(waypoints)?,
             closed: Boolean::literal(closed),
             name: OSString::literal(name.into()),
-        }
+        })
     }
 
-    /// Add a waypoint to this route
-    pub fn add_waypoint(mut self, waypoint: Waypoint) -> Self {
-        self.waypoints.push(waypoint);
-        self
-    }
-
-    /// Add a position with routing strategy as a waypoint
-    pub fn add_position(mut self, position: Position, strategy: RouteStrategy) -> Self {
-        self.waypoints.push(Waypoint::new(position, strategy));
-        self
+    /// Create a route from positions paired with a single routing strategy.
+    pub fn from_positions(
+        name: impl Into<String>,
+        closed: bool,
+        positions: Vec<(Position, RouteStrategy)>,
+    ) -> crate::Result<Self> {
+        let waypoints = positions
+            .into_iter()
+            .map(|(position, strategy)| Waypoint::new(position, strategy))
+            .collect();
+        Self::new(name, closed, waypoints)
     }
 
     /// Set parameter declarations for this route
@@ -211,23 +224,6 @@ impl Route {
         }
 
         Ok(distances)
-    }
-
-    /// Validate route continuity and constraints
-    pub fn validate_continuity(&self) -> crate::Result<()> {
-        if self.waypoints.len() < 2 {
-            return Err(crate::Error::ValidationError {
-                field: "waypoints".to_string(),
-                message: "Route must have at least 2 waypoints".to_string(),
-            });
-        }
-
-        // Additional validation logic can be added here
-        // - Check for reasonable distances between waypoints
-        // - Validate position types are compatible
-        // - Check routing strategies are appropriate
-
-        Ok(())
     }
 
     /// Check if all waypoints are reachable from their predecessors
@@ -361,9 +357,15 @@ mod tests {
 
     #[test]
     fn test_route_creation_and_building() {
-        let route = Route::new("TestRoute", false)
-            .add_position(Position::world_origin(), RouteStrategy::Shortest)
-            .add_position(Position::world_origin(), RouteStrategy::Fastest);
+        let route = Route::new(
+            "TestRoute",
+            false,
+            vec![
+                Waypoint::new(Position::world_origin(), RouteStrategy::Shortest),
+                Waypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+            ],
+        )
+        .unwrap();
 
         assert_eq!(
             route
@@ -402,19 +404,15 @@ mod tests {
 
     #[test]
     fn test_route_distance_calculations() {
-        let route = Route::new("DistanceTest", false)
-            .add_waypoint(Waypoint::world_position(
-                0.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                100.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ));
+        let route = Route::new(
+            "DistanceTest",
+            false,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Shortest),
+            ],
+        )
+        .unwrap();
 
         let total_distance = route.total_distance().unwrap();
         assert!((total_distance - 100.0).abs() < 0.001);
@@ -426,25 +424,16 @@ mod tests {
 
     #[test]
     fn test_closed_route_behavior() {
-        let route = Route::new("ClosedRoute", true)
-            .add_waypoint(Waypoint::world_position(
-                0.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                100.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                100.0,
-                100.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ));
+        let route = Route::new(
+            "ClosedRoute",
+            true,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 100.0, 0.0, RouteStrategy::Shortest),
+            ],
+        )
+        .unwrap();
 
         assert!(route.is_closed().unwrap());
 
@@ -453,34 +442,53 @@ mod tests {
     }
 
     #[test]
-    fn test_route_validation() {
-        let empty_route = Route::new("Empty", false);
-        assert!(empty_route.validate_continuity().is_err());
+    fn a_route_with_no_waypoint_is_refused() {
+        assert!(Route::new("Empty", false, vec![]).is_err());
+    }
 
-        let single_waypoint_route = Route::new("Single", false).add_waypoint(
-            Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
-        );
-        assert!(single_waypoint_route.validate_continuity().is_err());
+    #[test]
+    fn a_route_with_one_waypoint_is_refused() {
+        // XSD Route declares Waypoint with minOccurs="2". This is the case a missing
+        // serde(default) could not catch: the field was already required, and one
+        // waypoint still satisfied it.
+        assert!(Route::new(
+            "Single",
+            false,
+            vec![Waypoint::world_position(
+                0.0,
+                0.0,
+                0.0,
+                RouteStrategy::Shortest
+            )],
+        )
+        .is_err());
+    }
 
-        let valid_route = Route::new("Valid", false)
-            .add_waypoint(Waypoint::world_position(
-                0.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                100.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ));
-        assert!(valid_route.validate_continuity().is_ok());
+    #[test]
+    fn a_route_with_two_waypoints_is_accepted() {
+        let valid_route = Route::new(
+            "Valid",
+            false,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Shortest),
+            ],
+        )
+        .expect("two waypoints satisfy the schema minimum");
+        assert_eq!(valid_route.waypoint_count(), 2);
     }
 
     #[test]
     fn test_route_ref_variants() {
-        let direct_route = Route::new("DirectRoute", false);
+        let direct_route = Route::new(
+            "DirectRoute",
+            false,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(10.0, 0.0, 0.0, RouteStrategy::Shortest),
+            ],
+        )
+        .unwrap();
         let route_ref1 = RouteRef::direct(direct_route);
         assert!(matches!(route_ref1, RouteRef::Direct(_)));
 
@@ -490,19 +498,15 @@ mod tests {
 
     #[test]
     fn test_xml_serialization_roundtrip() {
-        let route = Route::new("SerializationTest", false)
-            .add_waypoint(Waypoint::world_position(
-                0.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                100.0,
-                100.0,
-                0.0,
-                RouteStrategy::Fastest,
-            ));
+        let route = Route::new(
+            "SerializationTest",
+            false,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 100.0, 0.0, RouteStrategy::Fastest),
+            ],
+        )
+        .unwrap();
 
         // Test serialization
         let xml = quick_xml::se::to_string(&route).expect("Failed to serialize");
@@ -524,36 +528,26 @@ mod tests {
 
     #[test]
     fn test_complex_multi_waypoint_route() {
-        let route = Route::new("ComplexRoute", true)
-            .add_waypoint(Waypoint::world_position(
-                0.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::lane_position(
-                "road1",
-                "lane1",
-                100.0,
-                RouteStrategy::Fastest,
-            ))
-            .add_waypoint(Waypoint::relative_world_position(
-                "vehicle1",
-                50.0,
-                0.0,
-                0.0,
-                RouteStrategy::LeastIntersections,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                200.0,
-                200.0,
-                0.0,
-                RouteStrategy::Random,
-            ));
+        let route = Route::new(
+            "ComplexRoute",
+            true,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::lane_position("road1", "lane1", 100.0, RouteStrategy::Fastest),
+                Waypoint::relative_world_position(
+                    "vehicle1",
+                    50.0,
+                    0.0,
+                    0.0,
+                    RouteStrategy::LeastIntersections,
+                ),
+                Waypoint::world_position(200.0, 200.0, 0.0, RouteStrategy::Random),
+            ],
+        )
+        .unwrap();
 
         assert_eq!(route.waypoint_count(), 4);
         assert!(route.is_closed().unwrap());
-        assert!(route.validate_continuity().is_ok());
 
         let reachability = route.check_waypoint_reachability().unwrap();
         assert_eq!(reachability.len(), 4);
@@ -572,20 +566,16 @@ mod tests {
                 constraint_groups: Vec::new(),
             });
 
-        let route = Route::new("ParameterizedRoute", false)
-            .with_parameter_declarations(declarations)
-            .add_waypoint(Waypoint::world_position(
-                0.0,
-                0.0,
-                0.0,
-                RouteStrategy::Shortest,
-            ))
-            .add_waypoint(Waypoint::world_position(
-                100.0,
-                0.0,
-                0.0,
-                RouteStrategy::Fastest,
-            ));
+        let route = Route::new(
+            "ParameterizedRoute",
+            false,
+            vec![
+                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
+                Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Fastest),
+            ],
+        )
+        .unwrap()
+        .with_parameter_declarations(declarations);
 
         assert!(route.parameter_declarations.is_some());
         assert_eq!(

@@ -12,7 +12,6 @@ mod tests {
         BasicScenarioTemplate, InitActionBuilder, ScenarioBuilder, ScenarioTemplate,
         TimeConditionBuilder, TriggerBuilder,
     };
-    use openscenario_rs::types::scenario::init::Init;
 
     #[test]
     fn test_init_action_builder_basic() {
@@ -45,7 +44,9 @@ mod tests {
         let init = InitActionBuilder::new()
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action("ego", position)
+            .unwrap()
             .add_speed_action("ego", 30.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -104,9 +105,13 @@ mod tests {
         let init = InitActionBuilder::new()
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action("ego", ego_pos)
+            .unwrap()
             .add_speed_action("ego", 30.0)
+            .unwrap()
             .add_teleport_action("target", target_pos)
+            .unwrap()
             .add_speed_action("target", 25.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -129,6 +134,7 @@ mod tests {
         // Test that TriggerBuilder creates non-empty triggers
         let trigger = TriggerBuilder::new()
             .add_condition(TimeConditionBuilder::new().at_time(5.0).build().unwrap())
+            .unwrap()
             .build()
             .unwrap();
 
@@ -186,41 +192,11 @@ mod tests {
         assert!(scenario.entities.is_some());
     }
 
-    #[test]
-    fn test_convenience_methods() {
-        // Test convenience methods for common patterns
-        let init_single = InitActionBuilder::for_single_vehicle("ego", "TestEnvironment")
-            .build()
-            .unwrap();
-
-        assert_eq!(init_single.actions.global_actions.len(), 1);
-        assert_eq!(init_single.actions.private_actions.len(), 1);
-        assert_eq!(
-            init_single.actions.private_actions[0]
-                .entity_ref
-                .as_literal()
-                .unwrap(),
-            "ego"
-        );
-
-        let init_multi = InitActionBuilder::for_multiple_vehicles(
-            &["ego", "target", "obstacle"],
-            "TestEnvironment",
-        )
-        .build()
-        .unwrap();
-
-        assert_eq!(init_multi.actions.global_actions.len(), 1);
-        assert_eq!(init_multi.actions.private_actions.len(), 3);
-
-        let entity_names: Vec<String> = init_multi
-            .actions
-            .private_actions
-            .iter()
-            .map(|p| p.entity_ref.as_literal().unwrap().to_string())
-            .collect();
-        assert_eq!(entity_names, vec!["ego", "target", "obstacle"]);
-    }
+    // `test_convenience_methods` covered `InitActionBuilder::for_single_vehicle` and
+    // `for_multiple_vehicles`, both removed. Each opened a `<Private>` container for a
+    // named entity and put no action in it, and the test asserted that count as the
+    // expected result. XSD `Private` requires at least one `PrivateAction`, so what the
+    // test pinned was the defect.
 
     #[test]
     fn test_fluent_private_action_builder() {
@@ -235,6 +211,7 @@ mod tests {
             .add_teleport_action(position)
             .add_speed_action(40.0)
             .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -261,6 +238,7 @@ mod tests {
         // 1. Non-empty triggers can be created
         let trigger = TriggerBuilder::new()
             .add_condition(TimeConditionBuilder::new().at_time(0.0).build().unwrap())
+            .unwrap()
             .build()
             .unwrap();
 
@@ -277,7 +255,9 @@ mod tests {
         let init = InitActionBuilder::new()
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action("Ego", position)
+            .unwrap()
             .add_speed_action("Ego", 16.67)
+            .unwrap()
             .build()
             .unwrap();
 

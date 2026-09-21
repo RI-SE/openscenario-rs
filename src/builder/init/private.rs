@@ -216,18 +216,22 @@ impl PrivateActionBuilder {
     }
 
     /// Finish building and return to parent
-    pub fn finish(self) -> InitActionBuilder {
+    ///
+    /// A builder that collected no action used to contribute
+    /// `<Private entityRef="…"/>`, which XSD `Private`
+    /// (`Schema/OpenSCENARIO.xsd:1773`) rejects: `PrivateAction` carries the default
+    /// `minOccurs="1"`. The empty case is now reported rather than emitted, which is why
+    /// this returns a `Result`.
+    pub fn finish(self) -> BuilderResult<InitActionBuilder> {
         let private_actions: Vec<PrivateAction> = self
             .actions
             .into_iter()
             .map(Self::convert_to_init_action)
             .collect();
 
-        let private = Private {
-            entity_ref: Value::literal(self.entity_ref),
-            private_actions,
-        };
-        self.parent.add_private(private)
+        Ok(self
+            .parent
+            .add_private(Private::new(&self.entity_ref, private_actions)?))
     }
 
     /// Build the private action container
@@ -238,10 +242,7 @@ impl PrivateActionBuilder {
             .map(Self::convert_to_init_action)
             .collect();
 
-        Ok(Private {
-            entity_ref: Value::literal(self.entity_ref),
-            private_actions,
-        })
+        Ok(Private::new(&self.entity_ref, private_actions)?)
     }
 }
 
@@ -407,6 +408,7 @@ mod tests {
             .add_teleport_action(position)
             .add_speed_action(25.0)
             .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -462,9 +464,11 @@ mod tests {
             .add_teleport_action(position)
             .add_speed_action(40.0)
             .finish()
+            .unwrap()
             .create_private_action("target")
             .add_speed_action(35.0)
             .finish()
+            .unwrap()
             .build()
             .unwrap();
 

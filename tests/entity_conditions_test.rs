@@ -11,7 +11,7 @@ use openscenario_rs::types::{
 #[test]
 fn test_by_entity_condition_basic() {
     // Test that we can create a basic ByEntityCondition
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let condition =
         ByEntityCondition::speed(triggering_entities, 10.0, Rule::GreaterThan, "ego_vehicle");
 

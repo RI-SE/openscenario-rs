@@ -57,8 +57,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
     speed_action1.attach_to_detached(&mut maneuver1)?;
-    maneuver1.attach_to_detached(&mut act1);
-    act1.attach_to(&mut story_builder);
+    maneuver1.attach_to_detached(&mut act1)?;
+    act1.attach_to(&mut story_builder)?;
     println!("✅ Created Act 1: Initial acceleration");
 
     // Act 2: Conditional overtaking
@@ -73,8 +73,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
     speed_action2.attach_to_detached(&mut maneuver2)?;
-    maneuver2.attach_to_detached(&mut act2);
-    act2.attach_to(&mut story_builder);
+    maneuver2.attach_to_detached(&mut act2)?;
+    act2.attach_to(&mut story_builder)?;
     println!("✅ Created Act 2: Conditional overtaking");
 
     // Act 3: Lane change maneuver
@@ -90,8 +90,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
     teleport_action.attach_to_detached(&mut maneuver3)?;
-    maneuver3.attach_to_detached(&mut act3);
-    act3.attach_to(&mut story_builder);
+    maneuver3.attach_to_detached(&mut act3)?;
+    act3.attach_to(&mut story_builder)?;
     println!("✅ Created Act 3: Lane change maneuver");
 
     // Step 4: Build the final comprehensive scenario

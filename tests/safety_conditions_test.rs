@@ -77,7 +77,7 @@ fn test_end_of_road_condition_new_value() {
 
 #[test]
 fn test_by_entity_condition_collision_variants() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let collision_target =
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1");
     let collision_type =
@@ -108,7 +108,7 @@ fn test_by_entity_condition_collision_variants() {
 
 #[test]
 fn test_by_entity_condition_safety_variants() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let off_road = ByEntityCondition::off_road(triggering_entities.clone(), 2.0);
     let end_of_road = ByEntityCondition::end_of_road(triggering_entities, 3.0);
 
@@ -153,7 +153,7 @@ fn test_safety_conditions_serialization() {
 #[test]
 fn test_by_entity_condition_enum_completeness() {
     // Test that all variants can be matched
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
     let conditions = vec![
         ByEntityCondition::collision_with_target(triggering_entities.clone(), "vehicle1"),
         ByEntityCondition::off_road(triggering_entities.clone(), 1.0),
@@ -184,7 +184,7 @@ fn test_by_entity_condition_enum_completeness() {
 
 #[test]
 fn test_by_entity_condition_safety_integration() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
+    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
 
     // Test collision conditions
     let collision_target =
