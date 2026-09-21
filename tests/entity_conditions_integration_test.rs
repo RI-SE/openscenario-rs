@@ -33,16 +33,13 @@ fn test_by_entity_condition_speed() {
 #[test]
 fn test_by_entity_condition_reach_position() {
     let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]);
-    let position = Position {
-        world_position: Some(WorldPosition::new(100.0, 200.0)),
-        ..Position::empty()
-    };
+    let position = Position::world(WorldPosition::new(100.0, 200.0));
     let reach_condition = ByEntityCondition::reach_position(triggering_entities, position, 3.0);
 
     match reach_condition.entity_condition {
         EntityCondition::ReachPosition(reach) => {
             assert_eq!(reach.tolerance, Double::literal(3.0));
-            assert!(reach.position.world_position.is_some());
+            assert!(reach.position.world_position().is_some());
         }
         _ => panic!("Expected ReachPosition condition"),
     }

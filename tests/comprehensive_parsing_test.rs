@@ -200,20 +200,9 @@ mod tests {
         println!("✅ TraveledDistanceCondition built successfully");
 
         // Test ReachPositionCondition
-        let position = Position {
-            world_position: Some(WorldPosition::with_full_orientation(
-                100.0, 200.0, 0.0, 0.0, 0.0, 0.0,
-            )),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        };
+        let position = Position::world(WorldPosition::with_full_orientation(
+            100.0, 200.0, 0.0, 0.0, 0.0, 0.0,
+        ));
 
         let reach_position_condition = ReachPositionConditionBuilder::new()
             .for_entity("ego")
@@ -287,20 +276,9 @@ mod tests {
 
         let storyboard_builder2 = scenario_builder2.create_storyboard();
 
-        let position = Position {
-            world_position: Some(WorldPosition::with_full_orientation(
-                500.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            )),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        };
+        let position = Position::world(WorldPosition::with_full_orientation(
+            500.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ));
 
         let storyboard_with_position_stop =
             storyboard_builder2.stop_when_entity_reaches("ego", position);
@@ -329,20 +307,9 @@ mod tests {
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action(
                 "ego",
-                Position {
-                    world_position: Some(WorldPosition::with_full_orientation(
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    )),
-                    relative_world_position: None,
-                    road_position: None,
-                    relative_road_position: None,
-                    lane_position: None,
-                    relative_lane_position: None,
-                    route_position: None,
-                    trajectory_position: None,
-                    geographic_position: None,
-                    relative_object_position: None,
-                },
+                Position::world(WorldPosition::with_full_orientation(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                )),
             )
             .add_speed_action("ego", 15.0)
             .finish()

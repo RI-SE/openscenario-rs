@@ -181,18 +181,7 @@ impl VertexBuilder {
             p: None,
             r: None,
         };
-        self.position = Some(Position {
-            world_position: Some(world_pos),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        });
+        self.position = Some(Position::world(world_pos));
         self
     }
 
@@ -440,7 +429,7 @@ mod tests {
 
         // Check first vertex
         assert_eq!(vertices[0].time.as_ref().unwrap().as_literal(), Some(&0.0));
-        if let Some(ref pos) = vertices[0].position.world_position {
+        if let Some(pos) = vertices[0].position.world_position() {
             assert_eq!(pos.x.as_literal(), Some(&0.0));
             assert_eq!(pos.y.as_literal(), Some(&0.0));
         } else {
@@ -449,7 +438,7 @@ mod tests {
 
         // Check last vertex
         assert_eq!(vertices[2].time.as_ref().unwrap().as_literal(), Some(&2.0));
-        if let Some(ref pos) = vertices[2].position.world_position {
+        if let Some(pos) = vertices[2].position.world_position() {
             assert_eq!(pos.x.as_literal(), Some(&20.0));
             assert_eq!(pos.y.as_literal(), Some(&10.0));
         } else {

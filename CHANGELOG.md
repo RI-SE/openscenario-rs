@@ -127,6 +127,31 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 Breaking, unless noted.
 
+- **The two position choice groups now hold a choice enum instead of parallel `Option`
+  fields.** `Position` (`Schema/OpenSCENARIO.xsd:1738-1749`, ten branches) and
+  `InRoutePosition` (`:1323-1329`, three branches) are each a bare `xsd:choice`. Nothing on
+  either choice or on any of its branches carries `minOccurs`, so every branch defaults to 1 and
+  exactly one must be selected. Both types now hold a single `position` field behind `$value`,
+  typed `PositionChoice` or `InRoutePositionChoice`, with the variants named for the XSD
+  elements and listed in schema order. The `GeoPosition` variant keeps the schema's element
+  name although the Rust payload type is called `GeographicPosition`.
+
+  Under the previous shape a `<Position/>` naming no branch parsed to an all-`None` value and
+  serialized back out as `<Position/>`, and a `<Position>` naming two branches kept both and
+  re-serialized both. Both documents are ones no schema-valid tool accepts. Serde now reports
+  them as `missing field $value` and `duplicate field $value` while deserializing.
+
+  Per-branch constructors replace the removed field access on construction:
+  `Position::world`, `relative_world`, `relative_object`, `road`, `relative_road`, `lane`,
+  `relative_lane`, `route`, `geographic` and `trajectory`. The four that did not exist before
+  (`relative_world`, `road`, `lane`, `route`) are new. Reading a branch goes through an
+  accessor of the old field's name returning `Option<&T>`, for example
+  `position.world_position()`, so a caller interested in one coordinate system does not have to
+  write the discard arm. A caller handling several branches should match on `position.position`
+  instead. `InRoutePosition` keeps its `from_current_entity`, `from_road_coordinates` and
+  `from_lane_coordinates` constructors and gains `_ref()`-suffixed accessors, since the
+  constructor names were already taken.
+
 - **The three `Init` action choice groups now hold a choice enum instead of parallel `Option`
   fields.** `GlobalAction` (`Schema/OpenSCENARIO.xsd:1282-1295`, seven branches),
   `PrivateAction` (`:1777-1791`, ten branches) and `LongitudinalAction` (`:1431-1437`, three
@@ -530,6 +555,14 @@ Breaking, unless noted.
   the same neighbor-file rule the guide already states for every other test.
 
 ### Removed
+
+- **`Position::empty()` and `InRoutePosition::empty()`.** Breaking. Each was a constructor whose
+  only product was a value the schema forbids: an element naming none of its choice's branches.
+  Both were public, and `Position::empty()` serialized to `<Position/>`. The branch now
+  lives in a `$value` field, so such a value cannot be built at all and there is nothing left to
+  port. Use the per-branch constructors, or `Position::world_origin()` where a placeholder is
+  genuinely wanted; `world_origin` selects the `WorldPosition` branch and is named for what it
+  does.
 
 - **`GlobalAction::validate`, `PrivateAction::validate`, `LongitudinalAction::validate`,
   their `get_action_type` counterparts, and the `empty()` constructor on each.** Breaking. The

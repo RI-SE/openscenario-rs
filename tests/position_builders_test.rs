@@ -23,9 +23,9 @@ mod position_builder_tests {
         );
 
         let position = result.unwrap();
-        assert!(position.world_position.is_some());
+        assert!(position.world_position().is_some());
 
-        let world_pos = position.world_position.unwrap();
+        let world_pos = position.world_position().unwrap();
         assert_eq!(world_pos.x.as_literal().unwrap(), &100.0);
         assert_eq!(world_pos.y.as_literal().unwrap(), &200.0);
         assert_eq!(world_pos.z.as_ref().unwrap().as_literal().unwrap(), &0.0);
@@ -46,9 +46,9 @@ mod position_builder_tests {
         );
 
         let position = result.unwrap();
-        assert!(position.relative_world_position.is_some());
+        assert!(position.relative_world_position().is_some());
 
-        let rel_pos = position.relative_world_position.unwrap();
+        let rel_pos = position.relative_world_position().unwrap();
         assert_eq!(rel_pos.entity_ref.as_literal().unwrap(), "target_vehicle");
         assert_eq!(rel_pos.dx.as_literal().unwrap(), &5.0);
         assert_eq!(rel_pos.dy.as_literal().unwrap(), &-2.0);
@@ -71,9 +71,9 @@ mod position_builder_tests {
         );
 
         let position = result.unwrap();
-        assert!(position.lane_position.is_some());
+        assert!(position.lane_position().is_some());
 
-        let lane_pos = position.lane_position.unwrap();
+        let lane_pos = position.lane_position().unwrap();
         assert_eq!(lane_pos.road_id.as_literal().unwrap(), "highway_1");
         assert_eq!(lane_pos.lane_id.as_literal().unwrap(), "1");
         assert_eq!(lane_pos.s.as_literal().unwrap(), &100.0);
@@ -97,9 +97,9 @@ mod position_builder_tests {
         );
 
         let position = result.unwrap();
-        assert!(position.lane_position.is_some());
+        assert!(position.lane_position().is_some());
 
-        let lane_pos = position.lane_position.unwrap();
+        let lane_pos = position.lane_position().unwrap();
         assert_eq!(lane_pos.road_id.as_literal().unwrap(), "test_road");
         assert_eq!(lane_pos.lane_id.as_literal().unwrap(), "2");
         assert_eq!(lane_pos.s.as_literal().unwrap(), &50.0);
@@ -119,9 +119,9 @@ mod position_builder_tests {
         );
 
         let position = result.unwrap();
-        assert!(position.relative_lane_position.is_some());
+        assert!(position.relative_lane_position().is_some());
 
-        let rel_lane_pos = position.relative_lane_position.unwrap();
+        let rel_lane_pos = position.relative_lane_position().unwrap();
         assert_eq!(
             rel_lane_pos.entity_ref.as_literal().unwrap(),
             "lead_vehicle"

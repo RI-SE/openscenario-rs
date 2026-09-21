@@ -889,10 +889,7 @@ impl Polygon {
     pub fn rectangle(x: f64, y: f64, width: f64, height: f64) -> Self {
         use crate::types::positions::WorldPosition;
 
-        let corner = |cx: f64, cy: f64| Position {
-            world_position: Some(WorldPosition::new(cx, cy)),
-            ..Position::empty()
-        };
+        let corner = |cx: f64, cy: f64| Position::world(WorldPosition::new(cx, cy));
 
         Self {
             position: vec![
@@ -1275,15 +1272,13 @@ mod tests {
         assert_eq!(polygon.position.len(), 4);
 
         let corner0 = polygon.position[0]
-            .world_position
-            .as_ref()
+            .world_position()
             .expect("expected a WorldPosition");
         assert_eq!(corner0.x.as_literal(), Some(&10.0));
         assert_eq!(corner0.y.as_literal(), Some(&20.0));
 
         let corner2 = polygon.position[2]
-            .world_position
-            .as_ref()
+            .world_position()
             .expect("expected a WorldPosition");
         assert_eq!(corner2.x.as_literal(), Some(&40.0)); // 10 + 30
         assert_eq!(corner2.y.as_literal(), Some(&60.0)); // 20 + 40
@@ -1821,18 +1816,9 @@ mod tests {
         let traffic_area = TrafficArea {
             choice: TrafficAreaChoice::Polygon(Polygon {
                 position: vec![
-                    Position {
-                        world_position: Some(WorldPosition::new(0.0, 0.0)),
-                        ..Position::empty()
-                    },
-                    Position {
-                        world_position: Some(WorldPosition::new(10.0, 0.0)),
-                        ..Position::empty()
-                    },
-                    Position {
-                        world_position: Some(WorldPosition::new(10.0, 10.0)),
-                        ..Position::empty()
-                    },
+                    Position::world(WorldPosition::new(0.0, 0.0)),
+                    Position::world(WorldPosition::new(10.0, 0.0)),
+                    Position::world(WorldPosition::new(10.0, 10.0)),
                 ],
             }),
         };
@@ -1979,10 +1965,7 @@ mod tests {
         let action = TrafficSourceAction::new(
             8.0,
             12.0,
-            Position {
-                world_position: Some(crate::types::positions::WorldPosition::new(1.0, 2.0)),
-                ..Position::empty()
-            },
+            Position::world(crate::types::positions::WorldPosition::new(1.0, 2.0)),
             sample_traffic_definition(),
         )
         .with_traffic_distribution(TrafficDistribution {

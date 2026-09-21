@@ -106,11 +106,11 @@ fn demo_complex_route() -> Result<(), Box<dyn std::error::Error>> {
             i + 1,
             waypoint.route_strategy
         );
-        if waypoint.position.world_position.is_some() {
+        if waypoint.position.world_position().is_some() {
             println!("    Position type: World");
-        } else if waypoint.position.lane_position.is_some() {
+        } else if waypoint.position.lane_position().is_some() {
             println!("    Position type: Lane");
-        } else if waypoint.position.relative_world_position.is_some() {
+        } else if waypoint.position.relative_world_position().is_some() {
             println!("    Position type: Relative World");
         }
     }

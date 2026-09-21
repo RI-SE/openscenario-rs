@@ -171,22 +171,11 @@ fn test_position_constructors() {
     let _relative_pos = RelativeObjectPosition::behind("vehicle1", 25.0);
 
     // Test Position construction
-    let pos1 = Position {
-        world_position: None,
-        relative_world_position: None,
-        road_position: None,
-        relative_road_position: None,
-        lane_position: None,
-        relative_lane_position: None,
-        route_position: None,
-        trajectory_position: Some(trajectory_pos.clone()),
-        geographic_position: None,
-        relative_object_position: None,
-    };
+    let pos1 = Position::trajectory(trajectory_pos.clone());
 
-    assert_eq!(pos1.trajectory_position, Some(trajectory_pos));
-    assert_eq!(pos1.geographic_position, None);
-    assert_eq!(pos1.relative_object_position, None);
+    assert_eq!(pos1.trajectory_position(), Some(&trajectory_pos));
+    assert_eq!(pos1.geographic_position(), None);
+    assert_eq!(pos1.relative_object_position(), None);
 }
 
 #[test]

@@ -127,25 +127,25 @@ fn test_position_enum_integration() {
     let rel_road = RelativeRoadPosition::new("EgoVehicle".to_string(), 10.0, -2.0);
     let position = Position::relative_road(rel_road.clone());
 
-    assert!(position.relative_road_position.is_some());
-    assert_eq!(position.relative_road_position.unwrap(), rel_road);
-    assert!(position.world_position.is_none());
-    assert!(position.relative_world_position.is_none());
-    assert!(position.road_position.is_none());
-    assert!(position.lane_position.is_none());
-    assert!(position.relative_lane_position.is_none());
+    assert!(position.relative_road_position().is_some());
+    assert_eq!(position.relative_road_position().unwrap(), &rel_road);
+    assert!(position.world_position().is_none());
+    assert!(position.relative_world_position().is_none());
+    assert!(position.road_position().is_none());
+    assert!(position.lane_position().is_none());
+    assert!(position.relative_lane_position().is_none());
 
     // Test RelativeLanePosition integration
     let rel_lane = RelativeLanePosition::new("EgoVehicle".to_string(), -1, 15.0, 0.5);
     let position = Position::relative_lane(rel_lane.clone());
 
-    assert!(position.relative_lane_position.is_some());
-    assert_eq!(position.relative_lane_position.unwrap(), rel_lane);
-    assert!(position.world_position.is_none());
-    assert!(position.relative_world_position.is_none());
-    assert!(position.road_position.is_none());
-    assert!(position.relative_road_position.is_none());
-    assert!(position.lane_position.is_none());
+    assert!(position.relative_lane_position().is_some());
+    assert_eq!(position.relative_lane_position().unwrap(), &rel_lane);
+    assert!(position.world_position().is_none());
+    assert!(position.relative_world_position().is_none());
+    assert!(position.road_position().is_none());
+    assert!(position.relative_road_position().is_none());
+    assert!(position.lane_position().is_none());
 }
 
 #[test]

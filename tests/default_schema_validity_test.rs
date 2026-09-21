@@ -547,31 +547,9 @@ fn defaulted_structural_spine_is_schema_valid() {
     );
 }
 
-/// Category 3 — *schema-invalid empty*, the reason `TeleportAction`'s derive was removed.
-///
-/// XSD `Position` (`:1738-1751`) is a bare `xsd:choice` with no `minOccurs="0"`, so a
-/// branch must be selected. `Position::empty()` — which is what the removed
-/// `TeleportAction::default()` produced — serializes to `<Position />` and is rejected.
-/// It invents nothing, and is still unusable. That is the distinction the two-category
-/// policy could not express.
-#[test]
-fn empty_position_choice_is_schema_invalid() {
-    let mut storyboard = Storyboard::default();
-    storyboard.init.actions.private_actions.push(Private {
-        entity_ref: Value::literal("ego".to_string()),
-        private_actions: vec![PrivateAction::teleport(TeleportAction::new(
-            Position::empty(),
-        ))],
-    });
-    let errors = validate(&document_with(storyboard));
-    assert!(
-        errors.iter().any(|e| e.contains("Position")),
-        "an all-None Position choice must be rejected by the schema; got: {errors:?}"
-    );
-}
-
-/// The same action with a branch selected validates — showing the rejection above is about
-/// the empty choice, not about `TeleportAction` being unrepresentable.
+/// A `TeleportAction` naming a position branch validates. The empty case it used to be
+/// paired with is no longer constructible: `Position` holds its branch in a `$value` field,
+/// so a value naming no branch cannot be built at all.
 #[test]
 fn teleport_action_with_a_selected_branch_is_schema_valid() {
     let mut storyboard = Storyboard::default();

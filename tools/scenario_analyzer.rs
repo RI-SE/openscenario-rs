@@ -1007,7 +1007,7 @@ fn analyze_init_detailed(
                 teleport_action,
             ) = &action.action
             {
-                if let Some(world_pos) = &teleport_action.position.world_position {
+                if let Some(world_pos) = &teleport_action.position.world_position() {
                     entity_init.position_info = Some(PositionInfo {
                         position_type: "WorldPosition".to_string(),
                         coordinates: format!(
@@ -1027,7 +1027,7 @@ fn analyze_init_detailed(
                             .and_then(|h| h.as_literal())
                             .map(|h| h.to_string()),
                     });
-                } else if let Some(lane_pos) = &teleport_action.position.lane_position {
+                } else if let Some(lane_pos) = &teleport_action.position.lane_position() {
                     entity_init.position_info = Some(PositionInfo {
                         position_type: "LanePosition".to_string(),
                         coordinates: format!(
@@ -2787,7 +2787,7 @@ fn resolve_expressions_in_scenario(
                 ) = &action.action
                 {
                     // Process position coordinates
-                    if let Some(world_position) = &teleport_action.position.world_position {
+                    if let Some(world_position) = &teleport_action.position.world_position() {
                         resolve_numeric_value(
                             &world_position.x,
                             &format!("Entity '{}' init position X", entity_ref),

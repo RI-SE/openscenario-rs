@@ -182,7 +182,7 @@ mod tests {
         let xml = r#"<Vertex><Position><WorldPosition x="1" y="2"/></Position></Vertex>"#;
         let v: Vertex = quick_xml::de::from_str(xml).unwrap();
         assert!(v.time.is_none());
-        assert!(v.position.world_position.is_some());
+        assert!(v.position.world_position().is_some());
     }
 
     /// A Vertex element with a `time` attribute must round-trip correctly.
@@ -193,10 +193,7 @@ mod tests {
 
         let vertex = Vertex {
             time: Some(Double::literal(1.5)),
-            position: Position {
-                world_position: Some(WorldPosition::new(10.0, 20.0)),
-                ..Position::empty()
-            },
+            position: Position::world(WorldPosition::new(10.0, 20.0)),
         };
         let xml = quick_xml::se::to_string(&vertex).unwrap();
         assert!(xml.contains(r#"time="1.5""#), "serialized XML: {xml}");
@@ -214,10 +211,7 @@ mod tests {
 
         let vertex = Vertex {
             time: None,
-            position: Position {
-                world_position: Some(WorldPosition::new(0.0, 0.0)),
-                ..Position::empty()
-            },
+            position: Position::world(WorldPosition::new(0.0, 0.0)),
         };
         let xml = quick_xml::se::to_string(&vertex).unwrap();
         assert!(!xml.contains("time="), "time attr must be absent: {xml}");
@@ -233,17 +227,11 @@ mod tests {
             vertices: vec![
                 Vertex {
                     time: Some(Double::literal(0.0)),
-                    position: Position {
-                        world_position: Some(WorldPosition::new(0.0, 0.0)),
-                        ..Position::empty()
-                    },
+                    position: Position::world(WorldPosition::new(0.0, 0.0)),
                 },
                 Vertex {
                     time: None,
-                    position: Position {
-                        world_position: Some(WorldPosition::new(5.0, 5.0)),
-                        ..Position::empty()
-                    },
+                    position: Position::world(WorldPosition::new(5.0, 5.0)),
                 },
             ],
         };
@@ -272,10 +260,7 @@ mod tests {
             length: Double::literal(50.0),
             start_time: None,
             stop_time: None,
-            start_position: Position {
-                world_position: Some(WorldPosition::new(1.0, 2.0)),
-                ..Position::empty()
-            },
+            start_position: Position::world(WorldPosition::new(1.0, 2.0)),
         };
         let xml = quick_xml::se::to_string(&clothoid).unwrap();
         assert!(xml.contains(r#"curvature="0.1""#), "serialized: {xml}");
@@ -300,10 +285,7 @@ mod tests {
             length: Double::literal(10.0),
             start_time: None,
             stop_time: None,
-            start_position: Position {
-                world_position: Some(WorldPosition::new(0.0, 0.0)),
-                ..Position::empty()
-            },
+            start_position: Position::world(WorldPosition::new(0.0, 0.0)),
         };
         let xml = quick_xml::se::to_string(&clothoid).unwrap();
         assert!(

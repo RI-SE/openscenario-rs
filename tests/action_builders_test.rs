@@ -44,7 +44,7 @@ mod action_builder_tests {
                 teleport_action,
             ) => {
                 // Verify position was set correctly
-                assert!(teleport_action.position.world_position.is_some());
+                assert!(teleport_action.position.world_position().is_some());
             }
             _ => panic!("Expected TeleportAction"),
         }

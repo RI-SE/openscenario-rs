@@ -117,12 +117,7 @@ impl ReachPositionCondition {
             p: Some(Double::literal(0.0)),
             r: Some(Double::literal(0.0)),
         };
-        let mut position = Position::empty();
-        position.world_position = Some(world_pos);
-        position.relative_world_position = None;
-        position.road_position = None;
-        position.lane_position = None;
-
+        let position = Position::world(world_pos);
         Self::new(position, tolerance)
     }
 }
@@ -262,9 +257,9 @@ mod tests {
         let condition = ReachPositionCondition::at_world_position(100.0, 200.0, 0.0, 1.57, 2.0);
 
         assert_eq!(condition.tolerance, Double::literal(2.0));
-        assert!(condition.position.world_position.is_some());
+        assert!(condition.position.world_position().is_some());
 
-        let world_pos = condition.position.world_position.unwrap();
+        let world_pos = condition.position.world_position().unwrap();
         assert_eq!(world_pos.x, Double::literal(100.0));
         assert_eq!(world_pos.y, Double::literal(200.0));
     }

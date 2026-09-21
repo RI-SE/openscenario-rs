@@ -70,9 +70,10 @@ fn nurbs_without_control_points_is_rejected() {
 #[test]
 fn nurbs_without_knots_is_rejected() {
     // `ControlPoint` is declared first in the type's field order, so once it is present the
-    // next missing required field reported is `Knot`.
+    // next missing required field reported is `Knot`. Each control point carries a real
+    // `<Position>` branch, since the `Position` choice rejects an element naming none.
     let err = parse::<Nurbs>(
-        r#"<Nurbs order="3"><ControlPoint><Position/></ControlPoint><ControlPoint><Position/></ControlPoint></Nurbs>"#,
+        r#"<Nurbs order="3"><ControlPoint><Position><WorldPosition x="0" y="0"/></Position></ControlPoint><ControlPoint><Position><WorldPosition x="1" y="1"/></Position></ControlPoint></Nurbs>"#,
     )
     .unwrap_err();
     assert_eq!(err.to_string(), "missing field `Knot`");

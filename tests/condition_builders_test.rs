@@ -98,25 +98,14 @@ mod condition_builder_tests {
 
     #[test]
     fn test_distance_condition_builder() {
-        let position = Position {
-            world_position: Some(WorldPosition {
-                x: Double::literal(100.0),
-                y: Double::literal(200.0),
-                z: Some(Double::literal(0.0)),
-                h: Some(Double::literal(0.0)),
-                p: Some(Double::literal(0.0)),
-                r: Some(Double::literal(0.0)),
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        };
+        let position = Position::world(WorldPosition {
+            x: Double::literal(100.0),
+            y: Double::literal(200.0),
+            z: Some(Double::literal(0.0)),
+            h: Some(Double::literal(0.0)),
+            p: Some(Double::literal(0.0)),
+            r: Some(Double::literal(0.0)),
+        });
 
         let condition = DistanceConditionBuilder::new()
             .for_entity("ego")
@@ -221,25 +210,14 @@ mod condition_builder_tests {
             .contains("Speed value is required"));
 
         // Distance condition without entity reference
-        let position = Position {
-            world_position: Some(WorldPosition {
-                x: Double::literal(0.0),
-                y: Double::literal(0.0),
-                z: Some(Double::literal(0.0)),
-                h: Some(Double::literal(0.0)),
-                p: Some(Double::literal(0.0)),
-                r: Some(Double::literal(0.0)),
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        };
+        let position = Position::world(WorldPosition {
+            x: Double::literal(0.0),
+            y: Double::literal(0.0),
+            z: Some(Double::literal(0.0)),
+            h: Some(Double::literal(0.0)),
+            p: Some(Double::literal(0.0)),
+            r: Some(Double::literal(0.0)),
+        });
 
         let result = DistanceConditionBuilder::new()
             .to_position(position)

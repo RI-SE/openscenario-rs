@@ -244,9 +244,10 @@ impl Route {
     /// In a real implementation, this would consider the routing strategy and road network.
     fn calculate_waypoint_distance(&self, wp1: &Waypoint, wp2: &Waypoint) -> crate::Result<f64> {
         // Simplified distance calculation - only handles WorldPosition for now
-        if let (Some(pos1), Some(pos2)) =
-            (&wp1.position.world_position, &wp2.position.world_position)
-        {
+        if let (Some(pos1), Some(pos2)) = (
+            &wp1.position.world_position(),
+            &wp2.position.world_position(),
+        ) {
             let dx = pos2.x.resolve(&std::collections::HashMap::new())?
                 - pos1.x.resolve(&std::collections::HashMap::new())?;
             let dy = pos2.y.resolve(&std::collections::HashMap::new())?
@@ -281,8 +282,7 @@ impl Waypoint {
     pub fn world_position(x: f64, y: f64, z: f64, strategy: RouteStrategy) -> Self {
         use crate::types::positions::WorldPosition;
 
-        let mut position = Position::empty();
-        position.world_position = Some(WorldPosition {
+        let position = Position::world(WorldPosition {
             x: Double::literal(x),
             y: Double::literal(y),
             z: Some(Double::literal(z)),
@@ -290,10 +290,6 @@ impl Waypoint {
             p: Some(Double::literal(0.0)),
             r: Some(Double::literal(0.0)),
         });
-        position.relative_world_position = None;
-        position.road_position = None;
-        position.lane_position = None;
-
         Self::new(position, strategy)
     }
 
@@ -306,11 +302,7 @@ impl Waypoint {
     ) -> Self {
         use crate::types::positions::{LanePosition, Orientation};
 
-        let mut position = Position::empty();
-        position.world_position = None;
-        position.relative_world_position = None;
-        position.road_position = None;
-        position.lane_position = Some(LanePosition {
+        let position = Position::lane(LanePosition {
             road_id: OSString::literal(road_id.into()),
             lane_id: OSString::literal(lane_id.into()),
             s: Double::literal(s),
@@ -322,7 +314,6 @@ impl Waypoint {
                 reference_context: None,
             }),
         });
-
         Self::new(position, strategy)
     }
 
@@ -336,18 +327,13 @@ impl Waypoint {
     ) -> Self {
         use crate::types::positions::RelativeWorldPosition;
 
-        let mut position = Position::empty();
-        position.world_position = None;
-        position.relative_world_position = Some(RelativeWorldPosition {
+        let position = Position::relative_world(RelativeWorldPosition {
             entity_ref: OSString::literal(entity_ref.into()),
             dx: Double::literal(dx),
             dy: Double::literal(dy),
             dz: Some(Double::literal(dz)),
             orientation: None,
         });
-        position.road_position = None;
-        position.lane_position = None;
-
         Self::new(position, strategy)
     }
 }
@@ -393,11 +379,11 @@ mod tests {
     #[test]
     fn test_waypoint_convenience_constructors() {
         let wp1 = Waypoint::world_position(100.0, 200.0, 0.0, RouteStrategy::Shortest);
-        assert!(wp1.position.world_position.is_some());
+        assert!(wp1.position.world_position().is_some());
         assert_eq!(wp1.route_strategy, Value::Literal(RouteStrategy::Shortest));
 
         let wp2 = Waypoint::lane_position("road1", "lane1", 50.0, RouteStrategy::Fastest);
-        assert!(wp2.position.lane_position.is_some());
+        assert!(wp2.position.lane_position().is_some());
         assert_eq!(wp2.route_strategy, Value::Literal(RouteStrategy::Fastest));
 
         let wp3 = Waypoint::relative_world_position(
@@ -407,7 +393,7 @@ mod tests {
             0.0,
             RouteStrategy::LeastIntersections,
         );
-        assert!(wp3.position.relative_world_position.is_some());
+        assert!(wp3.position.relative_world_position().is_some());
         assert_eq!(
             wp3.route_strategy,
             Value::Literal(RouteStrategy::LeastIntersections)

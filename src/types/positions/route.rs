@@ -100,62 +100,49 @@ impl PositionInLaneCoordinates {
     }
 }
 
-/// Position within a route.
+/// Position within a route: exactly one of the three reference frames.
 ///
-/// XSD `InRoutePosition` (:1323-1329) is a choice; modeled as parallel
-/// `Option` fields following the dominant pattern in this crate.
+/// XSD `InRoutePosition` (`Schema/OpenSCENARIO.xsd:1323-1329`) is a bare `xsd:choice`.
+/// The branch is held in a `$value` field so serde enforces the cardinality: a document
+/// naming no branch fails with ``missing field `$value` `` and one naming two with
+/// ``duplicate field `$value` ``. The earlier parallel-`Option` shape accepted both.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "InRoutePosition")]
 pub struct InRoutePosition {
-    #[serde(rename = "FromCurrentEntity", skip_serializing_if = "Option::is_none")]
-    pub from_current_entity: Option<PositionOfCurrentEntity>,
-    #[serde(
-        rename = "FromRoadCoordinates",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub from_road_coordinates: Option<PositionInRoadCoordinates>,
-    #[serde(
-        rename = "FromLaneCoordinates",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub from_lane_coordinates: Option<PositionInLaneCoordinates>,
+    /// The reference frame named by this `<InRoutePosition>` element.
+    #[serde(rename = "$value")]
+    pub position: InRoutePositionChoice,
 }
 
-impl InRoutePosition {
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own.** XSD `InRoutePosition (`:1327-1333`)` is a bare `xsd:choice`, so an
-    /// instance must select exactly one branch; this value selects none. It exists to be
-    /// the base of the per-branch constructors and struct-update expressions below, each of
-    /// which immediately fills one branch in. It replaces a derived `Default`, which said
-    /// the same thing while sounding neutral and — worse — let any enclosing struct derive
-    /// `Default` and inherit the invalidity silently. See the `Default` policy in
-    /// `docs/type_system_guide.md` and `tests/default_schema_validity_test.rs`.
-    pub fn empty() -> Self {
-        Self {
-            from_current_entity: None,
-            from_road_coordinates: None,
-            from_lane_coordinates: None,
-        }
-    }
+/// The three branches of the XSD `InRoutePosition` choice, in schema order
+/// (`Schema/OpenSCENARIO.xsd:1324-1327`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum InRoutePositionChoice {
+    /// The route position of the entity currently being acted upon.
+    FromCurrentEntity(PositionOfCurrentEntity),
+    /// A route position given in road coordinates.
+    FromRoadCoordinates(PositionInRoadCoordinates),
+    /// A route position given in lane coordinates.
+    FromLaneCoordinates(PositionInLaneCoordinates),
 }
 
 impl InRoutePosition {
     /// Create an `InRoutePosition` from the current entity.
     pub fn from_current_entity(entity_ref: impl Into<String>) -> Self {
         Self {
-            from_current_entity: Some(PositionOfCurrentEntity {
+            position: InRoutePositionChoice::FromCurrentEntity(PositionOfCurrentEntity {
                 entity_ref: OSString::literal(entity_ref.into()),
             }),
-            ..Self::empty()
         }
     }
 
     /// Create an `InRoutePosition` from road coordinates.
     pub fn from_road_coordinates(path_s: Double, t: Double) -> Self {
         Self {
-            from_road_coordinates: Some(PositionInRoadCoordinates { path_s, t }),
-            ..Self::empty()
+            position: InRoutePositionChoice::FromRoadCoordinates(PositionInRoadCoordinates {
+                path_s,
+                t,
+            }),
         }
     }
 
@@ -166,12 +153,35 @@ impl InRoutePosition {
         lane_offset: Option<Double>,
     ) -> Self {
         Self {
-            from_lane_coordinates: Some(PositionInLaneCoordinates {
+            position: InRoutePositionChoice::FromLaneCoordinates(PositionInLaneCoordinates {
                 lane_id,
                 lane_offset,
                 path_s,
             }),
-            ..Self::empty()
+        }
+    }
+
+    /// The `FromCurrentEntity` branch, if that is the branch held.
+    pub fn from_current_entity_ref(&self) -> Option<&PositionOfCurrentEntity> {
+        match &self.position {
+            InRoutePositionChoice::FromCurrentEntity(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `FromRoadCoordinates` branch, if that is the branch held.
+    pub fn from_road_coordinates_ref(&self) -> Option<&PositionInRoadCoordinates> {
+        match &self.position {
+            InRoutePositionChoice::FromRoadCoordinates(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `FromLaneCoordinates` branch, if that is the branch held.
+    pub fn from_lane_coordinates_ref(&self) -> Option<&PositionInLaneCoordinates> {
+        match &self.position {
+            InRoutePositionChoice::FromLaneCoordinates(v) => Some(v),
+            _ => None,
         }
     }
 }
@@ -245,7 +255,7 @@ mod tests {
         // Real corpus shape, with a `$param` value for pathS.
         let xml = r#"<InRoutePosition><FromLaneCoordinates laneId="-1" pathS="$_Ego_initS" laneOffset="0"/></InRoutePosition>"#;
         let parsed: InRoutePosition = quick_xml::de::from_str(xml).unwrap();
-        let lane = parsed.from_lane_coordinates.as_ref().unwrap();
+        let lane = parsed.from_lane_coordinates_ref().unwrap();
         assert_eq!(lane.lane_id.as_literal().unwrap(), "-1");
         assert!(
             lane.path_s.as_literal().is_none(),
@@ -255,8 +265,8 @@ mod tests {
             lane.lane_offset.as_ref().unwrap().as_literal().unwrap(),
             &0.0
         );
-        assert!(parsed.from_road_coordinates.is_none());
-        assert!(parsed.from_current_entity.is_none());
+        assert!(parsed.from_road_coordinates_ref().is_none());
+        assert!(parsed.from_current_entity_ref().is_none());
 
         let ser = quick_xml::se::to_string(&parsed).unwrap();
         assert!(ser.contains("_Ego_initS"), "serialized: {ser}");
@@ -269,7 +279,7 @@ mod tests {
         let xml =
             r#"<InRoutePosition><FromRoadCoordinates pathS="12.5" t="-1.75"/></InRoutePosition>"#;
         let parsed: InRoutePosition = quick_xml::de::from_str(xml).unwrap();
-        let road = parsed.from_road_coordinates.as_ref().unwrap();
+        let road = parsed.from_road_coordinates_ref().unwrap();
         assert_eq!(road.path_s.as_literal().unwrap(), &12.5);
         assert_eq!(road.t.as_literal().unwrap(), &-1.75);
 
@@ -284,7 +294,7 @@ mod tests {
         let parsed: InRoutePosition = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(
             parsed
-                .from_current_entity
+                .from_current_entity_ref()
                 .as_ref()
                 .unwrap()
                 .entity_ref
@@ -329,7 +339,10 @@ mod tests {
             other => panic!("expected catalog route ref, got {other:?}"),
         }
         assert!(parsed.orientation.is_none());
-        assert!(parsed.in_route_position.from_lane_coordinates.is_some());
+        assert!(parsed
+            .in_route_position
+            .from_lane_coordinates_ref()
+            .is_some());
 
         let ser = quick_xml::se::to_string(&parsed).unwrap();
         assert_eq!(ser, xml, "byte-exact round trip, no ParameterAssignments");
@@ -370,12 +383,9 @@ mod tests {
         use crate::types::positions::Position;
         let xml = r#"<Position><RoutePosition><RouteRef><CatalogReference catalogName="RouteCatalog" entryName="EgoRoute"/></RouteRef><InRoutePosition><FromRoadCoordinates pathS="$initS" t="0"/></InRoutePosition></RoutePosition></Position>"#;
         let parsed: Position = quick_xml::de::from_str(xml).unwrap();
-        let rp = parsed
-            .route_position
-            .as_ref()
-            .expect("RoutePosition must parse");
-        assert!(rp.in_route_position.from_road_coordinates.is_some());
-        assert!(parsed.world_position.is_none());
+        let rp = parsed.route_position().expect("RoutePosition must parse");
+        assert!(rp.in_route_position.from_road_coordinates_ref().is_some());
+        assert!(parsed.world_position().is_none());
 
         let ser = quick_xml::se::to_string(&parsed).unwrap();
         let back: Position = quick_xml::de::from_str(&ser).unwrap();

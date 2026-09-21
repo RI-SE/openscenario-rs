@@ -28,7 +28,7 @@ fn main() {
     println!("  Tolerance: {} meters", reach_condition.tolerance);
     println!(
         "  Position: {:?}\n",
-        reach_condition.position.world_position.is_some()
+        reach_condition.position.world_position().is_some()
     );
 
     // Example 2: Create a DistanceCondition directly

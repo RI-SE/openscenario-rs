@@ -342,25 +342,14 @@ mod tests {
         positions::{Position, WorldPosition},
     };
     fn create_test_position() -> Position {
-        Position {
-            world_position: Some(WorldPosition {
-                x: Double::literal(100.0),
-                y: Double::literal(200.0),
-                z: Some(Double::literal(0.0)),
-                h: Some(Double::literal(0.0)),
-                p: Some(Double::literal(0.0)),
-                r: Some(Double::literal(0.0)),
-            }),
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        }
+        Position::world(WorldPosition {
+            x: Double::literal(100.0),
+            y: Double::literal(200.0),
+            z: Some(Double::literal(0.0)),
+            h: Some(Double::literal(0.0)),
+            p: Some(Double::literal(0.0)),
+            r: Some(Double::literal(0.0)),
+        })
     }
 
     #[test]

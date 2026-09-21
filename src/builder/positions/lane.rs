@@ -66,8 +66,7 @@ impl PositionBuilder for LanePositionBuilder {
             orientation: None,
         };
 
-        let mut position = Position::empty();
-        position.lane_position = Some(lane_position);
+        let position = Position::lane(lane_position);
         Ok(position)
     }
 
@@ -101,7 +100,7 @@ mod tests {
             .offset(0.0)
             .finish()
             .unwrap();
-        let lp = pos.lane_position.unwrap();
+        let lp = pos.lane_position().unwrap();
         assert_eq!(lp.road_id.as_literal(), Some(&"1".to_string()));
         assert_eq!(lp.lane_id.as_literal(), Some(&"-1".to_string()));
         assert_eq!(lp.s.as_literal(), Some(&50.0));
@@ -135,7 +134,7 @@ mod tests {
             .right_lane("road1", -2, 100.0)
             .finish()
             .unwrap();
-        let lp = pos.lane_position.unwrap();
+        let lp = pos.lane_position().unwrap();
         assert_eq!(lp.lane_id.as_literal(), Some(&"-2".to_string()));
         assert_eq!(lp.s.as_literal(), Some(&100.0));
         assert_eq!(lp.offset.as_ref().unwrap().as_literal(), Some(&0.0));

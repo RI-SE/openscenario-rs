@@ -18,18 +18,14 @@ use openscenario_rs::types::{
 #[test]
 fn test_reach_position_condition_basic() {
     let world_pos = WorldPosition::with_full_orientation(100.0, 200.0, 0.0, 1.57, 0.0, 0.0);
-    let mut position = Position::world_origin();
-    position.world_position = Some(world_pos);
-    position.relative_world_position = None;
-    position.road_position = None;
-    position.lane_position = None;
+    let position = Position::world(world_pos);
 
     let condition = ReachPositionCondition::new(position, 2.5);
 
     assert_eq!(condition.tolerance, Double::literal(2.5));
-    assert!(condition.position.world_position.is_some());
+    assert!(condition.position.world_position().is_some());
 
-    let world_pos = condition.position.world_position.unwrap();
+    let world_pos = condition.position.world_position().unwrap();
     assert_eq!(world_pos.x, Double::literal(100.0));
     assert_eq!(world_pos.y, Double::literal(200.0));
     assert_eq!(world_pos.h, Some(Double::literal(1.57)));
@@ -40,9 +36,9 @@ fn test_reach_position_condition_builder() {
     let condition = ReachPositionCondition::at_world_position(50.0, 75.0, 1.0, 0.0, 1.5);
 
     assert_eq!(condition.tolerance, Double::literal(1.5));
-    assert!(condition.position.world_position.is_some());
+    assert!(condition.position.world_position().is_some());
 
-    let world_pos = condition.position.world_position.unwrap();
+    let world_pos = condition.position.world_position().unwrap();
     assert_eq!(world_pos.x, Double::literal(50.0));
     assert_eq!(world_pos.y, Double::literal(75.0));
     assert_eq!(world_pos.z, Some(Double::literal(1.0)));
@@ -217,7 +213,7 @@ fn test_spatial_condition_constructors() {
     // Was `is_none()`, which asserted a property of the removed `Position::default()`
     // rather than of the constructor. The contract is that the position is stored as given
     // — `Position::world_origin()` selects the WorldPosition branch.
-    assert!(reach_pos.position.world_position.is_some());
+    assert!(reach_pos.position.world_position().is_some());
 
     let distance = DistanceCondition::new(Position::world_origin(), 10.0, true, Rule::LessThan);
     assert_eq!(distance.value, Double::literal(10.0));
@@ -313,13 +309,13 @@ fn test_xml_round_trip_reach_position() {
 
     assert_eq!(original.tolerance, deserialized.tolerance);
     assert_eq!(
-        original.position.world_position.is_some(),
-        deserialized.position.world_position.is_some()
+        original.position.world_position().is_some(),
+        deserialized.position.world_position().is_some()
     );
 
     if let (Some(orig_pos), Some(deser_pos)) = (
-        original.position.world_position,
-        deserialized.position.world_position,
+        original.position.world_position(),
+        deserialized.position.world_position(),
     ) {
         assert_eq!(orig_pos.x, deser_pos.x);
         assert_eq!(orig_pos.y, deser_pos.y);

@@ -572,18 +572,7 @@ mod tests {
 
         let vertex = Vertex {
             time: Some(crate::types::basic::Value::literal(0.04)),
-            position: Position {
-                world_position: Some(WorldPosition::new(0.0, 0.0)),
-                relative_world_position: None,
-                road_position: None,
-                relative_road_position: None,
-                lane_position: None,
-                relative_lane_position: None,
-                route_position: None,
-                trajectory_position: None,
-                geographic_position: None,
-                relative_object_position: None,
-            },
+            position: Position::world(WorldPosition::new(0.0, 0.0)),
         };
 
         assert_eq!(vertex.time.as_ref().unwrap().as_literal().unwrap(), &0.04);
@@ -683,10 +672,7 @@ mod tests {
             length: crate::types::basic::Value::literal(20.0),
             start_time: None,
             stop_time: None,
-            start_position: Position {
-                world_position: Some(WorldPosition::new(0.0, 0.0)),
-                ..Position::empty()
-            },
+            start_position: Position::world(WorldPosition::new(0.0, 0.0)),
         });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
@@ -703,18 +689,12 @@ mod tests {
             order: crate::types::basic::Value::literal(3),
             control_points: vec![
                 ControlPoint {
-                    position: Position {
-                        world_position: Some(WorldPosition::new(0.0, 0.0)),
-                        ..Position::empty()
-                    },
+                    position: Position::world(WorldPosition::new(0.0, 0.0)),
                     time: None,
                     weight: None,
                 },
                 ControlPoint {
-                    position: Position {
-                        world_position: Some(WorldPosition::new(1.0, 1.0)),
-                        ..Position::empty()
-                    },
+                    position: Position::world(WorldPosition::new(1.0, 1.0)),
                     time: None,
                     weight: None,
                 },

@@ -91,8 +91,7 @@ impl PositionBuilder for WorldPositionBuilder {
             r: self.r.map(Double::literal),
         };
 
-        let mut position = Position::empty();
-        position.world_position = Some(world_position);
+        let position = Position::world(world_position);
         Ok(position)
     }
 
@@ -118,7 +117,7 @@ mod tests {
             .y(20.0)
             .finish()
             .unwrap();
-        let wp = pos.world_position.unwrap();
+        let wp = pos.world_position().unwrap();
         assert_eq!(wp.x.as_literal(), Some(&10.0));
         assert_eq!(wp.y.as_literal(), Some(&20.0));
         assert!(wp.z.is_none());
@@ -146,7 +145,7 @@ mod tests {
             .heading(1.57)
             .finish()
             .unwrap();
-        let wp = pos.world_position.unwrap();
+        let wp = pos.world_position().unwrap();
         assert_eq!(wp.z.as_ref().unwrap().as_literal(), Some(&3.0));
         assert_eq!(wp.h.as_ref().unwrap().as_literal(), Some(&1.57));
     }
@@ -154,6 +153,6 @@ mod tests {
     #[test]
     fn test_build_alias_works_same_as_finish() {
         let pos = WorldPositionBuilder::new().x(5.0).y(6.0).build().unwrap();
-        assert!(pos.world_position.is_some());
+        assert!(pos.world_position().is_some());
     }
 }

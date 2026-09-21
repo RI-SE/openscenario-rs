@@ -32,7 +32,7 @@ fn main() {
     );
 
     println!("✓ Vehicle must reach waypoint (1250, 850) within 2m tolerance");
-    let wp = waypoint_condition.position.world_position.as_ref().unwrap();
+    let wp = waypoint_condition.position.world_position().unwrap();
     println!(
         "  Target position: x={}, y={}, heading={} rad",
         wp.x,

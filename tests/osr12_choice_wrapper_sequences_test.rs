@@ -193,7 +193,7 @@ fn entity_action_with_sequence_below_position_parses() {
     };
     let vertices = &add
         .position
-        .trajectory_position
+        .trajectory_position()
         .as_ref()
         .expect("TrajectoryPosition dropped")
         .trajectory_ref

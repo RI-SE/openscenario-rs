@@ -16,47 +16,57 @@ pub use road::{
     LanePosition, Orientation, RelativeLanePosition, RelativeRoadPosition, RoadPosition,
 };
 pub use route::{
-    InRoutePosition, PositionInLaneCoordinates, PositionInRoadCoordinates, PositionOfCurrentEntity,
-    RoutePosition, RouteRefElement,
+    InRoutePosition, InRoutePositionChoice, PositionInLaneCoordinates, PositionInRoadCoordinates,
+    PositionOfCurrentEntity, RoutePosition, RouteRefElement,
 };
 pub use trajectory::TrajectoryPosition;
 pub use world::{GeographicPosition, WorldPosition};
 
-/// Wrapper for Position element that contains position variants
+/// The `<Position>` element: exactly one of the ten coordinate systems.
+///
+/// XSD `Position` (`Schema/OpenSCENARIO.xsd:1738-1749`) is a bare `xsd:choice`, so an
+/// instance names exactly one branch. The branch is held in a `$value` field carrying an
+/// externally tagged enum, which makes that cardinality a property of the type: serde
+/// rejects a document naming no branch with ``missing field `$value` `` and one naming two
+/// with ``duplicate field `$value` ``. The previous shape was ten parallel `Option` fields,
+/// which is the `xsd:all` production rather than the choice, and which accepted both of
+/// those documents and re-serialized them unchanged.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename = "Position")]
 pub struct Position {
-    #[serde(rename = "WorldPosition", skip_serializing_if = "Option::is_none")]
-    pub world_position: Option<WorldPosition>,
-    #[serde(
-        rename = "RelativeWorldPosition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub relative_world_position: Option<RelativeWorldPosition>,
-    #[serde(rename = "RoadPosition", skip_serializing_if = "Option::is_none")]
-    pub road_position: Option<RoadPosition>,
-    #[serde(
-        rename = "RelativeRoadPosition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub relative_road_position: Option<RelativeRoadPosition>,
-    #[serde(rename = "LanePosition", skip_serializing_if = "Option::is_none")]
-    pub lane_position: Option<LanePosition>,
-    #[serde(
-        rename = "RelativeLanePosition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub relative_lane_position: Option<RelativeLanePosition>,
-    #[serde(rename = "RoutePosition", skip_serializing_if = "Option::is_none")]
-    pub route_position: Option<RoutePosition>,
-    #[serde(rename = "TrajectoryPosition", skip_serializing_if = "Option::is_none")]
-    pub trajectory_position: Option<TrajectoryPosition>,
-    #[serde(rename = "GeoPosition", skip_serializing_if = "Option::is_none")]
-    pub geographic_position: Option<GeographicPosition>,
-    #[serde(
-        rename = "RelativeObjectPosition",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub relative_object_position: Option<RelativeObjectPosition>,
+    /// The coordinate system named by this `<Position>` element.
+    ///
+    /// `$value` takes the element name from the variant name, so each variant is spelled
+    /// exactly as the XSD element it models.
+    #[serde(rename = "$value")]
+    pub position: PositionChoice,
+}
+
+/// The ten branches of the XSD `Position` choice, in schema order
+/// (`Schema/OpenSCENARIO.xsd:1739-1748`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PositionChoice {
+    /// Absolute position in world coordinates.
+    WorldPosition(WorldPosition),
+    /// Position offset from a reference entity in world coordinates.
+    RelativeWorldPosition(RelativeWorldPosition),
+    /// Position offset from a reference entity in that entity's coordinates.
+    RelativeObjectPosition(RelativeObjectPosition),
+    /// Absolute position in road coordinates.
+    RoadPosition(RoadPosition),
+    /// Position offset from a reference entity in road coordinates.
+    RelativeRoadPosition(RelativeRoadPosition),
+    /// Absolute position in lane coordinates.
+    LanePosition(LanePosition),
+    /// Position offset from a reference entity in lane coordinates.
+    RelativeLanePosition(RelativeLanePosition),
+    /// Position along a route.
+    RoutePosition(RoutePosition),
+    /// Position in geographic coordinates. The XSD element is `GeoPosition`, hence the
+    /// variant name differs from the Rust type name `GeographicPosition`.
+    GeoPosition(GeographicPosition),
+    /// Position along a trajectory.
+    TrajectoryPosition(TrajectoryPosition),
 }
 
 /// Relative world position relative to an entity
@@ -100,79 +110,167 @@ impl Position {
     ///
     /// For call sites that need *a* position but do not care which: tests, doc examples,
     /// and fixtures asserting something other than the position itself. It is named for
-    /// what it is. It replaced `Position::world_origin()`, which produced an all-`None` choice
-    /// — schema-invalid (XSD `Position`, `Schema/OpenSCENARIO.xsd:1738-1751`, is a bare
-    /// `xsd:choice`) while reading like a neutral value. Never reach for this in code that
-    /// describes a real scenario: a position at (0, 0, 0) is content, and inventing it is
-    /// category 1 of the `Default` policy.
+    /// what it is. Never reach for this in code that describes a real scenario: a position
+    /// at (0, 0, 0) is content, and inventing it is category 1 of the `Default` policy.
     pub fn world_origin() -> Self {
         Self::world(WorldPosition::new(0.0, 0.0))
     }
 
-    /// No branch selected — every choice field `None`.
-    ///
-    /// **Not schema-valid on its own**, for the reason given on
-    /// [`Position::world_origin`]. It is the base for building a position one branch at a
-    /// time; anything that serializes needs a branch filled in first.
-    pub fn empty() -> Self {
-        Self {
-            world_position: None,
-            relative_world_position: None,
-            road_position: None,
-            relative_road_position: None,
-            lane_position: None,
-            relative_lane_position: None,
-            route_position: None,
-            trajectory_position: None,
-            geographic_position: None,
-            relative_object_position: None,
-        }
-    }
-    /// Create a Position with WorldPosition (the `WorldPosition` branch of the
-    /// XSD `Position` choice, `Schema/OpenSCENARIO.xsd:1738-1751`).
+    /// Create a Position holding the `WorldPosition` branch.
     pub fn world(world_position: WorldPosition) -> Self {
         Self {
-            world_position: Some(world_position),
-            ..Self::empty()
+            position: PositionChoice::WorldPosition(world_position),
         }
     }
-    /// Create a Position with RelativeRoadPosition
+
+    /// Create a Position holding the `RelativeWorldPosition` branch.
+    pub fn relative_world(relative_world_position: RelativeWorldPosition) -> Self {
+        Self {
+            position: PositionChoice::RelativeWorldPosition(relative_world_position),
+        }
+    }
+
+    /// Create a Position holding the `RoadPosition` branch.
+    pub fn road(road_position: RoadPosition) -> Self {
+        Self {
+            position: PositionChoice::RoadPosition(road_position),
+        }
+    }
+
+    /// Create a Position holding the `RelativeRoadPosition` branch.
     pub fn relative_road(relative_road_position: RelativeRoadPosition) -> Self {
         Self {
-            relative_road_position: Some(relative_road_position),
-            ..Self::empty()
+            position: PositionChoice::RelativeRoadPosition(relative_road_position),
         }
     }
 
-    /// Create a Position with RelativeLanePosition
+    /// Create a Position holding the `LanePosition` branch.
+    pub fn lane(lane_position: LanePosition) -> Self {
+        Self {
+            position: PositionChoice::LanePosition(lane_position),
+        }
+    }
+
+    /// Create a Position holding the `RelativeLanePosition` branch.
     pub fn relative_lane(relative_lane_position: RelativeLanePosition) -> Self {
         Self {
-            relative_lane_position: Some(relative_lane_position),
-            ..Self::empty()
+            position: PositionChoice::RelativeLanePosition(relative_lane_position),
         }
     }
 
-    /// Create a Position with TrajectoryPosition
+    /// Create a Position holding the `RoutePosition` branch.
+    pub fn route(route_position: RoutePosition) -> Self {
+        Self {
+            position: PositionChoice::RoutePosition(route_position),
+        }
+    }
+
+    /// Create a Position holding the `TrajectoryPosition` branch.
     pub fn trajectory(trajectory_position: TrajectoryPosition) -> Self {
         Self {
-            trajectory_position: Some(trajectory_position),
-            ..Self::empty()
+            position: PositionChoice::TrajectoryPosition(trajectory_position),
         }
     }
 
-    /// Create a Position with GeographicPosition
+    /// Create a Position holding the `GeoPosition` branch.
     pub fn geographic(geographic_position: GeographicPosition) -> Self {
         Self {
-            geographic_position: Some(geographic_position),
-            ..Self::empty()
+            position: PositionChoice::GeoPosition(geographic_position),
         }
     }
 
-    /// Create a Position with RelativeObjectPosition
+    /// Create a Position holding the `RelativeObjectPosition` branch.
     pub fn relative_object(relative_object_position: RelativeObjectPosition) -> Self {
         Self {
-            relative_object_position: Some(relative_object_position),
-            ..Self::empty()
+            position: PositionChoice::RelativeObjectPosition(relative_object_position),
+        }
+    }
+}
+
+/// Per-branch read accessors.
+///
+/// These are views over the single branch the choice holds, not storage. They exist so a
+/// caller interested in one coordinate system does not have to write the `match` arm and
+/// the discard arm; a caller that handles several branches should match on
+/// [`Position::position`] directly instead.
+impl Position {
+    /// The `WorldPosition` branch, if that is the branch held.
+    pub fn world_position(&self) -> Option<&WorldPosition> {
+        match &self.position {
+            PositionChoice::WorldPosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `RelativeWorldPosition` branch, if that is the branch held.
+    pub fn relative_world_position(&self) -> Option<&RelativeWorldPosition> {
+        match &self.position {
+            PositionChoice::RelativeWorldPosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `RelativeObjectPosition` branch, if that is the branch held.
+    pub fn relative_object_position(&self) -> Option<&RelativeObjectPosition> {
+        match &self.position {
+            PositionChoice::RelativeObjectPosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `RoadPosition` branch, if that is the branch held.
+    pub fn road_position(&self) -> Option<&RoadPosition> {
+        match &self.position {
+            PositionChoice::RoadPosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `RelativeRoadPosition` branch, if that is the branch held.
+    pub fn relative_road_position(&self) -> Option<&RelativeRoadPosition> {
+        match &self.position {
+            PositionChoice::RelativeRoadPosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `LanePosition` branch, if that is the branch held.
+    pub fn lane_position(&self) -> Option<&LanePosition> {
+        match &self.position {
+            PositionChoice::LanePosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `RelativeLanePosition` branch, if that is the branch held.
+    pub fn relative_lane_position(&self) -> Option<&RelativeLanePosition> {
+        match &self.position {
+            PositionChoice::RelativeLanePosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `RoutePosition` branch, if that is the branch held.
+    pub fn route_position(&self) -> Option<&RoutePosition> {
+        match &self.position {
+            PositionChoice::RoutePosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `GeoPosition` branch, if that is the branch held.
+    pub fn geographic_position(&self) -> Option<&GeographicPosition> {
+        match &self.position {
+            PositionChoice::GeoPosition(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `TrajectoryPosition` branch, if that is the branch held.
+    pub fn trajectory_position(&self) -> Option<&TrajectoryPosition> {
+        match &self.position {
+            PositionChoice::TrajectoryPosition(v) => Some(v),
+            _ => None,
         }
     }
 }
@@ -182,33 +280,16 @@ mod tests {
     use super::*;
     use crate::types::basic::Value;
 
-    /// Replaces `test_position_default_is_all_none`, whose subject — the derived
-    /// `Default` — has been removed. `world_origin` is the honest replacement, and its
-    /// contract is the opposite one: it *does* select a branch, which is the whole point.
     #[test]
     fn test_position_world_origin_selects_the_world_branch() {
         let pos = Position::world_origin();
         let world = pos
-            .world_position
-            .as_ref()
+            .world_position()
             .expect("world_origin must select the WorldPosition branch");
         assert_eq!(world.x, Value::Literal(0.0));
         assert_eq!(world.y, Value::Literal(0.0));
-        assert!(pos.lane_position.is_none());
-        assert!(pos.road_position.is_none());
-        assert_ne!(pos, Position::empty());
-    }
-
-    #[test]
-    fn test_position_empty_has_all_none() {
-        let pos = Position::empty();
-        assert!(pos.world_position.is_none());
-        assert!(pos.relative_world_position.is_none());
-        assert!(pos.road_position.is_none());
-        assert!(pos.lane_position.is_none());
-        assert!(pos.trajectory_position.is_none());
-        assert!(pos.geographic_position.is_none());
-        assert!(pos.relative_object_position.is_none());
+        assert!(pos.lane_position().is_none());
+        assert!(pos.road_position().is_none());
     }
 
     #[test]
@@ -228,16 +309,16 @@ mod tests {
             )),
         );
         let pos = Position::trajectory(tp.clone());
-        assert!(pos.trajectory_position.is_some());
-        assert!(pos.world_position.is_none());
+        assert!(pos.trajectory_position().is_some());
+        assert!(pos.world_position().is_none());
     }
 
     #[test]
     fn test_position_geographic_constructor() {
         let gp = GeographicPosition::new(48.0, 11.0);
         let pos = Position::geographic(gp);
-        assert!(pos.geographic_position.is_some());
-        assert!(pos.world_position.is_none());
+        assert!(pos.geographic_position().is_some());
+        assert!(pos.world_position().is_none());
     }
 
     #[test]
@@ -266,10 +347,7 @@ mod tests {
 
     #[test]
     fn test_position_xml_roundtrip() {
-        let pos = Position {
-            world_position: Some(WorldPosition::new(1.0, 2.0)),
-            ..Position::empty()
-        };
+        let pos = Position::world(WorldPosition::new(1.0, 2.0));
         let xml = quick_xml::se::to_string(&pos).unwrap();
         assert!(xml.contains("WorldPosition"));
         let deserialized: Position = quick_xml::de::from_str(&xml).unwrap();

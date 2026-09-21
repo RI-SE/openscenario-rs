@@ -163,10 +163,7 @@ mod tests {
                 traffic_signal_controller: vec![TrafficSignalController::new("intersection_1")],
             }),
             used_area: Some(UsedArea {
-                position: vec![Position {
-                    world_position: Some(WorldPosition::new(0.0, 0.0)),
-                    ..Position::empty()
-                }],
+                position: vec![Position::world(WorldPosition::new(0.0, 0.0))],
             }),
         };
 
