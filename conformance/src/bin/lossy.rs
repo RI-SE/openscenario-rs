@@ -17,7 +17,9 @@
 
 #![deny(unused_must_use)]
 
-use openscenario_roundtrip_harness::xml_profile::{diff, first_line, print_ranked, profile};
+use openscenario_roundtrip_harness::xml_profile::{
+    compare_values, diff, first_line, print_ranked, profile, values, ValueDiff,
+};
 use openscenario_roundtrip_harness::{
     corpus_dir, is_catalog, load_schema, require_corpus, stale_exemption_message, Expectations,
     Gate,
@@ -29,9 +31,10 @@ use std::collections::BTreeMap;
 use std::env;
 use std::path::Path;
 
-/// What this gate learned about one file: the dropped and invented keys, or the reason the file
-/// could not be examined at all (which counts as a failure, not a pass — see the exit code below).
-type Outcome = Result<(Vec<(String, i64)>, Vec<(String, i64)>), String>;
+/// What this gate learned about one file: the dropped and invented keys, the value rewrites
+/// found by [`compare_values`], or the reason the file could not be examined at all (which counts
+/// as a failure, not a pass — see the exit code below).
+type Outcome = Result<(Vec<(String, i64)>, Vec<(String, i64)>, ValueDiff), String>;
 
 fn examine(path: &Path, rel: &Path) -> Outcome {
     let path_str = path.to_string_lossy().to_string();
@@ -53,9 +56,15 @@ fn examine(path: &Path, rel: &Path) -> Outcome {
         (Ok(b), Ok(a)) => (b, a),
         _ => return Err("unparseable as XML".to_string()),
     };
-
     let d = diff(&before, &after);
-    Ok((d.dropped, d.invented))
+
+    let (before_values, after_values) = match (values(&original_xml), values(&produced_xml)) {
+        (Ok(b), Ok(a)) => (b, a),
+        _ => return Err("unparseable as XML".to_string()),
+    };
+    let value_diff = compare_values(&before_values, &after_values);
+
+    Ok((d.dropped, d.invented, value_diff))
 }
 
 fn main() {
@@ -80,6 +89,9 @@ fn main() {
     let mut skipped = 0usize;
     let mut total_dropped = 0i64;
     let mut total_invented = 0i64;
+    let mut total_rewritten = 0usize;
+    let mut total_number_format_only = 0usize;
+    let mut files_with_number_format_only = 0usize;
     let mut excluded: Vec<String> = Vec::new();
     let mut broken_expectations: Vec<String> = Vec::new();
 
@@ -95,18 +107,22 @@ fn main() {
                     rel.display(),
                     entry.assertion
                 ),
-                Ok((dropped, invented)) if !dropped.is_empty() || !invented.is_empty() => println!(
-                    "XFAIL {}  (lossy)  (expectations.toml: {})",
-                    rel.display(),
-                    entry.assertion
-                ),
+                Ok((dropped, invented, value_diff))
+                    if !dropped.is_empty() || !invented.is_empty() || !value_diff.is_empty() =>
+                {
+                    println!(
+                        "XFAIL {}  (lossy)  (expectations.toml: {})",
+                        rel.display(),
+                        entry.assertion
+                    )
+                }
                 Ok(_) => broken_expectations.push(stale_exemption_message(rel, Gate::Lossy)),
             }
             excluded.push(rel.display().to_string());
             continue;
         }
 
-        let (dropped, invented) = match outcome {
+        let (dropped, invented, value_diff) = match outcome {
             Ok(d) => d,
             Err(e) => {
                 skipped += 1;
@@ -117,8 +133,14 @@ fn main() {
 
         let file_dropped: i64 = dropped.iter().map(|(_, n)| n).sum();
         let file_invented: i64 = invented.iter().map(|(_, n)| n).sum();
+        let file_rewritten = value_diff.mismatches.len();
 
-        if file_dropped == 0 && file_invented == 0 {
+        if value_diff.number_format_only > 0 {
+            files_with_number_format_only += 1;
+            total_number_format_only += value_diff.number_format_only;
+        }
+
+        if file_dropped == 0 && file_invented == 0 && file_rewritten == 0 {
             clean_files += 1;
             if verbose {
                 println!("CLEAN {}", rel.display());
@@ -129,8 +151,9 @@ fn main() {
         lossy_files += 1;
         total_dropped += file_dropped;
         total_invented += file_invented;
+        total_rewritten += file_rewritten;
         println!(
-            "LOSSY {}  (-{file_dropped} dropped, +{file_invented} invented)",
+            "LOSSY {}  (-{file_dropped} dropped, +{file_invented} invented, ~{file_rewritten} rewritten)",
             rel.display()
         );
         for (key, n) in &dropped {
@@ -143,6 +166,11 @@ fn main() {
             *invented_totals.entry(key.clone()).or_insert(0) += n;
             if verbose {
                 println!("        + {key} x{n}");
+            }
+        }
+        if verbose {
+            for (key, before, after) in &value_diff.mismatches {
+                println!("        ~ {key}: \"{before}\" \u{2192} \"{after}\"");
             }
         }
     }
@@ -164,7 +192,10 @@ fn main() {
         excluded.len(),
         entries.len()
     );
-    println!("{total_dropped} dropped items, {total_invented} invented items");
+    println!("{total_dropped} dropped items, {total_invented} invented items, {total_rewritten} rewritten values");
+    println!(
+        "{total_number_format_only} number-format-only rewrites (e.g. \"1.0\" vs \"1\") across {files_with_number_format_only} files — not a failure, the value space is unchanged"
+    );
     if !excluded.is_empty() {
         println!(
             "\n{} excluded by conformance/expectations.toml:",
