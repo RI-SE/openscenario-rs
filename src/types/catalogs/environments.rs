@@ -15,9 +15,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Environment")]
 pub struct CatalogEnvironment {
-    /// Unique name for this environment in the catalog
+    /// Unique name for this environment in the catalog. XSD `Environment`
+    /// (`:1186`, the same complex type `CatalogEnvironment` mirrors) types
+    /// `@name` as the schema's `String`, a union including the parameter
+    /// member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Parameter declarations for this environment
     #[serde(
@@ -227,7 +230,7 @@ impl CatalogEnvironment {
     /// Creates a new catalog environment with the specified name
     pub fn new(name: String) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             parameter_declarations: None,
             time_of_day: None,
             weather: None,
@@ -238,7 +241,7 @@ impl CatalogEnvironment {
     /// Creates a catalog environment with parameter declarations
     pub fn with_parameters(name: String, parameters: ParameterDeclarations) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             parameter_declarations: Some(parameters),
             time_of_day: None,
             weather: None,
@@ -334,9 +337,7 @@ impl CatalogEnvironment {
             .transpose()?;
 
         Ok(Environment {
-            name: OSString::literal(crate::types::catalogs::entities::resolve_parameter(
-                &self.name, parameters,
-            )?),
+            name: OSString::literal(self.name.resolve(parameters)?),
             parameter_declarations: self.parameter_declarations.clone(),
             time_of_day,
             weather,
@@ -482,7 +483,10 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogEnvironment {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -496,7 +500,7 @@ mod tests {
     fn test_catalog_environment_creation() {
         let environment = CatalogEnvironment::new("TestEnvironment".to_string());
 
-        assert_eq!(environment.name, "TestEnvironment");
+        assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
         assert!(environment.parameter_declarations.is_none());
         assert!(environment.time_of_day.is_none());
     }
@@ -581,7 +585,10 @@ mod tests {
         weather.fog = Some(fog);
         environment.set_weather(weather);
 
-        assert_eq!(environment.name, "ParameterizedEnvironment");
+        assert_eq!(
+            environment.name.as_literal().unwrap(),
+            "ParameterizedEnvironment"
+        );
         assert!(environment.parameter_declarations.is_some());
         assert!(matches!(
             environment
@@ -696,7 +703,10 @@ mod tests {
         let environment = CatalogEnvironment::new("DefaultCatalogEnvironment".to_string());
         let weather = CatalogWeather::default();
 
-        assert_eq!(environment.name, "DefaultCatalogEnvironment");
+        assert_eq!(
+            environment.name.as_literal().unwrap(),
+            "DefaultCatalogEnvironment"
+        );
         assert!(environment.time_of_day.is_none());
         assert!(weather.cloud_state.is_none());
         assert!(weather.sun.is_none());

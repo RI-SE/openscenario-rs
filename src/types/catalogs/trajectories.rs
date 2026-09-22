@@ -12,9 +12,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Trajectory")]
 pub struct CatalogTrajectory {
-    /// Unique name for this trajectory in the catalog
+    /// Unique name for this trajectory in the catalog. XSD `Trajectory`
+    /// (`:2356`, the same complex type `CatalogTrajectory` mirrors) types
+    /// `@name` as the schema's `String`, a union including the parameter
+    /// member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Whether the trajectory is closed (forms a loop) — required per XSD
     #[serde(rename = "@closed")]
@@ -209,7 +212,7 @@ impl CatalogTrajectory {
     /// Removed; callers must supply both.
     pub fn new(name: String, shape: CatalogTrajectoryShape) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             closed: Value::Literal(false),
             parameter_declarations: None,
             shape: shape.into(),
@@ -223,7 +226,7 @@ impl CatalogTrajectory {
         parameters: ParameterDeclarations,
     ) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             closed: Value::Literal(false),
             parameter_declarations: Some(parameters),
             shape: shape.into(),
@@ -233,7 +236,7 @@ impl CatalogTrajectory {
     /// Creates a closed trajectory (forms a loop)
     pub fn with_closed(name: String, shape: CatalogTrajectoryShape, closed: bool) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             closed: Value::Literal(closed),
             parameter_declarations: None,
             shape: shape.into(),
@@ -340,9 +343,7 @@ impl CatalogTrajectory {
         };
 
         Ok(crate::types::actions::movement::Trajectory {
-            name: OSString::literal(crate::types::catalogs::entities::resolve_parameter(
-                &self.name, parameters,
-            )?),
+            name: OSString::literal(self.name.resolve(parameters)?),
             closed: Boolean::literal(self.closed.resolve(parameters)?),
             parameter_declarations: self.parameter_declarations.clone(),
             shape,
@@ -489,7 +490,10 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogTrajectory {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -522,7 +526,7 @@ mod tests {
 </Trajectory>"#;
 
         let trajectory: CatalogTrajectory = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(trajectory.name, "VRU_CPx");
+        assert_eq!(trajectory.name.as_literal().unwrap(), "VRU_CPx");
         match &trajectory.shape.shape {
             CatalogTrajectoryShape::Polyline(polyline) => {
                 assert_eq!(polyline.vertices.len(), 2);
@@ -548,7 +552,7 @@ mod tests {
         );
         let trajectory = CatalogTrajectory::new("TestTrajectory".to_string(), shape);
 
-        assert_eq!(trajectory.name, "TestTrajectory");
+        assert_eq!(trajectory.name.as_literal().unwrap(), "TestTrajectory");
         assert_eq!(trajectory.closed.as_literal(), Some(&false));
         assert!(trajectory.parameter_declarations.is_none());
     }
@@ -679,7 +683,10 @@ mod tests {
             param_decl,
         );
 
-        assert_eq!(trajectory.name, "ParameterizedTrajectory");
+        assert_eq!(
+            trajectory.name.as_literal().unwrap(),
+            "ParameterizedTrajectory"
+        );
         assert!(trajectory.parameter_declarations.is_some());
 
         match &trajectory.shape.shape {
@@ -850,7 +857,7 @@ mod tests {
         ];
         let nurbs = CatalogNurbs::new(Value::Literal(2), control_points, knots).unwrap();
 
-        assert_eq!(trajectory.name, "ExplicitTrajectory");
+        assert_eq!(trajectory.name.as_literal().unwrap(), "ExplicitTrajectory");
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);
         assert_eq!(nurbs.order.as_literal().unwrap(), &2);
     }

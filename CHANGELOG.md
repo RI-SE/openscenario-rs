@@ -526,6 +526,36 @@ Breaking, unless noted.
   `OSString::literal("...".to_string())` and a comparison against a `&str` becomes
   `property.value.as_literal().map(String::as_str)`.
 
+- **Nine catalog `@name` attributes now accept parameter references.** `CatalogVehicle`,
+  `CatalogController` (both the copy in `catalogs::entities` and the twin in
+  `catalogs::controllers` — the two are a known duplication tracked separately, and both
+  needed this fix independently), `CatalogPedestrian`, `CatalogMiscObject`, `CatalogManeuver`,
+  `CatalogRoute`, `CatalogTrajectory` and `CatalogEnvironment` each mirror an XSD complex type
+  (`Schema/OpenSCENARIO.xsd:970`, `:1186`, `:1450`, `:1474`, `:1677`, `:1955`, `:2356` and
+  `:2498` respectively) whose `@name` is typed `String`, the schema's union whose second member
+  is the parameter production. All nine held `@name` as plain Rust `String`, so a catalog entry
+  named `$vehicleName` parsed and round-tripped byte-identically while carrying the literal
+  text `$vehicleName` as data; nothing substituted it and nothing errored, the same defect class
+  fixed for `Property` above. All nine now hold `OSString` (`Value<String>`), resolved through
+  `Value<T>::resolve` the same way. The catalog-file entities module's own hand-rolled
+  `$`-stripping helper, `resolve_parameter`, is removed along with its five call sites: each now
+  calls `self.name.resolve(&parameters)` directly, since the deserializer already turns
+  `$vehicleName` into `Value::Parameter("vehicleName")` and there is no longer a plain string to
+  strip a prefix from.
+
+  This breaks direct field access, struct literals and the `CatalogEntity::entity_name` trait
+  method's implementation (its `&str` signature is unchanged, but each impl now reads through
+  `as_literal()` rather than borrowing the field directly, returning an empty string for a
+  catalog entry whose name is a live parameter reference — the same boundary
+  `CatalogReference::entry_name` resolution already has). A struct literal must supply
+  `OSString::literal("...".to_string())`, and a comparison against a `&str` becomes
+  `entity.name.as_literal().map(String::as_str)`. `src/catalog/mod.rs`'s
+  `is_entity_defined_in_catalog` and `src/types/catalogs/files.rs`'s `find_vehicle` /
+  `find_controller` / `find_pedestrian` / `entity_names` were not in `catalogs/` but broke on
+  this widening and are fixed here; `entity_names` now renders a parameterized name through
+  `Value`'s `Display` (`$vehicleName`) rather than the value it would resolve to, consistent
+  with how a parameter round-trips everywhere else in this crate.
+
 - **90 enum-typed attributes now accept parameter references.** All 37 enumeration
   `simpleType`s in `Schema/OpenSCENARIO.xsd` are `xsd:union`s whose second member is
   `<xsd:restriction base="parameter"/>`, so `<Vehicle vehicleCategory="$cat">` is

@@ -13,9 +13,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Route")]
 pub struct CatalogRoute {
-    /// Unique name for this route in the catalog
+    /// Unique name for this route in the catalog. XSD `Route`
+    /// (`Schema/OpenSCENARIO.xsd:1955`, the same complex type `CatalogRoute`
+    /// mirrors) types `@name` as the schema's `String`, a union including the
+    /// parameter member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Whether the route is closed (forms a loop) — required per XSD
     #[serde(rename = "@closed")]
@@ -86,7 +89,7 @@ impl CatalogRoute {
     /// downstream aware of it. Build the vector first and hand it over once.
     pub fn new(name: String, waypoints: Vec<RouteWaypoint>) -> crate::error::Result<Self> {
         Ok(Self {
-            name,
+            name: OSString::literal(name),
             closed: Value::Literal(false),
             parameter_declarations: None,
             waypoints: MinVec::new(waypoints)?,
@@ -100,7 +103,7 @@ impl CatalogRoute {
         parameters: ParameterDeclarations,
     ) -> crate::error::Result<Self> {
         Ok(Self {
-            name,
+            name: OSString::literal(name),
             closed: Value::Literal(false),
             parameter_declarations: Some(parameters),
             waypoints: MinVec::new(waypoints)?,
@@ -114,7 +117,7 @@ impl CatalogRoute {
         closed: bool,
     ) -> crate::error::Result<Self> {
         Ok(Self {
-            name,
+            name: OSString::literal(name),
             closed: Value::Literal(closed),
             parameter_declarations: None,
             waypoints: MinVec::new(waypoints)?,
@@ -226,10 +229,7 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
             .collect::<Vec<_>>();
 
         Ok(crate::types::routing::Route {
-            name: OSString::literal(crate::types::catalogs::entities::resolve_parameter(
-                &self.name,
-                &parameters,
-            )?),
+            name: OSString::literal(self.name.resolve(&parameters)?),
             closed: Boolean::literal(self.closed.resolve(&parameters)?),
             parameter_declarations: self
                 .parameter_declarations
@@ -263,7 +263,10 @@ impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -281,7 +284,7 @@ mod tests {
         ];
         let route = CatalogRoute::new("TestRoute".to_string(), waypoints).unwrap();
 
-        assert_eq!(route.name, "TestRoute");
+        assert_eq!(route.name.as_literal().unwrap(), "TestRoute");
         assert_eq!(route.closed.as_literal().unwrap(), &false);
         assert!(route.parameter_declarations.is_none());
         assert_eq!(route.waypoint_count(), 2);
@@ -355,7 +358,7 @@ mod tests {
             CatalogRoute::with_parameters("ParameterizedRoute".to_string(), waypoints, param_decl)
                 .unwrap();
 
-        assert_eq!(route.name, "ParameterizedRoute");
+        assert_eq!(route.name.as_literal().unwrap(), "ParameterizedRoute");
         assert!(route.parameter_declarations.is_some());
         assert_eq!(
             route
@@ -446,7 +449,7 @@ mod tests {
         let route = CatalogRoute::new("ExplicitRoute".to_string(), waypoints).unwrap();
         let waypoint = RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest);
 
-        assert_eq!(route.name, "ExplicitRoute");
+        assert_eq!(route.name.as_literal().unwrap(), "ExplicitRoute");
         assert_eq!(
             waypoint.route_strategy,
             Value::Literal(RouteStrategy::Fastest)

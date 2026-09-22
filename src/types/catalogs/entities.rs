@@ -30,25 +30,6 @@ pub trait CatalogEntity: Clone + Send + Sync {
     fn entity_name(&self) -> &str;
 }
 
-/// Resolves a possibly `$`-prefixed parameter reference against a substitution map.
-///
-/// Values that do not start with `$` are returned unchanged.
-pub(crate) fn resolve_parameter(
-    value: &str,
-    parameters: &HashMap<String, String>,
-) -> Result<String> {
-    match value.strip_prefix('$') {
-        Some(param_name) => {
-            let available: Vec<String> = parameters.keys().cloned().collect();
-            parameters
-                .get(param_name)
-                .cloned()
-                .ok_or_else(|| crate::error::Error::parameter_not_found(param_name, &available))
-        }
-        None => Ok(value.to_string()),
-    }
-}
-
 /// In-memory description of a parameter accepted by a catalog entity.
 ///
 /// This is *not* an XML type: the wire representation of
@@ -71,9 +52,12 @@ pub struct ParameterDefinition {
 /// Vehicle entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogVehicle {
-    /// Name of the vehicle in the catalog
+    /// Name of the vehicle in the catalog. XSD `Vehicle` (`:2498`, the same
+    /// complex type `CatalogVehicle` mirrors) types `@name` as the schema's
+    /// `String`, a union including the parameter member, so a catalog entry
+    /// may name itself with `$paramName`.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Vehicle category
     #[serde(rename = "@vehicleCategory")]
@@ -213,7 +197,7 @@ impl CatalogEntity for CatalogVehicle {
     ) -> Result<Self::ResolvedType> {
         // Resolve parameters in the catalog vehicle
         let resolved_vehicle = vehicle::Vehicle {
-            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(self.name.resolve(&parameters)?),
             vehicle_category: self.vehicle_category,
             role: self.role,
             mass: self
@@ -362,16 +346,21 @@ impl CatalogEntity for CatalogVehicle {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
 /// Controller entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogController {
-    /// Name of the controller in the catalog
+    /// Name of the controller in the catalog. XSD `Controller` (`:970`, the
+    /// same complex type `CatalogController` mirrors) types `@name` as the
+    /// schema's `String`, a union including the parameter member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Type of controller
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
@@ -398,7 +387,7 @@ impl CatalogEntity for CatalogController {
         parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
         let resolved_controller = Controller {
-            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(self.name.resolve(&parameters)?),
             controller_type: Some(
                 self.controller_type
                     .unwrap_or(Value::Literal(ControllerType::Movement)),
@@ -422,16 +411,21 @@ impl CatalogEntity for CatalogController {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
 /// Pedestrian entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogPedestrian {
-    /// Name of pedestrian in the catalog
+    /// Name of pedestrian in the catalog. XSD `Pedestrian` (`:1677`, the same
+    /// complex type `CatalogPedestrian` mirrors) types `@name` as the schema's
+    /// `String`, a union including the parameter member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Category of pedestrian
     #[serde(rename = "@pedestrianCategory")]
@@ -479,7 +473,7 @@ impl CatalogEntity for CatalogPedestrian {
         })?;
 
         let resolved_pedestrian = pedestrian::Pedestrian {
-            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(self.name.resolve(&parameters)?),
             pedestrian_category: self.pedestrian_category,
             mass: crate::types::basic::Double::literal(mass_value),
             role: self.role,
@@ -519,7 +513,10 @@ impl CatalogEntity for CatalogPedestrian {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -529,8 +526,11 @@ impl CatalogEntity for CatalogPedestrian {
 /// Miscellaneous object entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogMiscObject {
+    /// Name of the object in the catalog. XSD `MiscObject` (`:1474`, the same
+    /// complex type `CatalogMiscObject` mirrors) types `@name` as the schema's
+    /// `String`, a union including the parameter member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Mass of the object in kg — XSD attribute `mass`, `use="required"`
     #[serde(rename = "@mass")]
@@ -566,8 +566,11 @@ pub struct CatalogMiscObject {
 /// Maneuver entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogManeuver {
+    /// Name of the maneuver in the catalog. XSD `Maneuver` (`:1450`, the same
+    /// complex type `CatalogManeuver` mirrors) types `@name` as the schema's
+    /// `String`, a union including the parameter member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
     #[serde(
         rename = "ParameterDeclarations",
         default,
@@ -594,7 +597,7 @@ impl CatalogEntity for CatalogMiscObject {
         parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
         Ok(crate::types::entities::MiscObject {
-            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(self.name.resolve(&parameters)?),
             mass: Double::literal(self.mass.resolve(&parameters)?),
             misc_object_category: self.misc_object_category,
             model3d: self
@@ -644,7 +647,10 @@ impl CatalogEntity for CatalogMiscObject {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -660,7 +666,7 @@ impl CatalogEntity for CatalogManeuver {
         // `CatalogManeuver::events`, so the bound already holds on `self.events` and
         // needs no re-checking here.
         Ok(crate::types::scenario::story::Maneuver {
-            name: Value::literal(resolve_parameter(&self.name, &parameters)?),
+            name: Value::literal(self.name.resolve(&parameters)?),
             parameter_declarations: self.parameter_declarations,
             events: self.events,
         })
@@ -692,7 +698,10 @@ impl CatalogEntity for CatalogManeuver {
     }
 
     fn entity_name(&self) -> &str {
-        &self.name
+        self.name
+            .as_literal()
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -723,7 +732,7 @@ mod tests {
     #[test]
     fn test_catalog_vehicle_entity_name() {
         let catalog_vehicle = CatalogVehicle {
-            name: "SportsCar".to_string(),
+            name: OSString::literal("SportsCar".to_string()),
             vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
@@ -769,7 +778,7 @@ mod tests {
     #[test]
     fn test_catalog_vehicle_resolution() {
         let catalog_vehicle = CatalogVehicle {
-            name: "TestVehicle".to_string(),
+            name: OSString::literal("TestVehicle".to_string()),
             vehicle_category: Value::Literal(VehicleCategory::Car),
             role: None,
             mass: None,
@@ -833,7 +842,7 @@ mod tests {
     #[test]
     fn test_catalog_controller_entity_name() {
         let catalog_controller = CatalogController {
-            name: "AIDriver".to_string(),
+            name: OSString::literal("AIDriver".to_string()),
             controller_type: Some(Value::Literal(ControllerType::Movement)),
             parameter_declarations: None,
             properties: None,
@@ -845,7 +854,7 @@ mod tests {
     #[test]
     fn test_catalog_controller_resolution() {
         let catalog_controller = CatalogController {
-            name: "TestController".to_string(),
+            name: OSString::literal("TestController".to_string()),
             controller_type: Some(Value::Literal(ControllerType::Lateral)),
             parameter_declarations: None,
             properties: None,
@@ -864,7 +873,7 @@ mod tests {
     #[test]
     fn test_catalog_controller_type_resolution() {
         let catalog_controller = CatalogController {
-            name: "FlexController".to_string(),
+            name: OSString::literal("FlexController".to_string()),
             controller_type: Some(Value::Literal(ControllerType::Longitudinal)),
             parameter_declarations: None,
             properties: None,
@@ -918,7 +927,7 @@ mod tests {
     #[test]
     fn test_catalog_pedestrian_entity_name() {
         let catalog_pedestrian = CatalogPedestrian {
-            name: "WalkingPerson".to_string(),
+            name: OSString::literal("WalkingPerson".to_string()),
             pedestrian_category: Value::Literal(PedestrianCategory::Pedestrian),
             mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal(crate::types::enums::Role::None)),
@@ -937,7 +946,7 @@ mod tests {
     #[test]
     fn test_catalog_pedestrian_resolution() {
         let catalog_pedestrian = CatalogPedestrian {
-            name: "TestPedestrian".to_string(),
+            name: OSString::literal("TestPedestrian".to_string()),
             pedestrian_category: Value::Literal(PedestrianCategory::Wheelchair),
             mass: Value::Literal("75.0".to_string()),
             role: Some(Value::Literal(crate::types::enums::Role::Civil)),
@@ -985,7 +994,7 @@ mod tests {
     #[test]
     fn test_catalog_misc_object_resolution() {
         let catalog_misc_object = CatalogMiscObject {
-            name: "TrafficCone".to_string(),
+            name: OSString::literal("TrafficCone".to_string()),
             mass: Value::Parameter("ConeMass".to_string()),
             misc_object_category: Value::Literal(MiscObjectCategory::Obstacle),
             model3d: Some(Value::Literal("cone.obj".to_string())),
@@ -1068,7 +1077,7 @@ mod tests {
 </MiscObject>"#;
 
         let misc_object: CatalogMiscObject = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(misc_object.name, "obstacle");
+        assert_eq!(misc_object.name.as_literal().unwrap(), "obstacle");
         assert_eq!(misc_object.mass.as_literal().unwrap(), &70.0);
         assert_eq!(
             misc_object.misc_object_category,
@@ -1108,7 +1117,7 @@ mod tests {
 </Maneuver>"#;
 
         let maneuver: CatalogManeuver = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(maneuver.name, "LogAndSetVariables");
+        assert_eq!(maneuver.name.as_literal().unwrap(), "LogAndSetVariables");
         assert_eq!(maneuver.events.len(), 1);
 
         let event = &maneuver.events[0];
@@ -1180,7 +1189,7 @@ mod tests {
         assert_eq!(catalog.catalog.vehicles.len(), 1, "expected one vehicle");
 
         let vehicle = &catalog.catalog.vehicles[0];
-        assert_eq!(vehicle.name, "TestVehicle");
+        assert_eq!(vehicle.name.as_literal().unwrap(), "TestVehicle");
 
         let decls = vehicle
             .parameter_declarations
@@ -1318,7 +1327,7 @@ mod tests {
             .expect("catalog without ParameterDeclarations should parse without error");
 
         let vehicle = &catalog.catalog.vehicles[0];
-        assert_eq!(vehicle.name, "SimpleCar");
+        assert_eq!(vehicle.name.as_literal().unwrap(), "SimpleCar");
         assert!(
             vehicle.parameter_declarations.is_none(),
             "parameter_declarations should be None when element is absent"

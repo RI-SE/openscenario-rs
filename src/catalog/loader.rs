@@ -471,7 +471,10 @@ mod tests {
         let controllers = loader.load_controller_catalog(&file_path)?;
 
         assert_eq!(controllers.len(), 1);
-        assert_eq!(controllers[0].name, "AdaptiveCruiseController");
+        assert_eq!(
+            controllers[0].name.as_literal().unwrap(),
+            "AdaptiveCruiseController"
+        );
 
         Ok(())
     }
@@ -508,7 +511,7 @@ mod tests {
         let trajectories = loader.load_trajectory_catalog(&file_path)?;
 
         assert_eq!(trajectories.len(), 1);
-        assert_eq!(trajectories[0].name, "StraightPath");
+        assert_eq!(trajectories[0].name.as_literal().unwrap(), "StraightPath");
 
         Ok(())
     }
@@ -541,7 +544,7 @@ mod tests {
         let routes = loader.load_route_catalog(&file_path)?;
 
         assert_eq!(routes.len(), 1);
-        assert_eq!(routes[0].name, "MainRoute");
+        assert_eq!(routes[0].name.as_literal().unwrap(), "MainRoute");
         assert_eq!(routes[0].waypoints.len(), 2);
 
         Ok(())
@@ -572,7 +575,7 @@ mod tests {
         let environments = loader.load_environment_catalog(&file_path)?;
 
         assert_eq!(environments.len(), 1);
-        assert_eq!(environments[0].name, "Sunny");
+        assert_eq!(environments[0].name.as_literal().unwrap(), "Sunny");
 
         Ok(())
     }
@@ -624,7 +627,10 @@ mod tests {
 
         assert_eq!(catalogs.len(), 1);
         assert_eq!(catalogs["controllers"].len(), 1);
-        assert_eq!(catalogs["controllers"][0].name, "Ctrl1");
+        assert_eq!(
+            catalogs["controllers"][0].name.as_literal().unwrap(),
+            "Ctrl1"
+        );
 
         Ok(())
     }

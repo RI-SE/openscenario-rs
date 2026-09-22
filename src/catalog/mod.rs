@@ -586,7 +586,7 @@ pub fn resolve_catalog_reference_simple(
         let found = catalog_content
             .vehicles
             .iter()
-            .any(|v| v.name == resolved_entry_name);
+            .any(|v| v.name.as_literal() == Some(&resolved_entry_name));
         if found {
             return Ok(true);
         }
@@ -597,7 +597,7 @@ pub fn resolve_catalog_reference_simple(
         let found = catalog_content
             .pedestrians
             .iter()
-            .any(|p| p.name == resolved_entry_name);
+            .any(|p| p.name.as_literal() == Some(&resolved_entry_name));
         if found {
             return Ok(true);
         }
@@ -608,7 +608,7 @@ pub fn resolve_catalog_reference_simple(
         let found = catalog_content
             .controllers
             .iter()
-            .any(|c| c.name == resolved_entry_name);
+            .any(|c| c.name.as_literal() == Some(&resolved_entry_name));
         if found {
             return Ok(true);
         }
@@ -619,7 +619,7 @@ pub fn resolve_catalog_reference_simple(
         let found = catalog_content
             .misc_objects
             .iter()
-            .any(|m| m.name == resolved_entry_name);
+            .any(|m| m.name.as_literal() == Some(&resolved_entry_name));
         if found {
             return Ok(true);
         }

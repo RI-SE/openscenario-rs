@@ -134,7 +134,7 @@ mod catalog_builder_tests {
         use openscenario_rs::types::catalogs::entities::CatalogPedestrian;
 
         let catalog_pedestrian = CatalogPedestrian {
-            name: "TestPedestrian".to_string(),
+            name: Value::literal("TestPedestrian".to_string()),
             pedestrian_category: Value::Literal(
                 openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
             ),
@@ -149,7 +149,10 @@ mod catalog_builder_tests {
             parameter_declarations: None,
         };
 
-        assert_eq!(catalog_pedestrian.name, "TestPedestrian");
+        assert_eq!(
+            catalog_pedestrian.name.as_literal().unwrap(),
+            "TestPedestrian"
+        );
         assert_eq!(catalog_pedestrian.mass.as_literal().unwrap(), "75.0");
         assert!(catalog_pedestrian.role.is_some());
         assert!(catalog_pedestrian.model3d.is_some());
@@ -162,7 +165,7 @@ mod catalog_builder_tests {
         use std::collections::HashMap;
 
         let catalog_pedestrian = CatalogPedestrian {
-            name: "ParamPedestrian".to_string(),
+            name: Value::literal("ParamPedestrian".to_string()),
             pedestrian_category: Value::Literal(
                 openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
             ),
@@ -197,7 +200,7 @@ mod catalog_builder_tests {
         use std::collections::HashMap;
 
         let catalog_pedestrian = CatalogPedestrian {
-            name: "MassParamPedestrian".to_string(),
+            name: Value::literal("MassParamPedestrian".to_string()),
             pedestrian_category: Value::Literal(
                 openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
             ),

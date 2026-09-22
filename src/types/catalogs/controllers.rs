@@ -1,6 +1,7 @@
 //! `CatalogController`: a controller definition in its catalog-file form, carrying the
 //! parameter declarations that a `CatalogReference` supplies values for.
 
+use crate::types::basic::OSString;
 use crate::types::basic::ParameterDeclarations;
 use crate::types::basic::Value;
 use crate::types::controllers::Controller;
@@ -15,9 +16,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Controller")]
 pub struct CatalogController {
-    /// Unique name for this controller in the catalog
+    /// Unique name for this controller in the catalog. XSD `Controller`
+    /// (`:970`, the same complex type `CatalogController` mirrors) types
+    /// `@name` as the schema's `String`, a union including the parameter
+    /// member.
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: OSString,
 
     /// Type of controller (interactive, external, etc.)
     #[serde(rename = "@controllerType", skip_serializing_if = "Option::is_none")]
@@ -41,7 +45,7 @@ impl CatalogController {
     /// Creates a new catalog controller with the specified name and type
     pub fn new(name: String, controller_type: ControllerType) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
@@ -55,7 +59,7 @@ impl CatalogController {
         parameters: ParameterDeclarations,
     ) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: Some(parameters),
             properties: None,
@@ -69,7 +73,7 @@ impl CatalogController {
         properties: Properties,
     ) -> Self {
         Self {
-            name,
+            name: OSString::literal(name),
             controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: Some(properties),
@@ -80,7 +84,7 @@ impl CatalogController {
     /// with parameter substitution (placeholder for future implementation)
     pub fn to_scenario_controller(&self) -> Controller {
         Controller {
-            name: Value::Literal(self.name.clone()),
+            name: self.name.clone(),
             controller_type: self.controller_type.clone(),
             parameter_declarations: self.parameter_declarations.clone(),
             properties: self.properties.clone(),
@@ -91,7 +95,7 @@ impl CatalogController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::basic::{OSString, ParameterDeclaration};
+    use crate::types::basic::ParameterDeclaration;
     use crate::types::entities::vehicle::Property;
 
     use crate::types::enums::ParameterType;
@@ -101,7 +105,7 @@ mod tests {
         let controller =
             CatalogController::new("TestController".to_string(), ControllerType::Movement);
 
-        assert_eq!(controller.name, "TestController");
+        assert_eq!(controller.name.as_literal().unwrap(), "TestController");
         assert_eq!(
             controller.controller_type,
             Some(Value::Literal(ControllerType::Movement))
@@ -174,7 +178,10 @@ mod tests {
             param_decl,
         );
 
-        assert_eq!(controller.name, "ParameterizedController");
+        assert_eq!(
+            controller.name.as_literal().unwrap(),
+            "ParameterizedController"
+        );
         assert!(controller.parameter_declarations.is_some());
         assert_eq!(
             controller
@@ -232,7 +239,7 @@ mod tests {
             value: OSString::literal("value".to_string()),
         };
 
-        assert_eq!(controller.name, "ExplicitController");
+        assert_eq!(controller.name.as_literal().unwrap(), "ExplicitController");
         assert!(properties.properties.is_empty());
         assert_eq!(
             property.name.as_literal().map(String::as_str),

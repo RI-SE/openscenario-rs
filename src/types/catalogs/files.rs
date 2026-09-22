@@ -114,17 +114,26 @@ impl CatalogFile {
 
     /// Find a vehicle by name
     pub fn find_vehicle(&self, name: &str) -> Option<&CatalogVehicle> {
-        self.catalog.vehicles.iter().find(|v| v.name == name)
+        self.catalog
+            .vehicles
+            .iter()
+            .find(|v| v.name.as_literal().map(String::as_str) == Some(name))
     }
 
     /// Find a controller by name
     pub fn find_controller(&self, name: &str) -> Option<&CatalogController> {
-        self.catalog.controllers.iter().find(|c| c.name == name)
+        self.catalog
+            .controllers
+            .iter()
+            .find(|c| c.name.as_literal().map(String::as_str) == Some(name))
     }
 
     /// Find a pedestrian by name
     pub fn find_pedestrian(&self, name: &str) -> Option<&CatalogPedestrian> {
-        self.catalog.pedestrians.iter().find(|p| p.name == name)
+        self.catalog
+            .pedestrians
+            .iter()
+            .find(|p| p.name.as_literal().map(String::as_str) == Some(name))
     }
 }
 
@@ -175,14 +184,14 @@ impl CatalogContent {
     pub fn entity_names(&self) -> Vec<String> {
         let mut names = Vec::new();
 
-        names.extend(self.vehicles.iter().map(|v| v.name.clone()));
-        names.extend(self.controllers.iter().map(|c| c.name.clone()));
-        names.extend(self.pedestrians.iter().map(|p| p.name.clone()));
-        names.extend(self.misc_objects.iter().map(|m| m.name.clone()));
-        names.extend(self.environments.iter().map(|e| e.name.clone()));
-        names.extend(self.maneuvers.iter().map(|m| m.name.clone()));
-        names.extend(self.trajectories.iter().map(|t| t.name.clone()));
-        names.extend(self.routes.iter().map(|r| r.name.clone()));
+        names.extend(self.vehicles.iter().map(|v| v.name.to_string()));
+        names.extend(self.controllers.iter().map(|c| c.name.to_string()));
+        names.extend(self.pedestrians.iter().map(|p| p.name.to_string()));
+        names.extend(self.misc_objects.iter().map(|m| m.name.to_string()));
+        names.extend(self.environments.iter().map(|e| e.name.to_string()));
+        names.extend(self.maneuvers.iter().map(|m| m.name.to_string()));
+        names.extend(self.trajectories.iter().map(|t| t.name.to_string()));
+        names.extend(self.routes.iter().map(|r| r.name.to_string()));
 
         names
     }
@@ -263,7 +272,7 @@ mod tests {
         assert_eq!(catalog.environments.len(), 1);
 
         let env = &catalog.environments[0];
-        assert_eq!(env.name, "Sunny");
+        assert_eq!(env.name.as_literal().unwrap(), "Sunny");
         let weather = env.weather.as_ref().expect("Weather must be preserved");
         let sun = weather.sun.as_ref().expect("Sun must be preserved");
         assert_eq!(

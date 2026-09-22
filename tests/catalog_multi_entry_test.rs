@@ -42,8 +42,8 @@ fn multi_vehicle_catalog_parses_without_the_flatten_wrapper() {
     let file: CatalogFile = quick_xml::de::from_str(TWO_VEHICLE_CATALOG_FILE)
         .expect("a Catalog with two Vehicle children must parse without a redundant wrapper");
     assert_eq!(file.catalog.vehicles.len(), 2);
-    assert_eq!(file.catalog.vehicles[0].name, "v1");
-    assert_eq!(file.catalog.vehicles[1].name, "v2");
+    assert_eq!(file.catalog.vehicles[0].name.as_literal().unwrap(), "v1");
+    assert_eq!(file.catalog.vehicles[1].name.as_literal().unwrap(), "v2");
 }
 
 #[test]

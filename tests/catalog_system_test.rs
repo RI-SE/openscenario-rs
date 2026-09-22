@@ -64,7 +64,7 @@ fn test_catalog_file_parsing() {
     assert_eq!(catalog.vehicles().len(), 1);
 
     let vehicle = &catalog.vehicles()[0];
-    assert_eq!(vehicle.name, "TestCar");
+    assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
     assert_eq!(
         vehicle.vehicle_category,
         Value::Literal(openscenario_rs::types::enums::VehicleCategory::Car)
@@ -178,7 +178,10 @@ fn test_catalog_loader_with_temporary_files() {
         "TempTestCatalog"
     );
     assert_eq!(catalog.vehicles().len(), 1);
-    assert_eq!(catalog.vehicles()[0].name, "TempVehicle");
+    assert_eq!(
+        catalog.vehicles()[0].name.as_literal().unwrap(),
+        "TempVehicle"
+    );
 }
 
 #[test]
@@ -283,7 +286,7 @@ fn test_real_catalog_file_structure() {
 
                 // Check first vehicle has required fields
                 let first_vehicle = &catalog.vehicles()[0];
-                assert!(!first_vehicle.name.is_empty());
+                assert!(first_vehicle.name.as_literal().is_some());
             }
             Err(e) => {
                 println!("Could not load real catalog file: {}", e);
