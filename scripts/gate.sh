@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gate.sh — the project's quality gate: eleven stages, in a fixed order.
+# gate.sh — the project's quality gate: twelve stages, in a fixed order.
 #
 # This used to live only inside scripts/hooks/pre-push, which meant nothing
 # else (CI, the release workflow) could run the same checks without copying
@@ -9,13 +9,13 @@
 # Usage:
 #   scripts/gate.sh [all|lint|build|conformance]
 #
-#   (no argument), all  -> all eleven stages (markdown links, fmt, clippy,
+#   (no argument), all  -> all twelve stages (markdown links, fmt, clippy,
 #                          build, test, fetch corpus, harness test, report,
-#                          lossy, validate, validate-input)
+#                          lossy, validate, validate-input, mutate)
 #   lint                -> markdown links, fmt, clippy               (3 stages)
 #   build               -> build, test                               (2 stages)
 #   conformance         -> fetch corpus, harness test, report, lossy,
-#                          validate, validate-input                  (6 stages)
+#                          validate, validate-input, mutate          (7 stages)
 #
 # Any other argument is a usage error: a gate that would otherwise run zero
 # stages must never exit 0.
@@ -92,7 +92,7 @@ group_selected() {
   [[ "$filter" == "all" || "$filter" == "$1" ]]
 }
 
-declare -a STAGE_GROUPS=(lint lint lint build build conformance conformance conformance conformance conformance conformance)
+declare -a STAGE_GROUPS=(lint lint lint build build conformance conformance conformance conformance conformance conformance conformance)
 TOTAL_STAGES=0
 for g in "${STAGE_GROUPS[@]}"; do
   group_selected "$g" && TOTAL_STAGES=$((TOTAL_STAGES + 1))
@@ -183,6 +183,14 @@ stage conformance "Conformance XSD validation (output)"   -- cargo run -p opensc
 # the content is dropped, and the output validates — so `validate` went green
 # *because* something was lost.
 stage conformance "Conformance XSD validation (input)"    -- cargo run -p openscenario-roundtrip-harness --bin validate-input
+
+# The only stage that asks whether the crate *refuses* what the schema refuses. The other five
+# feed it valid documents, so none of them can see a type that accepts anything: the choice groups
+# modelled as parallel Options, the required repeated elements with no minOccurs, and the flattened
+# children all parsed invalid input without complaint while this gate reported eleven green stages.
+# This one breaks each valid corpus file in XSD-guided ways and requires the crate to reject every
+# mutant libxml2 rejects.
+stage conformance "Conformance refusal (mutation)"        -- cargo run -p openscenario-roundtrip-harness --bin mutate
 
 echo
 echo "${green}${bold}gate.sh: all ${TOTAL_STAGES} stages passed in ${SECONDS}s.${reset}"

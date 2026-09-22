@@ -1,6 +1,6 @@
 # openscenario-roundtrip-harness
 
-This crate is the `conformance` workspace member: a corpus of real `.xosc` files plus five
+This crate is the `conformance` workspace member: a corpus of real `.xosc` files plus six
 binaries that run this repo's types against them. It depends on `openscenario-rs` by path with
 the `builder` and `validation` features, so it always exercises the working tree, never a
 published version. See [../CONTRIBUTING.md](../CONTRIBUTING.md) for the day-to-day commands and
@@ -35,17 +35,19 @@ The openpass clone is fetched with a cone-mode sparse checkout of `engine/tests/
 also materialises every ancestor-level file, which is how its `LICENSE` and `NOTICE.md` land in
 the clone rather than being sparsed away.
 
-Without the corpus, `report`, `lossy`, `validate` and `validate-input` print a hint and exit 1;
+Without the corpus, `report`, `lossy`, `validate`, `validate-input` and `mutate` print a hint and
+exit 1;
 `cargo test -p openscenario-roundtrip-harness` generates zero corpus tests and still runs the
 builder-fixture gate; `builder` (without `--coverage`) needs no corpus at all.
 
-## The five binaries
+## The six binaries
 
 ```bash
 cargo run -p openscenario-roundtrip-harness --bin report
 cargo run -p openscenario-roundtrip-harness --bin lossy
 cargo run -p openscenario-roundtrip-harness --bin validate
 cargo run -p openscenario-roundtrip-harness --bin validate-input
+cargo run -p openscenario-roundtrip-harness --bin mutate
 cargo run -p openscenario-roundtrip-harness --bin builder
 cargo run -p openscenario-roundtrip-harness --bin builder -- --coverage
 ```
@@ -56,6 +58,7 @@ cargo run -p openscenario-roundtrip-harness --bin builder -- --coverage
 | `lossy` | The *first* serialization against the *original* file, so it can see data dropped or invented on the initial parse — the one thing `report` cannot see. It checks two things: names (did an element or attribute disappear or appear) and values (did an attribute or text value change at the same name). A number reserialized in a different lexical form, such as `1.0` becoming `1`, is reported separately and does not fail the gate, since the XSD types are numeric and the value space is unchanged. |
 | `validate` | The serialized output against `Schema/OpenSCENARIO.xsd`. |
 | `validate-input` | The corpus file *as it sits on disk* against `Schema/OpenSCENARIO.xsd`. The only gate that never parses the file with this crate, so its verdict is a fact about the corpus. It exists because a schema-invalid input whose invalid part the crate does not model is parsed, the content is dropped, and the output validates — `validate` then goes green *because* something was lost. Added by OSP-14. |
+| `mutate` | The other half of the question: does the crate **refuse** what the schema refuses? It breaks each schema-valid corpus file in XSD-guided ways — dropping a required child or a required attribute, duplicating a child whose `maxOccurs` is 1, adding a second branch to a choice, writing a value outside an enumeration — keeps the mutants libxml2 rejects, and requires the crate to reject them too. A mutant the crate accepts is a **hole**, reported by mutation kind and XSD type. It also runs an unmutated control per file, since refusing a valid document is a defect in the other direction. |
 | `builder` | Every builder fixture through the same three questions (round trip, fidelity, schema), using code as the corpus instead of files. With `--coverage`, reports how much of one real scenario the builder can reconstruct — a figure, not a gate. |
 
 ## Expected failures: `expectations.toml`
@@ -113,6 +116,38 @@ the gate stops failing, the assertion trips, and the entry must go.
 `path` is relative to `conformance/corpus/`, so the manifest is machine-independent, and every
 `path` must exist in the fetched corpus or the harness errors out.
 
+### Known holes: `[[hole]]` entries
+
+`mutate` asks about a constraint rather than about a file, so it is the one gate an `[[entry]]`
+cannot name; writing `"mutate"` in an entry's `gates` is a load error that says as much. A gap in
+what the crate refuses is recorded in a `[[hole]]` entry instead, keyed by the mutation kind and
+the XSD complex type of the mutated element, because every document containing that element
+exhibits the same gap:
+
+```toml
+[[hole]]
+gate = "mutate"
+kind = "double-choice"
+type = "OpenScenario"
+assert = "crate-accepts-invalid"
+reason = "…why the gap is open, and what closing it would cost…"
+```
+
+The anti-rot mechanism is the same one, in its one-assertion form: `assert = "crate-accepts-invalid"`
+claims the schema rejects this mutation and the crate accepts it, and the gate proves that claim on
+every run. When the crate starts refusing it, the entry describes nothing, the gate fails with
+`the mutate gate found no such hole`, and the entry has to be deleted. Hence a hole recorded here
+is a decision on record rather than a filter.
+
+The two entries present both describe the document root. `OpenScenario` (XSD:1532) is a sequence
+of `<FileHeader>` followed by an `xsd:group` reference whose choice is over three further group
+references, one of which inlines seven sibling elements into the root. There is no
+`<ScenarioDefinition>` element in the XML, so the `$value` idiom cannot express that choice —
+`$value` takes one element name per instance — and the nine root children are parallel `Option`
+fields. Thus a document that names no branch, or two at once, parses. The alternative is an
+untagged enum, which collapses every parse diagnostic in the document to "data did not match any
+variant"; that trade is a design decision and is recorded as an open one.
+
 ### Output and exit codes
 
 Each excluded file prints an `XFAIL` line naming the gate result and the `assert` value, and the
@@ -136,7 +171,7 @@ excludes `Invalid.xosc`, `OSC_1_3_test_invalid.xosc` and `traffic_area_action_te
 |---|---|
 | `0` | Clean: every non-excluded file passed, and every expectation still holds. |
 | `1` | A gate failure, or a broken expectation (an `assert` premise that no longer holds, or a gate that no longer fails for an exempt file). |
-| `2` | The **manifest itself** is wrong: unparseable, a `path` that does not exist, a duplicate entry, or an empty `gates` list. |
+| `2` | The **manifest itself** is wrong: unparseable, a `path` that does not exist, a duplicate entry, an empty `gates` list, a `[[hole]]` naming a gate other than `mutate` or a mutation kind that does not exist, or an `[[entry]]` naming the `mutate` gate. |
 
 ## What a green run proves, and what it does not
 
@@ -147,6 +182,17 @@ produces a passing comparison anyway. `lossy` is what makes dropped or invented 
 including dropped *character content*, which it could not see before OSP-14 — and the two
 `validate` binaries are the ones that consult the schema, one about the output and one about the
 input.
+
+A green run of those four proves the crate **keeps what it is given**. It cannot prove the crate
+refuses what the schema refuses, because every file they read is valid: a type that accepts
+anything passes all four. That is not a hypothetical. Thirty-four `xsd:choice` groups modelled as
+parallel `Option` fields, thirty-four required repeated elements with no `minOccurs`, and the
+`flatten` and untagged sites all parsed invalid documents without complaint while this gate
+reported eleven green stages. `mutate` is the stage that asks the other half, and its green run
+proves something narrower than it looks: 1829 mutants over 103 of the schema's 287 complex types,
+which is every type the corpus reaches at a site the cap selected. A type no mutant touched is
+untested, not sound — the same caveat the element-coverage figure above carries, measured on a
+different axis.
 
 `lossy` used to compare element and attribute *names* only. A value rewritten in place —
 `${pi}` reserialized as `$pi`, same-named siblings swapping position and so swapping priority or

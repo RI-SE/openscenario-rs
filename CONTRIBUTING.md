@@ -57,7 +57,7 @@ bash scripts/gate.sh
 ```
 
 It takes an optional stage filter as its one argument – `lint` (markdown links, fmt, clippy),
-`build` (build, test), or `conformance` (fetch corpus, the harness tests, and the four corpus
+`build` (build, test), or `conformance` (fetch corpus, the harness tests, and the five corpus
 gate binaries) – for a faster loop while iterating; an unrecognized filter is a usage error, not a silent no-op. It also
 checks system prerequisites first, for every filter – the MSRV from `Cargo.toml`'s
 `rust-version`, and `pkg-config`'s view of libxml2, which the `validation` feature links against
@@ -145,9 +145,9 @@ deserialized variant and its field values, re-serialize, and assert the emitted 
 
 ## The conformance gates
 
-Four gates run against the corpus in the `conformance` workspace member
+Five gates run against the corpus in the `conformance` workspace member
 (`openscenario-roundtrip-harness`), which depends on this crate by path with the `validation`
-feature. All four exit non-zero on failure.
+feature. All five exit non-zero on failure.
 
 The corpus itself is third-party content from three upstream repositories (two MPL-2.0, one
 EPL-2.0), not vendored into this GPL-3.0-only repo. Fetch it once with:
@@ -162,9 +162,12 @@ bash scripts/fetch-corpus.sh
 | `cargo run -p openscenario-roundtrip-harness --bin lossy` | the original file vs `xml1` | data dropped or invented on the first parse |
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs the XSD | schema-invalid output |
 | `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs the XSD | a schema-invalid input, which the crate may otherwise "improve" into a valid document by dropping the invalid part |
+| `cargo run -p openscenario-roundtrip-harness --bin mutate` | the crate's verdict vs the XSD's, on deliberately broken copies of each file | a type that **accepts** what the schema forbids: a missing required child or attribute, a repeated element past its `maxOccurs`, two branches of one choice, a value outside an enumeration |
 
 Run them from the repo root. `lossy` is the one to check after adding a type, because it is the
-only gate that sees first-parse data loss. `validate-input` is the odd one out: it never parses
+only gate that sees first-parse data loss. `mutate` is the one to check after tightening a type,
+because it is the only gate that feeds the crate invalid input at all; the other four read valid
+documents, so a type that accepts anything passes them. `validate-input` is the odd one out: it never parses
 the file with this crate, so its verdict is a fact about the corpus rather than about the code,
 and it is what stops a green `validate` run from meaning "the output is valid" when the reason is
 that content went missing.
@@ -173,7 +176,7 @@ that content went missing.
 files whose expected outcome is not "passes everything", with the reason and the gates each is
 exempt from. It is not a skip list: every entry asserts something the harness checks, so an
 exemption that stops being needed fails loudly. The categories and the per-gate table are in
-[conformance/README.md](conformance/README.md). All four, plus `cargo test -p
+[conformance/README.md](conformance/README.md). All five, plus `cargo test -p
 openscenario-roundtrip-harness`, also run from [the pre-push hook](#the-pre-push-gate), so a push
 that reaches the remote has already cleared them.
 

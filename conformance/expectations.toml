@@ -77,3 +77,50 @@ that the improvement happened rather than pretending it did not. If upstream fix
 both the `input-schema-invalid` premise and both gate assertions trip at once and this entry \
 must be deleted.\
 """
+
+# ---------------------------------------------------------------------------------------------
+# Known holes in what the crate refuses, for the `mutate` gate.
+#
+# A `[[hole]]` entry is the counterpart of an `[[entry]]`, for the one gate that asks the opposite
+# question: does the crate refuse what the schema refuses? `mutate` breaks each schema-valid corpus
+# file in XSD-guided ways, keeps the mutants libxml2 rejects, and requires the crate to reject them
+# too. A mutant the crate accepts is a hole.
+#
+# A hole is a property of a *type*, not of a file — every document with the same element in it
+# exhibits the same gap — so an entry is keyed by the mutation kind and the XSD complex type rather
+# than by a path, and `gate` is always "mutate". `assert = "crate-accepts-invalid"` states the
+# premise the gate proves on every run: the schema rejects this mutation and the crate accepts it.
+# When the crate starts refusing it, the entry describes nothing, the gate fails, and the entry has
+# to be deleted. Hence a hole recorded here is a decision on record, not a filter.
+
+[[hole]]
+gate = "mutate"
+kind = "drop-required"
+type = "OpenScenario"
+assert = "crate-accepts-invalid"
+reason = """
+The document root is a sequence of <FileHeader> followed by a reference to the OpenScenarioCategory \
+group (XSD:1532), which is a choice over three further group references. One of them, \
+ScenarioDefinition (XSD:1989), is seven sibling elements inlined into the root; four of those — \
+CatalogLocations, RoadNetwork, Entities and Storyboard — are required within it. There is no \
+<ScenarioDefinition> element in the XML at all, so the `$value` idiom cannot express the choice: \
+`$value` takes one element name per instance, and a `$value` enum over these branches would emit an \
+element the schema never declares. The nine root children are therefore parallel Option fields, and \
+a document missing a required member of the branch it took parses as that member being absent. \
+Making the cardinality structural needs an untagged enum, which collapses every parse diagnostic in \
+the document to "data did not match any variant"; that trade is a design decision and is recorded \
+as an open one rather than taken here.\
+"""
+
+[[hole]]
+gate = "mutate"
+kind = "double-choice"
+type = "OpenScenario"
+assert = "crate-accepts-invalid"
+reason = """
+The same root choice, from the other side: because the nine root children are parallel Option \
+fields rather than one choice, a document that takes two branches at once — a <Catalog> beside a \
+<Storyboard>, or a <ParameterValueDistribution> beside a <CatalogLocations> — parses with both \
+fields populated instead of being refused. See the drop-required entry above for why `$value` \
+cannot express this group and what the alternative costs.\
+"""

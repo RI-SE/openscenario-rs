@@ -4,6 +4,7 @@
 #![deny(unused_must_use)]
 
 pub mod builder_fixtures;
+pub mod mutate;
 pub mod xml_profile;
 
 use openscenario_rs::validation::XsdValidator;
@@ -177,9 +178,14 @@ pub fn check_builder_fixture(
     failures
 }
 
+/// The crate's `Schema/OpenSCENARIO.xsd`, relative to this crate's manifest directory.
+pub fn schema_path() -> PathBuf {
+    manifest_dir().join("../Schema/OpenSCENARIO.xsd")
+}
+
 /// Loads the crate's `Schema/OpenSCENARIO.xsd` relative to this crate's manifest directory.
 pub fn load_schema() -> openscenario_rs::Result<XsdValidator> {
-    XsdValidator::from_schema_file(manifest_dir().join("../Schema/OpenSCENARIO.xsd"))
+    XsdValidator::from_schema_file(schema_path())
 }
 
 /// This crate's manifest directory, falling back to the process CWD outside of Cargo.
@@ -260,13 +266,17 @@ pub fn assert_catalog_roundtrip_fixed_point(path: &str) {
 //   2. "still needed" — the gate the file is exempt from must still genuinely fail for it,
 //      checked by each binary at the point it would otherwise have run the gate.
 
-/// One of the four corpus gates a file can be exempted from.
+/// One of the gates an entry in `conformance/expectations.toml` can name.
+///
+/// The first four are per-file: a corpus file is exempted from them. `Mutate` is not — the
+/// `mutate` gate asks about a *constraint* rather than about a file, so it is named by a
+/// `[[hole]]` entry instead, and naming it in an `[[entry]]`'s `gates` is rejected at load.
 ///
 /// `Report` covers both `src/bin/report.rs` and the round-trip test `build.rs` generates for the
 /// file — they ask the same question of the same file, so exempting one without the other would
 /// leave the gate red in `cargo test` and green in the binary.
 ///
-/// `ValidateInput` is the odd one out: it asks about the **input** file rather than about
+/// `ValidateInput` is the odd one out among the per-file gates: it asks about the **input** file rather than about
 /// anything this crate produced, so it is the only gate whose result is independent of the code.
 /// Added by OSP-14, because `report`, `lossy` and `validate` between them could all stay green
 /// over a schema-invalid input that the crate quietly improved into a valid document.
@@ -278,6 +288,7 @@ pub enum Gate {
     Validate,
     #[serde(rename = "validate-input")]
     ValidateInput,
+    Mutate,
 }
 
 impl fmt::Display for Gate {
@@ -287,6 +298,7 @@ impl fmt::Display for Gate {
             Gate::Lossy => "lossy",
             Gate::Validate => "validate",
             Gate::ValidateInput => "validate-input",
+            Gate::Mutate => "mutate",
         })
     }
 }
@@ -332,16 +344,60 @@ pub struct Expectation {
     pub reason: String,
 }
 
+/// The premise a `[[hole]]` entry states about the `mutate` gate.
+///
+/// There is one variant because there is one thing such an entry can mean. It is still spelled out
+/// in the file, so the entry reads as a claim the harness proves rather than as a filter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+pub enum HoleAssert {
+    /// The schema rejects this mutation and the crate accepts it. `reason` names the issue or the
+    /// decision that keeps it open. When the crate starts refusing it, the entry is stale and the
+    /// gate fails until it is deleted.
+    #[serde(rename = "crate-accepts-invalid")]
+    CrateAcceptsInvalid,
+}
+
+impl fmt::Display for HoleAssert {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            HoleAssert::CrateAcceptsInvalid => "crate-accepts-invalid",
+        })
+    }
+}
+
+/// One `[[hole]]` of `conformance/expectations.toml`: a known gap in what the crate refuses.
+///
+/// A hole is a property of a *type*, not of a file — every corpus file with a `ScenarioObject` in
+/// it exhibits the same gap — so the entry is keyed by the mutation kind and the XSD complex type
+/// rather than by a path.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HoleExpectation {
+    /// Always `mutate`. The field is present so the entry says which gate it speaks for.
+    pub gate: Gate,
+    /// The mutation kind, as `mutate` prints it.
+    pub kind: String,
+    /// The XSD complex type of the mutated element.
+    #[serde(rename = "type")]
+    pub type_name: String,
+    pub assert: HoleAssert,
+    /// Prose for a human: the issue or the design decision that keeps the hole open.
+    pub reason: String,
+}
+
 #[derive(Debug, Clone, Default, serde::Deserialize)]
 struct ExpectationsFile {
     #[serde(default, rename = "entry")]
     entries: Vec<Expectation>,
+    #[serde(default, rename = "hole")]
+    holes: Vec<HoleExpectation>,
 }
 
 /// The parsed `conformance/expectations.toml`.
 #[derive(Debug, Clone, Default)]
 pub struct Expectations {
     entries: Vec<Expectation>,
+    holes: Vec<HoleExpectation>,
 }
 
 /// The manifest's path: `conformance/expectations.toml`.
@@ -361,6 +417,15 @@ impl Expectations {
 
         let mut seen: Vec<&str> = Vec::new();
         for entry in &parsed.entries {
+            if entry.gates.contains(&Gate::Mutate) {
+                return Err(format!(
+                    "{}: entry `{}` names the `mutate` gate, which is not a per-file gate. \
+                     A known gap in what the crate refuses belongs in a [[hole]] entry, keyed by \
+                     mutation kind and XSD type.",
+                    path.display(),
+                    entry.path
+                ));
+            }
             if entry.gates.is_empty() {
                 return Err(format!(
                     "{}: entry `{}` exempts no gate; delete it instead",
@@ -378,8 +443,44 @@ impl Expectations {
             seen.push(&entry.path);
         }
 
+        let mut seen_holes: Vec<(&str, &str)> = Vec::new();
+        for hole in &parsed.holes {
+            if hole.gate != Gate::Mutate {
+                return Err(format!(
+                    "{}: hole entry `{} / {}` names gate `{}`; only `mutate` reports holes",
+                    path.display(),
+                    hole.kind,
+                    hole.type_name,
+                    hole.gate
+                ));
+            }
+            if mutate::Kind::parse(&hole.kind).is_none() {
+                return Err(format!(
+                    "{}: hole entry names the unknown mutation kind `{}`. Known kinds: {}",
+                    path.display(),
+                    hole.kind,
+                    mutate::Kind::ALL
+                        .iter()
+                        .map(|k| k.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
+            let key = (hole.kind.as_str(), hole.type_name.as_str());
+            if seen_holes.contains(&key) {
+                return Err(format!(
+                    "{}: duplicate hole entry for `{} / {}`",
+                    path.display(),
+                    hole.kind,
+                    hole.type_name
+                ));
+            }
+            seen_holes.push(key);
+        }
+
         Ok(Self {
             entries: parsed.entries,
+            holes: parsed.holes,
         })
     }
 
@@ -428,6 +529,18 @@ impl Expectations {
     /// Every entry, in manifest order.
     pub fn entries(&self) -> &[Expectation] {
         &self.entries
+    }
+
+    /// Every `[[hole]]` entry, in manifest order.
+    pub fn holes(&self) -> &[HoleExpectation] {
+        &self.holes
+    }
+
+    /// The hole entry covering a mutation kind applied to an XSD type, if any.
+    pub fn hole(&self, kind: &str, type_name: &str) -> Option<&HoleExpectation> {
+        self.holes
+            .iter()
+            .find(|h| h.kind == kind && h.type_name == type_name)
     }
 
     /// The entry exempting `rel` from `gate`, if any. `rel` is corpus-relative.
@@ -501,6 +614,18 @@ pub fn stale_exemption_message(rel: &Path, gate: Gate) -> String {
         "{}: excluded from `{gate}` by conformance/expectations.toml, but it PASSES `{gate}` now. \
          The exemption is stale — remove it from the manifest.",
         rel.display()
+    )
+}
+
+/// The message `mutate` prints when a `[[hole]]` entry stops describing anything.
+///
+/// The counterpart of [`stale_exemption_message`]: a hole that has been closed must fail the gate,
+/// so the entry is deleted rather than left standing as a permanent excuse.
+pub fn stale_hole_message(hole: &HoleExpectation) -> String {
+    format!(
+        "{} / {}: recorded in conformance/expectations.toml as `{}`, but the mutate gate found no \
+         such hole. Either it is fixed — delete the entry — or no mutant reached that type.",
+        hole.kind, hole.type_name, hole.assert
     )
 }
 

@@ -767,6 +767,28 @@ Breaking, unless noted.
   `TriggerBuilder::add_condition` to create single-condition groups without the fallibility of
   `ConditionGroup::new`, which remains available for builders that collect conditions into a
   plain vector that may be empty.
+- **A conformance gate that feeds the crate invalid input.** The corpus harness had five binaries
+  and all five read schema-valid documents, so between them they answered one question: does the
+  crate keep what it is given? None of them could see the crate *accepting* a document the schema
+  forbids, which is the defect class this release is mostly about. The choice groups modelled as
+  parallel `Option` fields, the required repeated elements with no `minOccurs`, and the
+  `#[serde(flatten)]` and untagged sites all parsed invalid documents without complaint while the
+  gate reported eleven green stages. The new `mutate` binary
+  (`conformance/src/bin/mutate.rs`, engine in `conformance/src/mutate.rs`) closes that blind spot.
+  It reads `Schema/OpenSCENARIO.xsd` to find where a document can be broken, applies five
+  XSD-guided mutations to every schema-valid corpus file — dropping a child below its `minOccurs`,
+  duplicating a child past its `maxOccurs`, adding a second branch to an `xsd:choice`, dropping a
+  `use="required"` attribute, and writing a value outside an enumeration — and then compares two
+  verdicts on each mutant: libxml2's against the schema, and the crate's at `parse_from_str`. A
+  mutant the schema rejects and the crate accepts is a hole. The engine names no element and no
+  type of its own; every name comes from the schema or from the document, so the gate survives a
+  schema version bump. It is deliberately approximate, since libxml2 discards the mutants that
+  stayed valid, thereby keeping the oracle exact while the XSD reader only has to be a good
+  guide. Known gaps are recorded as `[[hole]]` entries in `conformance/expectations.toml`, keyed
+  by mutation kind and XSD type and proven on every run, so a gap that gets closed fails the gate
+  until its entry is deleted. Two are recorded, both describing the document root, whose
+  `xsd:group` choice cannot be expressed with the `$value` idiom. `scripts/gate.sh` runs the
+  binary as its twelfth stage.
 
 ### Removed
 
