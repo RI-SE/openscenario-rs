@@ -8,7 +8,7 @@
 
 use openscenario_rs::types::basic::{Double, Int, ParameterDeclarations, Value};
 use openscenario_rs::types::enums::ParameterType;
-use openscenario_rs::types::{ParameterScope, Resolve};
+use openscenario_rs::types::ParameterScope;
 use openscenario_rs::Error;
 
 fn declarations(xml: &str) -> ParameterDeclarations {
@@ -287,8 +287,6 @@ fn a_resolved_int_parameter_resolves_into_an_int_field() {
     declare_ok(&mut scope, "lane", "int", "-2");
     let field = Int::parameter("lane".into());
     assert_eq!(scope.resolve(&field).unwrap(), -2);
-    // The trait path is the same operation.
-    assert_eq!(Resolve::resolve(&field, &scope).unwrap(), -2);
 }
 
 // --- Names ---------------------------------------------------------------------------------

@@ -923,6 +923,14 @@ Breaking, unless noted.
   resolved against the flat `parameters` map alone; the type looked scoped and was not.
   `Resolve::resolve` now takes `&ParameterScope` instead of `&ParameterContext`.
 
+- **`types::Resolve<T>`.** Breaking. The trait's only impl was on `Value<T>`, and it was never
+  called in production code — a thin wrapper around `ParameterScope::resolve`. The inherent
+  method `Value<T>::resolve(&HashMap<String, String>)` shadows the trait at method-call syntax,
+  so `value.resolve(&scope)` always picked the inherent method and would not compile. Use
+  `scope.resolve(&value)` instead, or `value.resolve(&hashmap)` to resolve against a flat
+  parameter map (geometry and routing code do this for internal calculations when parameters
+  are not scoped).
+
 - **`builder::ParameterContext` and `builder::Parameterizable`.** Breaking. No builder and no
   other production path used either: `Parameterizable` had no implementation anywhere, and
   `ParameterContext` was constructed only by its own tests. Its `resolve_value` returned an

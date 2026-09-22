@@ -127,13 +127,6 @@ pub trait Validate {
     fn validate(&self, ctx: &ValidationContext) -> crate::Result<()>;
 }
 
-/// Resolution of `$parameter` references and `${expression}`s against the parameters
-/// visible at one point of a document.
-pub trait Resolve<T> {
-    /// Resolve any parameters in this object using the parameters `scope` makes visible
-    fn resolve(&self, scope: &ParameterScope) -> crate::Result<T>;
-}
-
 /// Context for validation operations
 ///
 /// Contains references to entities, catalogs, and other global state needed
@@ -189,15 +182,5 @@ impl<T> Validate for Value<T> {
     fn validate(&self, _ctx: &ValidationContext) -> crate::Result<()> {
         // Basic Value<T> types don't need validation beyond their own constraints
         Ok(())
-    }
-}
-
-impl<T: Clone> Resolve<T> for Value<T>
-where
-    T: std::str::FromStr,
-    T::Err: std::fmt::Display,
-{
-    fn resolve(&self, scope: &ParameterScope) -> crate::Result<T> {
-        scope.resolve(self)
     }
 }

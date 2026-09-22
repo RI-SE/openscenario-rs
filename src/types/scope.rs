@@ -398,9 +398,10 @@ impl ParameterScope {
     /// Resolve a value at this point of the document: a literal as itself, a `$name` against
     /// the innermost binding of `name`, an `${expression}` against every visible binding.
     ///
-    /// The same operation as [`Resolve::resolve`](crate::types::Resolve::resolve), reachable
-    /// without naming the trait: `Value<T>` has an inherent `resolve` taking a flat map, which
-    /// method-call syntax would pick instead.
+    /// This is the preferred way to resolve a value against a scope. `Value<T>` has an inherent
+    /// `resolve` method that takes a flat `HashMap`, but this method provides proper scoped
+    /// resolution according to ASAM OpenSCENARIO section 9.1, with inner scopes shadowing outer
+    /// ones and cross-scope visibility correctly handled.
     pub fn resolve<T>(&self, value: &Value<T>) -> Result<T>
     where
         T: FromStr + Clone,
