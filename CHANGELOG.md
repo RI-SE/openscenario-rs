@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-22
+
 This release is the result of a five-pass conformance campaign against
 `Schema/OpenSCENARIO.xsd`. The Rust types were read against the schema element by element,
 and the type model now follows the XSD rather than approximating it. The campaign removed
@@ -2220,7 +2222,8 @@ git log --oneline -1 FETCH_HEAD
 
 Nothing has been retagged, re-published or yanked to close this gap; the record is the fix.
 
-[Unreleased]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/RI-SE/openscenario-rs/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/RI-SE/openscenario-rs/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/RI-SE/openscenario-rs/tree/v0.4.0
