@@ -2030,6 +2030,22 @@ Breaking, unless noted.
   `TimeOfDayCondition` and `TimeOfDay` and asserts a byte-exact round trip, rather than comparing
   parsed values.
 
+- **`XsdDateTime`'s `PartialEq`, `Eq` and `Hash` compared the source text kept for lexical
+  fidelity, so two spellings of one instant compared unequal.** The `source` field added above
+  was derived over along with the parsed value, so `"...T10:00:00Z"` and `"...T10:00:00+00:00"` --
+  the same instant, written two ways -- were unequal, and a value built with
+  `XsdDateTime::aware`/`XsdDateTime::naive` was never equal to the parsed value it came from. A
+  `HashMap` or `HashSet` keyed on a parsed value could not be looked up with a constructed one for
+  the same reason. `PartialEq`, `Eq` and `Hash` are now hand-written to compare the parsed value
+  alone; `source` still participates in `Display` and therefore in serialization, so the lexical
+  fidelity above is unaffected. A naive (offset-less) value is still never equal to an aware one,
+  since it names no single instant to compare. `Value<T>`'s own derived `PartialEq` inherits this
+  fix wherever it wraps a `DateTime`.
+
+  The gate's corpus feeds the crate only one spelling per document, so it cannot observe two
+  values compare unequal; `tests/datetime_value_equality_test.rs` is a hand-built regression
+  fixture, comparing values parsed through `TimeOfDayCondition` and through `FromStr` directly.
+
 - **A typed-parse error following `parse_str_resolved` or `parse_file_resolved` named a position
   in the resolved text, not in the document the caller wrote, and `Error::with_context` spliced a
   generic description into the middle of a `ParameterError`'s message.** `resolve_parameters`

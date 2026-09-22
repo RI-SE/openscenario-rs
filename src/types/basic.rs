@@ -287,10 +287,32 @@ pub type DateTime = Value<XsdDateTime>;
 /// from alongside it and reproduces that text literally; only a value built directly with
 /// [`XsdDateTime::aware`] or [`XsdDateTime::naive`], which was never parsed from XML, falls
 /// back to the canonical form.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+///
+/// `PartialEq`, `Eq` and `Hash` compare the parsed [`XsdDateTimeValue`] only; the recorded
+/// `source` text takes no part. Two values that name the same instant through different
+/// spellings -- `Z` and `+00:00`, or `.5` and `.500` -- therefore compare equal even though
+/// each still serializes as the text it was parsed from. A value with no explicit offset
+/// (`Naive`) is never equal to one with an offset (`Aware`), regardless of clock reading,
+/// because it names no instant to compare. Use [`XsdDateTime::to_string`] (via `Display`) or
+/// hold onto the source string directly when the written spelling itself is what matters.
+#[derive(Debug, Clone)]
 pub struct XsdDateTime {
     value: XsdDateTimeValue,
     source: Option<Box<str>>,
+}
+
+impl PartialEq for XsdDateTime {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl Eq for XsdDateTime {}
+
+impl std::hash::Hash for XsdDateTime {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
