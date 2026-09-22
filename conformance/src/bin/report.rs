@@ -6,6 +6,8 @@
 //! exemption is an error), must still prove the premise its `assert` states about the input file,
 //! and is named on its own summary line.
 
+#![deny(unused_must_use)]
+
 use openscenario_roundtrip_harness::xml_profile::first_line;
 use openscenario_roundtrip_harness::{
     check_catalog_roundtrip, check_roundtrip, corpus_dir, is_catalog, load_schema, require_corpus,

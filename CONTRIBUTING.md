@@ -13,7 +13,7 @@ cargo build --features builder,validation --all-targets
 cargo test
 cargo test --features builder,validation
 cargo fmt --check
-cargo clippy --features builder,validation --all-targets
+cargo clippy --workspace --features builder,validation --all-targets
 ```
 
 The build should be clean. If `cargo build` fails on a fresh checkout, that is a bug worth

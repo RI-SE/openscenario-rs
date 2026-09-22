@@ -236,8 +236,8 @@ fn cut_in_detached() -> BuilderResult<OpenScenario> {
         });
 
     speed.attach_to_detached(&mut maneuver)?;
-    maneuver.attach_to_detached(&mut act);
-    act.attach_to(&mut story_builder);
+    maneuver.attach_to_detached(&mut act)?;
+    act.attach_to(&mut story_builder)?;
 
     storyboard_builder.finish().build()
 }
@@ -283,8 +283,8 @@ fn comprehensive_overtaking() -> BuilderResult<OpenScenario> {
                 condition_groups: vec![],
             });
         action.attach_to_detached(&mut maneuver)?;
-        maneuver.attach_to_detached(&mut act);
-        act.attach_to(&mut story_builder);
+        maneuver.attach_to_detached(&mut act)?;
+        act.attach_to(&mut story_builder)?;
     }
 
     // The third act uses a teleport rather than a speed action.
@@ -299,8 +299,8 @@ fn comprehensive_overtaking() -> BuilderResult<OpenScenario> {
             condition_groups: vec![],
         });
     teleport.attach_to_detached(&mut maneuver3)?;
-    maneuver3.attach_to_detached(&mut act3);
-    act3.attach_to(&mut story_builder);
+    maneuver3.attach_to_detached(&mut act3)?;
+    act3.attach_to(&mut story_builder)?;
 
     storyboard_builder.finish().build()
 }
@@ -349,8 +349,13 @@ pub fn alks_4_1_1_free_driving() -> BuilderResult<OpenScenario> {
     let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
     let mut story_builder = storyboard_builder.add_story_simple("ALKS_FreeDriving_TestSequence");
 
-    // Three acts: highway entry, adaptive following, steady-state validation.
-    let acts: [(&str, &[(&str, &str, &str, f64)]); 3] = [
+    // Three acts: highway entry, adaptive following, steady-state validation. Named so clippy
+    // stops asking for the tuple to be factored into a type: the tuple itself carries no
+    // meaning beyond "one row of the table below".
+    type ManeuverSpec = (&'static str, &'static str, &'static str, f64);
+    type ActSpec = (&'static str, &'static [ManeuverSpec]);
+
+    let acts: [ActSpec; 3] = [
         (
             "Act1_ALKSActivation",
             &[
@@ -392,11 +397,11 @@ pub fn alks_4_1_1_free_driving() -> BuilderResult<OpenScenario> {
                     condition_groups: vec![],
                 });
             action.attach_to_detached(&mut maneuver)?;
-            maneuver.attach_to_detached(&mut act);
+            maneuver.attach_to_detached(&mut act)?;
         }
-        act.attach_to(&mut story_builder);
+        act.attach_to(&mut story_builder)?;
     }
 
-    story_builder.finish();
+    story_builder.finish()?;
     storyboard_builder.stop_after_time(120.0)?.finish().build()
 }

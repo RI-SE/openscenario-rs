@@ -1,3 +1,8 @@
+// A dropped `Result` here is a dropped builder failure: a fixture whose `attach_to` or
+// `finish` silently did nothing builds a smaller scenario than it claims to, and every check
+// downstream certifies that smaller scenario instead of catching the defect.
+#![deny(unused_must_use)]
+
 pub mod builder_fixtures;
 pub mod xml_profile;
 

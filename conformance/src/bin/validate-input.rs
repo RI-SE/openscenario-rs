@@ -18,6 +18,8 @@
 //! excluded file is still validated, must still fail (a stale exemption is an error), must still
 //! prove the premise its `assert` states, and is named on its own summary line.
 
+#![deny(unused_must_use)]
+
 use openscenario_roundtrip_harness::xml_profile::{first_line, print_ranked};
 use openscenario_roundtrip_harness::{
     corpus_dir, load_schema, require_corpus, stale_exemption_message, Expectations, Gate,

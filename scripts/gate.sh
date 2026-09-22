@@ -162,7 +162,7 @@ stage lint "Check markdown links"                  -- check_md_links
 STAGE_CMD_DISPLAY="cargo fmt --all --check" \
   stage lint "Check formatting"                    -- fmt_check
 unset STAGE_CMD_DISPLAY
-stage lint "Clippy"                                -- cargo clippy --features builder,validation --all-targets
+stage lint "Clippy"                                -- cargo clippy --workspace --features builder,validation --all-targets
 stage build "Build"                                -- cargo build --features builder,validation --all-targets
 stage build "Test"                                 -- cargo test --features builder,validation
 

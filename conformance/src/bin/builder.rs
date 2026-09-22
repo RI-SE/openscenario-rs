@@ -12,6 +12,8 @@
 //! gated: the builder reaches perhaps half of the type system, so a non-zero diff is a coverage
 //! figure, not a regression.
 
+#![deny(unused_must_use)]
+
 use openscenario_roundtrip_harness::builder_fixtures;
 use openscenario_roundtrip_harness::xml_profile::{diff, first_line, print_ranked, profile};
 use openscenario_roundtrip_harness::{

@@ -15,6 +15,8 @@
 //! an error), must still prove the premise its `assert` states about the input file, and is named
 //! on its own summary line.
 
+#![deny(unused_must_use)]
+
 use openscenario_roundtrip_harness::xml_profile::{diff, first_line, print_ranked, profile};
 use openscenario_roundtrip_harness::{
     corpus_dir, is_catalog, load_schema, require_corpus, stale_exemption_message, Expectations,

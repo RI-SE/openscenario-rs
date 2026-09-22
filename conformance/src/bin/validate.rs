@@ -20,6 +20,8 @@
 //! here is still a crate bug — the exclusions are the files where that inference would not hold,
 //! each carrying a positive assertion about why.
 
+#![deny(unused_must_use)]
+
 use openscenario_roundtrip_harness::xml_profile::{first_line, print_ranked};
 
 use openscenario_roundtrip_harness::{
