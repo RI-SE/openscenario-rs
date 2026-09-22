@@ -51,13 +51,16 @@ impl TriggerBuilder {
 
     /// Add a single condition as its own group (convenience method)
     ///
-    /// `ConditionGroup` now states its `minOccurs="1"` in its field type, so building one
-    /// returns a `Result`. One condition always satisfies that bound; the `Result` is
-    /// propagated rather than unwrapped so that no panic path exists here.
-    pub fn add_condition(mut self, condition: Condition) -> BuilderResult<Self> {
-        self.condition_groups
-            .push(ConditionGroup::new(vec![condition])?);
-        Ok(self)
+    /// `ConditionGroup::new` keeps a `Result` for `ConditionGroupBuilder::finish_group`,
+    /// which collects conditions into a plain `Vec` that can still be empty. This method
+    /// never has that problem: it is handed exactly one condition, which is `MinVec<_,
+    /// 1>`'s minimum by construction, so `MinVec::from_min` proves the bound at the type
+    /// level and there is nothing left to check.
+    pub fn add_condition(mut self, condition: Condition) -> Self {
+        self.condition_groups.push(ConditionGroup {
+            conditions: crate::types::basic::MinVec::from_min([condition], Vec::new()),
+        });
+        self
     }
 
     /// Build the trigger
@@ -196,12 +199,34 @@ mod tests {
 
         let trigger = TriggerBuilder::new()
             .add_condition(time_condition)
-            .unwrap()
             .build()
             .unwrap();
 
         assert_eq!(trigger.condition_groups.len(), 1);
         assert_eq!(trigger.condition_groups[0].conditions.len(), 1);
+    }
+
+    /// `add_condition` builds each `ConditionGroup` from `MinVec::from_min` with the one
+    /// condition it is handed, so nothing here can fail. Three chained calls below take no
+    /// `Result` at any step; a change that put the fallible `ConditionGroup::new` back on
+    /// this path would force a `?` back into this call site and fail to compile.
+    #[test]
+    fn test_trigger_builder_three_single_condition_groups() {
+        let t1 = TimeConditionBuilder::new().at_time(1.0).build().unwrap();
+        let t2 = TimeConditionBuilder::new().at_time(2.0).build().unwrap();
+        let t3 = TimeConditionBuilder::new().at_time(3.0).build().unwrap();
+
+        let trigger = TriggerBuilder::new()
+            .add_condition(t1)
+            .add_condition(t2)
+            .add_condition(t3)
+            .build()
+            .unwrap();
+
+        assert_eq!(trigger.condition_groups.len(), 3);
+        for group in &trigger.condition_groups {
+            assert_eq!(group.conditions.len(), 1);
+        }
     }
 
     #[test]

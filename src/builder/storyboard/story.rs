@@ -539,15 +539,13 @@ impl InitActionBuilderForStoryboard {
         entity_ref: &str,
         position: crate::types::positions::Position,
     ) -> BuilderResult<Self> {
-        self.init_builder = self
-            .init_builder
-            .add_teleport_action(entity_ref, position)?;
+        self.init_builder = self.init_builder.add_teleport_action(entity_ref, position);
         Ok(self)
     }
 
     /// Add a speed action for an entity (convenience method)
     pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> BuilderResult<Self> {
-        self.init_builder = self.init_builder.add_speed_action(entity_ref, speed)?;
+        self.init_builder = self.init_builder.add_speed_action(entity_ref, speed);
         Ok(self)
     }
 

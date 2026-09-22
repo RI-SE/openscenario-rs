@@ -52,56 +52,40 @@ impl InitActionBuilder {
 
     /// Append one already-built private action to `entity_ref`, reusing that entity's
     /// `<Private>` container when it already exists.
+    ///
+    /// A live `Private` already holds at least one action, so growing its `MinVec` by one
+    /// cannot fall below that bound. `MinVec::push` says exactly that, in place, which
+    /// removes the earlier take-apart-and-rebuild-through-`MinVec::new` dance along with the
+    /// `Result` it forced onto every caller.
     fn push_private_action(
         &mut self,
         entity_ref: &str,
         action: crate::types::scenario::init::PrivateAction,
-    ) -> BuilderResult<()> {
+    ) {
         let existing = self
             .private_actions
             .iter()
             .position(|p| p.entity_ref.as_literal().unwrap_or(&String::new()) == entity_ref);
 
         match existing {
-            Some(index) => {
-                // `private_actions` is a `MinVec`, so it cannot be pushed into through a
-                // shared reference. The container is taken out, grown and rebuilt, which
-                // re-checks the minimum. Growing a list that already satisfies the bound
-                // cannot break it, so the `?` here never fires in practice.
-                let existing_private = self.private_actions.remove(index);
-                let entity = existing_private.entity_ref;
-                let mut actions = existing_private.private_actions.into_inner();
-                actions.push(action);
-                self.private_actions.insert(
-                    index,
-                    Private {
-                        entity_ref: entity,
-                        private_actions: crate::types::basic::MinVec::new(actions)?,
-                    },
-                );
-            }
+            Some(index) => self.private_actions[index].private_actions.push(action),
             None => self
                 .private_actions
-                .push(Private::new(entity_ref, vec![action])?),
+                .push(Private::from_min(entity_ref, action, Vec::new())),
         }
-        Ok(())
     }
 
     /// Add a teleport action for an entity (convenience method)
-    pub fn add_teleport_action(
-        mut self,
-        entity_ref: &str,
-        position: Position,
-    ) -> BuilderResult<Self> {
+    pub fn add_teleport_action(mut self, entity_ref: &str, position: Position) -> Self {
         let action = crate::types::scenario::init::PrivateAction::teleport(
             crate::types::actions::movement::TeleportAction { position },
         );
-        self.push_private_action(entity_ref, action)?;
-        Ok(self)
+        self.push_private_action(entity_ref, action);
+        self
     }
 
     /// Add a speed action for an entity (convenience method)
-    pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> BuilderResult<Self> {
+    pub fn add_speed_action(mut self, entity_ref: &str, speed: f64) -> Self {
         let speed_action = crate::types::actions::movement::SpeedAction {
             speed_action_dynamics: crate::types::actions::movement::TransitionDynamics {
                 dynamics_dimension: Value::Literal(crate::types::enums::DynamicsDimension::Time),
@@ -121,8 +105,8 @@ impl InitActionBuilder {
         let action = crate::types::scenario::init::PrivateAction::longitudinal(
             crate::types::scenario::init::LongitudinalAction::speed(speed_action),
         );
-        self.push_private_action(entity_ref, action)?;
-        Ok(self)
+        self.push_private_action(entity_ref, action);
+        self
     }
 
     /// Internal method to add a completed private action
@@ -186,7 +170,6 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -209,7 +192,6 @@ mod tests {
     fn test_init_action_builder_with_speed() {
         let init = InitActionBuilder::new()
             .add_speed_action("ego", 30.0)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -247,9 +229,7 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position)
-            .unwrap()
             .add_speed_action("ego", 30.0)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -275,6 +255,31 @@ mod tests {
         );
     }
 
+    /// `push_private_action` grows an existing `Private`'s `MinVec` in place with
+    /// `MinVec::push`, rather than removing the container, rebuilding it through the
+    /// fallible `MinVec::new`, and reinserting it. This adds a third action to the same
+    /// entity to exercise that path past its first growth, and the whole chain below takes
+    /// no `Result` at any step — a change to `push_private_action` that reintroduced the
+    /// old rebuild-through-`new` pattern would force a `?` back into this call site and
+    /// fail to compile.
+    #[test]
+    fn test_init_action_builder_grows_same_entity_past_two_actions() {
+        let position = WorldPositionBuilder::new()
+            .at_coordinates(0.0, 0.0, 0.0)
+            .build()
+            .unwrap();
+
+        let init = InitActionBuilder::new()
+            .add_teleport_action("ego", position)
+            .add_speed_action("ego", 10.0)
+            .add_speed_action("ego", 20.0)
+            .build()
+            .unwrap();
+
+        assert_eq!(init.actions.private_actions.len(), 1);
+        assert_eq!(init.actions.private_actions[0].private_actions.len(), 3);
+    }
+
     #[test]
     fn test_init_action_builder_multiple_entities() {
         let position1 = WorldPositionBuilder::new()
@@ -289,13 +294,9 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position1)
-            .unwrap()
             .add_speed_action("ego", 30.0)
-            .unwrap()
             .add_teleport_action("target", position2)
-            .unwrap()
             .add_speed_action("target", 25.0)
-            .unwrap()
             .build()
             .unwrap();
 

@@ -44,9 +44,7 @@ mod tests {
         let init = InitActionBuilder::new()
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action("ego", position)
-            .unwrap()
             .add_speed_action("ego", 30.0)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -105,13 +103,9 @@ mod tests {
         let init = InitActionBuilder::new()
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action("ego", ego_pos)
-            .unwrap()
             .add_speed_action("ego", 30.0)
-            .unwrap()
             .add_teleport_action("target", target_pos)
-            .unwrap()
             .add_speed_action("target", 25.0)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -134,7 +128,6 @@ mod tests {
         // Test that TriggerBuilder creates non-empty triggers
         let trigger = TriggerBuilder::new()
             .add_condition(TimeConditionBuilder::new().at_time(5.0).build().unwrap())
-            .unwrap()
             .build()
             .unwrap();
 
@@ -238,7 +231,6 @@ mod tests {
         // 1. Non-empty triggers can be created
         let trigger = TriggerBuilder::new()
             .add_condition(TimeConditionBuilder::new().at_time(0.0).build().unwrap())
-            .unwrap()
             .build()
             .unwrap();
 
@@ -255,9 +247,7 @@ mod tests {
         let init = InitActionBuilder::new()
             .add_global_environment_action("TestEnvironment")
             .add_teleport_action("Ego", position)
-            .unwrap()
             .add_speed_action("Ego", 16.67)
-            .unwrap()
             .build()
             .unwrap();
 

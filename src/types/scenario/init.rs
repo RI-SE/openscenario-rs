@@ -397,6 +397,22 @@ impl Private {
             private_actions: MinVec::new(actions)?,
         })
     }
+
+    /// Create a `Private` container from one guaranteed action plus any further ones.
+    ///
+    /// [`PrivateActionBuilder::finish`](crate::builder::init::PrivateActionBuilder::finish)
+    /// and [`build`](crate::builder::init::PrivateActionBuilder::build) collect actions into
+    /// a plain `Vec` that can still be empty when the caller finishes without adding one, so
+    /// [`Private::new`] keeps its `Result` for them. A caller that already holds one action,
+    /// such as `InitActionBuilder`'s single-action convenience methods, proves the bound at
+    /// the type level instead: the first action is a required parameter rather than the head
+    /// of a vector that might be short.
+    pub fn from_min(entity_ref: &str, first: PrivateAction, rest: Vec<PrivateAction>) -> Self {
+        Self {
+            entity_ref: crate::types::basic::Value::literal(entity_ref.to_string()),
+            private_actions: MinVec::from_min([first], rest),
+        }
+    }
 }
 
 #[cfg(test)]

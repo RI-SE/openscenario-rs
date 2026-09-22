@@ -627,7 +627,6 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ghost", position)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -660,7 +659,6 @@ mod tests {
 
         let init = InitActionBuilder::new()
             .add_teleport_action("ego", position)
-            .unwrap()
             .build()
             .unwrap();
 

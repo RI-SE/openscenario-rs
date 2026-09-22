@@ -14,9 +14,7 @@
 //!             .build()
 //!             .unwrap()
 //!     )
-//!     .unwrap()
 //!     .add_speed_action("ego", 30.0)
-//!     .unwrap()
 //!     .build()
 //!     .unwrap();
 //! ```

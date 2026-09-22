@@ -199,8 +199,8 @@ impl<'parent> SpeedActionEventBuilder<'parent> {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
@@ -332,28 +332,27 @@ impl<P> EventTriggerBuilder<P> {
 
     /// Add time condition
     ///
-    /// Neither the condition build nor adding it to the group can fail for the input this
-    /// method accepts, but both go through a fallible `TriggerBuilder`/`ConditionGroup` API
-    /// this crate does not own here. Rather than assert that with an `.unwrap()` and a
-    /// comment, the `Result` is propagated: a change to either dependency that makes this
-    /// genuinely fallible then surfaces as an error, not a panic.
+    /// `TriggerBuilder::add_condition` no longer returns a `Result` — one condition always
+    /// satisfies `ConditionGroup`'s minimum, proved at the type level by `MinVec::from_min`
+    /// — but building the condition itself is still genuinely fallible, so this method keeps
+    /// its own `Result` for that.
     pub fn time_condition(mut self, time: f64) -> BuilderResult<Self> {
         let condition = crate::builder::conditions::TimeConditionBuilder::new()
             .at_time(time)
             .build()?;
-        self.trigger_builder = self.trigger_builder.add_condition(condition)?;
+        self.trigger_builder = self.trigger_builder.add_condition(condition);
         Ok(self)
     }
 
     /// Add speed condition
     ///
-    /// See [`Self::time_condition`] for why this returns a `Result` rather than `Self`.
+    /// See [`Self::time_condition`] for why this still returns a `Result`.
     pub fn speed_condition(mut self, entity_ref: &str, speed: f64) -> BuilderResult<Self> {
         let condition = crate::builder::conditions::ValueSpeedConditionBuilder::new()
             .for_entity(entity_ref)
             .speed_above(speed)
             .build()?;
-        self.trigger_builder = self.trigger_builder.add_condition(condition)?;
+        self.trigger_builder = self.trigger_builder.add_condition(condition);
         Ok(self)
     }
 }
@@ -495,7 +494,7 @@ impl DetachedSpeedActionBuilder {
                 crate::builder::conditions::TimeConditionBuilder::new()
                     .at_time(time)
                     .build()?,
-            )?
+            )
             .build()?;
         self.start_trigger = Some(trigger);
         Ok(self)
@@ -538,8 +537,8 @@ impl DetachedSpeedActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
@@ -583,8 +582,8 @@ impl DetachedSpeedActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
@@ -628,8 +627,8 @@ impl DetachedSpeedActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("SpeedAction".to_string()),
@@ -707,8 +706,8 @@ impl DetachedTeleportActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
@@ -752,8 +751,8 @@ impl DetachedTeleportActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
@@ -797,8 +796,8 @@ impl DetachedTeleportActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("TeleportAction".to_string()),
@@ -891,7 +890,7 @@ impl DetachedFollowTrajectoryActionBuilder {
                 crate::builder::conditions::TimeConditionBuilder::new()
                     .at_time(time)
                     .build()?,
-            )?
+            )
             .build()?;
         self.start_trigger = Some(trigger);
         Ok(self)
@@ -936,8 +935,8 @@ impl DetachedFollowTrajectoryActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
@@ -983,8 +982,8 @@ impl DetachedFollowTrajectoryActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
@@ -1030,8 +1029,8 @@ impl DetachedFollowTrajectoryActionBuilder {
                             .build()
                             .unwrap(),
                     )
+                    .build()
                     .ok()
-                    .and_then(|b| b.build().ok())
             }),
             actions: MinVec::new(vec![StoryAction {
                 name: OSString::literal("FollowTrajectoryAction".to_string()),
@@ -1358,7 +1357,6 @@ fn default_trigger() -> Option<Trigger> {
                 .build()
                 .ok()?,
         )
-        .ok()?
         .build()
         .ok()
 }

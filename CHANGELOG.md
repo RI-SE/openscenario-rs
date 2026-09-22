@@ -168,6 +168,29 @@ The conformance ledger, including what the test corpus does and does not prove, 
   meets `MIN` cannot fall below it by gaining one more item, so `push` mutates in place with
   no `Result`. Both are additive; `MinVec::new` is unchanged.
 
+- **`InitActionBuilder::add_teleport_action` and `::add_speed_action` return `Self` instead
+  of `BuilderResult<Self>`.** Breaking. Both went through `push_private_action`, which took
+  an existing entity's `Private` apart and rebuilt it through the fallible `MinVec::new`
+  purely to grow a list that already met its minimum; growing such a list cannot fall below
+  the minimum, so the rebuild now uses `MinVec::push` in place and the two methods have
+  nothing left to report. `Private::new` keeps its `Result`, since
+  `PrivateActionBuilder::finish`/`::build` collect actions into a plain `Vec` that can still
+  be empty; a new `Private::from_min`, taking the first action as a required parameter, is
+  used instead wherever the caller already holds one guaranteed action. This removed ten
+  `.unwrap()` calls and the comments justifying them from the shipped templates
+  (`BasicScenarioTemplate::single_vehicle`/`two_vehicle_scenario`/`alks_template`), which
+  were carrying the same reasoning at the call site that now lives in the type.
+
+- **`TriggerBuilder::add_condition` returns `Self` instead of `BuilderResult<Self>`.**
+  Breaking. It built its one-condition `ConditionGroup` through the fallible
+  `ConditionGroup::new`, even though a single condition always meets the group's
+  `minOccurs="1"`. It now builds the group directly from `MinVec::from_min` with that one
+  condition, so there is nothing left to propagate. `ConditionGroup::new` is unchanged, since
+  `ConditionGroupBuilder::finish_group` still collects conditions into a plain `Vec` that can
+  be empty. `EventTriggerBuilder::time_condition`/`::speed_condition` keep their own
+  `Result`, which now reports only the condition build itself rather than a group that could
+  never actually fail to form.
+
 - **Twenty-five leaf-type lists now carry their schema minimum in their type.** Each is
   `MinVec<T, N>` with `N` read from the field's own XSD element: `Polygon.position`
   (`Schema/OpenSCENARIO.xsd:1730`, **3** — the only such field in the schema),
