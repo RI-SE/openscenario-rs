@@ -1,11 +1,9 @@
 //! Builders for parameter declarations and the `${...}` references that use them.
 
-use crate::builder::{BuilderError, BuilderResult};
 use crate::types::{
     basic::{OSString, ParameterDeclaration, ParameterDeclarations, Value},
     enums::ParameterType,
 };
-use std::collections::HashMap;
 
 /// Builder for parameter declarations
 #[derive(Debug, Default)]
@@ -148,73 +146,6 @@ impl<T> ParameterizedValueBuilder<T> {
     }
 }
 
-/// Parameter context for resolving parameter references
-#[derive(Debug, Default)]
-pub struct ParameterContext {
-    parameters: HashMap<String, String>,
-}
-
-impl ParameterContext {
-    /// Create a new parameter context
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a parameter value
-    pub fn add_parameter(mut self, name: &str, value: &str) -> Self {
-        self.parameters.insert(name.to_string(), value.to_string());
-        self
-    }
-
-    /// Set multiple parameters from a map
-    pub fn with_parameters(mut self, parameters: HashMap<String, String>) -> Self {
-        self.parameters.extend(parameters);
-        self
-    }
-
-    /// Get a parameter value
-    pub fn get_parameter(&self, name: &str) -> Option<&str> {
-        self.parameters.get(name).map(|s| s.as_str())
-    }
-
-    /// Resolve a parameter reference to its value
-    pub fn resolve_parameter(&self, parameter_name: &str) -> BuilderResult<String> {
-        self.parameters.get(parameter_name).cloned().ok_or_else(|| {
-            BuilderError::validation_error(&format!(
-                "Parameter '{}' not found in context",
-                parameter_name
-            ))
-        })
-    }
-
-    /// Resolve a Value<T> using this context
-    pub fn resolve_value<T>(&self, value: &Value<T>) -> BuilderResult<String>
-    where
-        T: ToString,
-    {
-        match value {
-            Value::Literal(val) => Ok(val.to_string()),
-            Value::Parameter(param_name) => self.resolve_parameter(param_name),
-            Value::Expression(expr) => {
-                // For now, return the expression as-is
-                // In a full implementation, this would evaluate the expression
-                Ok(expr.clone())
-            }
-        }
-    }
-
-    /// Get all parameters
-    pub fn parameters(&self) -> &HashMap<String, String> {
-        &self.parameters
-    }
-}
-
-/// Helper trait for types that can be parameterized
-pub trait Parameterizable {
-    /// Apply parameter context to resolve all parameter references
-    fn apply_parameters(&mut self, context: &ParameterContext) -> BuilderResult<()>;
-}
-
 /// Utility functions for working with parameters
 pub mod utils {
     use super::*;
@@ -279,20 +210,6 @@ mod tests {
 
         let expr_value = ParameterizedValueBuilder::<f64>::expression("$speed * 2").build();
         assert!(matches!(expr_value, Value::Expression(ref expr) if expr == "$speed * 2"));
-    }
-
-    #[test]
-    fn test_parameter_context() {
-        let context = ParameterContext::new()
-            .add_parameter("speed", "30.0")
-            .add_parameter("vehicle", "sedan");
-
-        assert_eq!(context.get_parameter("speed"), Some("30.0"));
-        assert_eq!(context.get_parameter("vehicle"), Some("sedan"));
-        assert_eq!(context.get_parameter("unknown"), None);
-
-        let resolved = context.resolve_parameter("speed").unwrap();
-        assert_eq!(resolved, "30.0");
     }
 
     #[test]

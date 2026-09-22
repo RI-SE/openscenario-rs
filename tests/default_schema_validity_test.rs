@@ -210,8 +210,8 @@ const NOT_XSD_BACKED: &[(&str, &str)] = &[
          xsd:choice (:1712-1725). Its own validity is covered by the `OpenScenario` document tests.",
     ),
     (
-        "ParameterContext",
-        "Runtime parameter-resolution state (`src/types/mod.rs`), never serialized.",
+        "ParameterScope",
+        "Runtime parameter-visibility state (`src/types/scope.rs`), never serialized.",
     ),
     (
         "ValidationContext",

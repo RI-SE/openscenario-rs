@@ -34,6 +34,9 @@ pub mod road;
 // Routing and navigation types
 pub mod routing;
 
+// Parameter visibility (ASAM OpenSCENARIO section 9.1)
+pub mod scope;
+
 // Re-export commonly used types for convenience
 pub use basic::{
     Boolean, Directory, Double, Int, OSString, ParameterDeclaration, ParameterDeclarations, Range,
@@ -107,6 +110,9 @@ pub use conditions::{
 // Re-export routing types
 pub use routing::{Route, RouteRef, Waypoint};
 
+// Re-export the parameter scope model
+pub use scope::{ParameterBinding, ParameterScope};
+
 // Re-export entity types
 pub use entities::{Axle, Axles, Entities, Pedestrian, ScenarioObject, Vehicle};
 
@@ -121,13 +127,11 @@ pub trait Validate {
     fn validate(&self, ctx: &ValidationContext) -> crate::Result<()>;
 }
 
-/// Common trait for types that support parameter resolution
-///
-/// This trait enables resolution of ${parameter} references to their actual values
-/// using a parameter context containing the parameter definitions.
+/// Resolution of `$parameter` references and `${expression}`s against the parameters
+/// visible at one point of a document.
 pub trait Resolve<T> {
-    /// Resolve any parameters in this object using the provided context
-    fn resolve(&self, ctx: &ParameterContext) -> crate::Result<T>;
+    /// Resolve any parameters in this object using the parameters `scope` makes visible
+    fn resolve(&self, scope: &ParameterScope) -> crate::Result<T>;
 }
 
 /// Context for validation operations
@@ -162,36 +166,6 @@ impl ValidationContext {
     }
 }
 
-/// Context for parameter resolution
-///
-/// Contains the parameter values and scope information needed to resolve
-/// ${parameter} references to their actual values.
-#[derive(Debug, Default)]
-pub struct ParameterContext {
-    /// Current parameter values by name
-    pub parameters: HashMap<String, String>,
-    /// Parameter declaration scope (for nested parameter sets)
-    pub scope: Vec<String>,
-}
-
-impl ParameterContext {
-    /// Create a new parameter context
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a parameter value
-    pub fn with_parameter(mut self, name: String, value: String) -> Self {
-        self.parameters.insert(name, value);
-        self
-    }
-
-    /// Get a parameter value by name
-    pub fn get(&self, name: &str) -> Option<&str> {
-        self.parameters.get(name).map(|s| s.as_str())
-    }
-}
-
 /// Reference to an entity in the scenario
 #[derive(Debug, Clone)]
 pub struct EntityRef {
@@ -223,7 +197,7 @@ where
     T: std::str::FromStr,
     T::Err: std::fmt::Display,
 {
-    fn resolve(&self, ctx: &ParameterContext) -> crate::Result<T> {
-        self.resolve(&ctx.parameters)
+    fn resolve(&self, scope: &ParameterScope) -> crate::Result<T> {
+        scope.resolve(self)
     }
 }

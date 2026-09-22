@@ -1,7 +1,7 @@
 #[cfg(feature = "builder")]
 mod parameter_builder_tests {
     use openscenario_rs::builder::{
-        ParameterContext, ParameterDeclarationsBuilder, ParameterizedValueBuilder, ScenarioBuilder,
+        ParameterDeclarationsBuilder, ParameterizedValueBuilder, ScenarioBuilder,
     };
     use openscenario_rs::types::basic::Value;
     use openscenario_rs::types::enums::ParameterType;
@@ -74,46 +74,6 @@ mod parameter_builder_tests {
             }
             _ => panic!("Expected expression"),
         }
-    }
-
-    #[test]
-    fn test_parameter_context() {
-        let context = ParameterContext::new()
-            .add_parameter("speed", "30.0")
-            .add_parameter("vehicle", "sedan")
-            .add_parameter("lane", "1");
-
-        assert_eq!(context.get_parameter("speed"), Some("30.0"));
-        assert_eq!(context.get_parameter("vehicle"), Some("sedan"));
-        assert_eq!(context.get_parameter("lane"), Some("1"));
-        assert_eq!(context.get_parameter("unknown"), None);
-
-        // Test parameter resolution
-        let resolved_speed = context.resolve_parameter("speed").unwrap();
-        assert_eq!(resolved_speed, "30.0");
-
-        let resolved_vehicle = context.resolve_parameter("vehicle").unwrap();
-        assert_eq!(resolved_vehicle, "sedan");
-
-        // Test error for unknown parameter
-        let result = context.resolve_parameter("unknown");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_parameter_context_with_map() {
-        let mut params = std::collections::HashMap::new();
-        params.insert("speed".to_string(), "25.0".to_string());
-        params.insert("vehicle".to_string(), "truck".to_string());
-
-        let context = ParameterContext::new()
-            .with_parameters(params)
-            .add_parameter("lane", "2");
-
-        assert_eq!(context.get_parameter("speed"), Some("25.0"));
-        assert_eq!(context.get_parameter("vehicle"), Some("truck"));
-        assert_eq!(context.get_parameter("lane"), Some("2"));
-        assert_eq!(context.parameters().len(), 3);
     }
 
     #[test]
@@ -197,29 +157,5 @@ mod parameter_builder_tests {
         let builder = ParameterDeclarationsBuilder::new();
         assert_eq!(builder.len(), 0);
         assert!(builder.is_empty());
-    }
-
-    #[test]
-    fn test_parameter_context_value_resolution() {
-        let context = ParameterContext::new()
-            .add_parameter("speed", "30.0")
-            .add_parameter("vehicle", "sedan");
-
-        // Test literal value resolution
-        let literal_value = openscenario_rs::types::basic::Value::Literal(42.0);
-        let resolved = context.resolve_value(&literal_value).unwrap();
-        assert_eq!(resolved, "42");
-
-        // Test parameter value resolution
-        let param_value: openscenario_rs::types::basic::Value<String> =
-            openscenario_rs::types::basic::Value::Parameter("speed".to_string());
-        let resolved = context.resolve_value(&param_value).unwrap();
-        assert_eq!(resolved, "30.0");
-
-        // Test expression value resolution (returns as-is for now)
-        let expr_value: openscenario_rs::types::basic::Value<String> =
-            openscenario_rs::types::basic::Value::Expression("$speed * 2".to_string());
-        let resolved = context.resolve_value(&expr_value).unwrap();
-        assert_eq!(resolved, "$speed * 2");
     }
 }

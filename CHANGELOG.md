@@ -17,6 +17,27 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 ### Added
 
+- **`types::ParameterScope`: parameter visibility as ASAM OpenSCENARIO XML section 9.1 defines
+  it** (`src/types/scope.rs`). Section 9.1 makes a parameter's scope "the subtree rooted in the
+  element where the `ParameterDeclaration` is located", and among overlapping scopes "only the
+  parameter with the smallest scope that subsumes the location is accessible". Nothing in the
+  crate implemented that: the old `types::ParameterContext` was a flat map beside a `scope`
+  field that no code read, so an inner redeclaration overwrote the outer one for the rest of the
+  document and a parameter declared in one `Maneuver` stayed visible in its siblings.
+  `ParameterScope` is a stack of declaration frames: `push_frame` on entering an element holding
+  `<ParameterDeclarations>`, `declare` for each declaration, `pop_frame` on leaving; `lookup`
+  and `resolve` see the innermost binding. Globals live in the root frame, which cannot be
+  popped. `declare` takes the three attribute strings as the XML holds them, so a pass over raw
+  XML can drive it; `declare_parsed` and `declare_all` accept the typed declarations. It refuses,
+  naming the parameter: a name outside `[A-Za-z_][A-Za-z0-9_]*`; a name with a reserved prefix
+  (the published text italicises *OSC*, which is also how AsciiDoc renders `_OSC_`, so both are
+  refused); a value that does not conform to its `parameterType` -- a check section 9.1 says
+  "is not ensured by the XML validator and therefore must be implemented by the simulator";
+  and two declarations of one name in one frame. **A declaration whose `name`, `parameterType`
+  or `value` is itself a parameter reference or expression is reported as unresolved**, because
+  section 9.1 allows such references without saying which declarations they may see (earlier
+  ones in the same `<ParameterDeclarations>`, any of them, or only enclosing scopes).
+
 - **The expression evaluator now implements all of ASAM OpenSCENARIO XML section 9.2's
   functions and Boolean operators.** `ExpressionEvaluator::evaluate_function`
   (`src/expression.rs`) implemented `sin`, `cos`, `tan`, `sqrt`, `abs`, `floor`, `ceil`, `min`
@@ -791,6 +812,17 @@ Breaking, unless noted.
   binary as its twelfth stage.
 
 ### Removed
+
+- **`types::ParameterContext`.** Breaking. Replaced by `types::ParameterScope`. Its `scope:
+  Vec<String>` field was never read by any code, including its own `Resolve` impl, which
+  resolved against the flat `parameters` map alone; the type looked scoped and was not.
+  `Resolve::resolve` now takes `&ParameterScope` instead of `&ParameterContext`.
+
+- **`builder::ParameterContext` and `builder::Parameterizable`.** Breaking. No builder and no
+  other production path used either: `Parameterizable` had no implementation anywhere, and
+  `ParameterContext` was constructed only by its own tests. Its `resolve_value` returned an
+  expression's text unevaluated as though it were the resolved value. Use
+  `types::ParameterScope`.
 
 - **`Route::validate_continuity`.** Breaking. Its only check was that the route held at
   least two waypoints, which `MinVec<Waypoint, 2>` now makes a property of the type. A

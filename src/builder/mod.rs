@@ -102,7 +102,7 @@ pub use conditions::{
 };
 pub use entities::{DetachedVehicleBuilder, VehicleBuilder};
 pub use init::{GlobalActionBuilder, InitActionBuilder, PrivateActionBuilder};
-pub use parameters::{ParameterContext, ParameterDeclarationsBuilder, ParameterizedValueBuilder};
+pub use parameters::{ParameterDeclarationsBuilder, ParameterizedValueBuilder};
 pub use scenario::ScenarioBuilder;
 pub use storyboard::{
     ActBuilder, DetachedActBuilder, DetachedFollowTrajectoryActionBuilder, DetachedManeuverBuilder,
