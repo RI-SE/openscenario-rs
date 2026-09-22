@@ -1954,6 +1954,42 @@ Breaking, unless noted.
   failing cases plus `not $flag` and the arithmetic type error, each parsed through
   `quick_xml::de::from_str` and resolved rather than built by hand.
 
+- **A schema-valid `Boolean` attribute written as `0` or `1`, or a `DateTime` attribute written
+  without a timezone, failed to parse even though `ParameterScope` already accepted both forms
+  in a `<ParameterDeclaration>`.** Section 9.2.2 states plainly that a Boolean "can also be given
+  as 0, 1, true, and false", but `Value<bool>` parsed attribute text through `bool::from_str`,
+  which accepts only the literal words. `DateTime` was `Value<chrono::DateTime<Utc>>`, and
+  `chrono::DateTime<Utc>::from_str` requires an RFC 3339 offset that `xsd:dateTime` does not
+  require. Both defects sat downstream of a correct check: `ParameterScope::check_conformance`
+  (`src/types/scope.rs`) already validated a declared `1` or a timezone-less dateTime against
+  the same lexical spaces, so a document with such a declaration passed scope checking and then
+  failed the moment a typed field resolved it -- an XSD-valid document the crate could declare
+  valid and then refuse to read.
+
+  `Value<T>`'s parsing is generic over `T`, so neither fix could be expressed by implementing a
+  trait for `bool` or `chrono::DateTime` (both foreign types, both hit by the orphan rule).
+  `normalize_xsd_lexical` (`src/types/basic.rs`) instead reads `T`'s name at the call site, the
+  same technique the empty-string `Double` check and `expression.rs`'s `evaluate_expression`
+  already use, and rewrites a bare `0`/`1` to `false`/`true` before parsing; this runs everywhere
+  a `Value<bool>` is parsed from text, including a `$param` lookup resolved through
+  `ParameterScope::resolve` or `Value::resolve`, not only the XML deserializer.
+
+  `DateTime` is now `Value<XsdDateTime>`, a new two-variant type (`Aware`, holding a
+  `chrono::DateTime<FixedOffset>`; `Naive`, holding a `chrono::NaiveDateTime`) rather than a
+  type alias over `chrono::DateTime<Utc>`. Forcing a timezone-less value into an assumed UTC
+  offset would have made the two lexical forms indistinguishable on the way back out, which is
+  what would have made the round trip lossy; keeping the parsed form separate keeps it lossless.
+  `Aware` writes a UTC offset as `Z`, matching the one dateTime already in the corpus
+  (`TimeOfDay@dateTime` in `EnvironmentCatalog.xosc`, itself a plain `String` field and
+  untouched by this change). This is a breaking change to `DateTime` and to
+  `TimeOfDayCondition::new`'s field type, though the constructor's own signature
+  (`chrono::DateTime<Utc>`) is unchanged.
+
+  No corpus file exercises the typed `DateTime` path or a `Boolean` attribute written as `0`/`1`,
+  so the gate stayed green on both defects throughout; `tests/typed_lexical_space_test.rs` is a
+  hand-built regression fixture, parsed and re-serialized through `quick_xml` rather than built
+  from Rust values by hand.
+
 ### Known gaps
 
 **`<TrafficAction>` does not deserialize.** The corpus expansion above brought the first corpus

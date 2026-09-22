@@ -60,7 +60,8 @@
 use crate::error::{Error, Result};
 use crate::expression::{Expr, ExpressionParser, Operator};
 use crate::types::basic::{
-    is_valid_parameter_name, OSString, ParameterDeclaration, ParameterDeclarations, Value,
+    is_valid_parameter_name, normalize_xsd_lexical, OSString, ParameterDeclaration,
+    ParameterDeclarations, Value,
 };
 use crate::types::enums::ParameterType;
 use serde::de::IntoDeserializer;
@@ -409,12 +410,14 @@ impl ParameterScope {
             // Through `lookup`, so an undeclared name lists the names visible here.
             Value::Parameter(name) => {
                 let binding = self.lookup(name)?;
-                binding.value.parse::<T>().map_err(|e| {
-                    Error::parameter_error(
-                        name,
-                        &format!("failed to parse '{}': {}", binding.value, e),
-                    )
-                })
+                normalize_xsd_lexical::<T>(&binding.value)
+                    .parse::<T>()
+                    .map_err(|e| {
+                        Error::parameter_error(
+                            name,
+                            &format!("failed to parse '{}': {}", binding.value, e),
+                        )
+                    })
             }
             _ => value.resolve(&self.visible_values()),
         }

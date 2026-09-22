@@ -6,9 +6,33 @@
 //! resolved to. `OSString`, `Double`, `Boolean` and the rest are aliases over it.
 use crate::error::{Error, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+
+/// `xsd:boolean`'s lexical space accepts `0` and `1` alongside `true` and `false` --
+/// section 9.2.2 repeats it explicitly: "Boolean literals... can also be given as 0, 1,
+/// true, and false." `bool::from_str` accepts only `true`/`false`, so a schema-valid
+/// `someBoolAttr="1"` attribute, a `$param` declared boolean whose raw text is `"0"`, or
+/// an inherited-scope lookup of one would otherwise fail to parse even though the
+/// document is valid.
+///
+/// Every call site here is generic over `T`, so there is nowhere to special-case `bool`
+/// through the type system without an orphan-rule violation (this crate cannot implement
+/// `FromStr` for the standard library's `bool`). Instead this narrows the text itself
+/// before parsing, gated by `T`'s name the same way the empty-string check below reads
+/// `T` for `Double` and `expression.rs`'s `evaluate_expression` reads it for `target_is_bool`.
+pub(crate) fn normalize_xsd_lexical<T>(s: &str) -> Cow<'_, str> {
+    if std::any::type_name::<T>() == "bool" {
+        match s {
+            "1" => return Cow::Borrowed("true"),
+            "0" => return Cow::Borrowed("false"),
+            _ => {}
+        }
+    }
+    Cow::Borrowed(s)
+}
 
 // Value enum that can hold either a literal value, a parameter reference, or an expression
 //
@@ -50,12 +74,14 @@ where
                     .get(param_name)
                     .ok_or_else(|| Error::parameter_error(param_name, "parameter not found"))?;
 
-                param_value.parse::<T>().map_err(|e| {
-                    Error::parameter_error(
-                        param_name,
-                        &format!("failed to parse '{}': {}", param_value, e),
-                    )
-                })
+                normalize_xsd_lexical::<T>(param_value)
+                    .parse::<T>()
+                    .map_err(|e| {
+                        Error::parameter_error(
+                            param_name,
+                            &format!("failed to parse '{}': {}", param_value, e),
+                        )
+                    })
             }
             Value::Expression(expr) => {
                 // For now, we'll treat expressions as parameters that need to be resolved
@@ -165,7 +191,7 @@ where
                 Ok(Value::Parameter(content.to_string()))
             } else {
                 // Not a valid parameter, treat as literal
-                match s.parse::<T>() {
+                match normalize_xsd_lexical::<T>(&s).parse::<T>() {
                     Ok(value) => Ok(Value::Literal(value)),
                     Err(e) => Err(serde::de::Error::custom(format!(
                         "Failed to parse '{}': {}",
@@ -175,7 +201,7 @@ where
             }
         } else {
             // Try to parse as literal value
-            match s.parse::<T>() {
+            match normalize_xsd_lexical::<T>(&s).parse::<T>() {
                 Ok(value) => Ok(Value::Literal(value)),
                 Err(e) => Err(serde::de::Error::custom(format!(
                     "Failed to parse '{}': {}",
@@ -242,7 +268,61 @@ pub type UnsignedInt = Value<u32>;
 pub type UnsignedShort = Value<u16>;
 pub type Boolean = Value<bool>;
 
-pub type DateTime = Value<chrono::DateTime<chrono::Utc>>;
+pub type DateTime = Value<XsdDateTime>;
+
+/// `xsd:dateTime`'s lexical space makes the timezone offset optional (XSD Part 2, `dateTime`);
+/// RFC 3339, which `chrono::DateTime<Utc>::from_str` enforces, does not. A timezone-less
+/// dateTime is schema-valid ASAM OpenSCENARIO XML -- `TimeOfDayCondition` (XSD:2169-2172) gives
+/// `dateTime` no narrower a type than the XSD base -- so this holds either lexical form as
+/// parsed, rather than forcing a timezone-less value into an assumed UTC offset that was never
+/// written. Forcing that assumption would also make the offset-bearing and offset-less forms
+/// indistinguishable on the way back out, which is what made the round trip lossy in the first
+/// place.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum XsdDateTime {
+    /// A dateTime with an explicit offset, including a trailing `Z` for UTC.
+    Aware(chrono::DateTime<chrono::FixedOffset>),
+    /// A dateTime with no timezone.
+    Naive(chrono::NaiveDateTime),
+}
+
+impl FromStr for XsdDateTime {
+    type Err = chrono::ParseError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match chrono::DateTime::parse_from_rfc3339(s) {
+            Ok(dt) => Ok(XsdDateTime::Aware(dt)),
+            // `parse_from_rfc3339`'s own error is the one worth keeping: the two formats
+            // overlap enough (both are `%Y-%m-%dT%H:%M:%S%.f...`) that its message -- naming
+            // the missing offset -- is more useful than the naive parser's "input contains
+            // invalid characters" on the same text.
+            Err(aware_err) => chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f")
+                .map(XsdDateTime::Naive)
+                .map_err(|_| aware_err),
+        }
+    }
+}
+
+impl fmt::Display for XsdDateTime {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            // `use_z: true` writes a UTC offset as `Z` instead of `+00:00`, which is what
+            // distinguishes the two written forms this campaign's corpus already contains
+            // (`TimeOfDay@dateTime="2024-04-26T09:10:00Z"`, outside this type today but the
+            // same lexical form `Aware` must reproduce if it is ever read through it).
+            XsdDateTime::Aware(dt) => {
+                write!(
+                    f,
+                    "{}",
+                    dt.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)
+                )
+            }
+            // `%.f` prints nothing when there are no fractional seconds, so a timezone-less
+            // value with none round-trips to exactly the text that was parsed.
+            XsdDateTime::Naive(dt) => write!(f, "{}", dt.format("%Y-%m-%dT%H:%M:%S%.f")),
+        }
+    }
+}
 
 // Enumeration type aliases.
 //

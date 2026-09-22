@@ -140,9 +140,13 @@ impl ParameterCondition {
 
 impl TimeOfDayCondition {
     /// XSD:2169-2172 `TimeOfDayCondition` — `dateTime` and `rule` are both `use="required"`.
+    /// Always constructs the timezone-aware form; a timezone-less `dateTime` only arises by
+    /// parsing one out of a document (`XsdDateTime::Naive`).
     pub fn new(date_time: chrono::DateTime<chrono::Utc>, rule: Rule) -> Self {
         Self {
-            date_time: DateTime::literal(date_time),
+            date_time: DateTime::literal(crate::types::basic::XsdDateTime::Aware(
+                date_time.fixed_offset(),
+            )),
             rule: Value::Literal(rule),
         }
     }
