@@ -17,6 +17,32 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 ### Added
 
+- **The expression evaluator now implements all of ASAM OpenSCENARIO XML section 9.2's
+  functions and Boolean operators.** `ExpressionEvaluator::evaluate_function`
+  (`src/expression.rs`) implemented `sin`, `cos`, `tan`, `sqrt`, `abs`, `floor`, `ceil`, `min`
+  and `max`, but not `round`, `asin`, `acos`, `atan`, `sign` or `pow`, and the parser had no
+  production at all for the Boolean operators `not`, `and` and `or`. Using any of them was
+  already an error before this change (`OSS-40`); four corpus files use `pow`, `acos`, `atan`
+  or `sign` inside a trajectory or overlap calculation and previously failed to parse with
+  "unknown function". `round`'s tie-breaking rule is not stated in section 9.2 -- it gives only
+  `round: double -> int` and defers "the definition of the arithmetic operators" to
+  IEEE 754-2019 without naming which of that standard's several round-to-integral operations
+  applies -- so this crate rounds half away from zero (`f64::round`), the conventional reading
+  absent a stated rule. `pow` and `asin`/`acos` name their domain violation directly (a negative
+  base raised to a non-integer exponent, or an argument outside `[-1, 1]`) rather than letting
+  the caller see only "not finite", consistent with section 9.2's general restriction that any
+  operation IEEE 754-2019 would define as `NaN` or infinite must instead be an error.
+  The Boolean operators required a second result shape, since `not`/`and`/`or` and the
+  comparisons that feed them are Boolean, not numeric; `ExpressionEvaluator::evaluate_bool`
+  handles that shape and `resolve_expression` (`src/types/basic.rs`) now calls into the
+  evaluator generically instead of hardcoding `f64`, so a `Boolean`-typed attribute can resolve
+  `${not $a and $b}` to the text `"true"`/`"false"` that its `FromStr` expects. This is not a
+  breaking change: every new production is additive, and the one existing hardcoded call site
+  was internal. Eleven tests in a new file pin one probe per function and per Boolean case,
+  each parsed from an XML attribute through `Value<T>::resolve` rather than built by hand;
+  `bash scripts/gate.sh` passes all eleven stages; the test total goes **1813 → 1824**; clippy
+  is unchanged at **176**; `report`, `lossy`, `validate` and `validate-input` are unchanged at
+  210 / 209 / 210 / 209 passing.
 - **A third conformance corpus source, and an expected-failure manifest.** The corpus now also
   fetches the Eclipse openpass
   [`openscenario1_engine`](https://gitlab.eclipse.org/eclipse/openpass/openscenario1_engine)
@@ -1665,10 +1691,11 @@ Breaking, unless noted.
   succeed. Four cases are pinned in `src/types/basic.rs`, each parsed through
   `quick_xml::de::from_str` and resolved as both `Double` and `String`: division by zero, `sqrt`
   of a negative number, a missing parameter, and unparseable text. The evaluator's arithmetic was
-  already correct; only the fallback around it was wrong. The evaluator does not yet implement
-  every operator and function section 9.2 lists — `round`, `asin`, `acos`, `atan`, `sign`, `pow`,
-  and the boolean operators `not`/`and`/`or` are absent — and using any of them was already an
-  error before this change; that gap is unaffected and unclosed here.
+  already correct; only the fallback around it was wrong. At the time of this change the evaluator
+  did not yet implement every operator and function section 9.2 lists — `round`, `asin`, `acos`,
+  `atan`, `sign`, `pow`, and the boolean operators `not`/`and`/`or` were absent — and using any
+  of them was already an error before this change; that gap was unaffected and unclosed here. It
+  is closed under *Added*, above.
 - **A braced bare identifier such as `${pi}` deserialized as the parameter `pi`, not as an
   expression, and re-serialized as `$pi`.** ASAM OpenSCENARIO XML section 9.2 gives the braced
   spelling to the `expression` production alone; its own examples reference a parameter *inside*

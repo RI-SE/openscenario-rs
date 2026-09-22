@@ -361,21 +361,12 @@ where
     // the real cause (division by zero, an unknown parameter, a malformed expression) rather
     // than discarding it and failing later, elsewhere, on a parse error that names the symptom
     // instead of the cause.
-    let result = crate::expression::evaluate_expression::<f64>(expr, params)?;
-
-    // Section 9.2: "ASAM OpenSCENARIO does not use NaN or infinity, all operations ... shall
-    // instead result in an error." The evaluator already rejects the two operations that can
-    // reach a non-finite value directly (division and modulo by zero, sqrt of a negative), so
-    // this is the backstop for any other combination that reaches NaN or +-infinity, such as an
-    // overflowing product.
-    if !result.is_finite() {
-        return Err(Error::parameter_error(
-            expr,
-            &format!("expression result {} is not finite", result),
-        ));
-    }
-
-    Ok(result.to_string())
+    //
+    // `evaluate_expression_text` picks the numeric or Boolean evaluator by the shape of the
+    // parsed expression and enforces section 9.2's "no NaN or infinity" restriction itself, so
+    // this function no longer hardcodes `f64` or repeats that check: a `Boolean`-typed attribute
+    // resolving `${not $a and $b}` needs the text `"true"`/`"false"`, not a number.
+    crate::expression::evaluate_expression_text(expr, params)
 }
 
 #[cfg(test)]

@@ -4,9 +4,19 @@
 //! `[$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]`. This module parses that content and
 //! evaluates it once the parameters it names are bound.
 //!
-//! Operators: `+ - * / %`, parentheses, and `> < >= <= == !=`.
+//! Operators: `+ - * / %`, parentheses, `> < >= <= == !=`, and the Boolean operators
+//! `not`/`and`/`or` (ASAM OpenSCENARIO XML v1.3.0 section 9.2, "Supported Boolean operators
+//! (ordered by operator precedence): Negation operator (not), Conjunction operator (and),
+//! Disjunction operator (or)").
 //! Operands: numeric literals, parameter references, and the constants `PI` and `E`.
-//! Functions: `sin`, `cos`, `tan`, `sqrt`, `abs`, `floor`, `ceil`, `min`, `max`.
+//! Functions: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`, `abs`, `sign`, `floor`,
+//! `ceil`, `round`, `pow`, `min`, `max` (section 9.2, "Supported arithmetic operators").
+//!
+//! Section 9.2's general restrictions require an error, not `NaN` or infinity, wherever
+//! [IEEE 754-2019] would produce one; [`evaluate_expression`] enforces this once on the final
+//! numeric result, and the functions that can reach a non-finite value from a finite input
+//! (`sqrt`, `asin`, `acos`, `pow`) also name the domain violation directly rather than letting
+//! the caller see only "not finite".
 
 use crate::error::{Error, Result};
 use std::collections::HashMap;
@@ -23,6 +33,9 @@ pub enum Token {
     LeftParen,
     RightParen,
     Comma,
+    Not,
+    And,
+    Or,
 }
 
 /// Supported mathematical operators
@@ -58,6 +71,9 @@ pub enum Expr {
         name: String,
         args: Vec<Expr>,
     },
+    Not(Box<Expr>),
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
 }
 
 /// Expression parser for OpenSCENARIO mathematical expressions
@@ -201,6 +217,12 @@ impl ExpressionParser {
                     // Check if it's followed by '(' for function call
                     if chars.peek() == Some(&'(') {
                         tokens.push(Token::Function(identifier));
+                    } else if identifier == "not" {
+                        tokens.push(Token::Not);
+                    } else if identifier == "and" {
+                        tokens.push(Token::And);
+                    } else if identifier == "or" {
+                        tokens.push(Token::Or);
                     } else if Self::is_constant(&identifier) {
                         tokens.push(Token::Constant(identifier));
                     } else {
@@ -299,8 +321,47 @@ impl ExpressionParser {
         matches!(identifier, "PI" | "E")
     }
 
-    /// Parse an expression with precedence handling
+    /// Parse an expression with precedence handling. The Boolean operators sit above
+    /// comparison in the grammar (lowest precedence first): `or`, then `and`, then `not`,
+    /// matching section 9.2's precedence list.
     fn parse_expression(&mut self) -> Result<Expr> {
+        self.parse_or()
+    }
+
+    /// Parse disjunction (`or`), the lowest-precedence Boolean operator.
+    fn parse_or(&mut self) -> Result<Expr> {
+        let mut left = self.parse_and()?;
+
+        while self.current < self.tokens.len() && self.tokens[self.current] == Token::Or {
+            self.current += 1;
+            let right = self.parse_and()?;
+            left = Expr::Or(Box::new(left), Box::new(right));
+        }
+
+        Ok(left)
+    }
+
+    /// Parse conjunction (`and`).
+    fn parse_and(&mut self) -> Result<Expr> {
+        let mut left = self.parse_not()?;
+
+        while self.current < self.tokens.len() && self.tokens[self.current] == Token::And {
+            self.current += 1;
+            let right = self.parse_not()?;
+            left = Expr::And(Box::new(left), Box::new(right));
+        }
+
+        Ok(left)
+    }
+
+    /// Parse negation (`not`), the highest-precedence Boolean operator. `not` is right-
+    /// associative like unary minus, so `not not $a` parses as `not (not $a)`.
+    fn parse_not(&mut self) -> Result<Expr> {
+        if self.current < self.tokens.len() && self.tokens[self.current] == Token::Not {
+            self.current += 1;
+            let inner = self.parse_not()?;
+            return Ok(Expr::Not(Box::new(inner)));
+        }
         self.parse_comparison()
     }
 
@@ -630,6 +691,57 @@ impl ExpressionEvaluator {
                 Ok(-val)
             }
             Expr::FunctionCall { name, args } => self.evaluate_function(name, args),
+            Expr::Not(_) | Expr::And(..) | Expr::Or(..) => Err(Error::parameter_error(
+                "expression",
+                "a Boolean expression (not/and/or) cannot be used where a numeric value is expected",
+            )),
+        }
+    }
+
+    /// Evaluate a Boolean expression AST to `true`/`false`.
+    ///
+    /// This is a separate entry point from [`evaluate`](Self::evaluate) rather than a shared
+    /// result type because only `not`/`and`/`or` and the operands that feed them are
+    /// Boolean-shaped; every other production in this grammar is numeric. A comparison
+    /// (`>`, `==`, ...) is evaluated numerically and its `1.0`/`0.0` result treated as
+    /// `true`/`false`, and a bare parameter is looked up as the literal text `"true"` or
+    /// `"false"` the way a `Boolean`-typed attribute would write it.
+    fn evaluate_bool(&self, expr: &Expr) -> Result<bool> {
+        match expr {
+            Expr::Not(inner) => Ok(!self.evaluate_bool(inner)?),
+            Expr::And(left, right) => Ok(self.evaluate_bool(left)? && self.evaluate_bool(right)?),
+            Expr::Or(left, right) => Ok(self.evaluate_bool(left)? || self.evaluate_bool(right)?),
+            Expr::Parameter(param_name) => {
+                let param_value = self
+                    .parameters
+                    .get(param_name)
+                    .ok_or_else(|| Error::parameter_error(param_name, "parameter not found"))?;
+                match param_value.as_str() {
+                    "true" => Ok(true),
+                    "false" => Ok(false),
+                    other => Err(Error::parameter_error(
+                        param_name,
+                        &format!(
+                            "parameter value '{}' is not a Boolean ('true' or 'false')",
+                            other
+                        ),
+                    )),
+                }
+            }
+            Expr::BinaryOp {
+                operator:
+                    Operator::Greater
+                    | Operator::Less
+                    | Operator::GreaterEqual
+                    | Operator::LessEqual
+                    | Operator::Equal
+                    | Operator::NotEqual,
+                ..
+            } => Ok(self.evaluate(expr)? != 0.0),
+            _ => Err(Error::parameter_error(
+                "expression",
+                "expected a Boolean expression (not/and/or, a comparison, or a Boolean parameter)",
+            )),
         }
     }
 
@@ -709,6 +821,115 @@ impl ExpressionEvaluator {
                 let arg = self.evaluate(&args[0])?;
                 Ok(arg.ceil())
             }
+            "round" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(
+                        name,
+                        "round() requires exactly 1 argument",
+                    ));
+                }
+                let arg = self.evaluate(&args[0])?;
+                // Section 9.2 declares `round: double -> int` but does not state a tie-breaking
+                // rule, and defers "the definition of the arithmetic operators" to IEEE 754-2019
+                // without naming which of that standard's several round-to-integral operations
+                // applies. `f64::round` implements round-half-away-from-zero (2.5 -> 3.0,
+                // -2.5 -> -3.0), the conventional meaning of "round" absent a stated rule, and is
+                // used here for that reason rather than IEEE 754's default ties-to-even.
+                Ok(arg.round())
+            }
+            "asin" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(
+                        name,
+                        "asin() requires exactly 1 argument",
+                    ));
+                }
+                let arg = self.evaluate(&args[0])?;
+                if !(-1.0..=1.0).contains(&arg) {
+                    return Err(Error::parameter_error(
+                        name,
+                        &format!("asin({}) is undefined outside [-1, 1]", arg),
+                    ));
+                }
+                Ok(arg.asin())
+            }
+            "acos" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(
+                        name,
+                        "acos() requires exactly 1 argument",
+                    ));
+                }
+                let arg = self.evaluate(&args[0])?;
+                if !(-1.0..=1.0).contains(&arg) {
+                    return Err(Error::parameter_error(
+                        name,
+                        &format!("acos({}) is undefined outside [-1, 1]", arg),
+                    ));
+                }
+                Ok(arg.acos())
+            }
+            "atan" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(
+                        name,
+                        "atan() requires exactly 1 argument",
+                    ));
+                }
+                let arg = self.evaluate(&args[0])?;
+                Ok(arg.atan())
+            }
+            "sign" => {
+                if args.len() != 1 {
+                    return Err(Error::parameter_error(
+                        name,
+                        "sign() requires exactly 1 argument",
+                    ));
+                }
+                let arg = self.evaluate(&args[0])?;
+                // Section 9.2: "sign(x) = -1, if x < 0; sign(x) = 0, if x = 0; sign(x) = 1, if
+                // x > 0."
+                Ok(if arg < 0.0 {
+                    -1.0
+                } else if arg > 0.0 {
+                    1.0
+                } else {
+                    0.0
+                })
+            }
+            "pow" => {
+                if args.len() != 2 {
+                    return Err(Error::parameter_error(
+                        name,
+                        "pow() requires exactly 2 arguments",
+                    ));
+                }
+                let base = self.evaluate(&args[0])?;
+                let exponent = self.evaluate(&args[1])?;
+                // Section 9.2 gives `pow` no explicit domain, only the general restriction that
+                // any operation IEEE 754-2019 defines as NaN or infinite must be an error. A
+                // negative base raised to a non-integer exponent is exactly that case (the real
+                // result does not exist); name it rather than let the caller see only "not
+                // finite".
+                if base < 0.0 && exponent.fract() != 0.0 {
+                    return Err(Error::parameter_error(
+                        name,
+                        &format!(
+                            "pow({}, {}) is not a real number: a negative base raised to a \
+                             non-integer exponent",
+                            base, exponent
+                        ),
+                    ));
+                }
+                let result = base.powf(exponent);
+                if !result.is_finite() {
+                    return Err(Error::parameter_error(
+                        name,
+                        &format!("pow({}, {}) is not finite", base, exponent),
+                    ));
+                }
+                Ok(result)
+            }
             "min" => {
                 if args.len() != 2 {
                     return Err(Error::parameter_error(
@@ -736,19 +957,54 @@ impl ExpressionEvaluator {
     }
 }
 
+/// Parse and evaluate an OpenSCENARIO expression to text, choosing the numeric or Boolean
+/// evaluator by the shape of the parsed AST: a root of `not`/`and`/`or` is Boolean and
+/// evaluates to `"true"`/`"false"`; anything else is numeric.
+///
+/// This is the shared core behind [`evaluate_expression`] and `types::basic::resolve_expression`
+/// (`src/types/basic.rs`). It is `pub(crate)`, not `pub`, because it returns text rather than a
+/// typed result; callers that want a typed result call `evaluate_expression` instead.
+pub(crate) fn evaluate_expression_text(
+    expr: &str,
+    params: &HashMap<String, String>,
+) -> Result<String> {
+    let mut parser = ExpressionParser::new(expr)?;
+    let ast = parser.parse()?;
+    let evaluator = ExpressionEvaluator::new(params.clone());
+
+    match &ast {
+        Expr::Not(_) | Expr::And(..) | Expr::Or(..) => {
+            Ok(evaluator.evaluate_bool(&ast)?.to_string())
+        }
+        _ => {
+            let result = evaluator.evaluate(&ast)?;
+
+            // Section 9.2, "General restrictions": "Because ASAM OpenSCENARIO does not use NaN
+            // or infinity, all operations where [IEEE 754-2019] defines the result to be either
+            // NaN or infinity shall instead result in an error." The functions most likely to
+            // reach a non-finite value from a finite input (`sqrt`, `asin`, `acos`, `pow`)
+            // already name the domain violation in `evaluate_function`; this is the backstop for
+            // any other combination that reaches NaN or +-infinity, such as an overflowing
+            // product.
+            if !result.is_finite() {
+                return Err(Error::parameter_error(
+                    expr,
+                    &format!("expression result {} is not finite", result),
+                ));
+            }
+
+            Ok(result.to_string())
+        }
+    }
+}
+
 /// Parse and evaluate an OpenSCENARIO expression
 pub fn evaluate_expression<T>(expr: &str, params: &HashMap<String, String>) -> Result<T>
 where
     T: FromStr,
     T::Err: std::fmt::Display,
 {
-    let mut parser = ExpressionParser::new(expr)?;
-    let ast = parser.parse()?;
-    let evaluator = ExpressionEvaluator::new(params.clone());
-    let result = evaluator.evaluate(&ast)?;
-
-    // Convert the numeric result to the target type
-    let result_str = result.to_string();
+    let result_str = evaluate_expression_text(expr, params)?;
     result_str.parse::<T>().map_err(|e| {
         Error::parameter_error(
             expr,

@@ -395,6 +395,11 @@ fn collect_expression_parameters(expr: &crate::expression::Expr, names: &mut Vec
                 collect_expression_parameters(arg, names);
             }
         }
+        Expr::Not(inner) => collect_expression_parameters(inner, names),
+        Expr::And(left, right) | Expr::Or(left, right) => {
+            collect_expression_parameters(left, names);
+            collect_expression_parameters(right, names);
+        }
         Expr::Number(_) | Expr::Constant(_) => {}
     }
 }
