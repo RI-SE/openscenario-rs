@@ -36,13 +36,11 @@ fn timezoneless_datetime_parses_and_round_trips() {
     )
     .expect("a dateTime with no timezone is schema-valid xsd:dateTime and must parse");
     assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
-    let naive =
-        chrono::NaiveDateTime::parse_from_str("2020-06-16T10:00:00", "%Y-%m-%dT%H:%M:%S%.f")
-            .unwrap();
-    assert_eq!(
-        condition.date_time,
-        Value::Literal(XsdDateTime::Naive(naive))
-    );
+    // Probe through the parse path rather than hand-building the expected value: `XsdDateTime`
+    // keeps the text it was parsed from (OSS-63), so a hand-built value carries none and would
+    // not compare equal to one read from XML even when it names the same instant.
+    let expected: XsdDateTime = "2020-06-16T10:00:00".parse().unwrap();
+    assert_eq!(condition.date_time, Value::Literal(expected));
 
     let serialized = quick_xml::se::to_string_with_root("TimeOfDayCondition", &condition).unwrap();
     assert_eq!(

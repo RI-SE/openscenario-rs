@@ -977,7 +977,7 @@ fn analyze_init_detailed(
                     time_of_day: environment
                         .time_of_day
                         .as_ref()
-                        .map(|t| t.date_time.clone())
+                        .map(|t| t.date_time.to_string())
                         .unwrap_or_default(),
                     weather_description: format!("{:?}", environment.weather),
                     road_conditions: format!("{:?}", environment.road_condition),

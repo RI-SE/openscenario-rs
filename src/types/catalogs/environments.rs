@@ -274,9 +274,18 @@ impl CatalogEnvironment {
             .time_of_day
             .as_ref()
             .map(|tod| -> crate::error::Result<TimeOfDay> {
+                let date_time_text = tod.date_time.resolve(parameters)?;
+                let date_time = date_time_text
+                    .parse::<crate::types::basic::XsdDateTime>()
+                    .map_err(|e| {
+                        crate::error::Error::parameter_error(
+                            "dateTime",
+                            &format!("failed to parse '{}': {}", date_time_text, e),
+                        )
+                    })?;
                 Ok(TimeOfDay {
                     animation: Boolean::literal(tod.animation.resolve(parameters)?),
-                    date_time: tod.date_time.resolve(parameters)?,
+                    date_time: crate::types::basic::DateTime::literal(date_time),
                 })
             })
             .transpose()?;
@@ -602,7 +611,12 @@ mod tests {
 
         assert_eq!(scenario_env.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(
-            scenario_env.time_of_day.as_ref().unwrap().date_time,
+            scenario_env
+                .time_of_day
+                .as_ref()
+                .unwrap()
+                .date_time
+                .to_string(),
             "2021-06-21T12:00:00"
         );
         assert_eq!(

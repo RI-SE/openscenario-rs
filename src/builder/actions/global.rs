@@ -279,7 +279,11 @@ mod tests {
             parameter_declarations: None,
             time_of_day: Some(TimeOfDay {
                 animation: crate::types::basic::Boolean::literal(false),
-                date_time: "2021-01-01T12:00:00".to_string(),
+                date_time: crate::types::basic::DateTime::literal(
+                    "2021-01-01T12:00:00"
+                        .parse::<crate::types::basic::XsdDateTime>()
+                        .unwrap(),
+                ),
             }),
             weather: Some(Weather::default()),
             road_condition: Some(RoadCondition {

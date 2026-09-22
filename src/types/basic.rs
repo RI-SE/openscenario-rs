@@ -278,12 +278,64 @@ pub type DateTime = Value<XsdDateTime>;
 /// written. Forcing that assumption would also make the offset-bearing and offset-less forms
 /// indistinguishable on the way back out, which is what made the round trip lossy in the first
 /// place.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum XsdDateTime {
+///
+/// The lexical space also admits written forms the parsed value alone cannot distinguish:
+/// `+00:00` and `Z` name the same offset, and `.5`, `.50`, and `.500` name the same fraction.
+/// `chrono`'s formatter always picks one canonical spelling, so deriving `Display` from the
+/// parsed `chrono` value alone rewrites every other spelling on the way back out -- lexically
+/// lossy even though the instant is preserved. This type keeps the text a value was parsed
+/// from alongside it and reproduces that text literally; only a value built directly with
+/// [`XsdDateTime::aware`] or [`XsdDateTime::naive`], which was never parsed from XML, falls
+/// back to the canonical form.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct XsdDateTime {
+    value: XsdDateTimeValue,
+    source: Option<Box<str>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum XsdDateTimeValue {
     /// A dateTime with an explicit offset, including a trailing `Z` for UTC.
     Aware(chrono::DateTime<chrono::FixedOffset>),
     /// A dateTime with no timezone.
     Naive(chrono::NaiveDateTime),
+}
+
+impl XsdDateTime {
+    /// A timezone-aware value in its canonical lexical form. Use this to construct a value
+    /// that was not read from XML; a value read from XML keeps the text it was parsed from
+    /// (see the type-level docs), so prefer parsing over this constructor when the text
+    /// matters.
+    pub fn aware(value: chrono::DateTime<chrono::FixedOffset>) -> Self {
+        Self {
+            value: XsdDateTimeValue::Aware(value),
+            source: None,
+        }
+    }
+
+    /// A timezone-less value in its canonical lexical form. See [`XsdDateTime::aware`].
+    pub fn naive(value: chrono::NaiveDateTime) -> Self {
+        Self {
+            value: XsdDateTimeValue::Naive(value),
+            source: None,
+        }
+    }
+
+    /// The timezone-aware instant, if this value carries one.
+    pub fn as_aware(&self) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+        match self.value {
+            XsdDateTimeValue::Aware(dt) => Some(dt),
+            XsdDateTimeValue::Naive(_) => None,
+        }
+    }
+
+    /// The timezone-less instant, if this value carries one.
+    pub fn as_naive(&self) -> Option<chrono::NaiveDateTime> {
+        match self.value {
+            XsdDateTimeValue::Naive(dt) => Some(dt),
+            XsdDateTimeValue::Aware(_) => None,
+        }
+    }
 }
 
 impl FromStr for XsdDateTime {
@@ -291,13 +343,19 @@ impl FromStr for XsdDateTime {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match chrono::DateTime::parse_from_rfc3339(s) {
-            Ok(dt) => Ok(XsdDateTime::Aware(dt)),
+            Ok(dt) => Ok(Self {
+                value: XsdDateTimeValue::Aware(dt),
+                source: Some(Box::from(s)),
+            }),
             // `parse_from_rfc3339`'s own error is the one worth keeping: the two formats
             // overlap enough (both are `%Y-%m-%dT%H:%M:%S%.f...`) that its message -- naming
             // the missing offset -- is more useful than the naive parser's "input contains
             // invalid characters" on the same text.
             Err(aware_err) => chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f")
-                .map(XsdDateTime::Naive)
+                .map(|dt| Self {
+                    value: XsdDateTimeValue::Naive(dt),
+                    source: Some(Box::from(s)),
+                })
                 .map_err(|_| aware_err),
         }
     }
@@ -305,22 +363,47 @@ impl FromStr for XsdDateTime {
 
 impl fmt::Display for XsdDateTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            // `use_z: true` writes a UTC offset as `Z` instead of `+00:00`, which is what
-            // distinguishes the two written forms this campaign's corpus already contains
-            // (`TimeOfDay@dateTime="2024-04-26T09:10:00Z"`, outside this type today but the
-            // same lexical form `Aware` must reproduce if it is ever read through it).
-            XsdDateTime::Aware(dt) => {
+        if let Some(source) = &self.source {
+            return write!(f, "{}", source);
+        }
+        match self.value {
+            // `use_z: true` writes a UTC offset as `Z` instead of `+00:00`; this is the
+            // canonical form used only for a value that was never parsed from text.
+            XsdDateTimeValue::Aware(dt) => {
                 write!(
                     f,
                     "{}",
                     dt.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)
                 )
             }
-            // `%.f` prints nothing when there are no fractional seconds, so a timezone-less
-            // value with none round-trips to exactly the text that was parsed.
-            XsdDateTime::Naive(dt) => write!(f, "{}", dt.format("%Y-%m-%dT%H:%M:%S%.f")),
+            // `%.f` prints nothing when there are no fractional seconds.
+            XsdDateTimeValue::Naive(dt) => write!(f, "{}", dt.format("%Y-%m-%dT%H:%M:%S%.f")),
         }
+    }
+}
+
+/// Serializes through `Display` (the recorded source text, when there is one), matching
+/// `Value<T>`'s own serialization path so a `DateTime` used outside `Value` still round-trips
+/// its lexical form rather than a `chrono`-derived one.
+impl Serialize for XsdDateTime {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+
+/// Deserializes through `FromStr` so the recorded source text is always the text that was on
+/// the wire, matching `Serialize` above.
+impl<'de> Deserialize<'de> for XsdDateTime {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse::<XsdDateTime>()
+            .map_err(|e| serde::de::Error::custom(format!("failed to parse '{}': {}", s, e)))
     }
 }
 

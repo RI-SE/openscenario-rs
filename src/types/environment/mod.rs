@@ -2,7 +2,7 @@
 //!
 //! Every child is optional, as the XSD has it: an `Environment` that sets only the
 //! time of day is valid, and the fields it omits stay `None`.
-use crate::types::basic::{Boolean, OSString, ParameterDeclarations};
+use crate::types::basic::{Boolean, DateTime, OSString, ParameterDeclarations};
 use serde::{Deserialize, Serialize};
 
 pub mod road;
@@ -54,13 +54,17 @@ pub struct TimeOfDay {
     #[serde(rename = "@animation")]
     pub animation: Boolean,
     #[serde(rename = "@dateTime")]
-    pub date_time: String, // ISO 8601 datetime format: "2021-12-10T11:00:00"
+    pub date_time: DateTime,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::basic::Value;
+    use crate::types::basic::{Value, XsdDateTime};
+
+    fn literal_date_time(s: &str) -> DateTime {
+        DateTime::literal(s.parse::<XsdDateTime>().unwrap())
+    }
 
     #[test]
     fn test_environment_creation() {
@@ -69,7 +73,7 @@ mod tests {
             parameter_declarations: None,
             time_of_day: Some(TimeOfDay {
                 animation: Value::literal(false),
-                date_time: "2021-12-10T11:00:00".to_string(),
+                date_time: literal_date_time("2021-12-10T11:00:00"),
             }),
             weather: Some(Weather::default()),
             road_condition: Some(RoadCondition {
@@ -81,7 +85,12 @@ mod tests {
 
         assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(
-            environment.time_of_day.as_ref().unwrap().date_time,
+            environment
+                .time_of_day
+                .as_ref()
+                .unwrap()
+                .date_time
+                .to_string(),
             "2021-12-10T11:00:00"
         );
         assert!(!environment
@@ -108,7 +117,7 @@ mod tests {
     fn test_time_of_day_serialization() {
         let time_of_day = TimeOfDay {
             animation: Value::literal(true),
-            date_time: "2021-12-10T11:00:00".to_string(),
+            date_time: literal_date_time("2021-12-10T11:00:00"),
         };
 
         let serialized = quick_xml::se::to_string(&time_of_day).unwrap();
@@ -123,7 +132,7 @@ mod tests {
             parameter_declarations: None,
             time_of_day: Some(TimeOfDay {
                 animation: Value::literal(false),
-                date_time: "2021-12-10T11:00:00".to_string(),
+                date_time: literal_date_time("2021-12-10T11:00:00"),
             }),
             weather: Some(Weather::default()),
             road_condition: Some(RoadCondition {

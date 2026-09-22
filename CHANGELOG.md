@@ -2006,6 +2006,30 @@ Breaking, unless noted.
   hand-built regression fixture, parsed and re-serialized through `quick_xml` rather than built
   from Rust values by hand.
 
+- **`XsdDateTime`'s `Display` rewrote a schema-valid `dateTime` to a different, still schema-valid,
+  written form: `+00:00` became `Z`, `.5Z` became `.500Z`, and `.25` became `.250`.** `xsd:dateTime`
+  treats these pairs as the same instant but distinct lexical forms, and `chrono`'s formatter
+  always picks one of them regardless of which was read. `XsdDateTime` is now a struct holding the
+  parsed value alongside the exact text it was parsed from; `Display` reproduces that text
+  literally rather than re-deriving a lexical form from the parsed value. A value built directly
+  with the new `XsdDateTime::aware`/`XsdDateTime::naive` constructors, rather than parsed from XML,
+  carries no source text and still formats through the previous canonical form. `Aware` and `Naive`
+  are no longer public tuple variants; this is a breaking change to any code matching on them
+  directly, and `TimeOfDayCondition::new` and `CatalogEnvironment::resolve_environment` are updated
+  to the new constructors.
+
+  Separately, `TimeOfDay::date_time` (`src/types/environment/mod.rs`) was a bare `String`, so it
+  bypassed `XsdDateTime` entirely and accepted any text, including one outside `xsd:dateTime`'s
+  lexical space, and could not carry a `$param` reference. It is now `Value<XsdDateTime>`
+  (`DateTime`), matching every other typed `dateTime` attribute in the crate. This is a breaking
+  change to `TimeOfDay::date_time`'s field type.
+
+  No corpus file exercises a `dateTime` written with an explicit `+00:00` offset, a fractional
+  second, or a `$param` reference on `TimeOfDay@dateTime`, so the gate stayed green on both
+  defects throughout; `tests/datetime_lexical_fidelity_test.rs` parses each written form through
+  `TimeOfDayCondition` and `TimeOfDay` and asserts a byte-exact round trip, rather than comparing
+  parsed values.
+
 - **A typed-parse error following `parse_str_resolved` or `parse_file_resolved` named a position
   in the resolved text, not in the document the caller wrote, and `Error::with_context` spliced a
   generic description into the middle of a `ParameterError`'s message.** `resolve_parameters`

@@ -144,7 +144,7 @@ impl TimeOfDayCondition {
     /// parsing one out of a document (`XsdDateTime::Naive`).
     pub fn new(date_time: chrono::DateTime<chrono::Utc>, rule: Rule) -> Self {
         Self {
-            date_time: DateTime::literal(crate::types::basic::XsdDateTime::Aware(
+            date_time: DateTime::literal(crate::types::basic::XsdDateTime::aware(
                 date_time.fixed_offset(),
             )),
             rule: Value::Literal(rule),

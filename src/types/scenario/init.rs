@@ -527,7 +527,11 @@ mod tests {
             parameter_declarations: None,
             time_of_day: Some(TimeOfDay {
                 animation: Value::literal(false),
-                date_time: "2021-12-10T11:00:00".to_string(),
+                date_time: crate::types::basic::DateTime::literal(
+                    "2021-12-10T11:00:00"
+                        .parse::<crate::types::basic::XsdDateTime>()
+                        .unwrap(),
+                ),
             }),
             weather: Some(Weather::default()),
             road_condition: Some(RoadCondition {
@@ -542,7 +546,12 @@ mod tests {
         };
         assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(
-            environment.time_of_day.as_ref().unwrap().date_time,
+            environment
+                .time_of_day
+                .as_ref()
+                .unwrap()
+                .date_time
+                .to_string(),
             "2021-12-10T11:00:00"
         );
     }
