@@ -322,20 +322,16 @@ mod tests {
     }
 
     fn sample_multi_parameter_distribution() -> DeterministicMultiParameterDistribution {
-        DeterministicMultiParameterDistribution::new(
-            ValueSetDistribution::new(
-                ParameterValueSet::new(
-                    ParameterAssignment::new(
-                        "parameter".to_string(),
-                        Value::Literal("0.0".to_string()),
-                    ),
-                    vec![],
-                )
-                .unwrap(),
+        DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
+            ParameterValueSet::new(
+                ParameterAssignment::new(
+                    "parameter".to_string(),
+                    Value::Literal("0.0".to_string()),
+                ),
                 vec![],
-            )
-            .unwrap(),
-        )
+            ),
+            vec![],
+        ))
     }
 
     fn sample_deterministic_parameter_distribution() -> Deterministic {

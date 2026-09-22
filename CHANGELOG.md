@@ -131,8 +131,16 @@ The conformance ledger, including what the test corpus does and does not prove, 
   was set, `add_*` accumulates one declaration per call. Neither declaration list requires a
   non-empty child, so an empty `VariableDeclarations` or `MonitorDeclarations` remains
   schema-valid; the builder simply never constructs one unless a caller asks for it.
-
-### Changed
+- **`MinVec::from_min` and `MinVec::push`.** A caller building a `MinVec<T, MIN>` from a
+  `first: T, rest: Vec<T>` pair (the shape several `::new` constructors use to state that a
+  schema-required list is non-empty) still had to go through `MinVec::new` and handle its
+  `Result`, even when the call could never fail. `from_min` takes the guaranteed part as an
+  array, `[T; MIN]`, so the array's length is the proof at the type level and there is
+  nothing left to check at runtime; a single guaranteed element does not prove the bound for
+  `MIN > 1`, which is why the array is sized to `MIN` rather than fixed at one. `push` is the
+  matching operation for growing a `MinVec` a caller already holds: a value that already
+  meets `MIN` cannot fall below it by gaining one more item, so `push` mutates in place with
+  no `Result`. Both are additive; `MinVec::new` is unchanged.
 
 - **Twenty-five leaf-type lists now carry their schema minimum in their type.** Each is
   `MinVec<T, N>` with `N` read from the field's own XSD element: `Polygon.position`
@@ -155,10 +163,20 @@ The conformance ledger, including what the test corpus does and does not prove, 
   Breaking: `EntityDistribution::new` takes its entries and returns `Result`;
   `EntityDistribution::add_entry` and the empty `EntityDistribution::new()` are removed, the
   pair of them having been able to describe a distribution with no entries.
-  `SpeedProfileAction::new`, `Stochastic::new`, `ValueSetDistribution::new` and
-  `ParameterValueSet::new` now return `Result`. `PolylineBuilder::finish` returns
+  `SpeedProfileAction::new` returns `Result`. `PolylineBuilder::finish` returns
   `BuilderResult<TrajectoryBuilder>`: it accumulated vertices in a plain `Vec` and could
   finish with nought or one, emitting a `<Polyline>` no schema-valid document can contain.
+  `Stochastic::new`, `ValueSetDistribution::new` and `ParameterValueSet::new` were given a
+  `Result` return here for the same reason as the rest of this entry, even though each
+  already took its first element as a separate, required parameter (`first: T, rest:
+  Vec<T>`) — a shape that proves the list non-empty without checking anything at runtime.
+  Later given `MinVec::from_min`, built for exactly this case, all three build their
+  `MinVec` from `first` directly and return `Self` again; their `Result` could never
+  actually be `Err`, and every caller carried a `.unwrap()` or `?` for an error that could
+  not happen. `DistributionSet::new` follows the same `first`/`rest` shape and always
+  returned `Self`, via an internal `.expect()` on its own `MinVec::new` call; it now uses
+  `MinVec::from_min` too, so the `.expect()` is gone along with the panic path it asserted
+  safe.
 
 - **`DistributionSet::validate`, `ProbabilityDistributionSet::validate` and
   `Histogram::validate` no longer check for emptiness.** The rule is now stated by the
@@ -197,6 +215,15 @@ Breaking, unless noted.
   `ManeuverBuilder::finish`, `StoryBuilder::finish`, `ActBuilder::finish` and
   `PrivateActionBuilder::finish`, gained a `Result` return for the same reason: they had no
   way to report a container with nothing in it, so they emitted one.
+
+- **`EventTriggerBuilder::time_condition` and `::speed_condition` return
+  `BuilderResult<Self>` instead of `Self`.** Breaking. Both build a one-condition
+  `ConditionGroup` through `TriggerBuilder::add_condition`, which returns `Result` for the
+  same `minOccurs="1"` reason as the rest of this entry; a single condition always meets
+  that minimum, so neither call can fail today, but the two methods previously asserted
+  that with an `.unwrap()` at the call site rather than in a type. Propagating the `Result`
+  removes the panic path; the two methods have no caller in this crate, so nothing else
+  changes shape as a result.
 
 - **`Route::add_waypoint` and `Route::add_position` are gone.** Breaking. A route was built
   by `Route::new(name, closed)` and then grown one waypoint at a time, so a route holding a

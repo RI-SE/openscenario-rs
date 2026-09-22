@@ -42,6 +42,14 @@ impl BasicScenarioTemplate {
             .build()
             .unwrap();
 
+        // `add_teleport_action`/`add_speed_action` return `Result` only because they build a
+        // `Private`'s `MinVec<PrivateAction, 1>` (`src/builder/init/actions.rs`,
+        // `src/types/scenario/init.rs`): the container either starts from a one-element `Vec`
+        // or grows one that already meets the minimum, so neither call here can fail. That
+        // invariant belongs to `push_private_action`, not to this template, so it cannot be
+        // moved into `MinVec`'s own API without widening a file this issue does not own; the
+        // `.unwrap()` stays, with the reason recorded at the call site instead of three files
+        // away.
         let init = InitActionBuilder::new()
             .add_global_environment_action("Environment")
             .add_teleport_action(vehicle_name, position)
@@ -69,6 +77,9 @@ impl BasicScenarioTemplate {
             .build()
             .unwrap();
 
+        // See the comment on the equivalent chain in `single_vehicle`: the `Result` here comes
+        // from `Private`'s `MinVec` minimum, which the container's own growth pattern always
+        // satisfies.
         let init = InitActionBuilder::new()
             .add_global_environment_action("Environment")
             .add_teleport_action("ego", ego_position)
@@ -102,6 +113,9 @@ impl BasicScenarioTemplate {
             .build()
             .unwrap();
 
+        // See the comment on the equivalent chain in `single_vehicle`: the `Result` here comes
+        // from `Private`'s `MinVec` minimum, which the container's own growth pattern always
+        // satisfies.
         let init = InitActionBuilder::new()
             .add_global_environment_action("Environment")
             .add_teleport_action("Ego", ego_position)

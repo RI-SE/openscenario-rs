@@ -148,18 +148,18 @@ pub struct Range {
 // `maxOccurs="unbounded"` with no `minOccurs="0"`, so an empty `distributions` Vec is not
 // schema-valid either. The previous impl fabricated `numberOfTestRuns: 1`. Use `new()`.
 impl Stochastic {
+    /// `StochasticDistribution` is `maxOccurs="unbounded"` with no `minOccurs="0"`, so `first`
+    /// proves the schema minimum and building this cannot fail.
     pub fn new(
         number_of_test_runs: UnsignedInt,
         first: StochasticDistribution,
         rest: Vec<StochasticDistribution>,
-    ) -> crate::Result<Self> {
-        let mut distributions = vec![first];
-        distributions.extend(rest);
-        Ok(Self {
-            distributions: MinVec::new(distributions)?,
+    ) -> Self {
+        Self {
+            distributions: MinVec::from_min([first], rest),
             number_of_test_runs,
             random_seed: None,
-        })
+        }
     }
 }
 
@@ -357,5 +357,23 @@ mod tests {
         assert!(valid_histogram.validate().is_ok());
 
         assert!(MinVec::<HistogramBin, 1>::new(vec![]).is_err());
+    }
+
+    #[test]
+    fn stochastic_new_takes_no_result() {
+        // `first` proves the schema minimum, so `Stochastic::new` returns `Self` directly.
+        let distribution = StochasticDistribution {
+            distribution_type: StochasticDistributionType::UniformDistribution(
+                UniformDistribution {
+                    range: Range {
+                        lower_limit: Value::Literal("0.0".to_string()),
+                        upper_limit: Value::Literal("1.0".to_string()),
+                    },
+                },
+            ),
+            parameter_name: OSString::Literal("speed".to_string()),
+        };
+        let stochastic = Stochastic::new(Value::Literal(10), distribution, vec![]);
+        assert_eq!(stochastic.distributions.len(), 1);
     }
 }

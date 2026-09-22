@@ -327,3 +327,53 @@ fn a_zero_length_value_cannot_be_constructed_at_min_one() {
     assert!(MinVec::<OSString, 1>::new(Vec::new()).is_err());
     assert!(MinVec::<OSString, 1>::new(vec![Value::literal("one".to_string())]).is_ok());
 }
+
+// ---------------------------------------------------------------------------
+// `from_min` and `push`
+//
+// A caller with one guaranteed element (a `first: T, rest: Vec<T>` constructor, the
+// shape several `::new` methods in the crate use) had no way to build a `MinVec`
+// without going through `new` and its `Result`, even though the call could never fail.
+// `from_min` closes that: the array argument is sized to `MIN` at the type level, so
+// supplying it is the proof, with nothing left to check at runtime. `push` is the
+// matching operation for growing a value the caller already holds.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn from_min_compiles_away_the_result_at_min_one() {
+    // No `?`, no `.unwrap()`, no `Result` anywhere in this line: `from_min` returns
+    // `MinVec` directly.
+    let one: MinVec<u8, 1> = MinVec::from_min([1], vec![]);
+    assert_eq!(one.as_slice(), &[1]);
+
+    let several: MinVec<u8, 1> = MinVec::from_min([1], vec![2, 3]);
+    assert_eq!(several.as_slice(), &[1, 2, 3]);
+}
+
+#[test]
+fn from_min_takes_exactly_min_guaranteed_items_at_min_two() {
+    // At `MIN = 2` a single guaranteed element is not proof of the bound; the array
+    // must carry both. This is `MinVec<u8, 2>::from_min([1], ...)` failing to compile,
+    // demonstrated the only way a compile failure can be: by writing the call that
+    // does type-check.
+    let two: MinVec<u8, 2> = MinVec::from_min([1, 2], vec![]);
+    assert_eq!(two.as_slice(), &[1, 2]);
+
+    let more: MinVec<u8, 2> = MinVec::from_min([1, 2], vec![3, 4]);
+    assert_eq!(more.as_slice(), &[1, 2, 3, 4]);
+}
+
+#[test]
+fn push_grows_a_live_min_vec_without_a_result() {
+    let mut one: MinVec<u8, 1> = MinVec::from_min([1], vec![]);
+    one.push(2);
+    one.push(3);
+    assert_eq!(one.as_slice(), &[1, 2, 3]);
+}
+
+#[test]
+fn new_still_rejects_a_short_list_alongside_the_new_constructors() {
+    // `from_min` and `push` are additions; `new`'s existing check is unchanged.
+    assert!(MinVec::<u8, 2>::new(vec![1]).is_err());
+    assert!(MinVec::<u8, 2>::new(vec![1, 2]).is_ok());
+}

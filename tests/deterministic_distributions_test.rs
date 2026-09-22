@@ -88,20 +88,16 @@ fn test_deterministic_add_single_and_multi() {
     );
     det.add_single(single);
 
-    let multi = DeterministicMultiParameterDistribution::new(
-        ValueSetDistribution::new(
-            ParameterValueSet::new(
-                ParameterAssignment::new(
-                    "position".to_string(),
-                    openscenario_rs::types::basic::Value::Literal("100.0".to_string()),
-                ),
-                vec![],
-            )
-            .unwrap(),
+    let multi = DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
+        ParameterValueSet::new(
+            ParameterAssignment::new(
+                "position".to_string(),
+                openscenario_rs::types::basic::Value::Literal("100.0".to_string()),
+            ),
             vec![],
-        )
-        .unwrap(),
-    );
+        ),
+        vec![],
+    ));
     det.add_multi(multi);
 
     assert_eq!(det.total_count(), 2);

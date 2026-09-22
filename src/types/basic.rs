@@ -908,14 +908,14 @@ impl ParameterDeclaration {
     /// Add a constraint to this parameter declaration
     pub fn add_constraint(&mut self, constraint: ValueConstraint) {
         if let Some(group) = self.constraint_groups.last_mut() {
-            let mut items = group.value_constraints.as_slice().to_vec();
-            items.push(constraint);
-            // Extending an already-nonempty group can never fall below MIN.
-            group.value_constraints = MinVec::new(items).expect("group was already non-empty");
+            // Growing an already-non-empty group can never fall below `MinVec`'s
+            // minimum, so `push` (infallible) replaces the old rebuild-through-`new`.
+            group.value_constraints.push(constraint);
         } else {
             self.constraint_groups.push(ValueConstraintGroup {
-                // A one-element vec always satisfies MIN = 1.
-                value_constraints: MinVec::new(vec![constraint]).expect("one element"),
+                // The array proves the one required element; `MinVec::new` and its
+                // `Result` are not needed.
+                value_constraints: MinVec::from_min([constraint], vec![]),
             });
         }
     }
@@ -984,10 +984,9 @@ impl ValueConstraintGroup {
 
     /// Add a constraint to the group.
     pub fn add_constraint(&mut self, constraint: ValueConstraint) {
-        let mut items = self.value_constraints.as_slice().to_vec();
-        items.push(constraint);
-        // Extending an already-nonempty group can never fall below MIN.
-        self.value_constraints = MinVec::new(items).expect("group was already non-empty");
+        // Growing an already-non-empty group can never fall below `MinVec`'s minimum,
+        // so `push` (infallible) replaces the old rebuild-through-`new`.
+        self.value_constraints.push(constraint);
     }
 }
 
@@ -1075,6 +1074,12 @@ impl Range {
 /// let two: MinVec<u8, 2> = MinVec::new(vec![1, 2]).unwrap();
 /// assert_eq!(two.as_slice(), &[1, 2]);
 /// assert!(MinVec::<u8, 2>::new(vec![1]).is_err());
+///
+/// // A caller that already has MIN guaranteed items avoids the `Result` entirely.
+/// let mut three: MinVec<u8, 2> = MinVec::from_min([1, 2], vec![3]);
+/// assert_eq!(three.as_slice(), &[1, 2, 3]);
+/// three.push(4);
+/// assert_eq!(three.as_slice(), &[1, 2, 3, 4]);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MinVec<T, const MIN: usize>(Vec<T>);
@@ -1089,6 +1094,36 @@ impl<T, const MIN: usize> MinVec<T, MIN> {
             ));
         }
         Ok(Self(items))
+    }
+
+    /// Build a `MinVec` from `MIN` required items plus any further ones, with no
+    /// fallible check.
+    ///
+    /// A caller with one guaranteed non-empty `Vec<T>` still has to go through
+    /// [`MinVec::new`] and its `Result`, even though nothing about the call can fail.
+    /// That mismatch is what leaves a `.unwrap()` or `?` sitting over an error that
+    /// never occurs. `from_min` closes it by moving the bound into the signature: the
+    /// array `head` carries exactly `MIN` elements at the type level, so supplying it
+    /// is itself the proof, and there is nothing left to check at runtime.
+    ///
+    /// This is the general form of the shape suggested for `MIN = 1` (a single
+    /// guaranteed element plus a `Vec` of the rest). A single element does not prove
+    /// the bound for `MIN > 1`, which is why the guaranteed part is an array sized to
+    /// `MIN` rather than one value.
+    pub fn from_min(head: [T; MIN], rest: Vec<T>) -> Self {
+        let mut items: Vec<T> = head.into();
+        items.extend(rest);
+        Self(items)
+    }
+
+    /// Append one further item to an already-non-empty `MinVec`, in place.
+    ///
+    /// A live `MinVec<T, MIN>` holds at least `MIN` items by construction, so growing
+    /// it by one cannot fall below that bound. This replaces the rebuild-through-`new`
+    /// pattern (`MinVec::new(vec_with_one_more_item).expect("...")`) for the common
+    /// case of extending a value the caller already holds.
+    pub fn push(&mut self, item: T) {
+        self.0.push(item);
     }
 
     /// Borrow the contents as a slice.

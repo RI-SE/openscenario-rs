@@ -284,11 +284,8 @@ impl DistributionSet {
     /// (`maxOccurs="unbounded"`, no `minOccurs="0"`), so this takes the first element plus any
     /// further ones rather than allowing an empty set.
     pub fn new(first: DistributionSetElement, rest: Vec<DistributionSetElement>) -> Self {
-        let mut elements = vec![first];
-        elements.extend(rest);
         Self {
-            // `first` guarantees at least one element.
-            elements: MinVec::new(elements).expect("at least one element"),
+            elements: MinVec::from_min([first], rest),
         }
     }
 }
@@ -307,25 +304,21 @@ impl DistributionRange {
 
 impl ValueSetDistribution {
     /// The schema requires at least one `ParameterValueSet` (`maxOccurs="unbounded"`, no
-    /// `minOccurs="0"`).
-    pub fn new(first: ParameterValueSet, rest: Vec<ParameterValueSet>) -> crate::Result<Self> {
-        let mut parameter_value_sets = vec![first];
-        parameter_value_sets.extend(rest);
-        Ok(Self {
-            parameter_value_sets: MinVec::new(parameter_value_sets)?,
-        })
+    /// `minOccurs="0"`). `first` proves it, so building this cannot fail.
+    pub fn new(first: ParameterValueSet, rest: Vec<ParameterValueSet>) -> Self {
+        Self {
+            parameter_value_sets: MinVec::from_min([first], rest),
+        }
     }
 }
 
 impl ParameterValueSet {
     /// The schema requires at least one `ParameterAssignment` (`maxOccurs="unbounded"`, no
-    /// `minOccurs="0"`).
-    pub fn new(first: ParameterAssignment, rest: Vec<ParameterAssignment>) -> crate::Result<Self> {
-        let mut parameter_assignments = vec![first];
-        parameter_assignments.extend(rest);
-        Ok(Self {
-            parameter_assignments: MinVec::new(parameter_assignments)?,
-        })
+    /// `minOccurs="0"`). `first` proves it, so building this cannot fail.
+    pub fn new(first: ParameterAssignment, rest: Vec<ParameterAssignment>) -> Self {
+        Self {
+            parameter_assignments: MinVec::from_min([first], rest),
+        }
     }
 }
 
@@ -494,17 +487,13 @@ mod tests {
     }
 
     fn sample_multi() -> DeterministicMultiParameterDistribution {
-        DeterministicMultiParameterDistribution::new(
-            ValueSetDistribution::new(
-                ParameterValueSet::new(
-                    ParameterAssignment::new("p".to_string(), Value::literal("1.0".to_string())),
-                    vec![],
-                )
-                .unwrap(),
+        DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
+            ParameterValueSet::new(
+                ParameterAssignment::new("p".to_string(), Value::literal("1.0".to_string())),
                 vec![],
-            )
-            .unwrap(),
-        )
+            ),
+            vec![],
+        ))
     }
 
     #[test]
@@ -598,5 +587,30 @@ mod tests {
             serialized, xml,
             "document order (single, multi, single) must be preserved on round trip"
         );
+    }
+
+    #[test]
+    fn distribution_set_new_takes_no_result() {
+        // `first` proves the schema minimum, so `DistributionSet::new` returns `Self`
+        // directly; there is nothing here to `.unwrap()` or propagate with `?`.
+        let set = DistributionSet::new(
+            DistributionSetElement::new(Value::literal("1.0".to_string())),
+            vec![DistributionSetElement::new(Value::literal(
+                "2.0".to_string(),
+            ))],
+        );
+        assert_eq!(set.elements.len(), 2);
+    }
+
+    #[test]
+    fn value_set_distribution_and_parameter_value_set_new_take_no_result() {
+        let value_set = ParameterValueSet::new(
+            ParameterAssignment::new("p".to_string(), Value::literal("1.0".to_string())),
+            vec![],
+        );
+        assert_eq!(value_set.parameter_assignments.len(), 1);
+
+        let distribution = ValueSetDistribution::new(value_set, vec![]);
+        assert_eq!(distribution.parameter_value_sets.len(), 1);
     }
 }

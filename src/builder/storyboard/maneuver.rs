@@ -331,28 +331,30 @@ impl<P> EventTriggerBuilder<P> {
     }
 
     /// Add time condition
-    pub fn time_condition(mut self, time: f64) -> Self {
+    ///
+    /// Neither the condition build nor adding it to the group can fail for the input this
+    /// method accepts, but both go through a fallible `TriggerBuilder`/`ConditionGroup` API
+    /// this crate does not own here. Rather than assert that with an `.unwrap()` and a
+    /// comment, the `Result` is propagated: a change to either dependency that makes this
+    /// genuinely fallible then surfaces as an error, not a panic.
+    pub fn time_condition(mut self, time: f64) -> BuilderResult<Self> {
         let condition = crate::builder::conditions::TimeConditionBuilder::new()
             .at_time(time)
-            .build()
-            .unwrap();
-        // A group of exactly one condition always meets `ConditionGroup`'s
-        // `minOccurs="1"`, so this cannot fail.
-        self.trigger_builder = self.trigger_builder.add_condition(condition).unwrap();
-        self
+            .build()?;
+        self.trigger_builder = self.trigger_builder.add_condition(condition)?;
+        Ok(self)
     }
 
     /// Add speed condition
-    pub fn speed_condition(mut self, entity_ref: &str, speed: f64) -> Self {
+    ///
+    /// See [`Self::time_condition`] for why this returns a `Result` rather than `Self`.
+    pub fn speed_condition(mut self, entity_ref: &str, speed: f64) -> BuilderResult<Self> {
         let condition = crate::builder::conditions::ValueSpeedConditionBuilder::new()
             .for_entity(entity_ref)
             .speed_above(speed)
-            .build()
-            .unwrap();
-        // A group of exactly one condition always meets `ConditionGroup`'s
-        // `minOccurs="1"`, so this cannot fail.
-        self.trigger_builder = self.trigger_builder.add_condition(condition).unwrap();
-        self
+            .build()?;
+        self.trigger_builder = self.trigger_builder.add_condition(condition)?;
+        Ok(self)
     }
 }
 
@@ -1426,5 +1428,23 @@ mod tests {
         assert_eq!(maneuver_builder.maneuver_name, "TestManeuver");
         assert_eq!(maneuver_builder.entity_ref, "ego");
         assert_eq!(maneuver_builder.events.len(), 0);
+    }
+
+    #[test]
+    fn event_trigger_builder_time_and_speed_condition_never_error() {
+        // Both methods build a one-condition `ConditionGroup`, which always meets the
+        // schema's `minOccurs="1"`. They now say so through a `Result` that this test
+        // exercises, rather than through an `.unwrap()` and a comment.
+        let builder = EventTriggerBuilder::new(())
+            .time_condition(5.0)
+            .expect("a single time condition always satisfies ConditionGroup's minimum")
+            .speed_condition("ego", 10.0)
+            .expect("a single speed condition always satisfies ConditionGroup's minimum");
+
+        let trigger = builder
+            .trigger_builder
+            .build()
+            .expect("two groups were added");
+        assert_eq!(trigger.condition_groups.len(), 2);
     }
 }
