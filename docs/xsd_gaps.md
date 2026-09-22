@@ -19,7 +19,7 @@ The gates below live in a workspace member, not a sibling crate:
 openscenario-rs/            # workspace root
 ├── Cargo.toml               # [workspace] members = ["conformance"]
 ├── src/                     # this crate, openscenario-rs
-└── conformance/              # openscenario-roundtrip-harness – the corpus and the four gates
+└── conformance/              # openscenario-roundtrip-harness – the corpus and the five gates
 ```
 
 The harness depends on this crate by path
@@ -32,9 +32,9 @@ the bundled `xosc-validate` binary validates individual files without it.
 
 ## What the harness proves, and what it does not
 
-Five independent checks run against the corpus in `conformance/corpus`. All five exit
+Six independent checks run against the corpus in `conformance/corpus`. All six exit
 non-zero on failure, so they can be gated on `$?` rather than by reading output. Only the
-first four run in `scripts/hooks/pre-push`; `builder` does not, because it exercises
+first five run in `scripts/hooks/pre-push`; `builder` does not, because it exercises
 `src/builder/` rather than the parser and has no corpus fixtures of its own — run it by
 hand for any change under `src/builder/`.
 
@@ -44,6 +44,7 @@ hand for any change under `src/builder/`.
 | `cargo run -p openscenario-roundtrip-harness --bin lossy` | **original file** vs `xml1` | data dropped or invented on the *first* parse |
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs **the XSD** | schema-invalid output: invented fields, mis-ordered sequences, empty choice groups |
 | `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs **the XSD** | a schema-invalid *input*, which the crate may otherwise "improve" into a valid document by dropping the part that made it invalid (OSP-14) |
+| `cargo run -p openscenario-roundtrip-harness --bin mutate` | every mutation of each corpus file, through the same three questions | the crate accepts an invalid document that the schema forbids; the gate breaks valid documents in XSD-guided ways and asserts the crate rejects every mutant libxml2 rejects |
 | `cargo run -p openscenario-roundtrip-harness --bin builder` (not in the pre-push gate) | every builder fixture, through the same three questions | the builder API producing non-schema-valid or lossy output, using code as the corpus instead of files |
 
 ### The corpus covers about three fifths of the schema
@@ -177,8 +178,8 @@ sources are MPL-2.0). Like them it is fetched on demand into gitignored
 - **What the gates said afterwards:** `report` 210 passed / 0 failed / 2 excluded / 212
   total; `lossy` 210 lossless / 0 lossy / 0 skipped / 2 excluded / 212 total, 0 dropped and
   0 invented items; `validate` 209 schema-valid / 0 schema-invalid / 0 skipped / 3 excluded
-  / 212 total, 0 validation errors. `bash scripts/gate.sh` exits 0 over all ten stages
-  (ten at that commit; eleven since OSP-14 added the `validate-input` stage).
+  / 212 total, 0 validation errors. `bash scripts/gate.sh` exits 0 over all ten stages at that commit;
+  eleven since OSP-14 added the `validate-input` stage, twelve since OSS-47 added `mutate`.
 
 The import found one defect in this crate rather than in the data: the crate cannot
 deserialize `<TrafficAction>`, failing with `invalid type: map, expected a sequence` at the

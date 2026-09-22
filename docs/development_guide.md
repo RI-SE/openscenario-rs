@@ -215,8 +215,8 @@ When modifying serialization behavior, always verify against the official schema
 cargo run --bin xosc-validate --features validation -- tests/data/alks_scenario.xosc
 ```
 
-For a change's effect on the whole corpus, run the four gates in the `conformance` workspace
-member (`report`, `lossy`, `validate`, `validate-input`) – see [xsd_gaps.md](xsd_gaps.md) for
+For a change's effect on the whole corpus, run the five gates in the `conformance` workspace
+member (`report`, `lossy`, `validate`, `validate-input`, `mutate`) – see [xsd_gaps.md](xsd_gaps.md) for
 what each one catches and [CONTRIBUTING.md](../CONTRIBUTING.md) for the commands.
 
 **Common XSD Issues**:

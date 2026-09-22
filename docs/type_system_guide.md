@@ -634,7 +634,7 @@ had.
 assumed**: every remaining impl there was read against its type's shape, not just its file's
 prior "done" status.
 
-**`grep -rn "^impl Default for" src/` now finds 15 — every one reviewed individually, none
+**`grep -rn "^impl Default for" src/` now finds 12 — every one reviewed individually, none
 fabricating:**
 
 - `catalog/loader.rs` `CatalogLoader`, `catalog/mod.rs` `CatalogManager`, `catalog/resolver.rs`
