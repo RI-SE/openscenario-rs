@@ -36,7 +36,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Required of a scenario document by the XSD, even when empty.
         .with_catalog_locations(CatalogLocations::default())
         .with_road_network(RoadNetwork::default())
-        .with_entities();
+        .with_entities()
+        .add_vehicle("Ego", |v| {
+            v.car()
+                .with_dimensions(4.5, 1.8, 1.4)
+                .with_performance(180.0, 4.0, 9.0)
+        });
 
     // Step 2: Create storyboard with the working pattern from tests
     let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
@@ -66,6 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 4: Build the final scenario
     println!("\n🔧 Building final scenario...");
+    story_builder.finish()?;
     let scenario = storyboard_builder.finish().build()?;
 
     println!("✅ Cut-in scenario built successfully using detached builders!");

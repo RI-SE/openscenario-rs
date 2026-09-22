@@ -32,7 +32,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_parameter("overtake_distance", ParameterType::Double, "50.0")
         .with_catalog_locations(CatalogLocations::default())
         .with_road_file("highway.xodr")
-        .with_entities();
+        .with_entities()
+        .add_vehicle("ego", |v| {
+            v.car()
+                .with_dimensions(4.5, 1.8, 1.4)
+                .with_performance(180.0, 4.0, 9.0)
+        });
 
     println!("✅ Created scenario with parameters and road network");
 
@@ -96,6 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 4: Build the final comprehensive scenario
     println!("\n🔧 Building final comprehensive scenario...");
+    story_builder.finish()?;
     let scenario = storyboard_builder.finish().build()?;
 
     println!("✅ Comprehensive scenario built successfully using NEW detached builders!");

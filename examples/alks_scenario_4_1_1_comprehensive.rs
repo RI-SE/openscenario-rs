@@ -230,7 +230,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     act3.attach_to(&mut story_builder)?;
 
     // Finish the story and complete the scenario
-    story_builder.finish();
+    story_builder.finish()?;
 
     // Add ALKS test completion stop condition (by-value condition)
     // This demonstrates using a simulation time condition to stop the scenario after 120 seconds
