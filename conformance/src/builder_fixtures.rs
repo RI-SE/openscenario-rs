@@ -220,7 +220,8 @@ fn cut_in_detached() -> BuilderResult<OpenScenario> {
         .with_header("Cut-in scenario", "OpenSCENARIO-rs Builder Demo")
         .with_catalog_locations(CatalogLocations::default())
         .with_road_network(RoadNetwork::default())
-        .with_entities();
+        .with_entities()
+        .add_vehicle("Ego", |v| v.car());
 
     let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
     let mut story_builder = storyboard_builder.add_story_simple("Cutin");
@@ -238,6 +239,7 @@ fn cut_in_detached() -> BuilderResult<OpenScenario> {
     speed.attach_to_detached(&mut maneuver)?;
     maneuver.attach_to_detached(&mut act)?;
     act.attach_to(&mut story_builder)?;
+    story_builder.finish()?;
 
     storyboard_builder.finish().build()
 }
@@ -254,7 +256,8 @@ fn comprehensive_overtaking() -> BuilderResult<OpenScenario> {
         .add_parameter("overtake_distance", ParameterType::Double, "50.0")
         .with_catalog_locations(CatalogLocations::default())
         .with_road_file("highway.xodr")
-        .with_entities();
+        .with_entities()
+        .add_vehicle("ego", |v| v.car());
 
     let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
     let mut story_builder = storyboard_builder.add_story_simple("highway_overtaking");
@@ -301,6 +304,7 @@ fn comprehensive_overtaking() -> BuilderResult<OpenScenario> {
     teleport.attach_to_detached(&mut maneuver3)?;
     maneuver3.attach_to_detached(&mut act3)?;
     act3.attach_to(&mut story_builder)?;
+    story_builder.finish()?;
 
     storyboard_builder.finish().build()
 }
@@ -404,4 +408,58 @@ pub fn alks_4_1_1_free_driving() -> BuilderResult<OpenScenario> {
 
     story_builder.finish()?;
     storyboard_builder.stop_after_time(120.0)?.finish().build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openscenario_rs::serialize_to_string;
+
+    /// `StoryBuilder::finish` consumes `self` and pushes the accumulated story onto its parent;
+    /// a `StoryBuilder` that is only ever borrowed through and then dropped never reaches that
+    /// push, so the story it built never enters the document. Both fixtures below build a story
+    /// through the detached-builder pattern and must call `finish()` before the last
+    /// `storyboard_builder.finish()`, or the serialized document has no `<Story>` at all despite
+    /// `check_builder_fixture` reporting a pass, because `Storyboard.Story` is `minOccurs="0"`.
+    #[test]
+    fn cut_in_detached_keeps_its_story() {
+        let scenario = cut_in_detached().expect("cut_in_detached builds");
+        let xml = serialize_to_string(&scenario).expect("cut_in_detached serializes");
+        assert_eq!(
+            xml.matches("</Story>").count(),
+            1,
+            "expected one <Story> element, got: {xml}"
+        );
+        assert_eq!(
+            xml.matches("</Act>").count(),
+            1,
+            "expected one <Act> element, got: {xml}"
+        );
+        assert_eq!(
+            xml.matches("</ManeuverGroup>").count(),
+            1,
+            "expected one <ManeuverGroup> element, got: {xml}"
+        );
+    }
+
+    #[test]
+    fn comprehensive_overtaking_keeps_its_story() {
+        let scenario = comprehensive_overtaking().expect("comprehensive_overtaking builds");
+        let xml = serialize_to_string(&scenario).expect("comprehensive_overtaking serializes");
+        assert_eq!(
+            xml.matches("</Story>").count(),
+            1,
+            "expected one <Story> element, got: {xml}"
+        );
+        assert_eq!(
+            xml.matches("</Act>").count(),
+            3,
+            "expected three <Act> elements, got: {xml}"
+        );
+        assert_eq!(
+            xml.matches("</ManeuverGroup>").count(),
+            3,
+            "expected three <ManeuverGroup> elements, got: {xml}"
+        );
+    }
 }
