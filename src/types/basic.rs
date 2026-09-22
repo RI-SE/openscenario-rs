@@ -146,14 +146,18 @@ where
 
         // Check if this is a parameter reference or expression
         if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
+            // ASAM OpenSCENARIO XML section 9.2 gives the braced spelling to the
+            // `expression` production alone; a bare parameter reference is always
+            // unbraced (`$name`, handled below). Section 9.2's own examples reference
+            // a parameter *inside* an expression with its `$` prefix, as in
+            // `${$defaultWidth + 12.3}`, so a braced single identifier with no `$`
+            // (`${pi}`) is not a parameter reference at all -- it is an expression
+            // that happens to be one token, and one the crate defines no constant
+            // for. Treating it as `$pi` silently renamed the reference on every
+            // round trip, so the braced form is always `Value::Expression` here;
+            // resolving it is `resolve_expression`'s job, not the deserializer's.
             let content = &s[2..s.len() - 1];
-            // Check if it's a simple parameter (no operators)
-            if is_valid_parameter_name(content) && !content.contains(|c| "+-*/%()".contains(c)) {
-                Ok(Value::Parameter(content.to_string()))
-            } else {
-                // Treat as expression
-                Ok(Value::Expression(content.to_string()))
-            }
+            Ok(Value::Expression(content.to_string()))
         } else if s.starts_with("$") && s.len() > 1 {
             // Handle $param format (without curly braces)
             let content = &s[1..];
@@ -418,22 +422,27 @@ mod tests {
         assert!(!is_valid_parameter_name("\u{FF41}bc")); // fullwidth 'a'
     }
 
-    /// Tightening the `parameter` production to ASCII must not tighten the
-    /// `expression` production, which has its own character class
-    /// (`Schema/OpenSCENARIO.xsd:11`) and is deliberately left alone.
+    /// The `${…}` spelling belongs to the `expression` production
+    /// (`Schema/OpenSCENARIO.xsd:11`) alone, whatever its content looks like; the
+    /// `parameter` production (`Schema/OpenSCENARIO.xsd:4-8`) is unbraced. Braces
+    /// therefore settle the variant on their own, independent of the ASCII rule
+    /// tightened elsewhere in this file for the bare-sigil form.
     #[test]
-    fn ascii_parameter_rule_leaves_the_expression_production_alone() {
-        // A `${…}` body that is not a plain parameter name is an expression, before and after.
+    fn braces_always_select_the_expression_production() {
+        // A `${…}` body containing an operator is an expression, as before.
         let expr: Value<f64> = quick_xml::de::from_str(r#"<v>${speed + 10}</v>"#).unwrap();
         assert!(matches!(expr, Value::Expression(ref e) if e == "speed + 10"));
 
-        // A plain ASCII name inside `${…}` is still recognised as a parameter.
-        let param: Value<f64> = quick_xml::de::from_str(r#"<v>${speed}</v>"#).unwrap();
-        assert!(matches!(param, Value::Parameter(ref p) if p == "speed"));
+        // A plain ASCII name inside `${…}` is *also* an expression -- braced, so it is
+        // the `expression` production, never `parameter`, regardless of whether the body
+        // parses as a valid parameter name.
+        let bare_name: Value<f64> = quick_xml::de::from_str(r#"<v>${speed}</v>"#).unwrap();
+        assert!(matches!(bare_name, Value::Expression(ref e) if e == "speed"));
+        assert_eq!(bare_name.to_string(), "${speed}");
 
-        // A non-ASCII `${…}` body is no longer a *parameter*, but it is still carried through
-        // as an expression rather than being dropped or rejected — the expression production
-        // is not what this change tightened, and the text survives a round-trip.
+        // A non-ASCII `${…}` body is carried through as an expression rather than being
+        // dropped or rejected -- the character class this file tightened applies to the
+        // unbraced `parameter` production, not to `${…}`.
         let unicode: Value<f64> = quick_xml::de::from_str(r#"<v>${café}</v>"#).unwrap();
         assert!(matches!(unicode, Value::Expression(ref e) if e == "café"));
         assert_eq!(unicode.to_string(), "${café}");
@@ -442,8 +451,8 @@ mod tests {
         // parameter reference; it falls through to a literal parse, which fails for f64.
         assert!(quick_xml::de::from_str::<Value<f64>>(r#"<v>$café</v>"#).is_err());
 
-        // `$speed` (the schema's `parameter` production) still deserializes as a
-        // parameter and re-serializes with the bare sigil.
+        // `$speed` (the schema's `parameter` production, unbraced) still deserializes as
+        // a parameter and re-serializes with the bare sigil.
         let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$speed</v>"#).unwrap();
         assert!(matches!(bare, Value::Parameter(ref p) if p == "speed"));
         assert_eq!(bare.to_string(), "$speed");
@@ -569,6 +578,58 @@ mod tests {
         let as_string: Value<String> =
             quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
         assert!(as_string.resolve(&params).is_err());
+    }
+
+    /// ASAM OpenSCENARIO XML section 9.2 gives a parameter reference inside an expression its
+    /// `$` prefix (`${$defaultWidth + 12.3}`) and defines no named constants, so `pi` is not
+    /// one. Before this change `Value<T>::deserialize` treated a braced bare identifier as a
+    /// parameter reference, so `${pi}` parsed the same as `$pi` and re-serialized as `$pi` --
+    /// silently renaming the reference on every round trip. It must now parse as an
+    /// expression, unresolved, and round-trip unchanged.
+    #[test]
+    fn braced_bare_name_is_an_expression_not_a_renamed_parameter() {
+        let value: Value<f64> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
+        assert!(matches!(value, Value::Expression(ref e) if e == "pi"));
+        assert_eq!(value.to_string(), "${pi}");
+
+        let value: Value<String> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
+        assert!(matches!(value, Value::Expression(ref e) if e == "pi"));
+        assert_eq!(value.to_string(), "${pi}");
+    }
+
+    /// `${pi}` names no parameter the crate defines and no constant section 9.2 defines, so
+    /// resolving it must fail -- as both a `Double` and a `String` -- naming the cause rather
+    /// than silently succeeding the way the pre-fix `$pi` conflation did.
+    #[test]
+    fn braced_bare_name_fails_to_resolve() {
+        let params = HashMap::new();
+
+        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
+        let err = as_double.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("not found"),
+            "expected the real cause, got: {err}"
+        );
+
+        let as_string: Value<String> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
+        let err = as_string.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("not found"),
+            "expected the real cause, got: {err}"
+        );
+    }
+
+    /// The unbraced `$name` spelling is unaffected: it is still the schema's `parameter`
+    /// production, and `${$speed * 2}` still resolves through the evaluator.
+    #[test]
+    fn unbraced_parameter_and_expression_with_parameter_are_unaffected() {
+        let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$pi</v>"#).unwrap();
+        assert!(matches!(bare, Value::Parameter(ref p) if p == "pi"));
+
+        let mut params = HashMap::new();
+        params.insert("speed".to_string(), "10".to_string());
+        let expr: Value<f64> = quick_xml::de::from_str(r#"<v>${$speed * 2}</v>"#).unwrap();
+        assert_eq!(expr.resolve(&params).unwrap(), 20.0);
     }
 
     #[test]

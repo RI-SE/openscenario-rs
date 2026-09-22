@@ -1669,6 +1669,26 @@ Breaking, unless noted.
   every operator and function section 9.2 lists — `round`, `asin`, `acos`, `atan`, `sign`, `pow`,
   and the boolean operators `not`/`and`/`or` are absent — and using any of them was already an
   error before this change; that gap is unaffected and unclosed here.
+- **A braced bare identifier such as `${pi}` deserialized as the parameter `pi`, not as an
+  expression, and re-serialized as `$pi`.** ASAM OpenSCENARIO XML section 9.2 gives the braced
+  spelling to the `expression` production alone; its own examples reference a parameter *inside*
+  an expression with the `$` prefix, as in `${$defaultWidth + 12.3}`, and it defines no named
+  constants, so `pi` is not one. `Value<T>::deserialize` (`src/types/basic.rs`) instead classified
+  `${...}` content by whether it looked like a parameter name: an identifier with no operator
+  became `Value::Parameter`, and only content containing an operator became `Value::Expression`.
+  `${pi}` therefore became the same value as `$pi`, silently renaming the reference on every round
+  trip. Three files in the conformance corpus write `Orientation@h="${pi}"`, none of them declares
+  a `pi` parameter, and every gate passed them, since the `lossy` check compares element and
+  attribute names, not values (`OSS-46`). The braced form is now always `Value::Expression`,
+  whatever its content; resolving it is `resolve_expression`'s job, and `${pi}` now fails there
+  with a cause naming the missing parameter rather than silently succeeding. The unbraced `$name`
+  form is unaffected. A second, independently wired classifier with the same defect existed in
+  `deserialize_optional_double` (`src/types/actions/movement.rs`, `LaneChangeAction`'s
+  `@targetLaneOffset`) and is fixed the same way. This is a breaking change: a document using
+  `${pi}` or any other braced bare identifier as a parameter reference now carries that reference
+  unevaluated instead of resolving it, and fails once resolution is attempted. `src/types/basic.rs`
+  pins the parse, the round trip, and the resolution failure, each parsed through
+  `quick_xml::de::from_str` rather than hand-built.
 
 ### Known gaps
 

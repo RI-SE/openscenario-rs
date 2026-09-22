@@ -19,9 +19,14 @@
 //! `expression`. So `vehicleCategory="${cat}"` is *not* schema-valid; `vehicleCategory="$cat"`
 //! is. `xmllint --schema` confirms both halves of that.
 //!
-//! The crate still *parses* `${cat}` on an enum attribute (its deserializer is deliberately
-//! permissive about the two spellings), but it *emits* `$cat`, which is the only spelling the
-//! schema accepts on an enum attribute and is valid on every scalar union as well.
+//! The crate no longer treats `${cat}` as a spelling variant of `$cat`. Section 9.2 gives the
+//! braced form to the `expression` production alone -- its own examples reference a parameter
+//! *inside* an expression with the `$` prefix, as in `${$defaultWidth + 12.3}` -- so a braced
+//! bare identifier is an unresolvable expression, not a parameter reference. `${cat}` on an
+//! enum attribute therefore parses as `Value::Expression("cat")` and round-trips unchanged,
+//! which happens to be schema-invalid XML on this attribute since the enum unions admit no
+//! `expression` member; that invalidity belongs to the document, not to a deserializer that
+//! would otherwise have to guess which production the author meant.
 
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::conditions::entity::EntityCondition;
@@ -241,12 +246,15 @@ fn parameters_serialize_in_the_schema_s_parameter_form() {
 }
 
 #[test]
-fn the_braced_spelling_still_parses() {
-    // The crate is permissive on input even though it is strict on output.
+fn the_braced_spelling_is_an_expression_not_a_parameter() {
+    // `${cat}` is the `expression` production, not a second spelling of `$cat`. It still
+    // parses -- the crate keeps the text rather than rejecting it at parse time, since
+    // resolution is a later pass's job -- but as `Value::Expression`, which is what
+    // resolving it against a parameter map would then correctly reject.
     let braced = SCENARIO.replace(r#"vehicleCategory="$cat""#, r#"vehicleCategory="${cat}""#);
     let doc = parse_from_str(&braced).expect("braced spelling parses");
     assert_eq!(
         ego_vehicle(&doc).vehicle_category,
-        Value::Parameter("cat".to_string())
+        Value::Expression("cat".to_string())
     );
 }

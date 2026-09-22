@@ -43,14 +43,15 @@ where
             match value.parse::<f64>() {
                 Ok(val) => Ok(Some(Double::literal(val))),
                 Err(_) => {
-                    // Try parameter/expression parsing
+                    // Try parameter/expression parsing. The braced spelling is always
+                    // an expression, per the same reasoning as `Value<T>`'s deserializer
+                    // in `src/types/basic.rs`: section 9.2 gives `${...}` to the
+                    // `expression` production, not `parameter`, so a bare identifier
+                    // inside braces (`${pi}`) is an expression to evaluate, not a
+                    // rename of `$pi`.
                     if value.starts_with("${") && value.ends_with('}') && value.len() > 3 {
                         let content = &value[2..value.len() - 1];
-                        if content.contains(|c: char| "+-*/%()".contains(c)) {
-                            Ok(Some(Double::expression(content.to_string())))
-                        } else {
-                            Ok(Some(Double::parameter(content.to_string())))
-                        }
+                        Ok(Some(Double::expression(content.to_string())))
                     } else if value.starts_with('$') {
                         Ok(Some(Double::parameter(value[1..].to_string())))
                     } else {

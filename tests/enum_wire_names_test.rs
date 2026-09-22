@@ -211,9 +211,20 @@ fn value_wraps_vehicle_category_literal_and_parameter() {
         "parameter round-trip not byte-identical"
     );
 
-    // Deserialization stays permissive about the two spellings: a document written with
-    // the braced form still parses, and normalizes to the schema-valid one on output.
+    // The braced form no longer normalizes to a parameter reference, even when its
+    // content would otherwise read as one. Section 9.2 gives `${...}` to the
+    // `expression` production alone; a parameter reference is always unbraced. Before
+    // this changed, `${cat}` and `$cat` parsed to the same `Value::Parameter`, so a
+    // document that named a `pi` parameter with `${pi}` silently became a reference to
+    // `$pi` on round-trip. `${cat}` now parses as `Value::Expression` and round-trips
+    // unchanged, which for an enum-typed attribute happens to be schema-invalid XML --
+    // the enumeration unions list `parameter` alone -- but that invalidity is the
+    // document's, not something the deserializer should paper over by guessing which
+    // production the author meant.
     let braced: Wrapper = serde_json::from_str(r#"{"@category":"${cat}"}"#).unwrap();
-    assert_eq!(braced.category, Value::Parameter("cat".to_string()));
-    assert_eq!(serde_json::to_string(&braced).unwrap(), param_xml);
+    assert_eq!(braced.category, Value::Expression("cat".to_string()));
+    assert_eq!(
+        serde_json::to_string(&braced).unwrap(),
+        r#"{"@category":"${cat}"}"#
+    );
 }
