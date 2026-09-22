@@ -347,24 +347,31 @@ fn resolve_expression<T: FromStr>(expr: &str, params: &HashMap<String, String>) 
 where
     T::Err: std::fmt::Display,
 {
-    // Use the full expression evaluator
-    match crate::expression::evaluate_expression::<f64>(expr, params) {
-        Ok(result) => Ok(result.to_string()),
-        Err(_) => {
-            // Fallback to parameter substitution if expression parsing fails
-            let mut result = expr.to_string();
+    // The evaluator is authoritative. An earlier version of this function fell back to a
+    // textual `${name}` substitution whenever the evaluator returned an error (021f2fc): that
+    // substitution predates the evaluator itself, and the commit kept it running afterward as a
+    // safety net rather than as a feature the schema asks for. Falling back on error turns an
+    // evaluation failure into a false success — a division by zero or an unresolvable reference
+    // parses to `Ok` holding the unevaluated text — which is exactly what ASAM OpenSCENARIO XML
+    // section 9.2 requires to be an error. Propagating the evaluator's own error instead keeps
+    // the real cause (division by zero, an unknown parameter, a malformed expression) rather
+    // than discarding it and failing later, elsewhere, on a parse error that names the symptom
+    // instead of the cause.
+    let result = crate::expression::evaluate_expression::<f64>(expr, params)?;
 
-            // Find and replace parameter references in the expression
-            for (param_name, param_value) in params {
-                let param_ref = format!("${{{}}}", param_name);
-                if result.contains(&param_ref) {
-                    result = result.replace(&param_ref, param_value);
-                }
-            }
-
-            Ok(result)
-        }
+    // Section 9.2: "ASAM OpenSCENARIO does not use NaN or infinity, all operations ... shall
+    // instead result in an error." The evaluator already rejects the two operations that can
+    // reach a non-finite value directly (division and modulo by zero, sqrt of a negative), so
+    // this is the backstop for any other combination that reaches NaN or +-infinity, such as an
+    // overflowing product.
+    if !result.is_finite() {
+        return Err(Error::parameter_error(
+            expr,
+            &format!("expression result {} is not finite", result),
+        ));
     }
+
+    Ok(result.to_string())
 }
 
 #[cfg(test)]
@@ -471,6 +478,97 @@ mod tests {
         // Test expression resolution (basic)
         let expression = Value::<String>::expression("speed".to_string());
         assert_eq!(expression.resolve(&params).unwrap(), "30");
+    }
+
+    /// A valid expression still resolves, as both a `Double` and a `String`, once the fallback
+    /// that swallowed evaluator errors is gone.
+    #[test]
+    fn valid_expression_still_resolves() {
+        let mut params = HashMap::new();
+        params.insert("speed".to_string(), "10".to_string());
+
+        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${$speed * 2}</v>"#).unwrap();
+        assert_eq!(as_double.resolve(&params).unwrap(), 20.0);
+
+        let as_string: Value<String> = quick_xml::de::from_str(r#"<v>${$speed * 2}</v>"#).unwrap();
+        assert_eq!(as_string.resolve(&params).unwrap(), "20");
+    }
+
+    /// ASAM OpenSCENARIO XML section 9.2 requires an error on division by zero. Before this
+    /// change, resolving as `String` returned `Ok("1 / 0")` -- the unevaluated text -- and
+    /// resolving as `Double` failed later with "invalid float literal", discarding the real
+    /// cause. Both must now fail, and both must name division by zero.
+    #[test]
+    fn division_by_zero_is_an_error_not_unevaluated_text() {
+        let params = HashMap::new();
+
+        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${1 / 0}</v>"#).unwrap();
+        let err = as_double.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("division by zero"),
+            "expected the real cause, got: {err}"
+        );
+
+        let as_string: Value<String> = quick_xml::de::from_str(r#"<v>${1 / 0}</v>"#).unwrap();
+        let err = as_string.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("division by zero"),
+            "expected the real cause, got: {err}"
+        );
+    }
+
+    /// Section 9.2 requires an error on "sqrt of a negative value". Before this change,
+    /// resolving as `String` returned the unevaluated `"sqrt(-1)"` text as `Ok`.
+    #[test]
+    fn sqrt_of_negative_is_an_error_not_unevaluated_text() {
+        let params = HashMap::new();
+
+        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${sqrt(-1)}</v>"#).unwrap();
+        let err = as_double.resolve(&params).unwrap_err().to_string();
+        assert!(err.contains("sqrt"), "expected the real cause, got: {err}");
+
+        let as_string: Value<String> = quick_xml::de::from_str(r#"<v>${sqrt(-1)}</v>"#).unwrap();
+        let err = as_string.resolve(&params).unwrap_err().to_string();
+        assert!(err.contains("sqrt"), "expected the real cause, got: {err}");
+    }
+
+    /// A reference to a parameter that is not in scope is "an unresolvable type mismatch" in
+    /// section 9.2's terms and must be an error, not a textual copy of the missing name. Before
+    /// this change, resolving as `String` returned `Ok("$missing * 2")`.
+    #[test]
+    fn missing_parameter_in_expression_is_an_error_not_unevaluated_text() {
+        let params = HashMap::new();
+
+        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${$missing * 2}</v>"#).unwrap();
+        let err = as_double.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("not found"),
+            "expected the real cause, got: {err}"
+        );
+
+        let as_string: Value<String> =
+            quick_xml::de::from_str(r#"<v>${$missing * 2}</v>"#).unwrap();
+        let err = as_string.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("not found"),
+            "expected the real cause, got: {err}"
+        );
+    }
+
+    /// Text that is not a valid expression at all -- the evaluator's parser rejects it -- must
+    /// fail rather than pass through as if it had been a literal. Before this change, resolving
+    /// as `String` returned the input text unchanged as `Ok`.
+    #[test]
+    fn unparseable_expression_is_an_error_not_unevaluated_text() {
+        let params = HashMap::new();
+
+        let as_double: Value<f64> =
+            quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
+        assert!(as_double.resolve(&params).is_err());
+
+        let as_string: Value<String> =
+            quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
+        assert!(as_string.resolve(&params).is_err());
     }
 
     #[test]

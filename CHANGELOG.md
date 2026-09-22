@@ -1646,6 +1646,29 @@ Breaking, unless noted.
   total goes **1559 → 1568**; clippy stays at **191**; `report`, `lossy`, `validate` and
   `validate-input` are unchanged at 211 / 210 / 210 / 209 passing. No change to
   `openscenario-rs`'s public API.
+- **A failing `${...}` expression resolved to `Ok`, carrying the unevaluated text instead of an
+  error.** `resolve_expression` (`src/types/basic.rs`) called the expression evaluator and, on
+  any error the evaluator returned, fell back to a textual `${name}` substitution over the raw
+  expression string. That substitution is the crate's original, pre-evaluator implementation; it
+  was kept running as the error branch when the full parser and evaluator replaced it (`021f2fc`)
+  rather than removed, so an evaluation failure became a false success instead of surfacing. ASAM
+  OpenSCENARIO XML section 9.2 requires an error for exactly the cases the fallback was masking:
+  division by zero, an unresolvable type mismatch (here, a parameter not found), and an
+  expression the evaluator cannot parse at all. Resolving `${1 / 0}` as `String` returned
+  `Ok("1 / 0")`; resolving it as `Double` failed later, but with "invalid float literal" rather
+  than the evaluator's own "division by zero". `resolve_expression` now propagates the
+  evaluator's error directly, so the failure names its real cause, and it separately rejects a
+  successful result that is `NaN` or infinite, which section 9.2 also requires to be an error.
+  This is a breaking change: a document whose expression previously resolved through the
+  fallback — dividing by zero, naming a parameter absent from the current scope, or writing text
+  the evaluator does not recognize as an expression — now fails to parse where it used to
+  succeed. Four cases are pinned in `src/types/basic.rs`, each parsed through
+  `quick_xml::de::from_str` and resolved as both `Double` and `String`: division by zero, `sqrt`
+  of a negative number, a missing parameter, and unparseable text. The evaluator's arithmetic was
+  already correct; only the fallback around it was wrong. The evaluator does not yet implement
+  every operator and function section 9.2 lists — `round`, `asin`, `acos`, `atan`, `sign`, `pow`,
+  and the boolean operators `not`/`and`/`or` are absent — and using any of them was already an
+  error before this change; that gap is unaffected and unclosed here.
 
 ### Known gaps
 
