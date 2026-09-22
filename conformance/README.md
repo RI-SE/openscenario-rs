@@ -96,10 +96,9 @@ exemption can never be right.
 
 | File (under `corpus/openscenario1-engine/engine/tests/data/Scenarios/`) | `gates` | `assert` | Why |
 |---|---|---|---|
-| `AutomatedLaneKeepingSystemScenarios/Invalid.xosc` | report, lossy, validate, validate-input | `input-schema-invalid` | Deliberately invalid upstream fixture; the crate correctly refuses to parse it, so the other two gates could only skip it. |
-| `OSC_1_3_test_invalid.xosc` | validate, validate-input | `input-schema-invalid` | Deliberately invalid upstream fixture that nonetheless round-trips losslessly, so it stays live on `report` and `lossy`. Its output carries exactly the one schema error its input has: garbage in, identical garbage out. |
-| `traffic_area_action_test_scenario.xosc` | report, lossy, validate | `crate-defect` | **Temporary.** Schema-valid input the crate cannot deserialize (`<TrafficAction>`); tracked by OSP-11. Its input *is* valid, so it stays live on `validate-input` and passes it. |
-| `trajectory_shape.xosc` | lossy, validate-input | `input-schema-invalid` | Upstream typo leaves loose text inside `<ParameterDeclarations>`, which is element-only. The crate has nowhere to put it, drops it, and emits a **valid** document — an invalid input quietly improved. Stays live on `report` and on `validate`, both of which it genuinely passes. Found by OSP-07, made visible by OSP-14. |
+| `AutomatedLaneKeepingSystemScenarios/Invalid.xosc` | report, lossy, validate, validate-input | `input-schema-invalid` | Deliberately invalid upstream fixture with a bare `<ParameterDeclaration />` missing required attributes. The crate correctly refuses to parse it, so the other gates could only skip it. |
+| `OSC_1_3_test_invalid.xosc` | report, lossy, validate, validate-input | `input-schema-invalid` | Deliberately invalid upstream fixture with `<ScenarioObject>` missing its required `EntityObject` child. Used to round-trip losslessly as parallel `Option` fields; now fails to parse as a `$value` enum with missing field. |
+| `trajectory_shape.xosc` | lossy, validate-input | `input-schema-invalid` | Upstream typo leaves loose text inside `<ParameterDeclarations>`, which is element-only. The crate has nowhere to put it, drops it, and emits a **valid** document — an invalid input quietly improved. Stays live on `report` and on `validate`, both of which it genuinely passes. |
 
 ### The anti-rot mechanism is two assertions, not one
 
@@ -110,8 +109,10 @@ Both run for every entry, in every binary:
    needed — the crate was fixed, or upstream changed the file — trips this and the entry has to
    be deleted rather than quietly protecting nothing.
 
-That second assertion is how the `crate-defect` entry is designed to expire: when OSP-11 lands,
-the gate stops failing, the assertion trips, and the entry must go.
+That second assertion is how the `crate-defect` entry is designed to expire: when the crate is
+fixed and the gates stop failing, the assertion trips and the entry must be deleted — this is how
+the former TrafficAction exemption (`traffic_area_action_test_scenario.xosc`) expired when OSR-12
+landed.
 
 `path` is relative to `conformance/corpus/`, so the manifest is machine-independent, and every
 `path` must exist in the fetched corpus or the harness errors out.
@@ -154,18 +155,18 @@ Each excluded file prints an `XFAIL` line naming the gate result and the `assert
 summary line carries an `N excluded` term alongside the totals:
 
 ```
-XFAIL …/traffic_area_action_test_scenario.xosc  (XML parsing error: invalid type: map, expected a sequence)  (expectations.toml: crate-defect)
+XFAIL …/OSC_1_3_test_invalid.xosc  (missing field `$value`)  (expectations.toml: input-schema-invalid)
 
 --- summary ---
 209 schema-valid, 0 schema-invalid, 0 skipped, 3 excluded, 212 total
 ```
 
-The denominator of a green run is therefore not 212. `report` reports 2 excluded; `lossy`,
-`validate` and `validate-input` report 3 each — but not the same 3. `lossy` excludes
-`Invalid.xosc`, `traffic_area_action_test_scenario.xosc` and `trajectory_shape.xosc`; `validate`
-excludes `Invalid.xosc`, `OSC_1_3_test_invalid.xosc` and `traffic_area_action_test_scenario.xosc`;
-`validate-input` excludes the three files that are invalid on disk, which are `Invalid.xosc`,
-`OSC_1_3_test_invalid.xosc` and `trajectory_shape.xosc`.
+The denominator of a green run is therefore not 212. `report` reports 2 excluded; `lossy` and
+`validate-input` report 3 each; `validate` reports 2. The three files are `Invalid.xosc`,
+`OSC_1_3_test_invalid.xosc` and `trajectory_shape.xosc`, but each gate excludes a different subset.
+`report` and `validate` exclude `Invalid.xosc` and `OSC_1_3_test_invalid.xosc`; `lossy` and
+`validate-input` exclude all three: `Invalid.xosc`, `OSC_1_3_test_invalid.xosc` and
+`trajectory_shape.xosc`.
 
 | Exit code | Meaning |
 |---|---|
@@ -225,4 +226,6 @@ Two further ways a green run can mislead, one of them still open:
   OSP-15.
 
 See [../docs/xsd_gaps.md](../docs/xsd_gaps.md) for the audit methods that find these gaps and
-the currently open conformance gap (`<TrafficAction>` deserialization, OSP-11).
+the currently known gaps in the `mutate` gate (recorded as `[[hole]]` entries: the root choice's
+group-of-seven branches cannot be modeled with `$value` and are parallel `Option` fields instead,
+allowing documents that take zero or two branches to parse).
