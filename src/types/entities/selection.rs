@@ -6,7 +6,7 @@
 //! from; a template may carry an `ExternalObjectReference` in place of an inline
 //! definition.
 
-use crate::types::basic::{Double, OSString, Value};
+use crate::types::basic::{Double, MinVec, OSString, Value};
 use crate::types::controllers::ObjectController;
 use crate::types::entities::{
     EntityCatalogReference, EntityObjectChoice, MiscObject, Pedestrian, Vehicle,
@@ -57,18 +57,15 @@ pub enum SelectedEntitiesChoice {
 
 /// Entity distribution system for probabilistic entity spawning
 ///
-/// XSD `EntityDistribution`: `EntityDistributionEntry` has `maxOccurs="unbounded"` with no
-/// `minOccurs="0"`, so a schema-valid distribution needs at least one entry. The derived
-/// `Default`'s `Vec::new()` is not schema-valid content on its own, but — like
-/// `ConditionGroup` (`scenario/triggers.rs`) — it states nothing invented, unlike the
-/// previous hand-written impl which filled the gap with a fabricated entry. Kept per the
-/// container/choice policy as a construction convenience, and because `EntityDistribution`
-/// has a `pub fn new()` that clippy's `new_without_default` otherwise flags.
+/// XSD `EntityDistribution` (`:1157-1161`): `EntityDistributionEntry` has
+/// `maxOccurs="unbounded"` with no `minOccurs`, so a schema-valid distribution needs at
+/// least one entry. The bound is now carried in the type: `entries` cannot be constructed
+/// empty, so there is no longer a zero-argument `new()` to fabricate one.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityDistribution {
     /// List of distribution entries
     #[serde(rename = "EntityDistributionEntry")]
-    pub entries: Vec<EntityDistributionEntry>,
+    pub entries: MinVec<EntityDistributionEntry, 1>,
 }
 
 /// Individual distribution entry with a scenario object template and weight
@@ -191,30 +188,28 @@ impl SelectedEntities {
 }
 
 impl EntityDistribution {
-    /// Create a new entity distribution
-    pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-        }
+    /// Build an entity distribution from its entries.
+    ///
+    /// Fails if `entries` is empty: the XSD requires at least one
+    /// `EntityDistributionEntry`, and there is no schema-valid document this
+    /// type could otherwise emit.
+    pub fn new(entries: Vec<EntityDistributionEntry>) -> crate::error::Result<Self> {
+        Ok(Self {
+            entries: MinVec::new(entries)?,
+        })
     }
 
-    /// Add a distribution entry from a scenario object template and weight
-    pub fn add_entry(&mut self, scenario_object_template: ScenarioObjectTemplate, weight: f64) {
-        self.entries.push(EntityDistributionEntry::new(
-            scenario_object_template,
-            weight,
-        ));
-    }
-
-    /// Create a uniform distribution from scenario object templates
-    pub fn uniform(templates: Vec<ScenarioObjectTemplate>) -> Self {
+    /// Create a uniform distribution from scenario object templates.
+    ///
+    /// Fails if `templates` is empty, for the same reason as [`Self::new`].
+    pub fn uniform(templates: Vec<ScenarioObjectTemplate>) -> crate::error::Result<Self> {
         let weight = 1.0 / templates.len() as f64;
         let entries = templates
             .into_iter()
             .map(|template| EntityDistributionEntry::new(template, weight))
             .collect();
 
-        Self { entries }
+        Self::new(entries)
     }
 
     /// Get the total weight of all entries
@@ -381,15 +376,17 @@ mod tests {
 
     #[test]
     fn test_entity_distribution() {
-        let mut distribution = EntityDistribution::new();
-        distribution.add_entry(
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            0.6,
-        );
-        distribution.add_entry(
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            0.4,
-        );
+        let entries = vec![
+            EntityDistributionEntry::new(
+                ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+                0.6,
+            ),
+            EntityDistributionEntry::new(
+                ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+                0.4,
+            ),
+        ];
+        let distribution = EntityDistribution::new(entries).unwrap();
 
         assert_eq!(distribution.entries.len(), 2);
         assert_eq!(distribution.total_weight(), 1.0);
@@ -400,9 +397,15 @@ mod tests {
             ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
             ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
         ];
-        let uniform_dist = EntityDistribution::uniform(templates);
+        let uniform_dist = EntityDistribution::uniform(templates).unwrap();
         assert_eq!(uniform_dist.entries.len(), 4);
         assert!((uniform_dist.total_weight() - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_entity_distribution_rejects_empty() {
+        assert!(EntityDistribution::new(vec![]).is_err());
+        assert!(EntityDistribution::uniform(vec![]).is_err());
     }
 
     #[test]
@@ -478,7 +481,7 @@ mod tests {
             ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
             ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
         ];
-        let distribution = EntityDistribution::uniform(templates);
+        let distribution = EntityDistribution::uniform(templates).unwrap();
         let xml = quick_xml::se::to_string(&distribution).unwrap();
         assert!(xml.contains("EntityDistributionEntry"));
         assert!(xml.contains("ScenarioObjectTemplate"));

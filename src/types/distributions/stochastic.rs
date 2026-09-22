@@ -1,15 +1,18 @@
 //! Stochastic distribution types for probabilistic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::{OSString, UnsignedInt, Value};
+use crate::types::basic::{MinVec, OSString, UnsignedInt, Value};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
-/// Container for stochastic distributions (matches XSD Stochastic type)
+/// Container for stochastic distributions
+///
+/// XSD `Stochastic` (`:2081-2087`): sequence of `StochasticDistribution`,
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Stochastic {
     #[serde(rename = "StochasticDistribution")]
-    pub distributions: Vec<StochasticDistribution>,
+    pub distributions: MinVec<StochasticDistribution, 1>,
     #[serde(rename = "@numberOfTestRuns")]
     pub number_of_test_runs: UnsignedInt,
     #[serde(rename = "@randomSeed", skip_serializing_if = "Option::is_none")]
@@ -50,10 +53,13 @@ pub enum StochasticDistributionType {
 }
 
 /// Weighted discrete probability distribution
+///
+/// XSD `ProbabilityDistributionSet` (`:1793-1797`): sequence of `Element`
+/// (`ProbabilityDistributionSetElement`), `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProbabilityDistributionSet {
     #[serde(rename = "Element")]
-    pub elements: Vec<ProbabilityDistributionSetElement>,
+    pub elements: MinVec<ProbabilityDistributionSetElement, 1>,
 }
 
 /// Element in a probability distribution set
@@ -108,10 +114,13 @@ pub struct PoissonDistribution {
 }
 
 /// Histogram-based distribution
+///
+/// XSD `Histogram` (`:1295-1299`): sequence of `Bin` (`HistogramBin`),
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Histogram {
     #[serde(rename = "Bin")]
-    pub bins: Vec<HistogramBin>,
+    pub bins: MinVec<HistogramBin, 1>,
 }
 
 /// Bin in a histogram distribution
@@ -143,14 +152,14 @@ impl Stochastic {
         number_of_test_runs: UnsignedInt,
         first: StochasticDistribution,
         rest: Vec<StochasticDistribution>,
-    ) -> Self {
+    ) -> crate::Result<Self> {
         let mut distributions = vec![first];
         distributions.extend(rest);
-        Self {
-            distributions,
+        Ok(Self {
+            distributions: MinVec::new(distributions)?,
             number_of_test_runs,
             random_seed: None,
-        }
+        })
     }
 }
 
@@ -178,13 +187,9 @@ impl ValidateDistribution for StochasticDistribution {
 }
 
 impl ValidateDistribution for ProbabilityDistributionSet {
+    /// Nothing left to check at run time: `elements` states its own minimum
+    /// (`MinVec<_, 1>`), so the empty set cannot be constructed.
     fn validate(&self) -> Result<()> {
-        if self.elements.is_empty() {
-            return Err(crate::error::Error::validation_error(
-                "elements",
-                "ProbabilityDistributionSet must have at least one element",
-            ));
-        }
         Ok(())
     }
 }
@@ -218,13 +223,8 @@ impl ValidateDistribution for PoissonDistribution {
 
 impl ValidateDistribution for Histogram {
     fn validate(&self) -> Result<()> {
-        if self.bins.is_empty() {
-            return Err(crate::error::Error::validation_error(
-                "bins",
-                "Histogram must have at least one bin",
-            ));
-        }
-
+        // "At least one bin" is now stated by the type (`MinVec<_, 1>`), so only the
+        // per-bin checks remain here.
         for bin in &self.bins {
             bin.validate()?;
         }
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn test_probability_distribution_set_validation() {
         let valid_set = ProbabilityDistributionSet {
-            elements: vec![
+            elements: MinVec::new(vec![
                 ProbabilityDistributionSetElement {
                     value: OSString::Literal("A".to_string()),
                     weight: OSString::Literal("0.6".to_string()),
@@ -311,12 +311,12 @@ mod tests {
                     value: OSString::Literal("B".to_string()),
                     weight: OSString::Literal("0.4".to_string()),
                 },
-            ],
+            ])
+            .unwrap(),
         };
         assert!(valid_set.validate().is_ok());
 
-        let empty_set = ProbabilityDistributionSet { elements: vec![] };
-        assert!(empty_set.validate().is_err());
+        assert!(MinVec::<ProbabilityDistributionSetElement, 1>::new(vec![]).is_err());
     }
 
     #[test]
@@ -345,17 +345,17 @@ mod tests {
     #[test]
     fn test_histogram_validation() {
         let valid_histogram = Histogram {
-            bins: vec![HistogramBin {
+            bins: MinVec::new(vec![HistogramBin {
                 range: Range {
                     lower_limit: Value::Literal("0.0".to_string()),
                     upper_limit: Value::Literal("5.0".to_string()),
                 },
                 weight: Value::Literal("0.3".to_string()),
-            }],
+            }])
+            .unwrap(),
         };
         assert!(valid_histogram.validate().is_ok());
 
-        let empty_histogram = Histogram { bins: vec![] };
-        assert!(empty_histogram.validate().is_err());
+        assert!(MinVec::<HistogramBin, 1>::new(vec![]).is_err());
     }
 }

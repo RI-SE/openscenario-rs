@@ -1,7 +1,7 @@
 //! Basic geometric shapes for OpenSCENARIO
 
 use crate::error::Result;
-use crate::types::basic::Double;
+use crate::types::basic::{Double, MinVec};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -444,10 +444,13 @@ impl Shape {
 }
 
 /// A sequence of clothoid segments forming a spline
+///
+/// XSD `ClothoidSpline` (`:907-912`): sequence of `ClothoidSplineSegment`,
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClothoidSpline {
     #[serde(rename = "ClothoidSplineSegment")]
-    pub segments: Vec<ClothoidSplineSegment>,
+    pub segments: MinVec<ClothoidSplineSegment, 1>,
     #[serde(rename = "@timeEnd", default, skip_serializing_if = "Option::is_none")]
     pub time_end: Option<Double>,
 }
@@ -478,14 +481,17 @@ pub struct ClothoidSplineSegment {
 }
 
 /// Non-uniform rational B-spline (NURBS) shape
+///
+/// XSD `Nurbs` (`:1515-1521`): both `ControlPoint` and `Knot` carry
+/// `minOccurs="2"`, unbounded.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Nurbs {
     #[serde(rename = "@order")]
     pub order: crate::types::basic::UnsignedInt,
     #[serde(rename = "ControlPoint")]
-    pub control_points: Vec<ControlPoint>,
+    pub control_points: MinVec<ControlPoint, 2>,
     #[serde(rename = "Knot")]
-    pub knots: Vec<Knot>,
+    pub knots: MinVec<Knot, 2>,
 }
 
 /// A single control point on a NURBS curve
@@ -508,14 +514,11 @@ pub struct Knot {
 
 /// Polyline shape with time-positioned vertices
 ///
-/// XSD `Polyline`: `Vertex` has `minOccurs="2"`, so the field carries no `default` and a
-/// document with no `Vertex` child fails to parse rather than deserializing into an empty
-/// vector. The lower bound of two is not yet enforced: a single vertex still parses, because
-/// no serde attribute expresses a minimum above one.
+/// XSD `Polyline` (`:1733-1737`): `Vertex` has `minOccurs="2"`, unbounded.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Polyline {
     #[serde(rename = "Vertex")]
-    pub vertices: Vec<Vertex>,
+    pub vertices: MinVec<Vertex, 2>,
 }
 
 /// Trajectory vertex with time and position.
@@ -592,7 +595,7 @@ mod tests {
         use crate::types::positions::Position;
 
         let polyline = Polyline {
-            vertices: vec![
+            vertices: MinVec::new(vec![
                 Vertex {
                     time: Some(crate::types::basic::Value::literal(0.0)),
                     position: Position::world_origin(),
@@ -601,7 +604,8 @@ mod tests {
                     time: Some(crate::types::basic::Value::literal(0.04)),
                     position: Position::world_origin(),
                 },
-            ],
+            ])
+            .unwrap(),
         };
 
         assert_eq!(polyline.vertices.len(), 2);
@@ -630,10 +634,18 @@ mod tests {
         use crate::types::positions::Position;
 
         let shape = Shape::polyline(Polyline {
-            vertices: vec![Vertex {
-                time: Some(crate::types::basic::Value::literal(1.0)),
-                position: Position::world_origin(),
-            }],
+            // Two vertices: XSD:1735 declares `Vertex` with `minOccurs="2"`.
+            vertices: MinVec::new(vec![
+                Vertex {
+                    time: Some(crate::types::basic::Value::literal(1.0)),
+                    position: Position::world_origin(),
+                },
+                Vertex {
+                    time: Some(crate::types::basic::Value::literal(2.0)),
+                    position: Position::world_origin(),
+                },
+            ])
+            .unwrap(),
         });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
@@ -647,10 +659,18 @@ mod tests {
 
         // A Vertex without time must not emit a time attribute in XML.
         let shape = Shape::polyline(Polyline {
-            vertices: vec![Vertex {
-                time: None,
-                position: Position::world_origin(),
-            }],
+            // Two vertices: XSD:1735 declares `Vertex` with `minOccurs="2"`.
+            vertices: MinVec::new(vec![
+                Vertex {
+                    time: None,
+                    position: Position::world_origin(),
+                },
+                Vertex {
+                    time: None,
+                    position: Position::world_origin(),
+                },
+            ])
+            .unwrap(),
         });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();
@@ -687,7 +707,7 @@ mod tests {
 
         let shape = Shape::nurbs(Nurbs {
             order: crate::types::basic::Value::literal(3),
-            control_points: vec![
+            control_points: MinVec::new(vec![
                 ControlPoint {
                     position: Position::world(WorldPosition::new(0.0, 0.0)),
                     time: None,
@@ -698,15 +718,17 @@ mod tests {
                     time: None,
                     weight: None,
                 },
-            ],
-            knots: vec![
+            ])
+            .unwrap(),
+            knots: MinVec::new(vec![
                 Knot {
                     value: crate::types::basic::Value::literal(0.0),
                 },
                 Knot {
                     value: crate::types::basic::Value::literal(1.0),
                 },
-            ],
+            ])
+            .unwrap(),
         });
 
         let xml = quick_xml::se::to_string(&shape).unwrap();

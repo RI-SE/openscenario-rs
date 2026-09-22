@@ -115,11 +115,19 @@ mod tests {
     use crate::types::geometry::shapes::{Polyline, Shape, Vertex};
     use crate::types::positions::Position;
 
-    /// A minimal schema-valid `Shape` (a one-vertex polyline) for tests that need a
-    /// concrete trajectory shape but do not exercise its content.
+    /// A minimal schema-valid `Shape` for tests that need a concrete trajectory shape but
+    /// do not exercise its content.
+    ///
+    /// Two vertices, because XSD `Polyline` (`Schema/OpenSCENARIO.xsd:1735`) declares
+    /// `Vertex` with `minOccurs="2"`. This helper used to build one and call itself
+    /// schema-valid; the plain `Vec` it was built on could not tell the difference.
     fn minimal_shape() -> Shape {
         Shape::polyline(Polyline {
-            vertices: vec![Vertex::new(Position::world_origin())],
+            vertices: crate::types::basic::MinVec::new(vec![
+                Vertex::new(Position::world_origin()),
+                Vertex::new(Position::world_origin()),
+            ])
+            .unwrap(),
         })
     }
 
@@ -224,7 +232,7 @@ mod tests {
         use crate::types::positions::{Position, WorldPosition};
 
         let polyline = Polyline {
-            vertices: vec![
+            vertices: crate::types::basic::MinVec::new(vec![
                 Vertex {
                     time: Some(Double::literal(0.0)),
                     position: Position::world(WorldPosition::new(0.0, 0.0)),
@@ -233,7 +241,8 @@ mod tests {
                     time: None,
                     position: Position::world(WorldPosition::new(5.0, 5.0)),
                 },
-            ],
+            ])
+            .unwrap(),
         };
         let xml = quick_xml::se::to_string(&polyline).unwrap();
         let deserialized: Polyline = quick_xml::de::from_str(&xml).unwrap();

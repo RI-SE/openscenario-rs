@@ -1,7 +1,7 @@
 //! Deterministic distribution types for systematic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::{OSString, Value};
+use crate::types::basic::{MinVec, OSString, Value};
 use crate::types::distributions::{
     DeterministicParameterDistributionGroup, DistributionSampler, ValidateDistribution,
 };
@@ -125,10 +125,13 @@ impl DeterministicMultiParameterDistribution {
 }
 
 /// Discrete value set distribution
+///
+/// XSD `DistributionSet` (`:1098-1102`): sequence of `Element`
+/// (`DistributionSetElement`), `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DistributionSet {
     #[serde(rename = "Element")]
-    pub elements: Vec<DistributionSetElement>,
+    pub elements: MinVec<DistributionSetElement, 1>,
 }
 
 /// Element in a distribution set
@@ -148,17 +151,23 @@ pub struct DistributionRange {
 }
 
 /// Multi-parameter value set distribution
+///
+/// XSD `ValueSetDistribution` (`:2451-2455`): sequence of `ParameterValueSet`,
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ValueSetDistribution {
     #[serde(rename = "ParameterValueSet")]
-    pub parameter_value_sets: Vec<ParameterValueSet>,
+    pub parameter_value_sets: MinVec<ParameterValueSet, 1>,
 }
 
 /// Set of parameter assignments
+///
+/// XSD `ParameterValueSet` (`:1672-1676`): sequence of `ParameterAssignment`,
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParameterValueSet {
     #[serde(rename = "ParameterAssignment")]
-    pub parameter_assignments: Vec<ParameterAssignment>,
+    pub parameter_assignments: MinVec<ParameterAssignment, 1>,
 }
 
 /// Individual parameter assignment
@@ -202,13 +211,13 @@ impl ValidateDistribution for DeterministicMultiParameterDistribution {
 }
 
 impl ValidateDistribution for DistributionSet {
+    /// Nothing left to check at run time.
+    ///
+    /// The only rule this ever enforced was "at least one element", which `elements`
+    /// now states in its own type (`MinVec<_, 1>`, XSD `DistributionSet` :1073 at the
+    /// default `minOccurs="1"`). A set that breaks it cannot be constructed, so there is
+    /// no invalid value left for this to report.
     fn validate(&self) -> Result<()> {
-        if self.elements.is_empty() {
-            return Err(crate::error::Error::validation_error(
-                "elements",
-                "DistributionSet must have at least one element",
-            ));
-        }
         Ok(())
     }
 }
@@ -277,7 +286,10 @@ impl DistributionSet {
     pub fn new(first: DistributionSetElement, rest: Vec<DistributionSetElement>) -> Self {
         let mut elements = vec![first];
         elements.extend(rest);
-        Self { elements }
+        Self {
+            // `first` guarantees at least one element.
+            elements: MinVec::new(elements).expect("at least one element"),
+        }
     }
 }
 
@@ -296,24 +308,24 @@ impl DistributionRange {
 impl ValueSetDistribution {
     /// The schema requires at least one `ParameterValueSet` (`maxOccurs="unbounded"`, no
     /// `minOccurs="0"`).
-    pub fn new(first: ParameterValueSet, rest: Vec<ParameterValueSet>) -> Self {
+    pub fn new(first: ParameterValueSet, rest: Vec<ParameterValueSet>) -> crate::Result<Self> {
         let mut parameter_value_sets = vec![first];
         parameter_value_sets.extend(rest);
-        Self {
-            parameter_value_sets,
-        }
+        Ok(Self {
+            parameter_value_sets: MinVec::new(parameter_value_sets)?,
+        })
     }
 }
 
 impl ParameterValueSet {
     /// The schema requires at least one `ParameterAssignment` (`maxOccurs="unbounded"`, no
     /// `minOccurs="0"`).
-    pub fn new(first: ParameterAssignment, rest: Vec<ParameterAssignment>) -> Self {
+    pub fn new(first: ParameterAssignment, rest: Vec<ParameterAssignment>) -> crate::Result<Self> {
         let mut parameter_assignments = vec![first];
         parameter_assignments.extend(rest);
-        Self {
-            parameter_assignments,
-        }
+        Ok(Self {
+            parameter_assignments: MinVec::new(parameter_assignments)?,
+        })
     }
 }
 
@@ -399,32 +411,35 @@ mod tests {
     #[test]
     fn test_distribution_set_validation() {
         let valid_set = DistributionSet {
-            elements: vec![
+            elements: MinVec::new(vec![
                 DistributionSetElement {
                     value: Value::Literal("10.0".to_string()),
                 },
                 DistributionSetElement {
                     value: Value::Literal("20.0".to_string()),
                 },
-            ],
+            ])
+            .unwrap(),
         };
         assert!(valid_set.validate().is_ok());
 
-        let empty_set = DistributionSet { elements: vec![] };
-        assert!(empty_set.validate().is_err());
+        // The empty set is no longer a value that can be built, so the bound is
+        // asserted where it now lives rather than through `validate()`.
+        assert!(MinVec::<DistributionSetElement, 1>::new(vec![]).is_err());
     }
 
     #[test]
     fn test_distribution_set_sampling() {
         let dist_set = DistributionSet {
-            elements: vec![
+            elements: MinVec::new(vec![
                 DistributionSetElement {
                     value: Value::Literal("10.0".to_string()),
                 },
                 DistributionSetElement {
                     value: Value::Literal("20.0".to_string()),
                 },
-            ],
+            ])
+            .unwrap(),
         };
 
         assert!(dist_set.sample().is_ok());
@@ -438,7 +453,7 @@ mod tests {
     #[test]
     fn test_parameter_value_set_validation() {
         let valid_set = ParameterValueSet {
-            parameter_assignments: vec![
+            parameter_assignments: MinVec::new(vec![
                 ParameterAssignment {
                     parameter_ref: "speed".to_string(),
                     value: Value::Literal("30.0".to_string()),
@@ -447,12 +462,13 @@ mod tests {
                     parameter_ref: "position".to_string(),
                     value: Value::Literal("100.0".to_string()),
                 },
-            ],
+            ])
+            .unwrap(),
         };
         assert!(valid_set.validate().is_ok());
 
         let duplicate_set = ParameterValueSet {
-            parameter_assignments: vec![
+            parameter_assignments: MinVec::new(vec![
                 ParameterAssignment {
                     parameter_ref: "speed".to_string(),
                     value: Value::Literal("30.0".to_string()),
@@ -461,7 +477,8 @@ mod tests {
                     parameter_ref: "speed".to_string(),
                     value: Value::Literal("40.0".to_string()),
                 },
-            ],
+            ])
+            .unwrap(),
         };
         assert!(duplicate_set.validate().is_err());
     }
@@ -477,13 +494,17 @@ mod tests {
     }
 
     fn sample_multi() -> DeterministicMultiParameterDistribution {
-        DeterministicMultiParameterDistribution::new(ValueSetDistribution::new(
-            ParameterValueSet::new(
-                ParameterAssignment::new("p".to_string(), Value::literal("1.0".to_string())),
+        DeterministicMultiParameterDistribution::new(
+            ValueSetDistribution::new(
+                ParameterValueSet::new(
+                    ParameterAssignment::new("p".to_string(), Value::literal("1.0".to_string())),
+                    vec![],
+                )
+                .unwrap(),
                 vec![],
-            ),
-            vec![],
-        ))
+            )
+            .unwrap(),
+        )
     }
 
     #[test]

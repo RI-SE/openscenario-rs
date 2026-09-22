@@ -125,6 +125,39 @@ The conformance ledger, including what the test corpus does and does not prove, 
 
 ### Changed
 
+- **Twenty-five leaf-type lists now carry their schema minimum in their type.** Each is
+  `MinVec<T, N>` with `N` read from the field's own XSD element: `Polygon.position`
+  (`Schema/OpenSCENARIO.xsd:1730`, **3** — the only such field in the schema),
+  `Polyline.vertices` (`:1735`), `Nurbs.control_points` / `.knots` (`:1517-1518`),
+  `RoadRange.road_cursor` (`:1951`), `UsedArea.position` (`:2413`), `CatalogRoute.waypoints`,
+  `CatalogPolyline.vertices`, `CatalogNurbs.control_points` / `.knots` (all **2**), and
+  fifteen further fields at the default `minOccurs="1"` across the distributions, traffic,
+  appearance, catalog and geometry types.
+
+  **What this buys differs by minimum, and the two cases are not the same fix.** For the ten
+  fields at 2 or 3 it closes a live **parse** hole: a `<Polyline>` carrying one `<Vertex>`,
+  or a `<Polygon>` carrying two `<Position>` elements, parsed and re-serialized unchanged
+  before this change, because a plain `Vec` cannot state a minimum. Those documents are now
+  rejected while deserializing, with the bound named. For the fifteen at `minOccurs="1"` the
+  empty document was **already** rejected one layer earlier by serde reporting
+  `missing field`; what changes there is the **serialization** side — `MinVec`'s inner field
+  is private, so a short value cannot be constructed and the crate can no longer emit one.
+
+  Breaking: `EntityDistribution::new` takes its entries and returns `Result`;
+  `EntityDistribution::add_entry` and the empty `EntityDistribution::new()` are removed, the
+  pair of them having been able to describe a distribution with no entries.
+  `SpeedProfileAction::new`, `Stochastic::new`, `ValueSetDistribution::new` and
+  `ParameterValueSet::new` now return `Result`. `PolylineBuilder::finish` returns
+  `BuilderResult<TrajectoryBuilder>`: it accumulated vertices in a plain `Vec` and could
+  finish with nought or one, emitting a `<Polyline>` no schema-valid document can contain.
+
+- **`DistributionSet::validate`, `ProbabilityDistributionSet::validate` and
+  `Histogram::validate` no longer check for emptiness.** The rule is now stated by the
+  fields' own types, so there is no invalid value left for these to report. `Histogram`
+  keeps its per-bin checks; the other two are now no-ops, kept because
+  `ValidateDistribution` is a shared trait.
+
+
 Breaking, unless noted.
 
 - **The storyboard spine's eight required-repeated elements now state their `minOccurs` in

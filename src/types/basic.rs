@@ -493,7 +493,8 @@ mod tests {
         let constraints = ValueConstraintGroup::new(vec![
             ValueConstraint::greater_than("0.0".to_string()),
             ValueConstraint::less_than("100.0".to_string()),
-        ]);
+        ])
+        .unwrap();
 
         let param = ParameterDeclaration::with_constraints(
             "Speed".to_string(),
@@ -709,10 +710,10 @@ mod tests {
     fn test_parameter_declaration_multiple_constraint_groups() {
         // Test the ALKS scenario pattern with multiple constraint groups
         let constraint_group1 =
-            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("1".to_string())]);
+            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("1".to_string())]).unwrap();
 
         let constraint_group2 =
-            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("-1".to_string())]);
+            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("-1".to_string())]).unwrap();
 
         let param = ParameterDeclaration::with_constraints(
             "SideVehicle_InitPosition_RelativeLaneId".to_string(),
@@ -850,10 +851,13 @@ pub struct ParameterDeclaration {
 }
 
 /// Parameter constraints container
+///
+/// XSD `ValueConstraintGroup` (`:2446-2450`): sequence of `ValueConstraint`,
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ValueConstraintGroup {
     #[serde(rename = "ValueConstraint")]
-    pub value_constraints: Vec<ValueConstraint>,
+    pub value_constraints: MinVec<ValueConstraint, 1>,
 }
 
 /// Individual parameter value constraint
@@ -904,10 +908,14 @@ impl ParameterDeclaration {
     /// Add a constraint to this parameter declaration
     pub fn add_constraint(&mut self, constraint: ValueConstraint) {
         if let Some(group) = self.constraint_groups.last_mut() {
-            group.value_constraints.push(constraint);
+            let mut items = group.value_constraints.as_slice().to_vec();
+            items.push(constraint);
+            // Extending an already-nonempty group can never fall below MIN.
+            group.value_constraints = MinVec::new(items).expect("group was already non-empty");
         } else {
             self.constraint_groups.push(ValueConstraintGroup {
-                value_constraints: vec![constraint],
+                // A one-element vec always satisfies MIN = 1.
+                value_constraints: MinVec::new(vec![constraint]).expect("one element"),
             });
         }
     }
@@ -964,16 +972,22 @@ impl Directory {
 
 // Helper methods for ValueConstraintGroup
 impl ValueConstraintGroup {
-    /// Create a new value constraint group with the given constraints
-    pub fn new(constraints: Vec<ValueConstraint>) -> Self {
-        Self {
-            value_constraints: constraints,
-        }
+    /// Create a new value constraint group with the given constraints.
+    ///
+    /// Fails if `constraints` is empty: XSD `ValueConstraintGroup` requires at least one
+    /// `ValueConstraint`.
+    pub fn new(constraints: Vec<ValueConstraint>) -> Result<Self> {
+        Ok(Self {
+            value_constraints: MinVec::new(constraints)?,
+        })
     }
 
-    /// Add a constraint to the group
+    /// Add a constraint to the group.
     pub fn add_constraint(&mut self, constraint: ValueConstraint) {
-        self.value_constraints.push(constraint);
+        let mut items = self.value_constraints.as_slice().to_vec();
+        items.push(constraint);
+        // Extending an already-nonempty group can never fall below MIN.
+        self.value_constraints = MinVec::new(items).expect("group was already non-empty");
     }
 }
 

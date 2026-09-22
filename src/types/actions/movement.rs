@@ -2,7 +2,7 @@
 //! `TeleportAction`, `FollowTrajectoryAction`, `SynchronizeAction`, and the distance
 //! actions. `TransitionDynamics` says how a change is reached: its shape, and whether
 //! the dimension bounding it is time, distance or rate.
-use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Boolean, Double, Int, MinVec, OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use crate::types::catalogs::trajectories::CatalogTrajectory;
 use crate::types::enums::{
@@ -623,6 +623,9 @@ pub struct LongitudinalDistanceAction {
 }
 
 /// Speed profile action for time-based speed control
+///
+/// XSD `SpeedProfileAction` (`:2060-2067`): `SpeedProfileEntry` has
+/// `maxOccurs="unbounded"` and no `minOccurs`, so the default of 1 applies.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SpeedProfileAction {
     #[serde(
@@ -636,7 +639,7 @@ pub struct SpeedProfileAction {
     #[serde(rename = "DynamicConstraints", skip_serializing_if = "Option::is_none")]
     pub dynamic_constraints: Option<DynamicConstraints>,
     #[serde(rename = "SpeedProfileEntry")]
-    pub entries: Vec<SpeedProfileEntry>,
+    pub entries: MinVec<SpeedProfileEntry, 1>,
 }
 
 /// Speed profile entry with time and speed
@@ -1441,13 +1444,16 @@ impl SpeedProfileAction {
     /// `maxOccurs="unbounded"` with no `minOccurs` override, i.e. at least
     /// one entry is required; `@entityRef` and `DynamicConstraints` are
     /// optional and default to `None` here.
-    pub fn new(following_mode: FollowingMode, entries: Vec<SpeedProfileEntry>) -> Self {
-        Self {
+    pub fn new(
+        following_mode: FollowingMode,
+        entries: Vec<SpeedProfileEntry>,
+    ) -> crate::Result<Self> {
+        Ok(Self {
             entity_ref: None,
             following_mode: Value::Literal(following_mode),
             dynamic_constraints: None,
-            entries,
-        }
+            entries: MinVec::new(entries)?,
+        })
     }
 
     /// Set the optional `@entityRef`.
@@ -1550,13 +1556,16 @@ mod tests {
     use crate::types::enums::{DynamicsDimension, DynamicsShape};
     use crate::types::positions::Position;
 
-    /// A minimal schema-valid `Shape` (a one-vertex polyline) for tests that need a
-    /// concrete trajectory shape but do not exercise its content.
+    /// A minimal schema-valid `Shape` for tests that need a concrete trajectory shape
+    /// but do not exercise its content.
     fn minimal_shape() -> Shape {
+        // Two vertices: XSD `Polyline` (:1735) declares `Vertex` with `minOccurs="2"`.
         Shape::polyline(crate::types::geometry::shapes::Polyline {
-            vertices: vec![crate::types::geometry::shapes::Vertex::new(
-                Position::world_origin(),
-            )],
+            vertices: MinVec::new(vec![
+                crate::types::geometry::shapes::Vertex::new(Position::world_origin()),
+                crate::types::geometry::shapes::Vertex::new(Position::world_origin()),
+            ])
+            .unwrap(),
         })
     }
 
@@ -1920,7 +1929,7 @@ mod tests {
                 max_speed: Some(Double::literal(30.0)),
                 ..Default::default()
             }),
-            entries: vec![entry1, entry2],
+            entries: MinVec::new(vec![entry1, entry2]).unwrap(),
         };
 
         assert_eq!(
@@ -2186,6 +2195,7 @@ mod tests {
     <Shape>
         <Polyline>
             <Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex>
+            <Vertex><Position><WorldPosition x="1" y="1"/></Position></Vertex>
         </Polyline>
     </Shape>
 </Trajectory>"#;

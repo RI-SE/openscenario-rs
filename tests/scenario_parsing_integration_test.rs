@@ -1221,7 +1221,8 @@ fn test_parameter_declarations_with_constraints() {
         vec![ValueConstraintGroup::new(vec![
             ValueConstraint::greater_than("0.0".to_string()),
             ValueConstraint::less_than("200.0".to_string()),
-        ])],
+        ])
+        .unwrap()],
     );
 
     let name_param = ParameterDeclaration::new(

@@ -301,9 +301,12 @@ mod tests {
                 false,
                 crate::types::geometry::shapes::Shape::polyline(
                     crate::types::geometry::shapes::Polyline {
-                        vertices: vec![crate::types::geometry::shapes::Vertex::new(
-                            Position::world_origin(),
-                        )],
+                        // XSD:1735 declares `Vertex` with `minOccurs="2"`.
+                        vertices: crate::types::basic::MinVec::new(vec![
+                            crate::types::geometry::shapes::Vertex::new(Position::world_origin()),
+                            crate::types::geometry::shapes::Vertex::new(Position::world_origin()),
+                        ])
+                        .unwrap(),
                     },
                 ),
             )),

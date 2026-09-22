@@ -14,7 +14,7 @@ use openscenario_rs::types::actions::movement::{
     TrajectoryFollowingMode, TrajectoryRef, TransitionDynamics,
 };
 use openscenario_rs::types::basic::Value;
-use openscenario_rs::types::basic::{Double, OSString};
+use openscenario_rs::types::basic::{Double, MinVec, OSString};
 use openscenario_rs::types::catalogs::references::CatalogReference;
 use openscenario_rs::types::controllers::{Controller, ObjectController};
 use openscenario_rs::types::enums::{
@@ -24,11 +24,17 @@ use openscenario_rs::types::geometry::shapes::{Polyline, Shape, Vertex};
 use openscenario_rs::types::positions::Position;
 use openscenario_rs::types::scenario::init::{LongitudinalAction, PrivateAction};
 
-/// A minimal schema-valid `Shape` (a one-vertex polyline) for tests that need a
-/// concrete trajectory shape but do not exercise its content.
+/// A minimal schema-valid `Shape` for tests that need a concrete trajectory shape but do
+/// not exercise its content.
 fn minimal_shape() -> Shape {
+    // Two vertices: XSD `Polyline` (`Schema/OpenSCENARIO.xsd:1735`) declares `Vertex`
+    // with `minOccurs="2"`.
     Shape::polyline(Polyline {
-        vertices: vec![Vertex::new(Position::world_origin())],
+        vertices: MinVec::new(vec![
+            Vertex::new(Position::world_origin()),
+            Vertex::new(Position::world_origin()),
+        ])
+        .unwrap(),
     })
 }
 
@@ -48,10 +54,9 @@ fn test_longitudinal_action_all_types() {
     assert_eq!(distance_action.action_type(), "LongitudinalDistanceAction");
 
     // Test SpeedProfileAction
-    let profile_action = LongitudinalAction::speed_profile(SpeedProfileAction::new(
-        FollowingMode::Follow,
-        vec![SpeedProfileEntry::new(10.0)],
-    ));
+    let profile_action = LongitudinalAction::speed_profile(
+        SpeedProfileAction::new(FollowingMode::Follow, vec![SpeedProfileEntry::new(10.0)]).unwrap(),
+    );
     assert_eq!(profile_action.action_type(), "SpeedProfileAction");
 }
 

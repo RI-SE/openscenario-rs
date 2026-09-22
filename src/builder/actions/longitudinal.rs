@@ -195,7 +195,7 @@ impl ActionBuilder for SpeedProfileActionBuilder {
             following_mode: self
                 .following_mode
                 .unwrap_or(Value::Literal(FollowingMode::Follow)),
-            entries: self.entries,
+            entries: crate::types::basic::MinVec::new(self.entries)?,
             dynamic_constraints: None,
         };
 

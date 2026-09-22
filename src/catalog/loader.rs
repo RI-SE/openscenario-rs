@@ -609,6 +609,9 @@ mod tests {
             <Waypoint routeStrategy="shortest">
                 <Position><WorldPosition x="0" y="0" z="0"/></Position>
             </Waypoint>
+            <Waypoint routeStrategy="shortest">
+                <Position><WorldPosition x="10" y="0" z="0"/></Position>
+            </Waypoint>
         </Route>
     </Catalog>
 </OpenSCENARIO>"#,

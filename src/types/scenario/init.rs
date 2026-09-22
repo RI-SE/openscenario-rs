@@ -580,10 +580,10 @@ mod tests {
         );
         assert_eq!(distance.action_type(), "LongitudinalDistanceAction");
 
-        let profile = LongitudinalAction::speed_profile(SpeedProfileAction::new(
-            FollowingMode::Follow,
-            vec![SpeedProfileEntry::new(10.0)],
-        ));
+        let profile = LongitudinalAction::speed_profile(
+            SpeedProfileAction::new(FollowingMode::Follow, vec![SpeedProfileEntry::new(10.0)])
+                .unwrap(),
+        );
         assert_eq!(profile.action_type(), "SpeedProfileAction");
     }
 

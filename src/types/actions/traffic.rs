@@ -2,7 +2,7 @@
 //! that surround a central entity, area-based density control, and the signal actions
 //! that drive intersections. `TrafficDefinition` describes the population each draws
 //! from, as vehicle-category and controller distributions.
-use crate::types::basic::{Boolean, Double, Int, OSString, Range, UnsignedInt, Value};
+use crate::types::basic::{Boolean, Double, Int, MinVec, OSString, Range, UnsignedInt, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::controllers::Controller;
 use crate::types::entities::{EntityDistribution, Properties};
@@ -261,10 +261,13 @@ pub struct TrafficDefinition {
 }
 
 /// Vehicle role distribution for traffic composition
+///
+/// XSD `VehicleRoleDistribution` (`:2535-2539`): sequence of
+/// `VehicleRoleDistributionEntry`, `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleRoleDistribution {
     #[serde(rename = "VehicleRoleDistributionEntry")]
-    pub entries: Vec<VehicleRoleDistributionEntry>,
+    pub entries: MinVec<VehicleRoleDistributionEntry, 1>,
 }
 
 /// Vehicle role distribution entry
@@ -277,10 +280,13 @@ pub struct VehicleRoleDistributionEntry {
 }
 
 /// Vehicle category distribution for traffic composition
+///
+/// XSD `VehicleCategoryDistribution` (`:2520-2524`): sequence of
+/// `VehicleCategoryDistributionEntry`, `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VehicleCategoryDistribution {
     #[serde(rename = "VehicleCategoryDistributionEntry")]
-    pub entries: Vec<VehicleCategoryDistributionEntry>,
+    pub entries: MinVec<VehicleCategoryDistributionEntry, 1>,
 }
 
 /// Vehicle category distribution entry
@@ -293,10 +299,13 @@ pub struct VehicleCategoryDistributionEntry {
 }
 
 /// Controller distribution for traffic behavior
+///
+/// XSD `ControllerDistribution` (`:990-994`): sequence of
+/// `ControllerDistributionEntry`, `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ControllerDistribution {
     #[serde(rename = "ControllerDistributionEntry")]
-    pub entries: Vec<ControllerDistributionEntry>,
+    pub entries: MinVec<ControllerDistributionEntry, 1>,
 }
 
 /// Controller distribution entry: choice of an inline `Controller` or a catalog
@@ -355,11 +364,11 @@ pub enum TrafficAreaChoice {
 /// Closed polygon area defined by at least three positions
 ///
 /// XSD `Polygon` (`:1728-1732`): sequence of `Position`, `minOccurs="3"`,
-/// unbounded.
+/// unbounded — the crate's only field with a lower bound above two.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Polygon {
     #[serde(rename = "Position")]
-    pub position: Vec<Position>,
+    pub position: MinVec<Position, 3>,
 }
 
 /// Range along a road defined by at least two road cursors
@@ -371,7 +380,7 @@ pub struct RoadRange {
     #[serde(rename = "@length", default, skip_serializing_if = "Option::is_none")]
     pub length: Option<Double>,
     #[serde(rename = "RoadCursor")]
-    pub road_cursor: Vec<RoadCursor>,
+    pub road_cursor: MinVec<RoadCursor, 2>,
 }
 
 /// A position along a road, optionally restricted to a set of lanes
@@ -400,11 +409,15 @@ pub struct Lane {
 /// Weighted distribution of traffic entities
 ///
 /// XSD `TrafficDistribution` (`:2236-2240`): sequence of
-/// `TrafficDistributionEntry`, `maxOccurs="unbounded"`.
+/// `TrafficDistributionEntry`, `maxOccurs="unbounded"`, no `minOccurs`, so the
+/// XSD default of 1 applies. An empty document already fails to parse (there
+/// is no `#[serde(default)]` here), so the type-level bound closes the
+/// serialization side: the crate can no longer construct a distribution
+/// naming zero entries and emit it.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrafficDistribution {
     #[serde(rename = "TrafficDistributionEntry")]
-    pub traffic_distribution_entry: Vec<TrafficDistributionEntry>,
+    pub traffic_distribution_entry: MinVec<TrafficDistributionEntry, 1>,
 }
 
 /// Single weighted entry in a `TrafficDistribution`
@@ -812,17 +825,20 @@ impl VehicleCategoryDistribution {
     /// Create distribution with single category
     pub fn single_category(category: VehicleCategory, weight: f64) -> Self {
         Self {
-            entries: vec![VehicleCategoryDistributionEntry {
+            // A one-element vec always satisfies MIN = 1.
+            entries: MinVec::new(vec![VehicleCategoryDistributionEntry {
                 category: Value::Literal(category),
                 weight: Double::literal(weight),
-            }],
+            }])
+            .expect("one element"),
         }
     }
 
     /// Create distribution for mixed traffic (cars, trucks, vans)
     pub fn mixed_traffic() -> Self {
         Self {
-            entries: vec![
+            // A three-element literal vec always satisfies MIN = 1.
+            entries: MinVec::new(vec![
                 VehicleCategoryDistributionEntry {
                     category: Value::Literal(VehicleCategory::Car),
                     weight: Double::literal(0.7), // 70% cars
@@ -835,14 +851,16 @@ impl VehicleCategoryDistribution {
                     category: Value::Literal(VehicleCategory::Van),
                     weight: Double::literal(0.1), // 10% vans
                 },
-            ],
+            ])
+            .expect("three elements"),
         }
     }
 
     /// Create distribution for urban traffic (mostly cars)
     pub fn urban_traffic() -> Self {
         Self {
-            entries: vec![
+            // A three-element literal vec always satisfies MIN = 1.
+            entries: MinVec::new(vec![
                 VehicleCategoryDistributionEntry {
                     category: Value::Literal(VehicleCategory::Car),
                     weight: Double::literal(0.85),
@@ -855,7 +873,8 @@ impl VehicleCategoryDistribution {
                     category: Value::Literal(VehicleCategory::Van),
                     weight: Double::literal(0.05),
                 },
-            ],
+            ])
+            .expect("three elements"),
         }
     }
 }
@@ -864,13 +883,15 @@ impl ControllerDistribution {
     /// Create distribution with single controller
     pub fn single_controller(controller: String, weight: f64) -> Self {
         Self {
-            entries: vec![ControllerDistributionEntry {
+            // A one-element vec always satisfies MIN = 1.
+            entries: MinVec::new(vec![ControllerDistributionEntry {
                 weight: Double::literal(weight),
                 choice: ControllerDistributionEntryChoice::Controller(Controller::new(
                     controller,
                     crate::types::enums::ControllerType::Movement,
                 )),
-            }],
+            }])
+            .expect("one element"),
         }
     }
 }
@@ -892,12 +913,14 @@ impl Polygon {
         let corner = |cx: f64, cy: f64| Position::world(WorldPosition::new(cx, cy));
 
         Self {
-            position: vec![
+            // A four-corner literal vec always satisfies MIN = 3.
+            position: MinVec::new(vec![
                 corner(x, y),
                 corner(x + width, y),
                 corner(x + width, y + height),
                 corner(x, y + height),
-            ],
+            ])
+            .expect("four corners"),
         }
     }
 }
@@ -949,15 +972,15 @@ impl Lane {
 }
 
 impl RoadRange {
-    /// Create a road range from at least two road cursors
+    /// Create a road range from at least two road cursors.
     ///
     /// XSD `RoadRange` (`:1949-1954`): sequence of `RoadCursor`,
-    /// `minOccurs="2"`; optional `@length`.
-    pub fn new(road_cursor: Vec<RoadCursor>) -> Self {
-        Self {
+    /// `minOccurs="2"`; optional `@length`. Fails if fewer than two cursors are given.
+    pub fn new(road_cursor: Vec<RoadCursor>) -> crate::error::Result<Self> {
+        Ok(Self {
             length: None,
-            road_cursor,
-        }
+            road_cursor: MinVec::new(road_cursor)?,
+        })
     }
 
     /// Set the `@length` attribute
@@ -968,15 +991,18 @@ impl RoadRange {
 }
 
 impl TrafficDistribution {
-    /// Create a traffic distribution from its weighted entries
+    /// Create a traffic distribution from its weighted entries.
     ///
     /// XSD `TrafficDistribution` (`:2236-2240`): sequence of
     /// `TrafficDistributionEntry`, `maxOccurs="unbounded"` with the default
-    /// `minOccurs="1"` — at least one entry is required.
-    pub fn new(traffic_distribution_entry: Vec<TrafficDistributionEntry>) -> Self {
-        Self {
-            traffic_distribution_entry,
-        }
+    /// `minOccurs="1"` — at least one entry is required. Fails if `traffic_distribution_entry`
+    /// is empty.
+    pub fn new(
+        traffic_distribution_entry: Vec<TrafficDistributionEntry>,
+    ) -> crate::error::Result<Self> {
+        Ok(Self {
+            traffic_distribution_entry: MinVec::new(traffic_distribution_entry)?,
+        })
     }
 }
 
@@ -1175,7 +1201,8 @@ mod tests {
             TrafficDistribution::new(vec![TrafficDistributionEntry::new(
                 1.0,
                 sample_entity_distribution(),
-            )]),
+            )])
+            .unwrap(),
             traffic_area,
         );
 
@@ -1765,10 +1792,11 @@ mod tests {
         use crate::types::entities::{ScenarioObjectTemplate, Vehicle};
 
         EntityDistribution {
-            entries: vec![crate::types::entities::EntityDistributionEntry::new(
+            entries: MinVec::new(vec![crate::types::entities::EntityDistributionEntry::new(
                 ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
                 1.0,
-            )],
+            )])
+            .unwrap(),
         }
     }
 
@@ -1785,7 +1813,7 @@ mod tests {
     #[test]
     fn test_traffic_distribution_round_trip() {
         let distribution = TrafficDistribution {
-            traffic_distribution_entry: vec![
+            traffic_distribution_entry: MinVec::new(vec![
                 TrafficDistributionEntry {
                     weight: Double::literal(0.6),
                     entity_distribution: sample_entity_distribution(),
@@ -1796,7 +1824,8 @@ mod tests {
                     entity_distribution: sample_entity_distribution(),
                     properties: None,
                 },
-            ],
+            ])
+            .unwrap(),
         };
 
         let xml = quick_xml::se::to_string(&distribution).unwrap();
@@ -1815,11 +1844,12 @@ mod tests {
 
         let traffic_area = TrafficArea {
             choice: TrafficAreaChoice::Polygon(Polygon {
-                position: vec![
+                position: MinVec::new(vec![
                     Position::world(WorldPosition::new(0.0, 0.0)),
                     Position::world(WorldPosition::new(10.0, 0.0)),
                     Position::world(WorldPosition::new(10.0, 10.0)),
-                ],
+                ])
+                .unwrap(),
             }),
         };
 
@@ -1837,7 +1867,7 @@ mod tests {
         let traffic_area = TrafficArea {
             choice: TrafficAreaChoice::RoadRange(vec![RoadRange {
                 length: Some(Double::literal(50.0)),
-                road_cursor: vec![
+                road_cursor: MinVec::new(vec![
                     RoadCursor {
                         road_id: OSString::literal("Road1".to_string()),
                         s: Some(Double::literal(0.0)),
@@ -1850,7 +1880,8 @@ mod tests {
                         s: Some(Double::literal(50.0)),
                         lane: Vec::new(),
                     },
-                ],
+                ])
+                .unwrap(),
             }]),
         };
 
@@ -1944,11 +1975,12 @@ mod tests {
             5,
             true,
             TrafficDistribution {
-                traffic_distribution_entry: vec![TrafficDistributionEntry {
+                traffic_distribution_entry: MinVec::new(vec![TrafficDistributionEntry {
                     weight: Double::literal(1.0),
                     entity_distribution: sample_entity_distribution(),
                     properties: None,
-                }],
+                }])
+                .unwrap(),
             },
             TrafficArea::rectangle(0.0, 0.0, 20.0, 20.0),
         );
@@ -1969,11 +2001,12 @@ mod tests {
             sample_traffic_definition(),
         )
         .with_traffic_distribution(TrafficDistribution {
-            traffic_distribution_entry: vec![TrafficDistributionEntry {
+            traffic_distribution_entry: MinVec::new(vec![TrafficDistributionEntry {
                 weight: Double::literal(1.0),
                 entity_distribution: sample_entity_distribution(),
                 properties: None,
-            }],
+            }])
+            .unwrap(),
         });
 
         let xml = quick_xml::se::to_string(&action).unwrap();

@@ -1,5 +1,6 @@
 //! Tests for advanced positions: TrajectoryPosition, GeographicPosition, RelativeObjectPosition
 
+use openscenario_rs::types::basic::MinVec;
 use openscenario_rs::types::{
     actions::movement::Trajectory,
     basic::{Double, OSString},
@@ -11,10 +12,16 @@ use openscenario_rs::types::{
 };
 
 fn test_trajectory_ref() -> TrajectoryRef {
-    // A minimal schema-valid `Shape` (a one-vertex polyline): these tests exercise
-    // `TrajectoryPosition`, not the trajectory's own shape content.
+    // A minimal schema-valid `Shape`: these tests exercise `TrajectoryPosition`, not the
+    // trajectory's own shape content. Two vertices, because XSD `Polyline`
+    // (`Schema/OpenSCENARIO.xsd:1735`) declares `Vertex` with `minOccurs="2"` — this
+    // helper used to build one and call itself schema-valid.
     let shape = Shape::polyline(Polyline {
-        vertices: vec![Vertex::new(Position::world_origin())],
+        vertices: MinVec::new(vec![
+            Vertex::new(Position::world_origin()),
+            Vertex::new(Position::world_origin()),
+        ])
+        .unwrap(),
     });
     TrajectoryRef::with_trajectory(Trajectory::new("TestTrajectory", false, shape))
 }

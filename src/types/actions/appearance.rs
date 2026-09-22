@@ -3,7 +3,7 @@
 //! Animations cover pedestrian gesture and motion, vehicle components such as doors
 //! and windows, and user-defined animation files. Visibility is separate: it decides
 //! which subsystems see the entity, not how it is drawn.
-use crate::types::basic::{Boolean, Double, OSString, Value};
+use crate::types::basic::{Boolean, Double, MinVec, OSString, Value};
 use crate::types::entities::vehicle::File;
 use crate::types::enums::{
     ColorType, LightMode, PedestrianGestureType, PedestrianMotionType, VehicleComponentType,
@@ -32,11 +32,14 @@ pub struct VisibilityAction {
 }
 
 /// Set of sensor references for selective visibility control
+///
+/// XSD `SensorReferenceSet` (`:2022-2026`): sequence of `SensorReference`,
+/// `maxOccurs="unbounded"`, no `minOccurs`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SensorReferenceSet {
     /// Individual sensor references
     #[serde(rename = "SensorReference")]
-    pub sensor_references: Vec<SensorReference>,
+    pub sensor_references: MinVec<SensorReference, 1>,
 }
 
 /// Reference to a specific sensor for visibility control
@@ -549,11 +552,13 @@ mod tests {
     }
 
     #[test]
-    fn test_sensor_reference_set_default_empty_vec() {
-        let srs = SensorReferenceSet {
-            sensor_references: Vec::new(),
-        };
-        assert!(srs.sensor_references.is_empty());
+    fn an_empty_sensor_reference_set_cannot_be_built() {
+        // XSD `SensorReferenceSet` (`Schema/OpenSCENARIO.xsd:2024`) declares
+        // `SensorReference` with the default `minOccurs="1"`, so the empty set is not a
+        // document this crate can emit. This test used to assert the opposite — that an
+        // empty `Vec` was the expected default — which the plain `Vec` allowed and
+        // re-serialized as `<SensorReferenceSet/>`.
+        assert!(MinVec::<SensorReference, 1>::new(Vec::new()).is_err());
     }
 
     #[test]

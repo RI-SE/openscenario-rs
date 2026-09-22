@@ -5,7 +5,7 @@
 //! action that puts an entity on it. Reached through a maneuver builder.
 use crate::builder::actions::base::{ActionBuilder, ManeuverAction};
 use crate::builder::{BuilderError, BuilderResult};
-use crate::types::basic::Value;
+use crate::types::basic::{MinVec, Value};
 use crate::types::{
     actions::movement::{
         FollowTrajectoryAction, RoutingAction, TimeReference, TimeReferenceChoice, Timing,
@@ -113,13 +113,19 @@ impl PolylineBuilder {
         VertexBuilder::new(self)
     }
 
-    /// Finish building the polyline and return to trajectory builder
-    pub fn finish(mut self) -> TrajectoryBuilder {
+    /// Finish building the polyline and return to trajectory builder.
+    ///
+    /// XSD `Polyline` (`Schema/OpenSCENARIO.xsd:1735`) declares `Vertex` with
+    /// `minOccurs="2"`, so a polyline of nought or one vertex is not a document this
+    /// crate can emit. The vertices accumulate in a plain `Vec` as they are added, and
+    /// the minimum is checked once, here — which is why this returns a `Result` where it
+    /// used to return the parent directly.
+    pub fn finish(mut self) -> BuilderResult<TrajectoryBuilder> {
         let polyline = Polyline {
-            vertices: self.vertices,
+            vertices: MinVec::new(self.vertices)?,
         };
         self.parent.shape = Some(Shape::polyline(polyline));
-        self.parent
+        Ok(self.parent)
     }
 
     fn add_vertex_internal(&mut self, vertex: Vertex) {
@@ -335,6 +341,7 @@ mod tests {
             .finish()
             .unwrap()
             .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -358,7 +365,13 @@ mod tests {
             .world_position(0.0, 0.0, 0.0, 0.0)
             .finish()
             .unwrap()
+            .add_vertex()
+            .time(1.0)
+            .world_position(10.0, 0.0, 0.0, 0.0)
             .finish()
+            .unwrap()
+            .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -374,7 +387,13 @@ mod tests {
             .world_position(0.0, 0.0, 0.0, 0.0)
             .finish()
             .unwrap()
+            .add_vertex()
+            .time(1.0)
+            .world_position(10.0, 0.0, 0.0, 0.0)
             .finish()
+            .unwrap()
+            .finish()
+            .unwrap()
             .build();
 
         assert!(result.is_err());
@@ -421,6 +440,7 @@ mod tests {
             .finish()
             .unwrap()
             .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -495,6 +515,7 @@ mod tests {
             .finish()
             .unwrap()
             .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -533,7 +554,13 @@ mod tests {
             .world_position(0.0, 0.0, 0.0, 0.0)
             .finish()
             .unwrap()
+            .add_vertex()
+            .time(1.0)
+            .world_position(10.0, 0.0, 0.0, 0.0)
             .finish()
+            .unwrap()
+            .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -569,7 +596,13 @@ mod tests {
             .world_position(0.0, 0.0, 0.0, 0.0)
             .finish()
             .unwrap()
+            .add_vertex()
+            .time(1.0)
+            .world_position(10.0, 0.0, 0.0, 0.0)
             .finish()
+            .unwrap()
+            .finish()
+            .unwrap()
             .build()
             .unwrap();
 
@@ -623,7 +656,13 @@ mod tests {
             .world_position(0.0, 0.0, 0.0, 0.0)
             .finish()
             .unwrap()
+            .add_vertex()
+            .time(1.0)
+            .world_position(10.0, 0.0, 0.0, 0.0)
             .finish()
+            .unwrap()
+            .finish()
+            .unwrap()
             .build()
             .unwrap();
 

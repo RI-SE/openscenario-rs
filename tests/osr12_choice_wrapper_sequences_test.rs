@@ -103,18 +103,29 @@ fn traffic_action_variant_b_no_repeated_child_parses() {
 }
 
 #[test]
-fn traffic_action_variant_c_single_road_cursor_parses() {
-    // A one-element sequence failed just as hard as a two-element one: the
-    // buffered `Content` is a map either way.
-    let xml = TRAFFIC_AREA_ACTION.replace(r#"<RoadCursor roadId="R" s="500"/>"#, "");
-    let action: TrafficAction = de(&xml);
+fn traffic_action_variant_c_single_element_sequence_parses() {
+    // A one-element sequence failed just as hard as a two-element one: the buffered
+    // `Content` is a map either way. That claim is what this test exists for.
+    //
+    // It used to make its one-element sequence by deleting a `<RoadCursor>`, leaving a
+    // `RoadRange` with one cursor. XSD `RoadRange` (`Schema/OpenSCENARIO.xsd:1951`)
+    // declares `RoadCursor` with `minOccurs="2"`, so that document was never
+    // schema-valid — the plain `Vec` simply could not tell. The single-element sequence
+    // is now taken at the `RoadRange` level, where the branch genuinely repeats and one
+    // element is legal.
+    let action: TrafficAction = de(TRAFFIC_AREA_ACTION);
     let TrafficActionChoice::TrafficAreaAction(area) = &action.action else {
         panic!("expected TrafficAreaAction");
     };
     let TrafficAreaChoice::RoadRange(road_ranges) = &area.traffic_area.choice else {
         panic!("expected RoadRange, got {:?}", area.traffic_area.choice);
     };
-    assert_eq!(road_ranges[0].road_cursor.len(), 1);
+    assert_eq!(
+        road_ranges.len(),
+        1,
+        "a one-element sequence must deserialize"
+    );
+    assert_eq!(road_ranges[0].road_cursor.len(), 2);
 }
 
 #[test]

@@ -2,7 +2,7 @@
 //! object. Each adds parameter declarations to the scenario type it mirrors.
 
 use crate::error::Result;
-use crate::types::basic::{Double, OSString, Value};
+use crate::types::basic::{Double, MinVec, OSString, Value};
 use crate::types::controllers::Controller;
 use crate::types::entities::{pedestrian, vehicle};
 use crate::types::enums::{
@@ -575,13 +575,12 @@ pub struct CatalogManeuver {
     )]
     pub parameter_declarations: Option<crate::types::basic::ParameterDeclarations>,
 
-    /// Events making up this maneuver. XSD `Maneuver` declares `<Event>` with
+    /// Events making up this maneuver. XSD `Maneuver` (`:1450-1456`, the same
+    /// complex type `CatalogManeuver` mirrors) declares `<Event>` with
     /// `maxOccurs="unbounded"` and no `minOccurs`, so at least one is required.
-    /// Hence no `default`, which would fabricate an empty maneuver from a
-    /// document that has none, and no `skip_serializing_if`, which would emit a
-    /// `<Maneuver>` carrying no `<Event>` at all.
+    /// The bound is now carried in the type rather than in a doc comment.
     #[serde(rename = "Event")]
-    pub events: Vec<crate::types::scenario::story::Event>,
+    pub events: MinVec<crate::types::scenario::story::Event, 1>,
 }
 
 // Placeholder implementations for remaining catalog entities
@@ -657,13 +656,13 @@ impl CatalogEntity for CatalogManeuver {
         parameters: HashMap<String, String>,
     ) -> Result<Self::ResolvedType> {
         // The hand-written "has no <Event>" guard that used to stand here is gone.
-        // `Maneuver::events` is a `MinVec<Event, 1>`, so the same check happens on
-        // construction and cannot be bypassed by a caller who builds the `Maneuver`
-        // some other way.
+        // `Maneuver::events` is a `MinVec<Event, 1>`, and now so is
+        // `CatalogManeuver::events`, so the bound already holds on `self.events` and
+        // needs no re-checking here.
         Ok(crate::types::scenario::story::Maneuver {
             name: Value::literal(resolve_parameter(&self.name, &parameters)?),
             parameter_declarations: self.parameter_declarations,
-            events: crate::types::basic::MinVec::new(self.events)?,
+            events: self.events,
         })
     }
 
@@ -1042,19 +1041,17 @@ mod tests {
         assert_eq!(resolved.events[0].name.as_literal().unwrap(), "AtCollision");
     }
 
-    /// The XSD requires a Maneuver to carry at least one Event, so an empty
-    /// catalog maneuver must not resolve into a structurally invalid one.
+    /// The XSD requires a Maneuver to carry at least one Event (`Maneuver` :1453,
+    /// `Event` at the default `minOccurs="1"`).
+    ///
+    /// This used to be checked by a hand-written guard in `into_scenario_entity`, tested
+    /// by building an event-less `CatalogManeuver` and asserting resolution failed. That
+    /// value can no longer be built at all, so there is nothing left for the guard to
+    /// report and nothing for a resolution test to construct. The bound is asserted here
+    /// where it now lives.
     #[test]
-    fn test_catalog_maneuver_resolution_rejects_empty_events() {
-        let catalog_maneuver = CatalogManeuver {
-            name: "Empty".to_string(),
-            parameter_declarations: None,
-            events: Vec::new(),
-        };
-
-        assert!(catalog_maneuver
-            .into_scenario_entity(HashMap::new())
-            .is_err());
+    fn a_catalog_maneuver_cannot_be_built_without_events() {
+        assert!(MinVec::<crate::types::scenario::story::Event, 1>::new(Vec::new()).is_err());
     }
 
     /// Regression: `mass`, `miscObjectCategory` and `<Properties>` are part of

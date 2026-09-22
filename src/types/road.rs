@@ -2,7 +2,7 @@
 //! and any traffic signal definitions attached to it.
 
 use crate::types::actions::traffic::TrafficSignalController;
-use crate::types::basic::OSString;
+use crate::types::basic::{MinVec, OSString};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -38,10 +38,12 @@ pub struct TrafficSignals {
 }
 
 /// Region of the road network actually used by the scenario
+///
+/// XSD `UsedArea` (`:2411-2415`): sequence of `Position`, `minOccurs="2"`, unbounded.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsedArea {
     #[serde(rename = "Position")]
-    pub position: Vec<Position>,
+    pub position: MinVec<Position, 2>,
 }
 
 /// Logic file containing road network definition
@@ -163,7 +165,13 @@ mod tests {
                 traffic_signal_controller: vec![TrafficSignalController::new("intersection_1")],
             }),
             used_area: Some(UsedArea {
-                position: vec![Position::world(WorldPosition::new(0.0, 0.0))],
+                // XSD:2413 declares `Position` with `minOccurs="2"`; this fixture carried
+                // one, which the old plain `Vec` accepted and re-emitted.
+                position: MinVec::new(vec![
+                    Position::world(WorldPosition::new(0.0, 0.0)),
+                    Position::world(WorldPosition::new(10.0, 0.0)),
+                ])
+                .unwrap(),
             }),
         };
 

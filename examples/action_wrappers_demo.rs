@@ -252,12 +252,11 @@ fn demonstrate_traffic_actions() {
 
     // Create TrafficAreaAction
     use openscenario_rs::types::entities::{ScenarioObjectTemplate, Vehicle};
-    let entity_distribution = EntityDistribution {
-        entries: vec![EntityDistributionEntry::new(
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            1.0,
-        )],
-    };
+    let entity_distribution = EntityDistribution::new(vec![EntityDistributionEntry::new(
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
+        1.0,
+    )])
+    .expect("one entry meets EntityDistribution's minimum of one");
     let traffic_action = TrafficAction {
         traffic_name: Some(Value::Literal("area_traffic".to_string())),
         action: TrafficActionChoice::TrafficAreaAction(TrafficAreaAction::new(
@@ -266,7 +265,8 @@ fn demonstrate_traffic_actions() {
             TrafficDistribution::new(vec![TrafficDistributionEntry::new(
                 1.0,
                 entity_distribution,
-            )]),
+            )])
+            .unwrap(),
             TrafficArea::rectangle(0.0, 0.0, 50.0, 50.0),
         )),
     };

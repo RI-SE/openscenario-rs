@@ -1,7 +1,7 @@
 //! `CatalogRoute` and `RouteWaypoint`: a route in its catalog-file form, with parameter
 //! declarations covering the waypoints it holds.
 
-use crate::types::basic::{Boolean, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Boolean, MinVec, OSString, ParameterDeclarations, Value};
 use crate::types::enums::RouteStrategy;
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
@@ -29,8 +29,11 @@ pub struct CatalogRoute {
     pub parameter_declarations: Option<ParameterDeclarations>,
 
     /// Waypoints defining the route
+    ///
+    /// XSD `Route` (`:1958-1965`, the same complex type `CatalogRoute` mirrors):
+    /// `Waypoint` carries `minOccurs="2"`, unbounded.
     #[serde(rename = "Waypoint")]
-    pub waypoints: Vec<RouteWaypoint>,
+    pub waypoints: MinVec<RouteWaypoint, 2>,
 }
 
 /// Waypoint in a route with position and routing configuration
@@ -74,47 +77,48 @@ pub struct RouteParameterAssignment {
 // Implementation methods for catalog routes
 
 impl CatalogRoute {
-    /// Creates a new catalog route with the specified name
-    pub fn new(name: String) -> Self {
-        Self {
+    /// Creates a new catalog route with the given name and waypoints.
+    ///
+    /// XSD `Route` (`Schema/OpenSCENARIO.xsd:1958`, the complex type `CatalogRoute`
+    /// mirrors) declares `<xsd:element name="Waypoint" minOccurs="2" maxOccurs="unbounded"/>`,
+    /// so this constructor takes the waypoints up front and returns a `Result` rather
+    /// than offering an `add_waypoint` chain that could stop after one and leave nothing
+    /// downstream aware of it. Build the vector first and hand it over once.
+    pub fn new(name: String, waypoints: Vec<RouteWaypoint>) -> crate::error::Result<Self> {
+        Ok(Self {
             name,
             closed: Value::Literal(false),
             parameter_declarations: None,
-            waypoints: Vec::new(),
-        }
+            waypoints: MinVec::new(waypoints)?,
+        })
     }
 
     /// Creates a catalog route with parameter declarations
-    pub fn with_parameters(name: String, parameters: ParameterDeclarations) -> Self {
-        Self {
+    pub fn with_parameters(
+        name: String,
+        waypoints: Vec<RouteWaypoint>,
+        parameters: ParameterDeclarations,
+    ) -> crate::error::Result<Self> {
+        Ok(Self {
             name,
             closed: Value::Literal(false),
             parameter_declarations: Some(parameters),
-            waypoints: Vec::new(),
-        }
+            waypoints: MinVec::new(waypoints)?,
+        })
     }
 
     /// Creates a closed route (forms a loop)
-    pub fn with_closed(name: String, closed: bool) -> Self {
-        Self {
+    pub fn with_closed(
+        name: String,
+        waypoints: Vec<RouteWaypoint>,
+        closed: bool,
+    ) -> crate::error::Result<Self> {
+        Ok(Self {
             name,
             closed: Value::Literal(closed),
             parameter_declarations: None,
-            waypoints: Vec::new(),
-        }
-    }
-
-    /// Adds a waypoint to this route
-    pub fn add_waypoint(&mut self, waypoint: RouteWaypoint) {
-        self.waypoints.push(waypoint);
-    }
-
-    /// Adds a simple waypoint with a position and routing strategy
-    pub fn add_position_waypoint(&mut self, position: Position, route_strategy: RouteStrategy) {
-        self.waypoints.push(RouteWaypoint {
-            position,
-            route_strategy: Value::Literal(route_strategy),
-        });
+            waypoints: MinVec::new(waypoints)?,
+        })
     }
 
     /// Gets the number of waypoints in this route
@@ -271,25 +275,38 @@ mod tests {
 
     #[test]
     fn test_catalog_route_creation() {
-        let route = CatalogRoute::new("TestRoute".to_string());
+        let waypoints = vec![
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Shortest),
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+        ];
+        let route = CatalogRoute::new("TestRoute".to_string(), waypoints).unwrap();
 
         assert_eq!(route.name, "TestRoute");
         assert_eq!(route.closed.as_literal().unwrap(), &false);
         assert!(route.parameter_declarations.is_none());
-        assert!(route.waypoints.is_empty());
+        assert_eq!(route.waypoint_count(), 2);
+    }
+
+    #[test]
+    fn test_catalog_route_rejects_fewer_than_two_waypoints() {
+        let one = vec![RouteWaypoint::new(
+            Position::world_origin(),
+            RouteStrategy::Shortest,
+        )];
+        assert!(CatalogRoute::new("ShortRoute".to_string(), one).is_err());
+        assert!(CatalogRoute::new("EmptyRoute".to_string(), Vec::new()).is_err());
     }
 
     #[test]
     fn test_route_waypoints() {
-        let mut route = CatalogRoute::new("WaypointRoute".to_string());
-
         let pos1 = Position::world_origin();
         let pos2 = Position::world_origin();
 
-        route.add_position_waypoint(pos1, RouteStrategy::Shortest);
-
+        let waypoint1 = RouteWaypoint::with_strategy(pos1, RouteStrategy::Shortest);
         let waypoint2 = RouteWaypoint::with_strategy(pos2, RouteStrategy::Fastest);
-        route.add_waypoint(waypoint2);
+
+        let route =
+            CatalogRoute::new("WaypointRoute".to_string(), vec![waypoint1, waypoint2]).unwrap();
 
         assert_eq!(route.waypoint_count(), 2);
         assert_eq!(
@@ -330,7 +347,13 @@ mod tests {
             }],
         };
 
-        let route = CatalogRoute::with_parameters("ParameterizedRoute".to_string(), param_decl);
+        let waypoints = vec![
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Shortest),
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+        ];
+        let route =
+            CatalogRoute::with_parameters("ParameterizedRoute".to_string(), waypoints, param_decl)
+                .unwrap();
 
         assert_eq!(route.name, "ParameterizedRoute");
         assert!(route.parameter_declarations.is_some());
@@ -347,7 +370,11 @@ mod tests {
 
     #[test]
     fn test_closed_route() {
-        let route = CatalogRoute::with_closed("ClosedRoute".to_string(), true);
+        let waypoints = vec![
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Shortest),
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+        ];
+        let route = CatalogRoute::with_closed("ClosedRoute".to_string(), waypoints, true).unwrap();
 
         assert_eq!(route.closed.as_literal().unwrap(), &true);
     }
@@ -385,16 +412,12 @@ mod tests {
     fn test_catalog_route_into_scenario_entity() {
         use crate::types::catalogs::entities::CatalogEntity;
 
-        let mut route = CatalogRoute::new("ResolvedRoute".to_string());
+        let waypoints = vec![
+            RouteWaypoint::with_strategy(Position::world_origin(), RouteStrategy::Shortest),
+            RouteWaypoint::with_strategy(Position::world_origin(), RouteStrategy::Fastest),
+        ];
+        let mut route = CatalogRoute::new("ResolvedRoute".to_string(), waypoints).unwrap();
         route.closed = Value::Parameter("isClosed".to_string());
-        route.add_waypoint(RouteWaypoint::with_strategy(
-            Position::world_origin(),
-            RouteStrategy::Shortest,
-        ));
-        route.add_waypoint(RouteWaypoint::with_strategy(
-            Position::world_origin(),
-            RouteStrategy::Fastest,
-        ));
 
         let mut parameters = std::collections::HashMap::new();
         parameters.insert("isClosed".to_string(), "true".to_string());
@@ -416,7 +439,11 @@ mod tests {
 
     #[test]
     fn test_constructors_do_not_fabricate_name_or_strategy() {
-        let route = CatalogRoute::new("ExplicitRoute".to_string());
+        let waypoints = vec![
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Shortest),
+            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+        ];
+        let route = CatalogRoute::new("ExplicitRoute".to_string(), waypoints).unwrap();
         let waypoint = RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest);
 
         assert_eq!(route.name, "ExplicitRoute");

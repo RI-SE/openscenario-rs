@@ -1,7 +1,7 @@
 //! `CatalogTrajectory`: a trajectory in its catalog-file form, with parameter
 //! declarations covering its shape.
 
-use crate::types::basic::{Boolean, Double, Int, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{Boolean, Double, Int, MinVec, OSString, ParameterDeclarations, Value};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -81,8 +81,11 @@ pub enum CatalogTrajectoryShape {
 #[serde(rename = "Polyline")]
 pub struct CatalogPolyline {
     /// Vertices defining the polyline (can be parameterized)
+    ///
+    /// XSD `Polyline` (`:1733-1737`, the same complex type `CatalogPolyline`
+    /// mirrors): `Vertex` carries `minOccurs="2"`, unbounded.
     #[serde(rename = "Vertex")]
-    pub vertices: Vec<CatalogVertex>,
+    pub vertices: MinVec<CatalogVertex, 2>,
 }
 
 /// Vertex in a catalog trajectory with parameterizable properties
@@ -154,12 +157,17 @@ pub struct CatalogNurbs {
     pub order: Int,
 
     /// Control points defining the NURBS curve
+    ///
+    /// XSD `Nurbs` (`:1515-1521`, the same complex type `CatalogNurbs`
+    /// mirrors): `ControlPoint` carries `minOccurs="2"`, unbounded.
     #[serde(rename = "ControlPoint")]
-    pub control_points: Vec<NurbsControlPoint>,
+    pub control_points: MinVec<NurbsControlPoint, 2>,
 
     /// Knot vector for the NURBS curve
+    ///
+    /// XSD `Nurbs` (`:1515-1521`): `Knot` also carries `minOccurs="2"`, unbounded.
     #[serde(rename = "Knot")]
-    pub knots: Vec<NurbsKnot>,
+    pub knots: MinVec<NurbsKnot, 2>,
 }
 
 /// Control point for NURBS trajectory
@@ -244,16 +252,22 @@ impl CatalogTrajectory {
         use crate::types::geometry::shapes::{ControlPoint, Knot, Nurbs, Polyline, Shape, Vertex};
 
         let shape = match &self.shape.shape {
-            CatalogTrajectoryShape::Polyline(polyline) => Shape::polyline(Polyline {
-                vertices: polyline
+            CatalogTrajectoryShape::Polyline(polyline) => {
+                let vertices: Vec<Vertex> = polyline
                     .vertices
                     .iter()
                     .map(|v| Vertex {
                         time: v.time.clone(),
                         position: v.position.clone(),
                     })
-                    .collect(),
-            }),
+                    .collect();
+                Shape::polyline(Polyline {
+                    // Mapped one-for-one from a `MinVec<CatalogVertex, 2>`, so the
+                    // length bound already holds.
+                    vertices: crate::types::basic::MinVec::new(vertices)
+                        .expect("length preserved from a MinVec<CatalogVertex, 2>"),
+                })
+            }
             CatalogTrajectoryShape::Clothoid(clothoid) => {
                 Shape::clothoid(crate::types::positions::trajectory::Clothoid {
                     curvature: Double::literal(clothoid.curvature.resolve(parameters)?),
@@ -290,30 +304,37 @@ impl CatalogTrajectory {
                     )
                 })?;
 
+                let control_points: Vec<ControlPoint> = nurbs
+                    .control_points
+                    .iter()
+                    .map(|cp| -> crate::error::Result<ControlPoint> {
+                        Ok(ControlPoint {
+                            position: cp.position.clone(),
+                            time: cp
+                                .time
+                                .as_ref()
+                                .map(|v| v.resolve(parameters).map(Double::literal))
+                                .transpose()?,
+                            weight: cp.weight.clone(),
+                        })
+                    })
+                    .collect::<crate::error::Result<Vec<_>>>()?;
+                let knots: Vec<Knot> = nurbs
+                    .knots
+                    .iter()
+                    .map(|k| Knot {
+                        value: k.value.clone(),
+                    })
+                    .collect();
+
                 Shape::nurbs(Nurbs {
                     order: Value::Literal(order),
-                    control_points: nurbs
-                        .control_points
-                        .iter()
-                        .map(|cp| -> crate::error::Result<ControlPoint> {
-                            Ok(ControlPoint {
-                                position: cp.position.clone(),
-                                time: cp
-                                    .time
-                                    .as_ref()
-                                    .map(|v| v.resolve(parameters).map(Double::literal))
-                                    .transpose()?,
-                                weight: cp.weight.clone(),
-                            })
-                        })
-                        .collect::<crate::error::Result<Vec<_>>>()?,
-                    knots: nurbs
-                        .knots
-                        .iter()
-                        .map(|k| Knot {
-                            value: k.value.clone(),
-                        })
-                        .collect(),
+                    // Both mapped one-for-one from a `MinVec<_, 2>`, so the length
+                    // bound already holds.
+                    control_points: crate::types::basic::MinVec::new(control_points)
+                        .expect("length preserved from a MinVec<NurbsControlPoint, 2>"),
+                    knots: crate::types::basic::MinVec::new(knots)
+                        .expect("length preserved from a MinVec<NurbsKnot, 2>"),
                 })
             }
         };
@@ -330,8 +351,11 @@ impl CatalogTrajectory {
 }
 
 impl CatalogPolyline {
-    /// Creates a polyline from a list of positions
-    pub fn from_positions(positions: Vec<Position>) -> Self {
+    /// Creates a polyline from a list of positions.
+    ///
+    /// XSD `Polyline` (`:1733-1737`, the same complex type `CatalogPolyline` mirrors):
+    /// `Vertex` carries `minOccurs="2"`. Fails if fewer than two positions are given.
+    pub fn from_positions(positions: Vec<Position>) -> crate::error::Result<Self> {
         let vertices = positions
             .into_iter()
             .map(|pos| CatalogVertex {
@@ -340,12 +364,9 @@ impl CatalogPolyline {
             })
             .collect();
 
-        Self { vertices }
-    }
-
-    /// Adds a vertex to this polyline
-    pub fn add_vertex(&mut self, position: Position, time: Option<Double>) {
-        self.vertices.push(CatalogVertex { time, position });
+        Ok(Self {
+            vertices: MinVec::new(vertices)?,
+        })
     }
 }
 
@@ -385,27 +406,21 @@ impl CatalogClothoid {
 }
 
 impl CatalogNurbs {
-    /// Creates a new NURBS curve with the specified order
-    pub fn new(order: Int) -> Self {
-        Self {
+    /// Creates a new NURBS curve from its order, control points and knots.
+    ///
+    /// XSD `Nurbs` (`:1515-1521`, the same complex type `CatalogNurbs` mirrors): both
+    /// `ControlPoint` and `Knot` carry `minOccurs="2"`. Fails if either list has fewer
+    /// than two entries.
+    pub fn new(
+        order: Int,
+        control_points: Vec<NurbsControlPoint>,
+        knots: Vec<NurbsKnot>,
+    ) -> crate::error::Result<Self> {
+        Ok(Self {
             order,
-            control_points: Vec::new(),
-            knots: Vec::new(),
-        }
-    }
-
-    /// Adds a control point to this NURBS curve
-    pub fn add_control_point(&mut self, position: Position, weight: Option<Double>) {
-        self.control_points.push(NurbsControlPoint {
-            position,
-            time: None,
-            weight,
-        });
-    }
-
-    /// Adds a knot to this NURBS curve
-    pub fn add_knot(&mut self, value: Double) {
-        self.knots.push(NurbsKnot { value });
+            control_points: MinVec::new(control_points)?,
+            knots: MinVec::new(knots)?,
+        })
     }
 }
 
@@ -497,6 +512,11 @@ mod tests {
                     <WorldPosition x="1" y="2" z="3"/>
                 </Position>
             </Vertex>
+            <Vertex>
+                <Position>
+                    <WorldPosition x="4" y="5" z="6"/>
+                </Position>
+            </Vertex>
         </Polyline>
     </Shape>
 </Trajectory>"#;
@@ -505,7 +525,7 @@ mod tests {
         assert_eq!(trajectory.name, "VRU_CPx");
         match &trajectory.shape.shape {
             CatalogTrajectoryShape::Polyline(polyline) => {
-                assert_eq!(polyline.vertices.len(), 1);
+                assert_eq!(polyline.vertices.len(), 2);
             }
             other => panic!("expected Polyline, got {other:?}"),
         }
@@ -519,9 +539,13 @@ mod tests {
 
     #[test]
     fn test_catalog_trajectory_creation() {
-        let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
-            vertices: Vec::new(),
-        });
+        let shape = CatalogTrajectoryShape::Polyline(
+            CatalogPolyline::from_positions(vec![
+                Position::world_origin(),
+                Position::world_origin(),
+            ])
+            .unwrap(),
+        );
         let trajectory = CatalogTrajectory::new("TestTrajectory".to_string(), shape);
 
         assert_eq!(trajectory.name, "TestTrajectory");
@@ -534,15 +558,15 @@ mod tests {
         let pos1 = Position::world_origin();
         let pos2 = Position::world_origin();
 
-        let mut polyline = CatalogPolyline::from_positions(vec![pos1, pos2]);
+        let polyline = CatalogPolyline::from_positions(vec![pos1, pos2]).unwrap();
 
         assert_eq!(polyline.vertices.len(), 2);
+    }
 
-        let pos3 = Position::world_origin();
-        polyline.add_vertex(pos3, Some(Value::Literal(10.0)));
-
-        assert_eq!(polyline.vertices.len(), 3);
-        assert!(polyline.vertices[2].time.is_some());
+    #[test]
+    fn test_catalog_polyline_rejects_fewer_than_two_positions() {
+        assert!(CatalogPolyline::from_positions(vec![Position::world_origin()]).is_err());
+        assert!(CatalogPolyline::from_positions(Vec::new()).is_err());
     }
 
     #[test]
@@ -561,22 +585,74 @@ mod tests {
 
     #[test]
     fn test_catalog_nurbs() {
-        let mut nurbs = CatalogNurbs::new(Value::Literal(3));
-
         let pos1 = Position::world_origin();
         let pos2 = Position::world_origin();
 
-        nurbs.add_control_point(pos1, Some(Value::Literal(1.0)));
-        nurbs.add_control_point(pos2, None);
+        let control_points = vec![
+            NurbsControlPoint {
+                position: pos1,
+                time: None,
+                weight: Some(Value::Literal(1.0)),
+            },
+            NurbsControlPoint {
+                position: pos2,
+                time: None,
+                weight: None,
+            },
+        ];
+        let knots = vec![
+            NurbsKnot {
+                value: Value::Literal(0.0),
+            },
+            NurbsKnot {
+                value: Value::Literal(1.0),
+            },
+        ];
 
-        nurbs.add_knot(Value::Literal(0.0));
-        nurbs.add_knot(Value::Literal(1.0));
+        let nurbs = CatalogNurbs::new(Value::Literal(3), control_points, knots).unwrap();
 
         assert_eq!(nurbs.order.as_literal().unwrap(), &3);
         assert_eq!(nurbs.control_points.len(), 2);
         assert_eq!(nurbs.knots.len(), 2);
         assert!(nurbs.control_points[0].weight.is_some());
         assert!(nurbs.control_points[1].weight.is_none());
+    }
+
+    #[test]
+    fn test_catalog_nurbs_rejects_fewer_than_two_control_points_or_knots() {
+        let one_point = vec![NurbsControlPoint {
+            position: Position::world_origin(),
+            time: None,
+            weight: None,
+        }];
+        let two_points = vec![
+            NurbsControlPoint {
+                position: Position::world_origin(),
+                time: None,
+                weight: None,
+            },
+            NurbsControlPoint {
+                position: Position::world_origin(),
+                time: None,
+                weight: None,
+            },
+        ];
+        let one_knot = vec![NurbsKnot {
+            value: Value::Literal(0.0),
+        }];
+        let two_knots = vec![
+            NurbsKnot {
+                value: Value::Literal(0.0),
+            },
+            NurbsKnot {
+                value: Value::Literal(1.0),
+            },
+        ];
+
+        assert!(
+            CatalogNurbs::new(Value::Literal(3), one_point.clone(), two_knots.clone()).is_err()
+        );
+        assert!(CatalogNurbs::new(Value::Literal(3), two_points, one_knot).is_err());
     }
 
     #[test]
@@ -616,8 +692,20 @@ mod tests {
 
     #[test]
     fn test_closed_trajectory() {
+        // Two vertices: XSD `Polyline` (:1735) declares `Vertex` with `minOccurs="2"`.
+        // This fixture carried none, which the plain `Vec` accepted.
         let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
-            vertices: Vec::new(),
+            vertices: MinVec::new(vec![
+                CatalogVertex {
+                    time: None,
+                    position: Position::world_origin(),
+                },
+                CatalogVertex {
+                    time: None,
+                    position: Position::world_origin(),
+                },
+            ])
+            .unwrap(),
         });
         let trajectory =
             CatalogTrajectory::with_closed("ClosedTrajectory".to_string(), shape, true);
@@ -628,7 +716,7 @@ mod tests {
     #[test]
     fn test_resolve_trajectory_polyline() {
         let shape = CatalogTrajectoryShape::Polyline(CatalogPolyline {
-            vertices: vec![
+            vertices: MinVec::new(vec![
                 CatalogVertex {
                     time: Some(Value::Literal(0.0)),
                     position: Position::world_origin(),
@@ -637,7 +725,8 @@ mod tests {
                     time: Some(Value::Literal(5.0)),
                     position: Position::world_origin(),
                 },
-            ],
+            ])
+            .unwrap(),
         });
 
         let catalog_trajectory = CatalogTrajectory::new("TestTrajectory".to_string(), shape);
@@ -665,11 +754,27 @@ mod tests {
     fn test_resolve_trajectory_nurbs_and_clothoid() {
         use crate::types::catalogs::entities::CatalogEntity;
 
-        let mut nurbs = CatalogNurbs::new(Value::Literal(3));
-        nurbs.add_control_point(Position::world_origin(), Some(Value::Literal(1.0)));
-        nurbs.add_control_point(Position::world_origin(), None);
-        nurbs.add_knot(Value::Literal(0.0));
-        nurbs.add_knot(Value::Literal(1.0));
+        let control_points = vec![
+            NurbsControlPoint {
+                position: Position::world_origin(),
+                time: None,
+                weight: Some(Value::Literal(1.0)),
+            },
+            NurbsControlPoint {
+                position: Position::world_origin(),
+                time: None,
+                weight: None,
+            },
+        ];
+        let knots = vec![
+            NurbsKnot {
+                value: Value::Literal(0.0),
+            },
+            NurbsKnot {
+                value: Value::Literal(1.0),
+            },
+        ];
+        let nurbs = CatalogNurbs::new(Value::Literal(3), control_points, knots).unwrap();
 
         let trajectory = CatalogTrajectory::new(
             "NurbsPath".to_string(),
@@ -709,9 +814,13 @@ mod tests {
     fn test_constructors_do_not_fabricate_name_or_shape() {
         let trajectory = CatalogTrajectory::new(
             "ExplicitTrajectory".to_string(),
-            CatalogTrajectoryShape::Polyline(CatalogPolyline {
-                vertices: Vec::new(),
-            }),
+            CatalogTrajectoryShape::Polyline(
+                CatalogPolyline::from_positions(vec![
+                    Position::world_origin(),
+                    Position::world_origin(),
+                ])
+                .unwrap(),
+            ),
         );
         let clothoid = CatalogClothoid::new(
             Value::Literal(0.0),
@@ -719,7 +828,27 @@ mod tests {
             Value::Literal(1.0),
             Position::world_origin(),
         );
-        let nurbs = CatalogNurbs::new(Value::Literal(2));
+        let control_points = vec![
+            NurbsControlPoint {
+                position: Position::world_origin(),
+                time: None,
+                weight: None,
+            },
+            NurbsControlPoint {
+                position: Position::world_origin(),
+                time: None,
+                weight: None,
+            },
+        ];
+        let knots = vec![
+            NurbsKnot {
+                value: Value::Literal(0.0),
+            },
+            NurbsKnot {
+                value: Value::Literal(1.0),
+            },
+        ];
+        let nurbs = CatalogNurbs::new(Value::Literal(2), control_points, knots).unwrap();
 
         assert_eq!(trajectory.name, "ExplicitTrajectory");
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);
