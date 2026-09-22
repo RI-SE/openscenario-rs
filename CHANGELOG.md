@@ -902,6 +902,22 @@ Breaking, unless noted.
   them in no scope at all. `CatalogResolvable::resolve` had one implementation, and it always
   returned "Catalog resolution not yet implemented".
 
+- **`catalog::extract_scenario_parameters`, `catalog::resolve_catalog_reference_simple`, and
+  `CatalogReference::{get_catalog_name, get_entry_name}`.** Breaking. All three predate
+  `parser::resolve` and its section 9.1 scoping. `extract_scenario_parameters` flattened every
+  declaration in a document into one map, so a parameter redeclared in an inner scope
+  overwrote the outer one for the rest of the document. `resolve_catalog_reference_simple`
+  matched a reference's `catalogName` against a hard-coded set of strings
+  (`"vehicle_catalog"`, `"pedestrian_catalog"`, ...) and a hard-coded filename
+  (`vehicle_catalog.xosc`, ...) rather than against the `<Catalog>` element's own `name`
+  attribute, so a `catalogName` such as `"Vehicles"` — common in the NCAP corpus — was
+  rejected as unknown regardless of what the catalog directory held.
+  `CatalogReference::{get_catalog_name, get_entry_name}` resolved against the same kind of
+  flat map and had no caller outside their own tests. `examples/parse.rs` and
+  `tools/scenario_analyzer.rs`, the only callers of the first two, now resolve the whole
+  document through `parse_file_resolved` instead of walking a hand-picked subset of fields
+  against a flat map.
+
 - **`types::ParameterContext`.** Breaking. Replaced by `types::ParameterScope`. Its `scope:
   Vec<String>` field was never read by any code, including its own `Resolve` impl, which
   resolved against the flat `parameters` map alone; the type looked scoped and was not.

@@ -27,13 +27,11 @@
 //! - Logs all resolution activities and statistics
 
 use openscenario_rs::{
-    catalog::{extract_scenario_parameters, resolve_catalog_reference_simple},
-    expression::evaluate_expression,
+    parse_file_resolved,
     parser::xml::{parse_from_file, serialize_to_string},
     types::{basic::Value, OpenScenarioDocumentType},
 };
 use std::{
-    collections::HashMap,
     env,
     fs::{self, File},
     io::Write,
@@ -247,108 +245,6 @@ fn resolve_file_paths_in_document(
     Ok(resolved_count)
 }
 
-/// Resolve expressions in OpenSCENARIO Value types throughout the document
-fn resolve_expressions_in_document(
-    document: &mut openscenario_rs::types::scenario::storyboard::OpenScenario,
-    parameters: &HashMap<String, String>,
-) -> Result<usize, Box<dyn std::error::Error>> {
-    let mut resolved_count = 0;
-
-    // Helper function to resolve a Value<String> if it's an expression
-    let resolve_string_value = |value: &mut Value<String>| -> bool {
-        if let Some(expr) = value.as_expression() {
-            match evaluate_expression::<String>(expr, parameters) {
-                Ok(result) => {
-                    println!("      🔍 Resolved expression: {} → {}", expr, result);
-                    *value = Value::Literal(result);
-                    true
-                }
-                Err(e) => {
-                    println!("      ❌ Failed to resolve expression {}: {}", expr, e);
-                    false
-                }
-            }
-        } else {
-            false
-        }
-    };
-
-    // Helper function to resolve a Value<f64> if it's an expression
-    let _resolve_numeric_value = |value: &mut Value<f64>| -> bool {
-        if let Some(expr) = value.as_expression() {
-            match evaluate_expression::<f64>(expr, parameters) {
-                Ok(result) => {
-                    println!(
-                        "      🔍 Resolved numeric expression: {} → {}",
-                        expr, result
-                    );
-                    *value = Value::Literal(result);
-                    true
-                }
-                Err(e) => {
-                    println!(
-                        "      ❌ Failed to resolve numeric expression {}: {}",
-                        expr, e
-                    );
-                    false
-                }
-            }
-        } else {
-            false
-        }
-    };
-
-    // Process parameter declarations (these often contain expressions)
-    if let Some(param_decls) = &mut document.parameter_declarations {
-        println!("   ⚙️  Processing parameter declarations...");
-        for param in &mut param_decls.parameter_declarations {
-            if resolve_string_value(&mut param.value) {
-                resolved_count += 1;
-            }
-        }
-    }
-
-    // Process entities
-    if let Some(entities) = &mut document.entities {
-        println!("   🎭 Processing entities...");
-        for entity in &mut entities.scenario_objects {
-            // Resolve entity name if it's an expression
-            if resolve_string_value(&mut entity.name) {
-                resolved_count += 1;
-            }
-
-            // Process vehicle properties if present
-            if let Some(vehicle) = entity.vehicle_mut() {
-                if resolve_string_value(&mut vehicle.name) {
-                    resolved_count += 1;
-                }
-                // Could process other vehicle fields like performance values here
-            }
-
-            // Process pedestrian properties if present
-            if let Some(pedestrian) = entity.pedestrian_mut() {
-                if resolve_string_value(&mut pedestrian.name) {
-                    resolved_count += 1;
-                }
-                // Could process other pedestrian fields here
-            }
-        }
-    }
-
-    // In a full implementation, we would also walk through:
-    // - Position coordinates (Value<f64>) using resolve_numeric_value
-    // - Speed values (Value<f64>) using resolve_numeric_value
-    // - Time values (Value<f64>) using resolve_numeric_value
-    // - All action parameters throughout the storyboard
-    // - Condition parameters in triggers
-    // - Trigger parameters and timing values
-    // etc.
-
-    // For now, we focus on the most common expression locations in parameters and entity names
-
-    Ok(resolved_count)
-}
-
 /// Main processing function that handles the entire parsing and resolution pipeline
 fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     println!("🚀 OpenSCENARIO Universal Parser Tool");
@@ -361,9 +257,13 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
         return Err(format!("Input file does not exist: {}", input_file).into());
     }
 
-    let mut document = parse_from_file(input_path)?;
+    // `parse_file_resolved` resolves every `$name`/`${expression}` against the document's own
+    // `<ParameterDeclarations>` (section 9.1 scoping) and inlines every `<CatalogReference>`
+    // with its own `<ParameterAssignments>` (section 9.5/9.6), so the document returned here
+    // already carries literal values and resolved entities.
+    let mut document = parse_file_resolved(input_path)?;
 
-    println!("✅ Successfully parsed scenario file");
+    println!("✅ Successfully parsed and resolved scenario file");
     println!("   📋 Description: {:?}", document.file_header.description);
     println!("   👤 Author: {:?}", document.file_header.author);
     println!("   📅 Date: {:?}", document.file_header.date);
@@ -376,37 +276,36 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
                 println!("   🎭 Entities: 0");
             }
 
-            // Step 2: Extract parameters from scenario
-            let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
-            println!("   ⚙️  Parameters: {}", scenario_parameters.len());
-            for (name, value) in &scenario_parameters {
-                println!("      - {} = {}", name, value);
+            // Step 2: Report the parameters declared on the document. `parse_file_resolved`
+            // already replaced every use with its literal value, following the section 9.1
+            // scope; the declarations below still show the values that were used.
+            if let Some(param_decls) = &document.parameter_declarations {
+                println!(
+                    "   ⚙️  Parameters: {}",
+                    param_decls.parameter_declarations.len()
+                );
+                for param in &param_decls.parameter_declarations {
+                    println!("      - {} = {}", param.name, param.value);
+                }
+            } else {
+                println!("   ⚙️  Parameters: 0");
             }
 
-            // Step 3: Check if scenario uses catalogs
-            if let Some(catalog_locations) = document.catalog_locations.clone() {
-                if catalog_locations.vehicle_catalog.is_some()
-                    || catalog_locations.pedestrian_catalog.is_some()
-                    || catalog_locations.misc_object_catalog.is_some()
-                    || catalog_locations.controller_catalog.is_some()
-                {
-                    println!("\n🗂️  Catalog locations found - proceeding with resolution:");
-
-                    // Get the base directory for relative catalog paths
-                    let base_dir = input_path.parent().unwrap_or(Path::new("."));
-
-                    // Resolve catalog references using the new simple resolver
-                    resolve_catalog_references_simple(
-                        &mut document,
-                        &catalog_locations,
-                        &scenario_parameters,
-                        base_dir,
-                    )?;
-                } else {
-                    println!(
-                        "\n💡 No catalog locations found - scenario uses inline entities only"
-                    );
-                }
+            // Step 3: Report catalog usage. `parse_file_resolved` has already located each
+            // `<CatalogReference>` by catalog name and entry name, in the scope of its own
+            // `<ParameterAssignments>`, and inlined the resolved entry in its place (section
+            // 9.5/9.6), so there is nothing left to resolve here.
+            let has_catalogs = document
+                .catalog_locations
+                .as_ref()
+                .is_some_and(|locations| {
+                    locations.vehicle_catalog.is_some()
+                        || locations.pedestrian_catalog.is_some()
+                        || locations.misc_object_catalog.is_some()
+                        || locations.controller_catalog.is_some()
+                });
+            if has_catalogs {
+                println!("\n🗂️  Catalog locations found - references resolved during parsing");
             } else {
                 println!("\n💡 No catalog locations found - scenario uses inline entities only");
             }
@@ -484,26 +383,11 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
         println!("💡 No relative file paths found to resolve");
     }
 
-    // Step 5: Perform expression resolution (scan for ${...} expressions and evaluate them)
+    // Step 5: `parse_file_resolved` evaluated every `${expression}` against the document's own
+    // parameters as it parsed, so no separate expression pass is needed here.
     println!("\n🧮 Expression Resolution");
     println!("═══════════════════════");
-
-    if document.is_scenario() {
-        let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
-        let expressions_resolved =
-            resolve_expressions_in_document(&mut document, &scenario_parameters)?;
-
-        if expressions_resolved > 0 {
-            println!(
-                "✅ Resolved {} expressions in the scenario",
-                expressions_resolved
-            );
-        } else {
-            println!("💡 No expressions found to resolve in this scenario");
-        }
-    } else {
-        println!("💡 Expression resolution only applies to scenario documents");
-    }
+    println!("💡 Expressions were resolved during parsing");
 
     // Step 6: Create output directory
     let output_dir = Path::new("output");
@@ -534,106 +418,6 @@ fn process_scenario(input_file: &str) -> Result<PathBuf, Box<dyn std::error::Err
 
     Ok(output_path)
 }
-
-// Parameter extraction is now handled by the catalog module
-
-/// Simplified catalog resolution function using the new infrastructure
-fn resolve_catalog_references_simple(
-    document: &mut openscenario_rs::types::scenario::storyboard::OpenScenario,
-    catalog_locations: &openscenario_rs::types::catalogs::locations::CatalogLocations,
-    parameters: &HashMap<String, String>,
-    base_dir: &Path,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut resolved_references = 0;
-    let mut failed_references = 0;
-
-    // Process each entity in the scenario
-    if document.is_scenario() {
-        if let Some(entities) = &mut document.entities {
-            for entity in &mut entities.scenario_objects {
-                let entity_name = entity.name.to_string();
-                println!("   🎭 Processing entity: {}", entity_name);
-
-                // Check if entity has a catalog reference
-                if let Some(catalog_ref) = entity.catalog_reference() {
-                    println!("      🔗 Resolving entity catalog reference...");
-                    println!("         Catalog: {:?}", catalog_ref.catalog_name);
-                    println!("         Entry: {:?}", catalog_ref.entry_name);
-
-                    // Use the new catalog resolution function
-                    match resolve_catalog_reference_simple(
-                        &catalog_ref.catalog_name,
-                        &catalog_ref.entry_name,
-                        catalog_locations,
-                        parameters,
-                        base_dir,
-                    ) {
-                        Ok(found) => {
-                            if found {
-                                println!("         ✅ Catalog entry found and validated");
-                                resolved_references += 1;
-                                // In a full implementation, we would load and replace the entity here
-                                // For this example, we just validate that the reference can be resolved
-                            } else {
-                                println!("         ❌ Catalog entry not found");
-                                failed_references += 1;
-                            }
-                        }
-                        Err(e) => {
-                            println!("         ❌ Failed to resolve catalog reference: {}", e);
-                            failed_references += 1;
-                        }
-                    }
-                }
-
-                // Check controller references
-                for object_controller in &entity.object_controller {
-                    if let Some(controller_ref) = object_controller.catalog_reference() {
-                        println!("      🎮 Resolving controller reference...");
-
-                        match resolve_catalog_reference_simple(
-                            &controller_ref.catalog_name,
-                            &controller_ref.entry_name,
-                            catalog_locations,
-                            parameters,
-                            base_dir,
-                        ) {
-                            Ok(found) => {
-                                if found {
-                                    println!("         ✅ Controller entry found and validated");
-                                    resolved_references += 1;
-                                } else {
-                                    println!("         ❌ Controller entry not found");
-                                    failed_references += 1;
-                                }
-                            }
-                            Err(e) => {
-                                println!(
-                                    "         ❌ Failed to resolve controller reference: {}",
-                                    e
-                                );
-                                failed_references += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    println!(
-        "   📊 Resolution complete: {} resolved, {} failed",
-        resolved_references, failed_references
-    );
-
-    if failed_references > 0 {
-        return Err(format!("Failed to resolve {} catalog references", failed_references).into());
-    }
-
-    Ok(())
-}
-
-// Vehicle and controller resolution functions removed - using simplified approach
 
 /// Print a comprehensive summary of the resolution process
 fn print_resolution_summary(document: &openscenario_rs::types::scenario::storyboard::OpenScenario) {

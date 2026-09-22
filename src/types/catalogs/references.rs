@@ -3,10 +3,8 @@
 //! resolves to the type it names and not to a common enum.
 
 use super::entities::CatalogEntity;
-use crate::error::Result;
 use crate::types::basic::Value;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use crate::types::basic::OSString;
@@ -80,16 +78,6 @@ impl<T: CatalogEntity> CatalogReference<T> {
             phantom: PhantomData,
         }
     }
-
-    /// Get the catalog name as a resolved string
-    pub fn get_catalog_name(&self, context_params: &HashMap<String, String>) -> Result<String> {
-        self.catalog_name.resolve(context_params)
-    }
-
-    /// Get the entry name as a resolved string
-    pub fn get_entry_name(&self, context_params: &HashMap<String, String>) -> Result<String> {
-        self.entry_name.resolve(context_params)
-    }
 }
 
 impl<T: CatalogEntity> Default for CatalogReference<T> {
@@ -134,18 +122,18 @@ pub type ManeuverCatalogReference = CatalogReference<CatalogManeuver>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_catalog_reference_creation() {
         let reference =
             VehicleCatalogReference::new("VehicleCatalog".to_string(), "SportsCar".to_string());
 
-        let params = HashMap::new();
         assert_eq!(
-            reference.get_catalog_name(&params).unwrap(),
+            reference.catalog_name.as_literal().unwrap(),
             "VehicleCatalog"
         );
-        assert_eq!(reference.get_entry_name(&params).unwrap(), "SportsCar");
+        assert_eq!(reference.entry_name.as_literal().unwrap(), "SportsCar");
     }
 
     #[test]
@@ -197,11 +185,11 @@ mod tests {
         context_params.insert("CatalogNameParam".to_string(), "DynamicCatalog".to_string());
 
         assert_eq!(
-            reference.get_catalog_name(&context_params).unwrap(),
+            reference.catalog_name.resolve(&context_params).unwrap(),
             "DynamicCatalog"
         );
         assert_eq!(
-            reference.get_entry_name(&context_params).unwrap(),
+            reference.entry_name.resolve(&context_params).unwrap(),
             "DefaultVehicle"
         );
     }
@@ -213,12 +201,11 @@ mod tests {
             "AIDriver".to_string(),
         );
 
-        let params = HashMap::new();
         assert_eq!(
-            reference.get_catalog_name(&params).unwrap(),
+            reference.catalog_name.as_literal().unwrap(),
             "ControllerCatalog"
         );
-        assert_eq!(reference.get_entry_name(&params).unwrap(), "AIDriver");
+        assert_eq!(reference.entry_name.as_literal().unwrap(), "AIDriver");
     }
 
     #[test]
@@ -228,12 +215,11 @@ mod tests {
             "WalkingPerson".to_string(),
         );
 
-        let params = HashMap::new();
         assert_eq!(
-            reference.get_catalog_name(&params).unwrap(),
+            reference.catalog_name.as_literal().unwrap(),
             "PedestrianCatalog"
         );
-        assert_eq!(reference.get_entry_name(&params).unwrap(), "WalkingPerson");
+        assert_eq!(reference.entry_name.as_literal().unwrap(), "WalkingPerson");
     }
 
     #[test]
@@ -242,12 +228,10 @@ mod tests {
         let controller_ref = ControllerCatalogReference::default();
         let pedestrian_ref = PedestrianCatalogReference::default();
 
-        let params = HashMap::new();
-
         // All should have valid default values
-        assert!(vehicle_ref.get_catalog_name(&params).is_ok());
-        assert!(controller_ref.get_catalog_name(&params).is_ok());
-        assert!(pedestrian_ref.get_catalog_name(&params).is_ok());
+        assert!(vehicle_ref.catalog_name.as_literal().is_some());
+        assert!(controller_ref.catalog_name.as_literal().is_some());
+        assert!(pedestrian_ref.catalog_name.as_literal().is_some());
     }
 
     #[test]

@@ -45,15 +45,13 @@
 //! ```
 
 use openscenario_rs::{
-    catalog::{extract_scenario_parameters, resolve_catalog_reference_simple},
-    expression::evaluate_expression,
-    parse_from_file,
+    parse_file_resolved, parse_from_file,
     types::{
         basic::Value, scenario::story::StoryActionChoice, scenario::storyboard::OpenScenario,
         OpenScenarioDocumentType,
     },
 };
-use std::{collections::HashMap, env, path::Path, process};
+use std::{env, path::Path, process};
 
 /// Configuration for the analysis tool
 #[derive(Debug, Clone)]
@@ -675,7 +673,7 @@ fn analyze_document(
     };
 
     // Analyze parameters (including expression resolution)
-    let parameter_analysis = analyze_parameters(document);
+    let parameter_analysis = analyze_parameters(document, input_path);
 
     // Analyze parameter variations (only for parameter variation documents)
     let parameter_variation_analysis =
@@ -1518,7 +1516,7 @@ fn analyze_parameter_variation(
 }
 
 /// Analyze parameters in the document
-fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
+fn analyze_parameters(document: &OpenScenario, input_path: &Path) -> ParameterAnalysis {
     let mut analysis = ParameterAnalysis {
         total_parameters: 0,
         parameter_names: Vec::new(),
@@ -1528,6 +1526,27 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
         expressions_failed: 0,
         resolution_examples: Vec::new(),
     };
+
+    // A single whole-document resolution, reused below for both the per-declaration resolved
+    // value and the expression-resolution summary. `parse_file_resolved` follows the section
+    // 9.1 scoping rules; resolving each declaration's expression text against a flat map built
+    // from the same declarations, as this tool used to, ignores that scoping.
+    let resolved = if document.document_type() == OpenScenarioDocumentType::Scenario {
+        parse_file_resolved(input_path).ok()
+    } else {
+        None
+    };
+    let resolved_param_values: std::collections::HashMap<String, String> = resolved
+        .as_ref()
+        .and_then(|doc| doc.parameter_declarations.as_ref())
+        .map(|decls| {
+            decls
+                .parameter_declarations
+                .iter()
+                .filter_map(|p| Some((p.name.as_literal()?.clone(), p.value.as_literal()?.clone())))
+                .collect()
+        })
+        .unwrap_or_default();
 
     if let Some(param_decls) = &document.parameter_declarations {
         analysis.total_parameters = param_decls.parameter_declarations.len();
@@ -1557,18 +1576,7 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
             };
 
             let resolved_value = if is_expression {
-                if let Some(expr) = param.value.as_expression() {
-                    // Try to resolve using scenario parameters if available
-                    if document.document_type() == OpenScenarioDocumentType::Scenario {
-                        let scenario_parameters =
-                            extract_scenario_parameters(&document.parameter_declarations);
-                        evaluate_expression::<String>(expr, &scenario_parameters).ok()
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
+                resolved_param_values.get(&name).cloned()
             } else {
                 None
             };
@@ -1588,8 +1596,7 @@ fn analyze_parameters(document: &OpenScenario) -> ParameterAnalysis {
 
     // Perform expression resolution analysis
     if document.document_type() == OpenScenarioDocumentType::Scenario {
-        let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
-        let expression_results = resolve_expressions_in_scenario(document, &scenario_parameters);
+        let expression_results = resolve_expressions_in_scenario(document, resolved.as_ref());
 
         analysis.expressions_found = expression_results.expressions_found;
         analysis.expressions_resolved = expression_results.expressions_resolved;
@@ -1631,12 +1638,10 @@ fn analyze_catalogs(document: &OpenScenario, input_path: &Path) -> CatalogAnalys
 
         // Perform catalog resolution analysis for scenarios
         if document.document_type() == OpenScenarioDocumentType::Scenario {
-            let scenario_parameters = extract_scenario_parameters(&document.parameter_declarations);
+            let resolved = parse_file_resolved(input_path).map_err(|e| e.to_string());
             let resolution_results = resolve_catalog_references_in_scenario(
                 document,
-                catalog_locations,
-                &scenario_parameters,
-                input_path,
+                resolved.as_ref().map_err(|e| e.clone()),
             );
 
             analysis.resolution_attempts = resolution_results.resolution_attempts;
@@ -2624,202 +2629,117 @@ struct CatalogAnalysisResult {
     resolution_results: Vec<CatalogResolutionResult>,
 }
 
-/// Helper function to resolve a Value<String> if it's an expression
-fn resolve_string_value(
-    value: &Value<String>,
-    location: &str,
-    result: &mut ExpressionAnalysisResult,
-    parameters: &HashMap<String, String>,
-) -> bool {
-    if let Some(expr) = value.as_expression() {
-        result.expressions_found += 1;
-        match evaluate_expression::<String>(expr, parameters) {
-            Ok(resolved) => {
-                result.expressions_resolved += 1;
-                if result.resolution_examples.len() < 5 {
-                    result
-                        .resolution_examples
-                        .push(ExpressionResolutionExample {
-                            original: format!("${{{}}}", expr),
-                            resolved: resolved.clone(),
-                            location: location.to_string(),
-                        });
-                }
-                true
-            }
-            Err(_) => {
-                result.expressions_failed += 1;
-                false
-            }
+/// The location and `${expression}` text of every expression this tool reports on: the same
+/// fields `resolve_expressions_in_scenario` used to walk by hand, now only counted, since
+/// resolving them is `parse_file_resolved`'s job.
+fn find_expressions(document: &OpenScenario) -> Vec<(String, String)> {
+    fn note(found: &mut Vec<(String, String)>, location: String, value: &Value<String>) {
+        if let Some(expr) = value.as_expression() {
+            found.push((location, expr.to_string()));
         }
-    } else {
-        false
     }
-}
-
-/// Helper function to resolve a Value<f64> if it's an expression
-fn resolve_numeric_value(
-    value: &Value<f64>,
-    location: &str,
-    result: &mut ExpressionAnalysisResult,
-    parameters: &HashMap<String, String>,
-) -> bool {
-    if let Some(expr) = value.as_expression() {
-        result.expressions_found += 1;
-        match evaluate_expression::<f64>(expr, parameters) {
-            Ok(resolved) => {
-                result.expressions_resolved += 1;
-                if result.resolution_examples.len() < 5 {
-                    result
-                        .resolution_examples
-                        .push(ExpressionResolutionExample {
-                            original: format!("${{{}}}", expr),
-                            resolved: resolved.to_string(),
-                            location: location.to_string(),
-                        });
-                }
-                true
-            }
-            Err(_) => {
-                result.expressions_failed += 1;
-                false
-            }
+    fn note_numeric(found: &mut Vec<(String, String)>, location: String, value: &Value<f64>) {
+        if let Some(expr) = value.as_expression() {
+            found.push((location, expr.to_string()));
         }
-    } else {
-        false
     }
-}
 
-/// Resolve expressions throughout the scenario document
-fn resolve_expressions_in_scenario(
-    document: &OpenScenario,
-    parameters: &HashMap<String, String>,
-) -> ExpressionAnalysisResult {
-    let mut result = ExpressionAnalysisResult {
-        expressions_found: 0,
-        expressions_resolved: 0,
-        expressions_failed: 0,
-        resolution_examples: Vec::new(),
-    };
+    let mut found = Vec::new();
 
-    // Process parameter declarations
     if let Some(param_decls) = &document.parameter_declarations {
         for param in &param_decls.parameter_declarations {
             let param_name = param.name.as_literal().map_or("Unknown", |v| v);
-            resolve_string_value(
+            note(
+                &mut found,
+                format!("Parameter '{}'", param_name),
                 &param.value,
-                &format!("Parameter '{}'", param_name),
-                &mut result,
-                parameters,
             );
         }
     }
 
-    // Process entities
     if let Some(entities) = &document.entities {
         for entity in &entities.scenario_objects {
             let entity_name = entity.name.as_literal().map_or("Unknown", |v| v);
-
-            // Resolve entity name if it's an expression
-            resolve_string_value(
+            note(
+                &mut found,
+                format!("Entity '{}' name", entity_name),
                 &entity.name,
-                &format!("Entity '{}' name", entity_name),
-                &mut result,
-                parameters,
             );
 
-            // Process vehicle properties if present
             if let Some(vehicle) = entity.vehicle() {
-                resolve_string_value(
+                note(
+                    &mut found,
+                    format!("Vehicle '{}' name", entity_name),
                     &vehicle.name,
-                    &format!("Vehicle '{}' name", entity_name),
-                    &mut result,
-                    parameters,
                 );
-
-                // Process performance values
                 let performance = &vehicle.performance;
-                resolve_numeric_value(
+                note_numeric(
+                    &mut found,
+                    format!("Vehicle '{}' max speed", entity_name),
                     &performance.max_speed,
-                    &format!("Vehicle '{}' max speed", entity_name),
-                    &mut result,
-                    parameters,
                 );
-                resolve_numeric_value(
+                note_numeric(
+                    &mut found,
+                    format!("Vehicle '{}' max acceleration", entity_name),
                     &performance.max_acceleration,
-                    &format!("Vehicle '{}' max acceleration", entity_name),
-                    &mut result,
-                    parameters,
                 );
-                resolve_numeric_value(
+                note_numeric(
+                    &mut found,
+                    format!("Vehicle '{}' max deceleration", entity_name),
                     &performance.max_deceleration,
-                    &format!("Vehicle '{}' max deceleration", entity_name),
-                    &mut result,
-                    parameters,
                 );
             }
 
-            // Process pedestrian properties if present
             if let Some(pedestrian) = entity.pedestrian() {
-                resolve_string_value(
+                note(
+                    &mut found,
+                    format!("Pedestrian '{}' name", entity_name),
                     &pedestrian.name,
-                    &format!("Pedestrian '{}' name", entity_name),
-                    &mut result,
-                    parameters,
                 );
             }
         }
     }
 
-    // Process storyboard initialization actions
     if let Some(storyboard) = &document.storyboard {
-        // Process private actions
         for private_action in &storyboard.init.actions.private_actions {
             let entity_ref = private_action
                 .entity_ref
                 .as_literal()
                 .map_or("Unknown", |v| v);
 
-            // Process position actions
             for action in &private_action.private_actions {
                 if let openscenario_rs::types::scenario::init::PrivateActionChoice::TeleportAction(
                     teleport_action,
                 ) = &action.action
                 {
-                    // Process position coordinates
                     if let Some(world_position) = &teleport_action.position.world_position() {
-                        resolve_numeric_value(
+                        note_numeric(
+                            &mut found,
+                            format!("Entity '{}' init position X", entity_ref),
                             &world_position.x,
-                            &format!("Entity '{}' init position X", entity_ref),
-                            &mut result,
-                            parameters,
                         );
-                        resolve_numeric_value(
+                        note_numeric(
+                            &mut found,
+                            format!("Entity '{}' init position Y", entity_ref),
                             &world_position.y,
-                            &format!("Entity '{}' init position Y", entity_ref),
-                            &mut result,
-                            parameters,
                         );
                         if let Some(z_value) = &world_position.z {
-                            resolve_numeric_value(
+                            note_numeric(
+                                &mut found,
+                                format!("Entity '{}' init position Z", entity_ref),
                                 z_value,
-                                &format!("Entity '{}' init position Z", entity_ref),
-                                &mut result,
-                                parameters,
                             );
                         }
                         if let Some(h_value) = &world_position.h {
-                            resolve_numeric_value(
+                            note_numeric(
+                                &mut found,
+                                format!("Entity '{}' init heading", entity_ref),
                                 h_value,
-                                &format!("Entity '{}' init heading", entity_ref),
-                                &mut result,
-                                parameters,
                             );
                         }
                     }
                 }
 
-                // Process speed actions
                 if let openscenario_rs::types::scenario::init::PrivateActionChoice::LongitudinalAction(
                     longitudinal_action,
                 ) = &action.action
@@ -2830,11 +2750,10 @@ fn resolve_expressions_in_scenario(
                     {
                         let target = &speed_action.speed_action_target;
                         if let Some(absolute_speed) = target.target.as_absolute() {
-                            resolve_numeric_value(
+                            note_numeric(
+                                &mut found,
+                                format!("Entity '{}' init speed", entity_ref),
                                 &absolute_speed.value,
-                                &format!("Entity '{}' init speed", entity_ref),
-                                &mut result,
-                                parameters,
                             );
                         }
                     }
@@ -2843,27 +2762,71 @@ fn resolve_expressions_in_scenario(
         }
     }
 
+    found
+}
+
+/// Report expression resolution by asking the crate's own resolver to do it, rather than
+/// walking a hand-picked subset of fields against a flat parameter map. `parse_file_resolved`
+/// follows the section 9.1 scoping rules and evaluates every `${expression}` in the document
+/// in one pass, so `resolved` (or its absence, on a failed resolution) settles every location
+/// `find_expressions` names at once.
+fn resolve_expressions_in_scenario(
+    document: &OpenScenario,
+    resolved: Option<&OpenScenario>,
+) -> ExpressionAnalysisResult {
+    let found = find_expressions(document);
+    let mut result = ExpressionAnalysisResult {
+        expressions_found: found.len(),
+        expressions_resolved: 0,
+        expressions_failed: 0,
+        resolution_examples: Vec::new(),
+    };
+
+    match resolved {
+        Some(resolved) => {
+            result.expressions_resolved = found.len();
+            if let (Some(before), Some(after)) = (
+                &document.parameter_declarations,
+                &resolved.parameter_declarations,
+            ) {
+                for (orig, done) in before
+                    .parameter_declarations
+                    .iter()
+                    .zip(after.parameter_declarations.iter())
+                {
+                    if let (Some(expr), Some(name), Some(value)) = (
+                        orig.value.as_expression(),
+                        orig.name.as_literal(),
+                        done.value.as_literal(),
+                    ) {
+                        if result.resolution_examples.len() < 5 {
+                            result
+                                .resolution_examples
+                                .push(ExpressionResolutionExample {
+                                    original: format!("${{{}}}", expr),
+                                    resolved: value.clone(),
+                                    location: format!("Parameter '{}'", name),
+                                });
+                        }
+                    }
+                }
+            }
+        }
+        None => {
+            result.expressions_failed = found.len();
+        }
+    }
+
     result
 }
 
-/// Resolve catalog references throughout the scenario document
-fn resolve_catalog_references_in_scenario(
-    document: &OpenScenario,
-    catalog_locations: &openscenario_rs::types::catalogs::locations::CatalogLocations,
-    parameters: &HashMap<String, String>,
-    scenario_path: &Path,
-) -> CatalogAnalysisResult {
-    let mut result = CatalogAnalysisResult {
-        resolution_attempts: 0,
-        resolution_successes: 0,
-        resolution_failures: 0,
-        resolution_results: Vec::new(),
-    };
+/// The `(entity name, catalog name, entry name, "entity"|"controller")` of every
+/// `<CatalogReference>` in the document. Reads the unresolved document, since a document
+/// `parse_file_resolved` already resolved has none of these left: each was replaced in place
+/// by the entry it named.
+fn find_catalog_references(document: &OpenScenario) -> Vec<(String, String, String, &'static str)> {
+    let mut references = Vec::new();
 
-    // Get the base directory for relative catalog paths
-    let base_dir = scenario_path.parent().unwrap_or(Path::new("."));
-
-    // Process each entity in the scenario
     if let Some(entities) = &document.entities {
         for entity in &entities.scenario_objects {
             let entity_name = entity
@@ -2872,124 +2835,81 @@ fn resolve_catalog_references_in_scenario(
                 .map_or("Unknown", |v| v)
                 .to_string();
 
-            // Check if entity has a catalog reference
             if let Some(catalog_ref) = entity.catalog_reference() {
-                result.resolution_attempts += 1;
-
-                let catalog_name = catalog_ref
-                    .catalog_name
-                    .as_literal()
-                    .map_or("Unknown".to_string(), |v| v.clone());
-                let entry_name = catalog_ref
-                    .entry_name
-                    .as_literal()
-                    .map_or("Unknown".to_string(), |v| v.clone());
-
-                // Attempt to resolve the catalog reference
-                match resolve_catalog_reference_simple(
-                    &catalog_ref.catalog_name,
-                    &catalog_ref.entry_name,
-                    catalog_locations,
-                    parameters,
-                    base_dir,
-                ) {
-                    Ok(found) => {
-                        if found {
-                            result.resolution_successes += 1;
-                            result.resolution_results.push(CatalogResolutionResult {
-                                entity_name: entity_name.clone(),
-                                catalog_name,
-                                entry_name,
-                                resolution_type: "entity".to_string(),
-                                success: true,
-                                error_message: None,
-                            });
-                        } else {
-                            result.resolution_failures += 1;
-                            result.resolution_results.push(CatalogResolutionResult {
-                                entity_name: entity_name.clone(),
-                                catalog_name,
-                                entry_name,
-                                resolution_type: "entity".to_string(),
-                                success: false,
-                                error_message: Some("Entry not found in catalog".to_string()),
-                            });
-                        }
-                    }
-                    Err(e) => {
-                        result.resolution_failures += 1;
-                        result.resolution_results.push(CatalogResolutionResult {
-                            entity_name: entity_name.clone(),
-                            catalog_name,
-                            entry_name,
-                            resolution_type: "entity".to_string(),
-                            success: false,
-                            error_message: Some(e.to_string()),
-                        });
-                    }
-                }
-            }
-
-            // Check controller references
-            for object_controller in &entity.object_controller {
-                if let Some(controller_ref) = object_controller.catalog_reference() {
-                    result.resolution_attempts += 1;
-
-                    let catalog_name = controller_ref
+                references.push((
+                    entity_name.clone(),
+                    catalog_ref
                         .catalog_name
                         .as_literal()
-                        .map_or("Unknown".to_string(), |v| v.clone());
-                    let entry_name = controller_ref
+                        .map_or("Unknown".to_string(), |v| v.clone()),
+                    catalog_ref
                         .entry_name
                         .as_literal()
-                        .map_or("Unknown".to_string(), |v| v.clone());
+                        .map_or("Unknown".to_string(), |v| v.clone()),
+                    "entity",
+                ));
+            }
 
-                    match resolve_catalog_reference_simple(
-                        &controller_ref.catalog_name,
-                        &controller_ref.entry_name,
-                        catalog_locations,
-                        parameters,
-                        base_dir,
-                    ) {
-                        Ok(found) => {
-                            if found {
-                                result.resolution_successes += 1;
-                                result.resolution_results.push(CatalogResolutionResult {
-                                    entity_name: entity_name.clone(),
-                                    catalog_name,
-                                    entry_name,
-                                    resolution_type: "controller".to_string(),
-                                    success: true,
-                                    error_message: None,
-                                });
-                            } else {
-                                result.resolution_failures += 1;
-                                result.resolution_results.push(CatalogResolutionResult {
-                                    entity_name: entity_name.clone(),
-                                    catalog_name,
-                                    entry_name,
-                                    resolution_type: "controller".to_string(),
-                                    success: false,
-                                    error_message: Some("Entry not found in catalog".to_string()),
-                                });
-                            }
-                        }
-                        Err(e) => {
-                            result.resolution_failures += 1;
-                            result.resolution_results.push(CatalogResolutionResult {
-                                entity_name: entity_name.clone(),
-                                catalog_name,
-                                entry_name,
-                                resolution_type: "controller".to_string(),
-                                success: false,
-                                error_message: Some(e.to_string()),
-                            });
-                        }
-                    }
+            for object_controller in &entity.object_controller {
+                if let Some(controller_ref) = object_controller.catalog_reference() {
+                    references.push((
+                        entity_name.clone(),
+                        controller_ref
+                            .catalog_name
+                            .as_literal()
+                            .map_or("Unknown".to_string(), |v| v.clone()),
+                        controller_ref
+                            .entry_name
+                            .as_literal()
+                            .map_or("Unknown".to_string(), |v| v.clone()),
+                        "controller",
+                    ));
                 }
             }
         }
     }
+
+    references
+}
+
+/// Report catalog resolution by asking the crate's own resolver to do it, rather than matching
+/// `catalogName` against a hard-coded set of filenames. `parse_file_resolved` locates each
+/// `<CatalogReference>` by the `<Catalog>` element's own name and inlines the resolved entry
+/// (section 9.5/9.6); it resolves the whole document or fails on the first reference it
+/// cannot, so this reports the document as a whole, not reference by reference — on failure,
+/// the shared error names the one reference that stopped it, not any one of these specifically.
+fn resolve_catalog_references_in_scenario(
+    document: &OpenScenario,
+    resolved: Result<&OpenScenario, String>,
+) -> CatalogAnalysisResult {
+    let references = find_catalog_references(document);
+    let mut result = CatalogAnalysisResult {
+        resolution_attempts: references.len(),
+        resolution_successes: 0,
+        resolution_failures: 0,
+        resolution_results: Vec::new(),
+    };
+
+    let error_message = resolved.err();
+    if error_message.is_none() {
+        result.resolution_successes = references.len();
+    } else {
+        result.resolution_failures = references.len();
+    }
+
+    result.resolution_results = references
+        .into_iter()
+        .map(
+            |(entity_name, catalog_name, entry_name, resolution_type)| CatalogResolutionResult {
+                entity_name,
+                catalog_name,
+                entry_name,
+                resolution_type: resolution_type.to_string(),
+                success: error_message.is_none(),
+                error_message: error_message.clone(),
+            },
+        )
+        .collect();
 
     result
 }
