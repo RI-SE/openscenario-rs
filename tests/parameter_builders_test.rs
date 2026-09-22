@@ -173,21 +173,6 @@ mod parameter_builder_tests {
         assert_eq!(utils::parameter_ref("speed"), "${speed}");
         assert_eq!(utils::parameter_ref("vehicle_name"), "${vehicle_name}");
 
-        // Test parameter reference detection
-        assert!(utils::is_parameter_ref("${speed}"));
-        assert!(utils::is_parameter_ref("${vehicle_name}"));
-        assert!(!utils::is_parameter_ref("speed"));
-        assert!(!utils::is_parameter_ref("literal_value"));
-
-        // Test parameter name extraction
-        assert_eq!(utils::extract_parameter_name("${speed}"), Some("speed"));
-        assert_eq!(
-            utils::extract_parameter_name("${vehicle_name}"),
-            Some("vehicle_name")
-        );
-        assert_eq!(utils::extract_parameter_name("speed"), None);
-        assert_eq!(utils::extract_parameter_name("literal_value"), None);
-
         // Test parameterized value creation
         let param_string = utils::parameterized_string("vehicle_name");
         match param_string {

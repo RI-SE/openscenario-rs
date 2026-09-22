@@ -224,20 +224,6 @@ pub mod utils {
         format!("${{{}}}", name)
     }
 
-    /// Check if a string is a parameter reference
-    pub fn is_parameter_ref(value: &str) -> bool {
-        value.starts_with("${") && value.ends_with('}')
-    }
-
-    /// Extract parameter name from a parameter reference
-    pub fn extract_parameter_name(param_ref: &str) -> Option<&str> {
-        if is_parameter_ref(param_ref) {
-            Some(&param_ref[2..param_ref.len() - 1])
-        } else {
-            None
-        }
-    }
-
     /// Create a parameterized OSString
     pub fn parameterized_string(parameter_name: &str) -> OSString {
         OSString::parameter(parameter_name.to_string())
@@ -312,9 +298,5 @@ mod tests {
     #[test]
     fn test_parameter_utils() {
         assert_eq!(utils::parameter_ref("speed"), "${speed}");
-        assert!(utils::is_parameter_ref("${speed}"));
-        assert!(!utils::is_parameter_ref("speed"));
-        assert_eq!(utils::extract_parameter_name("${speed}"), Some("speed"));
-        assert_eq!(utils::extract_parameter_name("speed"), None);
     }
 }

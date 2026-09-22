@@ -296,28 +296,6 @@ pub type VehicleComponentTypeValue = Value<crate::types::enums::VehicleComponent
 pub type VehicleLightTypeValue = Value<crate::types::enums::VehicleLightType>;
 pub type WetnessValue = Value<crate::types::enums::Wetness>;
 
-/// Parse a parameter reference from a string
-///
-/// Returns the parameter name if the string matches ${paramName} pattern
-pub fn parse_parameter_reference(s: &str) -> Option<String> {
-    if s.starts_with("${") && s.ends_with('}') && s.len() > 3 {
-        let param_name = &s[2..s.len() - 1];
-        if is_valid_parameter_name(param_name) {
-            Some(param_name.to_string())
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-/// Check if a string is an expression (contains mathematical operators)
-#[inline]
-pub fn is_expression(s: &str) -> bool {
-    s.contains(|c| "+-*/%()".contains(c))
-}
-
 /// Check if a string is a valid parameter name, i.e. the part after the `$` sigil.
 ///
 /// This is the XSD `parameter` production verbatim, `Schema/OpenSCENARIO.xsd:6`:
@@ -373,21 +351,6 @@ where
 mod tests {
     use super::*;
     use quick_xml;
-
-    #[test]
-    fn test_parameter_reference_parsing() {
-        assert_eq!(
-            parse_parameter_reference("${speed}"),
-            Some("speed".to_string())
-        );
-        assert_eq!(
-            parse_parameter_reference("${vehicle_speed}"),
-            Some("vehicle_speed".to_string())
-        );
-        assert_eq!(parse_parameter_reference("literal"), None);
-        assert_eq!(parse_parameter_reference("${}"), None);
-        assert_eq!(parse_parameter_reference("${123}"), None); // Invalid: starts with digit
-    }
 
     #[test]
     fn test_parameter_name_validation() {

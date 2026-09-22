@@ -1354,6 +1354,17 @@ Breaking, unless noted.
     single `T` could describe it. Four types before this change, two after: the generic
     `CatalogReference<T>` and the untyped `EntityCatalogReference`.
 
+- **`types::basic::parse_parameter_reference` and `types::basic::is_expression`.** Breaking.
+  `parse_parameter_reference` treated any `${name}` text as a parameter reference, the rule an
+  earlier issue in this campaign removed in favor of reading the braces as an expression and
+  letting the evaluator decide. `is_expression` called a string an expression whenever it
+  contained an operator character, which contradicts that same rule. Neither had a caller
+  outside its own tests.
+- **`builder::parameters::utils::is_parameter_ref` and
+  `builder::parameters::utils::extract_parameter_name`.** Breaking. Both were public and unused
+  outside their own tests. `utils::parameter_ref`, which builds a `${name}` string rather than
+  reading one, is unaffected.
+
 ### Fixed
 
 - **A catalog document could not be parsed through the document root, and serializing one emitted
