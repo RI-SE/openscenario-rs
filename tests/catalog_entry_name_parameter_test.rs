@@ -1,6 +1,5 @@
 //! Regression: `@name` on the nine catalog entry types (`CatalogVehicle`,
-//! `CatalogController` (both `catalogs::entities` and `catalogs::controllers`),
-//! `CatalogPedestrian`, `CatalogMiscObject`, `CatalogManeuver`, `CatalogRoute`,
+//! `CatalogController`, `CatalogPedestrian`, `CatalogMiscObject`, `CatalogManeuver`, `CatalogRoute`,
 //! `CatalogTrajectory`, `CatalogEnvironment`) used to be a plain Rust `String`,
 //! though every one mirrors an XSD complex type whose `@name` is the schema's
 //! `String`, a union including the parameter production. A document naming a

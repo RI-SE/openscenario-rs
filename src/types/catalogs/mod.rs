@@ -1,6 +1,5 @@
 //! Catalog content types: the entries a catalog file holds, and the `CatalogReference`
 //! a scenario uses to name one. Loading and resolution live in [`crate::catalog`].
-pub mod controllers;
 pub mod entities;
 pub mod environments;
 pub mod files;

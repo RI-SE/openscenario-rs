@@ -355,6 +355,7 @@ impl CatalogEntity for CatalogVehicle {
 
 /// Controller entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename = "Controller")]
 pub struct CatalogController {
     /// Name of the controller in the catalog. XSD `Controller` (`:970`, the
     /// same complex type `CatalogController` mirrors) types `@name` as the

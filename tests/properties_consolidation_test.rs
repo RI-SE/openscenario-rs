@@ -6,7 +6,7 @@
 //! consolidated type through the two places that carry it: a scenario `Controller`
 //! and a catalog `CatalogController`.
 
-use openscenario_rs::types::catalogs::controllers::CatalogController;
+use openscenario_rs::types::catalogs::CatalogController;
 use openscenario_rs::types::controllers::Controller;
 use openscenario_rs::types::entities::vehicle::Properties;
 

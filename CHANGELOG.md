@@ -884,6 +884,20 @@ Breaking, unless noted.
     struct already held by `Private.longitudinal_action`, which models all three branches as
     parallel `Option` fields. `LongitudinalActionType` had no consumer beyond its own
     definition and re-export.
+  - **`types::catalogs::controllers::CatalogController`**, and the module with it — a
+    field-for-field copy of XSD `Controller` (`Schema/OpenSCENARIO.xsd:970-977`) reachable only
+    by its full path; nothing parsed through it outside its own unit tests and one test file.
+    **Surviving twin: `types::catalogs::entities::CatalogController`**, already re-exported
+    from `types::catalogs` and used by `types::actions::control`. The surviving type gained
+    `#[serde(rename = "Controller")]`, which the removed copy carried and the surviving one
+    lacked; without it, a bare `CatalogController` serializes under its Rust name
+    (`<CatalogController>`) instead of the schema's element name, a difference invisible until
+    something serializes the type standalone rather than through a field that already renames
+    it. The four convenience constructors the removed copy carried (`new`, `with_parameters`,
+    `with_properties`, `to_scenario_controller`) had no call site of their own and are not
+    ported; `CatalogEntity::into_scenario_entity` is the surviving type's equivalent path to a
+    scenario `Controller`. Their six unit tests go with them, which is the whole of the test
+    count's drop in this change.
 - **Five public types with no schema counterpart**: `controllers::ControllerDistribution`,
   `controllers::ActivateControllerAction`, `controllers::ControllerAssignment`,
   `positions::RoadCoordinate` and `positions::LaneCoordinate`. The `controllers` module now
