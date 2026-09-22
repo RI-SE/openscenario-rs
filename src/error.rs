@@ -6,9 +6,17 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     // XML/Serialization
-    /// XML deserialization failures
-    #[error("XML parsing error: {0}")]
-    XmlParseError(#[from] quick_xml::DeError),
+    /// XML deserialization failures. `context` names where the parse was invoked from -- the
+    /// file being read, for instance -- and starts `None`; [`with_context`](Error::with_context)
+    /// fills or extends it. Without a place to hold it, context passed to `with_context` had
+    /// nothing to attach to and was silently dropped, so a syntax error from `parse_from_file`
+    /// never named the file.
+    #[error("XML parsing error: {source}{}", context.as_deref().map(|c| format!(" ({c})")).unwrap_or_default())]
+    XmlParseError {
+        #[source]
+        source: quick_xml::DeError,
+        context: Option<String>,
+    },
 
     /// A typed-parse error found while reading the output of
     /// [`resolve_parameters`](crate::parser::resolve::resolve_parameters). That text is not
@@ -360,9 +368,34 @@ impl Error {
         }
     }
 
-    /// Add context to an error
+    /// Create an XML deserialization error with no context yet attached. See
+    /// [`XmlParseError`](Error::XmlParseError).
+    pub fn xml_parse_error(source: quick_xml::DeError) -> Self {
+        Error::XmlParseError {
+            source,
+            context: None,
+        }
+    }
+
+    /// Add context to an error.
+    ///
+    /// The match is exhaustive rather than falling back to a wildcard arm: a variant with
+    /// nowhere to put context still gets a named arm that says so, so that adding a new variant
+    /// later without deciding what happens to its context is a compile error, not a silent drop
+    /// -- which is the defect this method used to have for [`XmlParseError`](Error::XmlParseError).
     pub fn with_context(mut self, context: &str) -> Self {
         match &mut self {
+            Error::XmlParseError { context: ctx, .. } => {
+                *ctx = Some(match ctx.take() {
+                    Some(existing) => format!("{}, {}", existing, context),
+                    None => context.to_string(),
+                });
+            }
+            Error::ResolvedParseError {
+                ref mut location, ..
+            } => {
+                *location = format!("{}, {}", location, context);
+            }
             Error::ValidationError {
                 ref mut message, ..
             } => {
@@ -384,11 +417,6 @@ impl Error {
                 // description ended and the specific one began.
                 *message = format!("{} ({})", message, context);
             }
-            Error::ResolvedParseError {
-                ref mut location, ..
-            } => {
-                *location = format!("{}, {}", location, context);
-            }
             Error::FileReadError { ref mut reason, .. } => {
                 *reason = format!("{}: {}", context, reason);
             }
@@ -407,7 +435,24 @@ impl Error {
             Error::OutOfRange { ref mut value, .. } => {
                 *value = format!("{}: {}", context, value);
             }
-            _ => {}
+            // No field to carry free-form context. Named explicitly, rather than caught by a
+            // wildcard, so that a future variant is a compile error here until someone decides
+            // what it should do.
+            Error::XmlSerializeError(_)
+            | Error::IoError(_)
+            | Error::FileNotFound { .. }
+            | Error::DirectoryNotFound { .. }
+            | Error::EntityNotFound { .. }
+            | Error::CatalogEntryNotFound { .. }
+            | Error::CatalogNotFound { .. }
+            | Error::MissingRequiredField { .. }
+            | Error::TypeMismatch { .. }
+            | Error::ParameterNotFound { .. }
+            | Error::CircularDependency { .. }
+            | Error::InvalidXmlStructure { .. }
+            | Error::MalformedXml { .. }
+            | Error::ConstraintViolation { .. }
+            | Error::InconsistentState { .. } => {}
         }
         self
     }

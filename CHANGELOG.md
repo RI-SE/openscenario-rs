@@ -2059,6 +2059,19 @@ Breaking, unless noted.
   now appended instead, so the parameter's own message stays one unbroken sentence and the
   wrapping context is a distinguishable trailing clause.
 
+- **`parse_from_file` on a malformed file never named the file.** `Error::XmlParseError` wrapped
+  `quick_xml::DeError` with no field to hold anything else, and `with_context`'s match had no
+  arm for it, so `parse_from_file_internal`'s `with_context(&format!("Failed to parse file: {path}"))`
+  had nowhere to go and was silently dropped. The same held for the catalog loading path, which
+  wraps the same variant at three levels (`parse_catalog_from_str`, `parse_catalog_from_file_internal`,
+  `CatalogLoader::load_and_parse_catalog_file`) and lost every one of them. `XmlParseError` is now
+  a struct variant carrying `context: Option<String>` alongside the quick-xml source, following
+  the same treatment `ResolvedParseError` already had; `with_context` fills or extends it, joining
+  successive calls with a comma the way `ResolvedParseError`'s `location` does. `with_context`'s
+  match is also now exhaustive over every `Error` variant rather than falling back to a wildcard
+  arm, so a future variant with nowhere to put its context is a compile error here rather than a
+  silent drop.
+
 ### Known gaps
 
 **`<TrafficAction>` does not deserialize.** The corpus expansion above brought the first corpus

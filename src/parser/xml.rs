@@ -193,7 +193,7 @@ fn parse_catalog_from_file_internal<P: AsRef<Path>>(
 #[must_use = "parsing result should be handled"]
 pub fn parse_from_str(xml: &str) -> Result<OpenScenario> {
     quick_xml::de::from_str(xml)
-        .map_err(Error::from)
+        .map_err(Error::xml_parse_error)
         .map_err(|e| e.with_context("Failed to parse OpenSCENARIO XML"))
 }
 
@@ -356,7 +356,7 @@ pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario
 #[must_use = "parsing result should be handled"]
 pub fn parse_catalog_from_str(xml: &str) -> Result<CatalogFile> {
     quick_xml::de::from_str(xml)
-        .map_err(Error::from)
+        .map_err(Error::xml_parse_error)
         .map_err(|e| e.with_context("Failed to parse catalog XML"))
 }
 
