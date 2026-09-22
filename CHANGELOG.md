@@ -1775,6 +1775,21 @@ Breaking, unless noted.
   pins the parse, the round trip, and the resolution failure, each parsed through
   `quick_xml::de::from_str` rather than hand-built.
 
+- **A bare Boolean parameter reference or a comparison resolved into a `Boolean` attribute failed
+  instead of resolving.** `evaluate_expression_text` (`src/expression.rs`) chose the numeric or
+  Boolean evaluator by scanning the parsed expression for a `not`/`and`/`or` keyword, but a bare
+  parameter reference (`${$flag}`) and a comparison (`${$speed > 10}`) contain neither, even
+  though both are valid Boolean operands under section 9.2. `${$flag}` therefore went down the
+  numeric path and failed to parse `"true"` as `f64`; `${$speed > 10}` also went numeric and
+  produced the text `"1"`/`"0"`, which fails to parse as `bool` since its `FromStr` accepts only
+  the literal words `"true"`/`"false"`. The evaluator is now chosen by the target attribute's
+  type instead of the expression's shape, the same technique already used for the `Double`
+  empty-string check in `Value::deserialize`. An arithmetic expression in a `Boolean` attribute
+  and a Boolean parameter in an arithmetic position both remain type errors, in both directions,
+  as section 9.2 requires. `tests/expression_evaluator_functions_test.rs` pins the two previously
+  failing cases plus `not $flag` and the arithmetic type error, each parsed through
+  `quick_xml::de::from_str` and resolved rather than built by hand.
+
 ### Known gaps
 
 **`<TrafficAction>` does not deserialize.** The corpus expansion above brought the first corpus

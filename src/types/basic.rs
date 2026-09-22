@@ -340,11 +340,15 @@ where
     // than discarding it and failing later, elsewhere, on a parse error that names the symptom
     // instead of the cause.
     //
-    // `evaluate_expression_text` picks the numeric or Boolean evaluator by the shape of the
-    // parsed expression and enforces section 9.2's "no NaN or infinity" restriction itself, so
-    // this function no longer hardcodes `f64` or repeats that check: a `Boolean`-typed attribute
-    // resolving `${not $a and $b}` needs the text `"true"`/`"false"`, not a number.
-    crate::expression::evaluate_expression_text(expr, params)
+    // `evaluate_expression_text` picks the numeric or Boolean evaluator by the target type `T`
+    // and enforces section 9.2's "no NaN or infinity" restriction itself, so this function no
+    // longer hardcodes `f64` or repeats that check: a `Boolean`-typed attribute resolving
+    // `${not $a and $b}`, `${$flag}`, or `${$speed > 10}` needs the text `"true"`/`"false"`, not
+    // a number. The AST shape alone cannot tell a Boolean parameter reference or a comparison
+    // from a numeric one -- only the attribute's declared type can -- so the target type is
+    // read off `T` the same way the empty-string check above reads `T` for `Double`.
+    let target_is_bool = std::any::type_name::<T>() == "bool";
+    crate::expression::evaluate_expression_text(expr, params, target_is_bool)
 }
 
 #[cfg(test)]

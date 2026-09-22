@@ -152,3 +152,58 @@ fn boolean_operator_precedence_matches_the_spec_example() {
     // false or (true and (not false)) == false or true == true
     assert!(resolve_bool("$a or $b and not $c", &params).unwrap());
 }
+
+/// A bare parameter reference is a valid Boolean operand under section 9.2 -- a parameter is an
+/// operand like any other -- but its AST contains no `not`/`and`/`or` keyword and no comparison
+/// operator, so choosing the evaluator by scanning the parsed expression for those keywords sends
+/// it down the numeric path, where `"true"` fails to parse as `f64`. The evaluator must instead
+/// be chosen by the target attribute's type.
+#[test]
+fn bare_boolean_parameter_resolves_as_boolean() {
+    let mut params = HashMap::new();
+    params.insert("flag".to_string(), "true".to_string());
+    assert!(resolve_bool("$flag", &params).unwrap());
+
+    params.insert("flag".to_string(), "false".to_string());
+    assert!(!resolve_bool("$flag", &params).unwrap());
+}
+
+/// `not $flag` is the case the keyword scan already handled (its AST root is `Expr::Not`), kept
+/// here alongside the two cases the scan missed so the three probes this issue names sit
+/// together.
+#[test]
+fn not_bare_boolean_parameter_resolves_as_boolean() {
+    let mut params = HashMap::new();
+    params.insert("flag".to_string(), "true".to_string());
+    assert!(!resolve_bool("not $flag", &params).unwrap());
+}
+
+/// A comparison resolved into a `Boolean` attribute must produce the literal text
+/// `"true"`/`"false"`, not the numeric evaluator's `"1"`/`"0"` -- `bool`'s `FromStr` accepts only
+/// the former. Like the bare parameter above, a comparison's AST contains no Boolean keyword, so
+/// the fix has to be the same one: pick the evaluator from the target type.
+#[test]
+fn comparison_resolves_as_boolean_in_a_boolean_attribute() {
+    let mut params = HashMap::new();
+    params.insert("speed".to_string(), "20".to_string());
+    assert!(resolve_bool("$speed > 10", &params).unwrap());
+
+    params.insert("speed".to_string(), "5".to_string());
+    assert!(!resolve_bool("$speed > 10", &params).unwrap());
+}
+
+/// A Boolean parameter used in an arithmetic position stays a type error in a `Double` attribute
+/// (section 9.2 does not admit Boolean operands to arithmetic operators), and the error names the
+/// type rather than surfacing only a generic parse failure.
+#[test]
+fn boolean_parameter_in_arithmetic_position_is_a_type_error_naming_the_type() {
+    let mut params = HashMap::new();
+    params.insert("flag".to_string(), "true".to_string());
+    let err = resolve_double("$flag + 1", &params)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("failed to parse") && err.contains("true"),
+        "expected a parse failure naming the non-numeric value 'true', got: {err}"
+    );
+}

@@ -958,8 +958,17 @@ impl ExpressionEvaluator {
 }
 
 /// Parse and evaluate an OpenSCENARIO expression to text, choosing the numeric or Boolean
-/// evaluator by the shape of the parsed AST: a root of `not`/`and`/`or` is Boolean and
-/// evaluates to `"true"`/`"false"`; anything else is numeric.
+/// evaluator by the **target attribute's type**, `target_is_bool`, not by scanning the parsed
+/// AST for `not`/`and`/`or`. Section 9.2 makes a Boolean production out of three shapes that a
+/// keyword scan cannot tell apart from a numeric one: `not`/`and`/`or`, a comparison
+/// (`${$speed > 10}`), and a bare parameter reference (`${$flag}`) — the last two contain no
+/// Boolean keyword at all, so a scan sent them down the numeric path, where `"true"` fails to
+/// parse as `f64` and a comparison's `1`/`0` fails to parse as `bool` (whose `FromStr` accepts
+/// only the literal words `"true"`/`"false"`). Reading the target type off the caller's `T`
+/// instead — the same technique the `Double` empty-string check above already uses — resolves
+/// unambiguously: an arithmetic expression in a Boolean attribute is still a type error, and a
+/// Boolean parameter or comparison in a numeric attribute is still a type error, exactly as
+/// section 9.2 requires either way.
 ///
 /// This is the shared core behind [`evaluate_expression`] and `types::basic::resolve_expression`
 /// (`src/types/basic.rs`). It is `pub(crate)`, not `pub`, because it returns text rather than a
@@ -967,34 +976,32 @@ impl ExpressionEvaluator {
 pub(crate) fn evaluate_expression_text(
     expr: &str,
     params: &HashMap<String, String>,
+    target_is_bool: bool,
 ) -> Result<String> {
     let mut parser = ExpressionParser::new(expr)?;
     let ast = parser.parse()?;
     let evaluator = ExpressionEvaluator::new(params.clone());
 
-    match &ast {
-        Expr::Not(_) | Expr::And(..) | Expr::Or(..) => {
-            Ok(evaluator.evaluate_bool(&ast)?.to_string())
-        }
-        _ => {
-            let result = evaluator.evaluate(&ast)?;
+    if target_is_bool {
+        Ok(evaluator.evaluate_bool(&ast)?.to_string())
+    } else {
+        let result = evaluator.evaluate(&ast)?;
 
-            // Section 9.2, "General restrictions": "Because ASAM OpenSCENARIO does not use NaN
-            // or infinity, all operations where [IEEE 754-2019] defines the result to be either
-            // NaN or infinity shall instead result in an error." The functions most likely to
-            // reach a non-finite value from a finite input (`sqrt`, `asin`, `acos`, `pow`)
-            // already name the domain violation in `evaluate_function`; this is the backstop for
-            // any other combination that reaches NaN or +-infinity, such as an overflowing
-            // product.
-            if !result.is_finite() {
-                return Err(Error::parameter_error(
-                    expr,
-                    &format!("expression result {} is not finite", result),
-                ));
-            }
-
-            Ok(result.to_string())
+        // Section 9.2, "General restrictions": "Because ASAM OpenSCENARIO does not use NaN
+        // or infinity, all operations where [IEEE 754-2019] defines the result to be either
+        // NaN or infinity shall instead result in an error." The functions most likely to
+        // reach a non-finite value from a finite input (`sqrt`, `asin`, `acos`, `pow`)
+        // already name the domain violation in `evaluate_function`; this is the backstop for
+        // any other combination that reaches NaN or +-infinity, such as an overflowing
+        // product.
+        if !result.is_finite() {
+            return Err(Error::parameter_error(
+                expr,
+                &format!("expression result {} is not finite", result),
+            ));
         }
+
+        Ok(result.to_string())
     }
 }
 
@@ -1004,7 +1011,8 @@ where
     T: FromStr,
     T::Err: std::fmt::Display,
 {
-    let result_str = evaluate_expression_text(expr, params)?;
+    let target_is_bool = std::any::type_name::<T>() == "bool";
+    let result_str = evaluate_expression_text(expr, params, target_is_bool)?;
     result_str.parse::<T>().map_err(|e| {
         Error::parameter_error(
             expr,
