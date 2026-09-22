@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="Parameter resolution against the document's own declarations" author="openscenario-rs"/>
+  <ParameterDeclarations>
+    <ParameterDeclaration name="p" parameterType="string" value="120"/>
+    <ParameterDeclaration name="ego_speed" parameterType="double" value="10"/>
+    <ParameterDeclaration name="double_speed" parameterType="double" value="${$ego_speed * 2}"/>
+    <ParameterDeclaration name="car_catalog" parameterType="string" value="Vehicles"/>
+  </ParameterDeclarations>
+  <CatalogLocations/>
+  <RoadNetwork/>
+  <Entities>
+    <ScenarioObject name="Ego">
+      <Vehicle name="car" vehicleCategory="car">
+        <BoundingBox>
+          <Center x="0" y="0" z="0.75"/>
+          <Dimensions width="2" length="4" height="1.5"/>
+        </BoundingBox>
+        <Performance maxSpeed="${$ego_speed + 40}" maxAcceleration="5" maxDeceleration="5"/>
+        <Axles>
+          <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="3" positionZ="0.3"/>
+          <RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="0" positionZ="0.3"/>
+        </Axles>
+        <Properties>
+          <Property name="speedLimit" value="$p"/>
+        </Properties>
+      </Vehicle>
+    </ScenarioObject>
+    <ScenarioObject name="Target">
+      <CatalogReference catalogName="$car_catalog" entryName="sedan">
+        <ParameterAssignments>
+          <ParameterAssignment parameterRef="speed" value="$ego_speed"/>
+        </ParameterAssignments>
+      </CatalogReference>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init>
+      <Actions/>
+    </Init>
+    <Story name="Story">
+      <Act name="Act">
+        <ManeuverGroup name="Group" maximumExecutionCount="1">
+          <Actors selectTriggeringEntities="false">
+            <EntityRef entityRef="Ego"/>
+          </Actors>
+          <Maneuver name="Overtake">
+            <ParameterDeclarations>
+              <ParameterDeclaration name="ego_speed" parameterType="double" value="30"/>
+            </ParameterDeclarations>
+            <Event name="Inside" priority="overwrite">
+              <Action name="InsideSpeed">
+                <PrivateAction>
+                  <LongitudinalAction>
+                    <SpeedAction>
+                      <SpeedActionDynamics dynamicsShape="step" value="0" dynamicsDimension="time"/>
+                      <SpeedActionTarget>
+                        <AbsoluteTargetSpeed value="$ego_speed"/>
+                      </SpeedActionTarget>
+                    </SpeedAction>
+                  </LongitudinalAction>
+                </PrivateAction>
+              </Action>
+            </Event>
+          </Maneuver>
+          <Maneuver name="Follow">
+            <Event name="Outside" priority="overwrite">
+              <Action name="OutsideSpeed">
+                <PrivateAction>
+                  <LongitudinalAction>
+                    <SpeedAction>
+                      <SpeedActionDynamics dynamicsShape="step" value="0" dynamicsDimension="time"/>
+                      <SpeedActionTarget>
+                        <AbsoluteTargetSpeed value="$ego_speed"/>
+                      </SpeedActionTarget>
+                    </SpeedAction>
+                  </LongitudinalAction>
+                </PrivateAction>
+              </Action>
+            </Event>
+          </Maneuver>
+        </ManeuverGroup>
+      </Act>
+    </Story>
+  </Storyboard>
+</OpenSCENARIO>

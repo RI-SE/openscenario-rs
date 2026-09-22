@@ -34,11 +34,13 @@ openscenario-rs = { version = "0.4.0", features = ["builder", "validation"] }
 
 ## Top-level functions
 
-The crate root offers five convenience functions wrapping `parser::xml`:
+The crate root offers seven convenience functions wrapping `parser::xml`:
 
 ```rust
 pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
 pub fn parse_str(xml: &str) -> Result<OpenScenario>;
+pub fn parse_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
+pub fn parse_str_resolved(xml: &str) -> Result<OpenScenario>;
 pub fn parse_catalog_file<P: AsRef<Path>>(path: P) -> Result<CatalogFile>;
 pub fn parse_catalog_str(xml: &str) -> Result<CatalogFile>;
 pub fn serialize_str(scenario: &OpenScenario) -> Result<String>;
@@ -54,9 +56,9 @@ pub use types::scenario::storyboard::{
     FileHeader, OpenScenario, OpenScenarioDocumentType, ScenarioDefinition,
 };
 pub use parser::xml::{
-    parse_catalog_from_file, parse_catalog_from_str, parse_from_file, parse_from_str,
-    serialize_catalog_to_file, serialize_catalog_to_string, serialize_to_file,
-    serialize_to_string,
+    parse_catalog_from_file, parse_catalog_from_str, parse_from_file, parse_from_file_resolved,
+    parse_from_str, parse_from_str_resolved, serialize_catalog_to_file,
+    serialize_catalog_to_string, serialize_to_file, serialize_to_string,
 };
 pub use parser::choice_groups::{
     parse_choice_group, ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup,
@@ -133,6 +135,8 @@ pub fn parse_from_str(xml: &str) -> Result<OpenScenario>;
 pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
 pub fn parse_from_str_validated(xml: &str) -> Result<OpenScenario>;
 pub fn parse_from_file_validated<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
+pub fn parse_from_str_resolved(xml: &str) -> Result<OpenScenario>;
+pub fn parse_from_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario>;
 pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String>;
 pub fn serialize_to_file<P: AsRef<Path>>(scenario: &OpenScenario, path: P) -> Result<()>;
 pub fn validate_xml_structure(xml: &str) -> Result<()>;
@@ -153,6 +157,21 @@ serialize functions are `#[must_use]`.
 The `_validated` variants run `validate_xml_structure` first. That check confirms the input is
 non-empty, starts with `<?xml` or `<`, and contains the substring `OpenSCENARIO` – it is
 **not** schema validation. For that, see `validation::XsdValidator` below.
+
+The `_resolved` variants pass the document through `parser::resolve::resolve_parameters` first
+and parse the result.
+
+### `parser::resolve`
+
+```rust
+pub fn resolve_parameters(xml: &str) -> Result<String>;
+```
+
+Returns the document with every `$name` and `${expression}` attribute value replaced by its
+value under the document's own `<ParameterDeclarations>`, scoped as ASAM OpenSCENARIO XML
+section 9.1 defines. The declarations are kept, with their own references resolved. A
+`<CatalogReference>` and its subtree are left as written. Errors name the element path and
+source line. The plain `parse_*` functions do not call it, so they stay lossless.
 
 ### `parser::validation`
 
@@ -268,7 +287,7 @@ pub trait Validate {
 }
 
 pub trait Resolve<T> {
-    fn resolve(&self, ctx: &ParameterContext) -> Result<T>;
+    fn resolve(&self, scope: &ParameterScope) -> Result<T>;
 }
 
 pub struct ValidationContext {
@@ -281,14 +300,38 @@ impl ValidationContext {
     pub fn with_strict_mode(self) -> Self;                             // chainable
     pub fn add_entity(&mut self, name: String, entity_ref: EntityRef); // not chainable
 }
+```
 
-pub struct ParameterContext {
-    pub parameters: HashMap<String, String>,
-    pub scope: Vec<String>,
+`Value<T>` carries blanket impls of both traits. `Value<T>` also has an inherent
+`resolve(&HashMap<String, String>)`, which method-call syntax picks over the trait; call
+`scope.resolve(&value)` to resolve against a `ParameterScope`.
+
+### `types::ParameterScope`
+
+```rust
+impl ParameterScope {
+    pub fn new() -> Self;
+    pub fn push_frame(&mut self);
+    pub fn pop_frame(&mut self) -> Result<()>;
+    pub fn declare(&mut self, name: &str, parameter_type: &str, value: &str) -> Result<()>;
+    pub fn declare_sequence(&mut self, declarations: &[(&str, &str, &str)])
+        -> Result<Vec<(String, ParameterBinding)>>;
+    pub fn declare_in_sequence(&mut self, declarations: &[(&str, &str, &str)], index: usize)
+        -> Result<(String, ParameterBinding)>;
+    pub fn declare_parsed(&mut self, declaration: &ParameterDeclaration) -> Result<()>;
+    pub fn declare_all(&mut self, declarations: &ParameterDeclarations) -> Result<()>;
+    pub fn lookup(&self, name: &str) -> Result<&ParameterBinding>;
+    pub fn get(&self, name: &str) -> Option<&str>;
+    pub fn resolve<T>(&self, value: &Value<T>) -> Result<T>;
+    pub fn resolve_attribute(&self, raw: &str) -> Result<Option<String>>;
+    pub fn visible_values(&self) -> HashMap<String, String>;
 }
 ```
 
-`Value<T>` carries blanket impls of both traits.
+A stack of declaration frames, one per element holding `<ParameterDeclarations>`; the innermost
+binding of a name shadows the outer ones. A declaration may reference the declarations before it
+in the same `<ParameterDeclarations>` and those of enclosing frames; a reference to a later
+sibling or to itself is an error naming both parameters.
 
 ### Enumerations
 
@@ -532,7 +575,7 @@ none of them build a `PrivateAction`.
 
 Init: `GlobalActionBuilder`, `InitActionBuilder`, `PrivateActionBuilder`.
 
-Parameters: `ParameterContext`, `ParameterDeclarationsBuilder`, `ParameterizedValueBuilder`.
+Parameters: `ParameterDeclarationsBuilder`, `ParameterizedValueBuilder`.
 
 Storyboard: `ActBuilder`, `DetachedActBuilder`, `DetachedFollowTrajectoryActionBuilder`,
 `DetachedManeuverBuilder`, `DetachedSpeedActionBuilder`, `DetachedStoryBuilder`,
@@ -546,8 +589,6 @@ Validation: `BuilderValidatable`, `BuilderValidationContext`, `ValidationContext
 > `DetachedPedestrianBuilder` exist but are **not** re-exported at `builder::`. Import them
 > from `openscenario_rs::builder::entities`.
 
-> **Name collision.** `builder::parameters::ParameterContext` is a different type from
-> `types::ParameterContext`. The builder one has a private field and no `scope`.
 
 ## Binaries
 

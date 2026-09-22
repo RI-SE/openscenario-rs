@@ -67,8 +67,9 @@ pub use types::scenario::storyboard::{
 
 // Re-export parser functions
 pub use parser::xml::{
-    parse_catalog_from_file, parse_catalog_from_str, parse_from_file, parse_from_str,
-    serialize_catalog_to_file, serialize_catalog_to_string, serialize_to_file, serialize_to_string,
+    parse_catalog_from_file, parse_catalog_from_str, parse_from_file, parse_from_file_resolved,
+    parse_from_str, parse_from_str_resolved, serialize_catalog_to_file,
+    serialize_catalog_to_string, serialize_to_file, serialize_to_string,
 };
 
 // Re-export choice group infrastructure
@@ -170,6 +171,49 @@ pub fn parse_catalog_str(xml: &str) -> Result<types::catalogs::files::CatalogFil
 /// ```
 pub fn parse_str(xml: &str) -> Result<OpenScenario> {
     parse_from_str(xml)
+}
+
+/// Parse an OpenSCENARIO document from a string and resolve its parameter references
+///
+/// [`parse_str`] keeps every `$name` and `${expression}` as written, so that a document
+/// round-trips unchanged. This function instead resolves each of them against the document's
+/// own `<ParameterDeclarations>`, following the scoping rules of ASAM OpenSCENARIO XML section
+/// 9.1, and returns the document with literal values in their place. The name pairs with
+/// [`parse_str`] because the two take the same input and differ only in that step.
+///
+/// A `<CatalogReference>` is returned unresolved. An undeclared parameter, a failing
+/// expression, or an invalid declaration is an error naming the element path and line.
+///
+/// # Example
+/// ```rust
+/// use openscenario_rs::parse_str_resolved;
+///
+/// let xml = r#"
+/// <?xml version="1.0" encoding="UTF-8"?>
+/// <OpenSCENARIO>
+///   <FileHeader author="$author" date="2024-01-01T00:00:00" description="Test" revMajor="1" revMinor="3"/>
+///   <ParameterDeclarations>
+///     <ParameterDeclaration name="author" parameterType="string" value="Example"/>
+///   </ParameterDeclarations>
+///   <CatalogLocations/>
+///   <RoadNetwork/>
+///   <Entities/>
+///   <Storyboard><Init><Actions/></Init><StopTrigger/></Storyboard>
+/// </OpenSCENARIO>
+/// "#;
+///
+/// let scenario = parse_str_resolved(xml)?;
+/// assert_eq!(scenario.file_header.author.as_literal().map(String::as_str), Some("Example"));
+/// # Ok::<(), openscenario_rs::Error>(())
+/// ```
+pub fn parse_str_resolved(xml: &str) -> Result<OpenScenario> {
+    parse_from_str_resolved(xml)
+}
+
+/// Parse an OpenSCENARIO file and resolve its parameter references, as [`parse_str_resolved`]
+/// does for a string
+pub fn parse_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
+    parse_from_file_resolved(path)
 }
 
 /// Serialize an OpenSCENARIO document to XML string

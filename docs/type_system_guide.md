@@ -795,7 +795,7 @@ pub trait Validate {
 }
 
 pub trait Resolve<T> {
-    fn resolve(&self, ctx: &ParameterContext) -> crate::Result<T>;
+    fn resolve(&self, scope: &ParameterScope) -> crate::Result<T>;
 }
 ```
 

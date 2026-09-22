@@ -342,42 +342,178 @@ fn the_same_name_in_a_nested_frame_is_accepted() {
 }
 
 // --- References inside a declaration -------------------------------------------------------
+//
+// Section 9.1 allows a declaration's name, type or value to reference another parameter but
+// does not say which declarations the reference may see. The scope reads one
+// `<ParameterDeclarations>` in order: a reference sees the earlier declarations of its own
+// `<ParameterDeclarations>` and everything the enclosing elements declare.
 
-/// Section 9.1 allows a declaration to reference another parameter but does not say which
-/// declarations that reference may see, so the scope reports it rather than guess.
 #[test]
-fn a_declaration_value_referencing_a_parameter_is_reported_unresolved() {
+fn a_declaration_value_may_reference_an_earlier_sibling_in_an_expression() {
     let mut scope = ParameterScope::new();
-    declare_ok(&mut scope, "base", "double", "10");
     let parsed = declarations(
         r#"<ParameterDeclarations>
+             <ParameterDeclaration name="base" parameterType="double" value="10"/>
              <ParameterDeclaration name="derived" parameterType="double" value="${$base * 2}"/>
            </ParameterDeclarations>"#,
     );
-    let msg = scope.declare_all(&parsed).unwrap_err().to_string();
-    assert!(msg.contains("'derived'"), "{msg}");
-    assert!(msg.contains("9.1"), "{msg}");
-    assert!(scope.lookup("derived").is_err());
+    scope
+        .declare_all(&parsed)
+        .expect("an earlier sibling is visible");
+    assert_eq!(scope.get("derived"), Some("20"));
 }
 
 #[test]
-fn a_declaration_value_that_is_a_bare_reference_is_reported_unresolved() {
+fn a_declaration_value_may_be_a_bare_reference_to_an_earlier_sibling() {
     let mut scope = ParameterScope::new();
-    declare_ok(&mut scope, "base", "double", "10");
-    let msg = refusal(&mut scope, "copy", "double", "$base");
-    assert!(msg.contains("9.1"), "{msg}");
+    let declared = scope
+        .declare_sequence(&[("base", "double", "10"), ("copy", "double", "$base")])
+        .expect("an earlier sibling is visible");
+    assert_eq!(declared[1].0, "copy");
+    assert_eq!(declared[1].1.value, "10");
 }
 
 #[test]
-fn a_declaration_name_that_is_a_reference_is_reported_unresolved() {
-    let msg = refusal(&mut ParameterScope::new(), "$other", "double", "1");
-    assert!(msg.contains("9.1"), "{msg}");
+fn a_declaration_may_reference_an_enclosing_frame() {
+    let mut scope = ParameterScope::new();
+    declare_ok(&mut scope, "outer", "int", "4");
+    scope.push_frame();
+    declare_ok(&mut scope, "inner", "int", "${$outer + 1}");
+    assert_eq!(scope.get("inner"), Some("5"));
 }
 
 #[test]
-fn a_declaration_type_that_is_a_reference_is_reported_unresolved() {
-    let msg = refusal(&mut ParameterScope::new(), "p", "$the_type", "1");
-    assert!(msg.contains("9.1"), "{msg}");
+fn a_declaration_name_may_reference_an_earlier_sibling() {
+    let mut scope = ParameterScope::new();
+    scope
+        .declare_sequence(&[
+            ("the_name", "string", "speed"),
+            ("$the_name", "double", "3"),
+        ])
+        .expect("the name resolves");
+    assert_eq!(scope.get("speed"), Some("3"));
+}
+
+#[test]
+fn a_declaration_type_may_reference_an_earlier_sibling() {
+    let mut scope = ParameterScope::new();
+    scope
+        .declare_sequence(&[("the_type", "string", "int"), ("p", "$the_type", "7")])
+        .expect("the type resolves");
+    assert_eq!(
+        scope.lookup("p").unwrap().parameter_type,
+        ParameterType::Int
+    );
+}
+
+#[test]
+fn a_resolved_type_still_checks_the_value() {
+    let mut scope = ParameterScope::new();
+    let err = scope
+        .declare_sequence(&[("the_type", "string", "int"), ("p", "$the_type", "fast")])
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("'p'") && err.contains("not a valid int"),
+        "{err}"
+    );
+}
+
+#[test]
+fn a_referenced_value_is_checked_against_the_declaring_type() {
+    let mut scope = ParameterScope::new();
+    let err = scope
+        .declare_sequence(&[("half", "double", "2.5"), ("count", "int", "$half")])
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("'count'") && err.contains("not a valid int"),
+        "{err}"
+    );
+}
+
+#[test]
+fn a_forward_reference_is_an_error_naming_both_parameters() {
+    let mut scope = ParameterScope::new();
+    let err = scope
+        .declare_sequence(&[("early", "double", "${$late * 2}"), ("late", "double", "1")])
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("'early'"), "{err}");
+    assert!(err.contains("`late`"), "{err}");
+    assert!(err.contains("declared after it"), "{err}");
+    assert!(scope.lookup("early").is_err());
+}
+
+#[test]
+fn a_forward_reference_is_an_error_even_when_an_outer_frame_declares_the_name() {
+    // The later sibling's scope is the smaller one, so it is the declaration the reference
+    // would mean; resolving to the outer one instead would be a silent surprise.
+    let mut scope = ParameterScope::new();
+    declare_ok(&mut scope, "late", "double", "100");
+    scope.push_frame();
+    let err = scope
+        .declare_sequence(&[("early", "double", "$late"), ("late", "double", "1")])
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("'early'") && err.contains("`late`"), "{err}");
+    assert!(err.contains("declared after it"), "{err}");
+}
+
+#[test]
+fn a_self_reference_is_an_error_naming_the_parameter() {
+    let mut scope = ParameterScope::new();
+    let err = refusal(&mut scope, "loop_", "double", "${$loop_ + 1}");
+    assert!(err.contains("'loop_'"), "{err}");
+    assert!(
+        err.contains("references the parameter being declared"),
+        "{err}"
+    );
+}
+
+#[test]
+fn a_self_reference_is_an_error_even_when_an_outer_frame_declares_the_name() {
+    let mut scope = ParameterScope::new();
+    declare_ok(&mut scope, "speed", "double", "10");
+    scope.push_frame();
+    let err = refusal(&mut scope, "speed", "double", "$speed");
+    assert!(
+        err.contains("references the parameter being declared"),
+        "{err}"
+    );
+}
+
+#[test]
+fn an_undeclared_reference_is_an_error_naming_both_parameters() {
+    let err = refusal(&mut ParameterScope::new(), "p", "double", "$nowhere");
+    assert!(err.contains("'p'") && err.contains("`nowhere`"), "{err}");
+    assert!(err.contains("not declared before it"), "{err}");
+}
+
+#[test]
+fn a_reference_free_expression_is_evaluated() {
+    let mut scope = ParameterScope::new();
+    declare_ok(&mut scope, "three", "int", "${1 + 2}");
+    assert_eq!(scope.get("three"), Some("3"));
+}
+
+#[test]
+fn a_boolean_declaration_evaluates_its_expression_as_a_boolean() {
+    let mut scope = ParameterScope::new();
+    scope
+        .declare_sequence(&[
+            ("speed", "double", "12"),
+            ("fast", "boolean", "${$speed > 10}"),
+        ])
+        .expect("a comparison is a Boolean expression");
+    assert_eq!(scope.get("fast"), Some("true"));
+}
+
+#[test]
+fn a_failing_declaration_expression_keeps_its_cause() {
+    let err = refusal(&mut ParameterScope::new(), "p", "double", "${1 / 0}");
+    assert!(err.contains("'p'"), "{err}");
+    assert!(err.to_lowercase().contains("division by zero"), "{err}");
 }
 
 #[test]

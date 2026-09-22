@@ -33,19 +33,32 @@
 //! * **Two declarations of one name in one frame.** "The smallest scope that subsumes the
 //!   location" picks between frames; it cannot pick between two declarations of the same
 //!   frame, whose scopes are identical.
-//! * **A declaration whose `name`, `parameterType` or `value` is itself a parameter reference
-//!   or an expression.** Section 9.1 allows it ("it is also generally allowed to use a
-//!   reference as, for example, `parameterType` on another `ParameterDeclaration`"; "Using a
-//!   parameter reference in the name field of another parameter declaration is allowed") and
-//!   advises against it ("it is strongly advised not to do such chaining of parameters or
-//!   mutual referencing, as this can easily lead to deadlocks"), but it never says which
-//!   declarations such a reference may see: only the earlier ones in the same
-//!   `<ParameterDeclarations>`, any of them, or only those of enclosing scopes. Each answer
-//!   resolves some documents differently from the others, so rather than pick one this module
-//!   reports the reference as unresolvable. The caller can resolve the value under whichever
-//!   rule it adopts and declare the literal result.
+//! * **A declaration that references a parameter declared after it, or itself.** See below.
+//!
+//! # References inside a declaration
+//!
+//! Section 9.1 allows a declaration's `name`, `parameterType` or `value` to be a parameter
+//! reference or an expression ("it is also generally allowed to use a reference as, for
+//! example, `parameterType` on another `ParameterDeclaration`"; "Using a parameter reference in
+//! the name field of another parameter declaration is allowed"), and advises against it ("it
+//! is strongly advised not to do such chaining of parameters or mutual referencing, as this can
+//! easily lead to deadlocks"). However, it never says which declarations such a reference may
+//! see. This module reads the declarations of one `<ParameterDeclarations>` sequentially: a
+//! reference sees the declarations before it in the same `<ParameterDeclarations>` and every
+//! declaration of the enclosing elements. A reference to a later declaration of the same
+//! `<ParameterDeclarations>`, or to the declaration itself, is an error naming both
+//! parameters. It is an error even when an enclosing element declares the same name, since the
+//! later declaration's scope is the smaller one and a reader would expect it to be the one
+//! meant. Thus, a cycle cannot be written, and every document the rule accepts resolves in one
+//! pass in document order. An expression that references nothing, such as `${1 + 2}`, is
+//! evaluated like any other.
+//!
+//! The referenced value is substituted as text and the result is then checked against the
+//! declaring parameter's own `parameterType`, so a `double` parameter holding `2.5` cannot
+//! initialize an `int` one.
 
 use crate::error::{Error, Result};
+use crate::expression::{Expr, ExpressionParser, Operator};
 use crate::types::basic::{
     is_valid_parameter_name, OSString, ParameterDeclaration, ParameterDeclarations, Value,
 };
@@ -118,17 +131,76 @@ impl ParameterScope {
     /// Declare a parameter in the innermost frame from the three attribute strings of a
     /// `<ParameterDeclaration>`, exactly as the XML holds them.
     ///
+    /// A reference in any of the three resolves against what is visible now, as the module
+    /// documentation describes. This call sees one declaration only, so it cannot tell a
+    /// reference to a later sibling from a reference to an undeclared name; use
+    /// [`declare_sequence`](Self::declare_sequence) for a whole `<ParameterDeclarations>`.
+    ///
     /// Fails, naming the parameter, if the name is malformed or reserved, if the name is
     /// already declared in this frame, if `value` does not conform to `parameter_type`, or if
-    /// any of the three is a parameter reference or expression (see the module documentation
-    /// for why that last case is refused).
+    /// a reference in the declaration cannot be resolved.
     pub fn declare(&mut self, name: &str, parameter_type: &str, value: &str) -> Result<()> {
-        let name = literal_attribute(name, name, "name")?;
+        self.declare_one(name, parameter_type, value, &[])
+            .map(|_| ())
+    }
+
+    /// Declare the entries of one `<ParameterDeclarations>` in the innermost frame, in document
+    /// order, stopping at the first that fails. Each entry is `(name, parameterType, value)` as
+    /// the XML holds them.
+    ///
+    /// Returns every declared parameter with its references resolved, in document order, so
+    /// that a caller rewriting the document can write the literal values back.
+    pub fn declare_sequence(
+        &mut self,
+        declarations: &[(&str, &str, &str)],
+    ) -> Result<Vec<(String, ParameterBinding)>> {
+        (0..declarations.len())
+            .map(|index| self.declare_in_sequence(declarations, index))
+            .collect()
+    }
+
+    /// Declare entry `index` of one `<ParameterDeclarations>`, whose entries are all given so
+    /// that a reference to a later one is recognized as such. The entries before `index` must
+    /// already be declared. [`declare_sequence`](Self::declare_sequence) is this call for every
+    /// index in turn; a caller that reports errors per declaration calls it directly.
+    pub fn declare_in_sequence(
+        &mut self,
+        declarations: &[(&str, &str, &str)],
+        index: usize,
+    ) -> Result<(String, ParameterBinding)> {
+        // Only a literal later name can be recognized as a forward target; a later name that is
+        // itself a reference is not known until that declaration is reached.
+        let later: Vec<String> = declarations[index + 1..]
+            .iter()
+            .filter_map(|(later_name, _, _)| match classify(later_name) {
+                Ok(Value::Literal(n)) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let (name, parameter_type, value) = declarations[index];
+        self.declare_one(name, parameter_type, value, &later)
+    }
+
+    fn declare_one(
+        &mut self,
+        raw_name: &str,
+        raw_type: &str,
+        raw_value: &str,
+        later: &[String],
+    ) -> Result<(String, ParameterBinding)> {
+        let name = self.resolve_declaration_attribute(raw_name, raw_name, "name", later, false)?;
         check_name(&name)?;
-        let parameter_type = literal_attribute(&name, parameter_type, "parameterType")?;
+        let parameter_type =
+            self.resolve_declaration_attribute(&name, raw_type, "parameterType", later, false)?;
         let parameter_type = ParameterType::from_str(&parameter_type)
             .map_err(|e| Error::parameter_error(&name, &format!("invalid parameterType: {}", e)))?;
-        let value = literal_attribute(&name, value, "value")?;
+        let value = self.resolve_declaration_attribute(
+            &name,
+            raw_value,
+            "value",
+            later,
+            parameter_type == ParameterType::Boolean,
+        )?;
         check_conformance(&name, &parameter_type, &value)?;
 
         let frame = self
@@ -142,14 +214,72 @@ impl ParameterScope {
                  same scope, so neither is the one with the smallest scope",
             ));
         }
-        frame.insert(
-            name,
-            ParameterBinding {
-                parameter_type,
-                value,
-            },
-        );
-        Ok(())
+        let binding = ParameterBinding {
+            parameter_type,
+            value,
+        };
+        frame.insert(name.clone(), binding.clone());
+        Ok((name, binding))
+    }
+
+    /// Resolve one attribute of the declaration of `parameter` to literal text, refusing a
+    /// reference to the declaration itself, to a later sibling, or to anything not visible.
+    fn resolve_declaration_attribute(
+        &self,
+        parameter: &str,
+        raw: &str,
+        attribute: &str,
+        later: &[String],
+        boolean_target: bool,
+    ) -> Result<String> {
+        let parsed = classify(raw).map_err(|e| {
+            Error::parameter_error(
+                parameter,
+                &format!("invalid {} `{}`: {}", attribute, raw, e),
+            )
+        })?;
+        if let Value::Literal(text) = parsed {
+            return Ok(text);
+        }
+        for referenced in referenced_names(&parsed) {
+            let problem = if referenced == parameter {
+                Some("references the parameter being declared".to_string())
+            } else if later.contains(&referenced) {
+                Some(format!(
+                    "references `{}`, which is declared after it in the same \
+                     ParameterDeclarations; a declaration may reference only the declarations \
+                     before it and those of enclosing elements",
+                    referenced
+                ))
+            } else if self.lookup(&referenced).is_err() {
+                let mut visible: Vec<String> = self.visible_values().into_keys().collect();
+                visible.sort();
+                Some(format!(
+                    "references `{}`, which is not declared before it or in an enclosing \
+                     element (visible here: {})",
+                    referenced,
+                    if visible.is_empty() {
+                        "none".to_string()
+                    } else {
+                        visible.join(", ")
+                    }
+                ))
+            } else {
+                None
+            };
+            if let Some(problem) = problem {
+                return Err(Error::parameter_error(
+                    parameter,
+                    &format!("its {} `{}` {}", attribute, raw, problem),
+                ));
+            }
+        }
+        self.evaluate(&parsed, Some(boolean_target)).map_err(|e| {
+            Error::parameter_error(
+                parameter,
+                &format!("its {} `{}` could not be resolved: {}", attribute, raw, e),
+            )
+        })
     }
 
     /// Declare one parsed `ParameterDeclaration` in the innermost frame.
@@ -165,12 +295,83 @@ impl ParameterScope {
     }
 
     /// Declare every entry of a parsed `<ParameterDeclarations>` in the innermost frame, in
-    /// document order, stopping at the first that fails.
+    /// document order, stopping at the first that fails. The same as
+    /// [`declare_sequence`](Self::declare_sequence) on the attribute strings the declarations
+    /// serialize to.
     pub fn declare_all(&mut self, declarations: &ParameterDeclarations) -> Result<()> {
-        declarations
+        let strings: Vec<[String; 3]> = declarations
             .parameter_declarations
             .iter()
-            .try_for_each(|d| self.declare_parsed(d))
+            .map(|d| {
+                [
+                    d.name.to_string(),
+                    d.parameter_type.to_string(),
+                    d.value.to_string(),
+                ]
+            })
+            .collect();
+        let entries: Vec<(&str, &str, &str)> = strings
+            .iter()
+            .map(|[n, t, v]| (n.as_str(), t.as_str(), v.as_str()))
+            .collect();
+        self.declare_sequence(&entries).map(|_| ())
+    }
+
+    /// Resolve one attribute value as the XML holds it, at this point of the document.
+    ///
+    /// Returns `None` when the value is a literal, and the resolved text when it is a `$name`
+    /// reference or an `${expression}`. The value is classified by the same rules the typed
+    /// deserializer applies, so exactly the values it would store as a reference or expression
+    /// are resolved here.
+    ///
+    /// The attribute's schema type is not known at this level, so an expression is evaluated as
+    /// a Boolean when its outermost operation is `not`, `and`, `or` or a comparison, or when it
+    /// is a single reference to a parameter declared `boolean`; otherwise it is evaluated as a
+    /// number. A result of the wrong kind for the attribute fails later, when the typed
+    /// deserializer reads it.
+    pub fn resolve_attribute(&self, raw: &str) -> Result<Option<String>> {
+        match classify(raw).map_err(|e| Error::parse_error(raw, &e.to_string()))? {
+            Value::Literal(_) => Ok(None),
+            parsed => self.evaluate(&parsed, None).map(Some),
+        }
+    }
+
+    /// The text a classified value stands for here. `boolean_target` picks the expression
+    /// evaluator; `None` infers it from the expression, as [`resolve_attribute`] describes.
+    ///
+    /// [`resolve_attribute`]: Self::resolve_attribute
+    fn evaluate(&self, value: &Value<String>, boolean_target: Option<bool>) -> Result<String> {
+        match value {
+            Value::Literal(text) => Ok(text.clone()),
+            Value::Parameter(name) => Ok(self.lookup(name)?.value.clone()),
+            Value::Expression(expr) => {
+                let boolean = boolean_target.unwrap_or_else(|| self.is_boolean_expression(expr));
+                crate::expression::evaluate_expression_text(expr, &self.visible_values(), boolean)
+            }
+        }
+    }
+
+    fn is_boolean_expression(&self, expr: &str) -> bool {
+        let Ok(ast) = ExpressionParser::new(expr).and_then(|mut p| p.parse()) else {
+            // The evaluator reports the parse error itself.
+            return false;
+        };
+        match ast {
+            Expr::Not(_) | Expr::And(..) | Expr::Or(..) => true,
+            Expr::BinaryOp { operator, .. } => matches!(
+                operator,
+                Operator::Greater
+                    | Operator::Less
+                    | Operator::GreaterEqual
+                    | Operator::LessEqual
+                    | Operator::Equal
+                    | Operator::NotEqual
+            ),
+            Expr::Parameter(name) => self
+                .lookup(&name)
+                .is_ok_and(|b| b.parameter_type == ParameterType::Boolean),
+            _ => false,
+        }
     }
 
     /// The binding of `name` visible here: the one in the innermost frame that declares it.
@@ -233,26 +434,37 @@ impl ParameterScope {
     }
 }
 
-/// Parse one attribute of a declaration with the same rules the typed deserializer applies to
-/// an XSD `String`, and insist on a literal.
-fn literal_attribute(parameter: &str, raw: &str, attribute: &str) -> Result<String> {
-    let parsed: std::result::Result<OSString, serde::de::value::Error> =
-        OSString::deserialize(raw.into_deserializer());
-    match parsed {
-        Ok(Value::Literal(s)) => Ok(s),
-        Ok(Value::Parameter(_) | Value::Expression(_)) => Err(Error::parameter_error(
-            parameter,
-            &format!(
-                "its {} `{}` is a parameter reference or an expression; ASAM OpenSCENARIO \
-                 section 9.1 allows one in a declaration but does not say which declarations \
-                 it may see, so it is not resolved here",
-                attribute, raw
-            ),
-        )),
-        Err(e) => Err(Error::parameter_error(
-            parameter,
-            &format!("invalid {} `{}`: {}", attribute, raw, e),
-        )),
+/// Classify an attribute value with the same rules the typed deserializer applies to an XSD
+/// `String`: a literal, a `$name` reference, or an `${expression}`.
+fn classify(raw: &str) -> std::result::Result<OSString, serde::de::value::Error> {
+    OSString::deserialize(raw.into_deserializer())
+}
+
+/// The parameter names a classified value references. An expression that does not parse
+/// references nothing here; evaluating it reports the parse error.
+fn referenced_names(value: &Value<String>) -> Vec<String> {
+    fn collect(expr: &Expr, names: &mut Vec<String>) {
+        match expr {
+            Expr::Parameter(name) => names.push(name.clone()),
+            Expr::Number(_) | Expr::Constant(_) => {}
+            Expr::BinaryOp { left, right, .. } | Expr::And(left, right) | Expr::Or(left, right) => {
+                collect(left, names);
+                collect(right, names);
+            }
+            Expr::UnaryMinus(inner) | Expr::Not(inner) => collect(inner, names),
+            Expr::FunctionCall { args, .. } => args.iter().for_each(|a| collect(a, names)),
+        }
+    }
+    match value {
+        Value::Literal(_) => Vec::new(),
+        Value::Parameter(name) => vec![name.clone()],
+        Value::Expression(expr) => {
+            let mut names = Vec::new();
+            if let Ok(ast) = ExpressionParser::new(expr).and_then(|mut p| p.parse()) {
+                collect(&ast, &mut names);
+            }
+            names
+        }
     }
 }
 

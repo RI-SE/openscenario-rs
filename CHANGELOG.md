@@ -33,10 +33,38 @@ The conformance ledger, including what the test corpus does and does not prove, 
   (the published text italicises *OSC*, which is also how AsciiDoc renders `_OSC_`, so both are
   refused); a value that does not conform to its `parameterType` -- a check section 9.1 says
   "is not ensured by the XML validator and therefore must be implemented by the simulator";
-  and two declarations of one name in one frame. **A declaration whose `name`, `parameterType`
-  or `value` is itself a parameter reference or expression is reported as unresolved**, because
-  section 9.1 allows such references without saying which declarations they may see (earlier
-  ones in the same `<ParameterDeclarations>`, any of them, or only enclosing scopes).
+  and two declarations of one name in one frame. Section 9.1 allows a declaration's `name`,
+  `parameterType` or `value` to reference another parameter but does not say which declarations
+  the reference may see. **The scope reads one `<ParameterDeclarations>` in document order**: a
+  reference sees the declarations before it and those of enclosing elements, and is resolved
+  before the value is checked against its type. A reference to a later declaration of the same
+  `<ParameterDeclarations>`, or to the declaration itself, is an error naming both parameters,
+  even when an enclosing element declares the same name. Thus, no cycle can be written. A
+  reference-free expression such as `${1 + 2}` is evaluated. `declare_sequence` and
+  `declare_in_sequence` declare a whole `<ParameterDeclarations>`, which is what lets a
+  reference to a later sibling be told apart from one to an undeclared name. All 556
+  referencing declaration values in the conformance corpus point at an earlier sibling.
+
+- **`parse_str_resolved` and `parse_file_resolved`: a document resolved against its own
+  `<ParameterDeclarations>`** (`src/lib.rs`, `src/parser/resolve.rs`). `parse_str` returns
+  every `$name` as `Value::Parameter` and every `${...}` as `Value::Expression`, and the crate
+  had no routine that resolved them against the document's declarations. `Value::resolve` takes
+  a flat map, and the right map depends on where in the tree the value sits, so a caller could
+  not build it without reimplementing section 9.1. The new entry points run
+  `parser::resolve::resolve_parameters` over the XML before the typed parse. It walks the
+  document with a `ParameterScope`, pushing a frame at every element holding
+  `<ParameterDeclarations>`, and replaces each attribute value that is a reference or an
+  expression by its value. Working on the XML covers every attribute of every element with no
+  per-type code. The declarations are kept in the output with their own references resolved.
+  A `<CatalogReference>` and its subtree, including its `<ParameterAssignments>`, are left as
+  written, since resolving them needs the referenced catalog entry. The attribute's schema type
+  is not known at the XML level, so an expression is evaluated as a Boolean when its outermost
+  operation is `not`, `and`, `or` or a comparison, or when it is a lone reference to a `boolean`
+  parameter, and as a number otherwise. An undeclared parameter, a failing expression and an
+  invalid declaration are errors naming the element path and source line. `parse_str` and
+  `parse_file` are unchanged. Over the conformance corpus, 200 of 212 files resolve and parse;
+  ten use `pi` in an expression, which section 9.2 does not define, and two are deliberately
+  invalid upstream fixtures.
 
 - **The expression evaluator now implements all of ASAM OpenSCENARIO XML section 9.2's
   functions and Boolean operators.** `ExpressionEvaluator::evaluate_function`

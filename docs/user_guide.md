@@ -181,6 +181,42 @@ let result: f64 = evaluate_expression("vehicle_speed * 2 + 5", &params)?;
 cargo run --example expression_demo
 ```
 
+### Resolving a whole document
+
+The map above is flat, and it is the caller's job to fill it. However, ASAM OpenSCENARIO
+section 9.1 scopes a parameter to the subtree of the element that declares it, so the right map
+depends on where in the document a value sits: a `Maneuver` may redeclare a global
+`ego_speed`, and inside that maneuver only the maneuver's value is visible. `parse_str_resolved`
+and `parse_file_resolved` apply that rule to the whole document and return it with literal
+values in place of every reference and expression:
+
+```rust
+use openscenario_rs::{parse_file, parse_file_resolved};
+
+let as_written = parse_file("scenario.xosc")?; // `$ego_speed` stays `Value::Parameter`
+let resolved = parse_file_resolved("scenario.xosc")?; // `$ego_speed` becomes its value
+```
+
+Resolution runs on the XML before the typed parse, so it covers every attribute of every
+element. The rules it applies:
+
+- An element holding `<ParameterDeclarations>` opens a scope for its subtree, including its own
+  attributes; the root element's declarations are the globals. The innermost declaration of a
+  name wins, and a sibling subtree's declarations are not visible.
+- A declaration may reference the declarations before it in the same `<ParameterDeclarations>`
+  and those of enclosing elements. A reference to a later declaration, or to itself, is an
+  error naming both parameters. Each value is checked against its `parameterType`.
+- The `<ParameterDeclarations>` stay in the result, with their own references resolved.
+- An expression is evaluated as a Boolean when its outermost operation is `not`, `and`, `or` or
+  a comparison, or when it is a lone reference to a `boolean` parameter; otherwise as a number.
+- A `<CatalogReference>` is left as written, parameter assignments included.
+
+An undeclared parameter, a failing expression, or an invalid declaration is an error naming
+the element path and the source line, for example
+`/OpenSCENARIO/Storyboard/Story[@name='Main']/Act[@name='A1']/... (line 212)`.
+`parser::resolve::resolve_parameters` returns the resolved XML itself, for callers that want
+to inspect or store it.
+
 ## Catalogs
 
 Catalogs hold reusable vehicles, pedestrians, controllers, trajectories, routes and
