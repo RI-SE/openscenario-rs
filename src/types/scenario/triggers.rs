@@ -138,6 +138,21 @@ impl ConditionGroup {
             conditions: MinVec::new(conditions)?,
         })
     }
+
+    /// Create a `ConditionGroup` from one guaranteed condition plus any further ones.
+    ///
+    /// [`ConditionGroupBuilder::finish_group`](crate::builder::conditions::ConditionGroupBuilder::finish_group)
+    /// collects conditions into a plain `Vec` that can still be empty when the builder
+    /// finishes without adding one, so [`Self::new`] keeps its `Result` for it. A caller
+    /// that already holds one condition, such as
+    /// [`TriggerBuilder::add_condition`](crate::builder::conditions::TriggerBuilder::add_condition),
+    /// proves the bound at the type level instead: the first condition is a required
+    /// parameter rather than the head of a vector that might be short.
+    pub fn from_min(first: Condition, rest: Vec<Condition>) -> Self {
+        Self {
+            conditions: MinVec::from_min([first], rest),
+        }
+    }
 }
 
 impl Condition {

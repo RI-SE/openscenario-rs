@@ -761,6 +761,12 @@ Breaking, unless noted.
   `Option<T>` as implicitly defaulted on a missing key regardless of `#[serde(default)]`, so the
   asymmetry is cosmetic. `Route`/`CatalogRoute` and `Polyline`/`CatalogPolyline` were swept the
   same way and carry no equivalent mismatch; every attribute on both pairs already agrees in type.
+- **`ConditionGroup::from_min`.** Infallible constructor for condition groups with a guaranteed
+  minimum of one condition. Takes a required first condition and an optional vector of further
+  conditions, mirroring `Private::from_min`. This method is used by
+  `TriggerBuilder::add_condition` to create single-condition groups without the fallibility of
+  `ConditionGroup::new`, which remains available for builders that collect conditions into a
+  plain vector that may be empty.
 
 ### Removed
 

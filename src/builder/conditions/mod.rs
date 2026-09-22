@@ -54,12 +54,11 @@ impl TriggerBuilder {
     /// `ConditionGroup::new` keeps a `Result` for `ConditionGroupBuilder::finish_group`,
     /// which collects conditions into a plain `Vec` that can still be empty. This method
     /// never has that problem: it is handed exactly one condition, which is `MinVec<_,
-    /// 1>`'s minimum by construction, so `MinVec::from_min` proves the bound at the type
-    /// level and there is nothing left to check.
+    /// 1>`'s minimum by construction, so `ConditionGroup::from_min` proves the bound at
+    /// the type level and there is nothing left to check.
     pub fn add_condition(mut self, condition: Condition) -> Self {
-        self.condition_groups.push(ConditionGroup {
-            conditions: crate::types::basic::MinVec::from_min([condition], Vec::new()),
-        });
+        self.condition_groups
+            .push(ConditionGroup::from_min(condition, Vec::new()));
         self
     }
 
@@ -206,7 +205,7 @@ mod tests {
         assert_eq!(trigger.condition_groups[0].conditions.len(), 1);
     }
 
-    /// `add_condition` builds each `ConditionGroup` from `MinVec::from_min` with the one
+    /// `add_condition` builds each `ConditionGroup` from `ConditionGroup::from_min` with the one
     /// condition it is handed, so nothing here can fail. Three chained calls below take no
     /// `Result` at any step; a change that put the fallible `ConditionGroup::new` back on
     /// this path would force a `?` back into this call site and fail to compile.
