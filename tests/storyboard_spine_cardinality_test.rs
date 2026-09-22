@@ -294,6 +294,7 @@ fn a_story_with_no_act_cannot_be_constructed() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[cfg(feature = "builder")]
 fn a_private_action_builder_with_no_action_reports_rather_than_emitting_an_empty_container() {
     use openscenario_rs::builder::init::{InitActionBuilder, PrivateActionBuilder};
 
