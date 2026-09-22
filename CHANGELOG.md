@@ -122,6 +122,15 @@ The conformance ledger, including what the test corpus does and does not prove, 
   `MIN` is unconstructable rather than merely detectable, which closes the serialization
   side as well as the parse side. The type is additive: no field changes type in this
   release entry, and the fields that will adopt it are converted separately.
+- **`ScenarioBuilder::with_variables`/`add_variable` and `with_monitors`/`add_monitor`.** The
+  XSD group `ScenarioDefinition` (`Schema/OpenSCENARIO.xsd:1989`) declares `VariableDeclarations`
+  and `MonitorDeclarations` alongside `ParameterDeclarations`, all three `minOccurs="0"`. Only
+  the third had a builder entry point; `build_scenario` hardcoded the other two to `None`, so no
+  builder call could reach them even though the schema allows both. The new methods follow the
+  same `with_*`/`add_*` shape as `with_parameters`/`add_parameter`: `with_*` replaces whatever
+  was set, `add_*` accumulates one declaration per call. Neither declaration list requires a
+  non-empty child, so an empty `VariableDeclarations` or `MonitorDeclarations` remains
+  schema-valid; the builder simply never constructs one unless a caller asks for it.
 
 ### Changed
 

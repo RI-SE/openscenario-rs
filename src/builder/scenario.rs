@@ -33,7 +33,9 @@ use crate::types::{
     entities::Entities,
     enums::ParameterType,
     road::RoadNetwork,
+    scenario::monitors::{MonitorDeclaration, MonitorDeclarations},
     scenario::storyboard::{FileHeader, OpenScenario, Storyboard},
+    scenario::variables::{VariableDeclaration, VariableDeclarations},
 };
 use std::marker::PhantomData;
 
@@ -81,6 +83,8 @@ pub struct ScenarioBuilder<S> {
 pub(crate) struct PartialScenarioData {
     pub(crate) file_header: Option<FileHeader>,
     pub(crate) parameter_declarations: Option<ParameterDeclarations>,
+    pub(crate) variable_declarations: Option<VariableDeclarations>,
+    pub(crate) monitor_declarations: Option<MonitorDeclarations>,
     pub(crate) catalog_locations: Option<CatalogLocations>,
     pub(crate) road_network: Option<RoadNetwork>,
     pub(crate) entities: Option<Entities>,
@@ -206,6 +210,83 @@ impl ScenarioBuilder<HasHeader> {
         });
 
         self.data.parameter_declarations = Some(params);
+        self
+    }
+
+    /// Set the scenario's variable declarations, replacing any already set.
+    ///
+    /// ```rust
+    /// use openscenario_rs::{ScenarioBuilder, types::scenario::variables::VariableDeclarations};
+    ///
+    /// let vars = VariableDeclarations::default(); // Build your variables
+    /// let builder = ScenarioBuilder::new()
+    ///     .with_header("Test", "Author")
+    ///     .with_variables(vars);
+    /// ```
+    pub fn with_variables(mut self, vars: VariableDeclarations) -> Self {
+        self.data.variable_declarations = Some(vars);
+        self
+    }
+
+    /// Declare one variable, named as `$name` elsewhere in the scenario. Unlike a
+    /// parameter, a variable may change during the run.
+    /// Calls accumulate, unlike [`ScenarioBuilder::with_variables`].
+    ///
+    /// ```rust
+    /// use openscenario_rs::{ScenarioBuilder, types::enums::ParameterType};
+    ///
+    /// let builder = ScenarioBuilder::new()
+    ///     .with_header("Test", "Author")
+    ///     .add_variable("lap_count", ParameterType::Int, "0");
+    /// ```
+    pub fn add_variable(mut self, name: &str, var_type: ParameterType, value: &str) -> Self {
+        let mut vars = self.data.variable_declarations.take().unwrap_or_default();
+
+        vars.variable_declarations.push(VariableDeclaration {
+            name: OSString::literal(name.to_string()),
+            variable_type: Value::Literal(var_type),
+            value: OSString::literal(value.to_string()),
+        });
+
+        self.data.variable_declarations = Some(vars);
+        self
+    }
+
+    /// Set the scenario's monitor declarations, replacing any already set.
+    ///
+    /// ```rust
+    /// use openscenario_rs::{ScenarioBuilder, types::scenario::monitors::MonitorDeclarations};
+    ///
+    /// let monitors = MonitorDeclarations::default(); // Build your monitors
+    /// let builder = ScenarioBuilder::new()
+    ///     .with_header("Test", "Author")
+    ///     .with_monitors(monitors);
+    /// ```
+    pub fn with_monitors(mut self, monitors: MonitorDeclarations) -> Self {
+        self.data.monitor_declarations = Some(monitors);
+        self
+    }
+
+    /// Declare one monitor: named boolean state the scenario exposes for observation
+    /// during the run.
+    /// Calls accumulate, unlike [`ScenarioBuilder::with_monitors`].
+    ///
+    /// ```rust
+    /// use openscenario_rs::ScenarioBuilder;
+    ///
+    /// let builder = ScenarioBuilder::new()
+    ///     .with_header("Test", "Author")
+    ///     .add_monitor("collision_seen", false);
+    /// ```
+    pub fn add_monitor(mut self, name: &str, value: bool) -> Self {
+        let mut monitors = self.data.monitor_declarations.take().unwrap_or_default();
+
+        monitors.monitor_declarations.push(MonitorDeclaration {
+            name: OSString::literal(name.to_string()),
+            value: crate::types::basic::Boolean::literal(value),
+        });
+
+        self.data.monitor_declarations = Some(monitors);
         self
     }
 
@@ -390,8 +471,8 @@ fn build_scenario(data: PartialScenarioData) -> BuilderResult<OpenScenario> {
     let scenario = OpenScenario {
         file_header,
         parameter_declarations: data.parameter_declarations,
-        variable_declarations: None,
-        monitor_declarations: None,
+        variable_declarations: data.variable_declarations,
+        monitor_declarations: data.monitor_declarations,
         catalog_locations: Some(catalog_locations),
         road_network: Some(road_network),
         entities: Some(entities),
