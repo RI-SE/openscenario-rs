@@ -88,6 +88,14 @@ use std::path::{Path, PathBuf};
 /// values replaced and catalog references expanded; comments, whitespace and the unchanged
 /// attributes are written back as read.
 pub fn resolve_parameters(xml: &str, base_dir: &Path) -> Result<String> {
+    resolve_parameters_with_map(xml, base_dir).map(|(xml, _)| xml)
+}
+
+/// [`resolve_parameters`], additionally returning a [`LineMap`] from a line of the resolved
+/// output back to the line of the document, or inlined catalog file, it came from. A typed
+/// parse of the resolved text reports its own position against this text, not against what the
+/// caller wrote; the map is how that position is translated back.
+pub(crate) fn resolve_parameters_with_map(xml: &str, base_dir: &Path) -> Result<(String, LineMap)> {
     let mut document = read_tree(xml)?;
     let mut catalogs = Catalogs::new(base_dir);
     let mut scope = ParameterScope::new();
@@ -97,7 +105,7 @@ pub fn resolve_parameters(xml: &str, base_dir: &Path) -> Result<String> {
             resolve_element(root, &mut catalogs, &mut scope, &mut path, Frame::Root)?;
         }
     }
-    write_tree(&document)
+    write_tree_mapped(&document)
 }
 
 /// Resolve one catalog entry for a single reference made outside any document, and return the
@@ -158,8 +166,23 @@ struct Element {
     /// Written as `<Name/>` when true, `<Name>...</Name>` otherwise.
     empty: bool,
     children: Vec<Node>,
-    /// The 1-based source line of the start tag.
+    /// The 1-based source line of the start tag, in whichever document `catalog_source` names.
     line: usize,
+    /// `None` for an element read from the document [`resolve_parameters`] was given; the
+    /// catalog file it was read from when it is (or descends from) an inlined catalog entry.
+    /// Set once, when a catalog file is first read in [`Catalogs::documents`], and carried
+    /// unchanged through cloning and resolution so [`LineMap`] can tell the two apart.
+    catalog_source: Option<PathBuf>,
+}
+
+impl Element {
+    /// Where this element's start line sits, for [`LineMap`].
+    fn source(&self) -> Source {
+        match &self.catalog_source {
+            None => Source::Document(self.line),
+            Some(file) => Source::Catalog(file.clone(), self.line),
+        }
+    }
 }
 
 impl Element {
@@ -373,7 +396,7 @@ impl Catalogs {
                             continue;
                         }
                         let name = catalog.attribute("name")?.unwrap_or_default();
-                        let entries = catalog
+                        let mut entries: Vec<Element> = catalog
                             .children
                             .into_iter()
                             .filter_map(|n| match n {
@@ -381,6 +404,12 @@ impl Catalogs {
                                 Node::Other(_) => None,
                             })
                             .collect();
+                        // Tagged once, here, rather than when an entry is inlined: an entry can
+                        // itself be cloned and resolved more than once (one per reference), and
+                        // every copy must still trace back to this file.
+                        for entry in &mut entries {
+                            tag_catalog_source(entry, &file);
+                        }
                         documents.push(CatalogDocument {
                             path: file.clone(),
                             name,
@@ -840,6 +869,7 @@ fn read_tree(xml: &str) -> Result<Vec<Node>> {
                     empty: false,
                     children: Vec::new(),
                     line,
+                    catalog_source: None,
                 });
                 continue;
             }
@@ -857,6 +887,7 @@ fn read_tree(xml: &str) -> Result<Vec<Node>> {
                 empty: true,
                 children: Vec::new(),
                 line,
+                catalog_source: None,
             }),
             other => Node::Other(other.into_owned()),
         };
@@ -871,25 +902,127 @@ fn read_tree(xml: &str) -> Result<Vec<Node>> {
     Ok(top)
 }
 
+/// Set `catalog_source` on `element` and every element below it, marking the whole subtree as
+/// read from `file`. Called once, when a catalog file is loaded, so every copy later cloned out
+/// of it for a reference keeps the tag.
+fn tag_catalog_source(element: &mut Element, file: &Path) {
+    element.catalog_source = Some(file.to_path_buf());
+    for child in &mut element.children {
+        if let Node::Element(child) = child {
+            tag_catalog_source(child, file);
+        }
+    }
+}
+
+/// Where one line of [`resolve_parameters`]'s output came from.
+#[derive(Clone)]
+enum Source {
+    /// Line `usize` of the document passed to [`resolve_parameters`].
+    Document(usize),
+    /// Line `usize` of the catalog file whose entry was inlined at this point.
+    Catalog(PathBuf, usize),
+}
+
+impl std::fmt::Display for Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Source::Document(line) => write!(f, "line {}", line),
+            Source::Catalog(file, line) => {
+                write!(f, "line {} of catalog file {}", line, file.display())
+            }
+        }
+    }
+}
+
+/// Maps a line of [`resolve_parameters`]'s output back to where it came from.
+///
+/// Substituting a `$name` reference or an `${expression}` never changes how many lines a
+/// document has, since the replacement text is written in place of the reference within the
+/// same attribute value. Inlining a `<CatalogReference>` does: the entry replacing it can hold
+/// more or fewer lines, so every line after it shifts. [`LineMap`] is built once, while writing
+/// the resolved document, by recording the source of every element's start line; a line between
+/// two such records shares the source of the one before it, offset by how many lines separate
+/// them, since [`write_tree_mapped`] writes everything but a substituted attribute value back
+/// byte for byte.
+pub(crate) struct LineMap {
+    /// `(output line, source of that line)`, in increasing order of the first field.
+    breaks: Vec<(usize, Source)>,
+}
+
+impl LineMap {
+    /// Where line `output_line` of the resolved document came from, as text fit for an error
+    /// message: `"line N"` for the document itself, `"line N of catalog file ..."` for an
+    /// inlined entry.
+    pub(crate) fn locate(&self, output_line: usize) -> String {
+        match self
+            .breaks
+            .iter()
+            .rev()
+            .find(|(line, _)| *line <= output_line)
+        {
+            Some((break_line, Source::Document(source_line))) => {
+                Source::Document(source_line + (output_line - break_line)).to_string()
+            }
+            Some((break_line, Source::Catalog(file, source_line))) => {
+                Source::Catalog(file.clone(), source_line + (output_line - break_line)).to_string()
+            }
+            // No element was ever written, so nothing was substituted either; the output line
+            // is the source line.
+            None => format!("line {}", output_line),
+        }
+    }
+}
+
 fn write_tree(nodes: &[Node]) -> Result<String> {
-    fn write(writer: &mut Writer<Vec<u8>>, nodes: &[Node]) -> std::io::Result<()> {
+    write_tree_mapped(nodes).map(|(xml, _)| xml)
+}
+
+/// [`write_tree`], additionally returning a [`LineMap`] for the document it wrote.
+fn write_tree_mapped(nodes: &[Node]) -> Result<(String, LineMap)> {
+    fn write(
+        writer: &mut Writer<Vec<u8>>,
+        nodes: &[Node],
+        line: &mut usize,
+        breaks: &mut Vec<(usize, Source)>,
+    ) -> std::io::Result<()> {
+        fn count_lines(writer: &Writer<Vec<u8>>, written_from: usize, line: &mut usize) {
+            *line += writer.get_ref()[written_from..]
+                .iter()
+                .filter(|b| **b == b'\n')
+                .count();
+        }
         for node in nodes {
             match node {
-                Node::Other(event) => writer.write_event(event.borrow())?,
+                Node::Other(event) => {
+                    let start = writer.get_ref().len();
+                    writer.write_event(event.borrow())?;
+                    count_lines(writer, start, line);
+                }
                 Node::Element(element) if element.empty => {
-                    writer.write_event(Event::Empty(element.start.borrow()))?
+                    breaks.push((*line, element.source()));
+                    let start = writer.get_ref().len();
+                    writer.write_event(Event::Empty(element.start.borrow()))?;
+                    count_lines(writer, start, line);
                 }
                 Node::Element(element) => {
+                    breaks.push((*line, element.source()));
+                    let start = writer.get_ref().len();
                     writer.write_event(Event::Start(element.start.borrow()))?;
-                    write(writer, &element.children)?;
+                    count_lines(writer, start, line);
+                    write(writer, &element.children, line, breaks)?;
+                    let start = writer.get_ref().len();
                     writer.write_event(Event::End(element.start.to_end()))?;
+                    count_lines(writer, start, line);
                 }
             }
         }
         Ok(())
     }
     let mut writer = Writer::new(Vec::new());
-    write(&mut writer, nodes).map_err(Error::from)?;
-    String::from_utf8(writer.into_inner())
-        .map_err(|e| Error::invalid_xml(&format!("resolved document is not UTF-8: {}", e)))
+    let mut line = 1usize;
+    let mut breaks = Vec::new();
+    write(&mut writer, nodes, &mut line, &mut breaks).map_err(Error::from)?;
+    let xml = String::from_utf8(writer.into_inner())
+        .map_err(|e| Error::invalid_xml(&format!("resolved document is not UTF-8: {}", e)))?;
+    Ok((xml, LineMap { breaks }))
 }

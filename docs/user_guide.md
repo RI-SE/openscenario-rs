@@ -227,6 +227,17 @@ the element path and the source line, for example
 `parser::resolve::resolve_parameters` returns the resolved XML itself, for callers that want
 to inspect or store it; it takes the directory relative catalog paths start from.
 
+A document can still fail the typed parse after resolution succeeds -- an attribute can resolve
+to text of the wrong shape for its field, such as a `string` parameter substituted into a
+`Double` attribute. This error reports a position in the *resolved* text, not the document as
+written, since that is what the typed parser actually reads. Substituting a reference never
+adds or removes a line, so outside a catalog reference the two line numbers agree. Inlining a
+`<CatalogReference>` does not: the entry replacing it can hold more or fewer lines than the
+reference did, shifting every line after it. `parse_str_resolved` and `parse_file_resolved`
+therefore translate the position back before reporting it -- to the document's own line when the
+failure sits outside any inlined entry, or to the catalog file and the line inside it when the
+failure sits within one.
+
 ## Catalogs
 
 Catalogs hold reusable vehicles, pedestrians, controllers, trajectories, routes and

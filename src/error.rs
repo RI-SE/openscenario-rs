@@ -10,6 +10,19 @@ pub enum Error {
     #[error("XML parsing error: {0}")]
     XmlParseError(#[from] quick_xml::DeError),
 
+    /// A typed-parse error found while reading the output of
+    /// [`resolve_parameters`](crate::parser::resolve::resolve_parameters). That text is not
+    /// always the text the caller wrote: a `CatalogReference` is replaced by the entry it
+    /// names, which can hold more or fewer lines than the reference did. `location` names the
+    /// line the failure maps back to instead -- of the document that was resolved, or, when the
+    /// failure sits inside an inlined entry, of the catalog file that entry came from.
+    #[error("XML parsing error: {source} ({location})")]
+    ResolvedParseError {
+        #[source]
+        source: quick_xml::DeError,
+        location: String,
+    },
+
     /// XML serialization failures
     #[error("XML serialization error: {0}")]
     XmlSerializeError(#[from] quick_xml::SeError),
@@ -338,6 +351,15 @@ impl Error {
         }
     }
 
+    /// Create a typed-parse error located in a resolved document, naming where `location` puts
+    /// it. See [`ResolvedParseError`](Error::ResolvedParseError).
+    pub fn resolved_parse_error(source: quick_xml::DeError, location: &str) -> Self {
+        Error::ResolvedParseError {
+            source,
+            location: location.to_string(),
+        }
+    }
+
     /// Add context to an error
     pub fn with_context(mut self, context: &str) -> Self {
         match &mut self {
@@ -355,7 +377,17 @@ impl Error {
             Error::ParameterError {
                 ref mut message, ..
             } => {
-                *message = format!("{}: {}", context, message);
+                // `context` is a sentence of its own ("Failed to parse file: ..."), not a
+                // clause continuing this one. Appending it keeps the parameter's own message
+                // intact instead of interrupting it partway through, as a leading
+                // `context: message` did: the reader could not tell where the generic
+                // description ended and the specific one began.
+                *message = format!("{} ({})", message, context);
+            }
+            Error::ResolvedParseError {
+                ref mut location, ..
+            } => {
+                *location = format!("{}, {}", location, context);
             }
             Error::FileReadError { ref mut reason, .. } => {
                 *reason = format!("{}: {}", context, reason);

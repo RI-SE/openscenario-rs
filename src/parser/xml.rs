@@ -71,6 +71,7 @@ use crate::error::{Error, Result};
 use crate::types::catalogs::files::CatalogFile;
 use crate::types::scenario::storyboard::OpenScenario;
 use markup_fmt::{config::FormatOptions, format_text, Language};
+use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
@@ -234,9 +235,34 @@ pub fn parse_from_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario>
 }
 
 fn parse_resolved(xml: &str, base_dir: &Path) -> Result<OpenScenario> {
-    let resolved = super::resolve::resolve_parameters(remove_bom(xml), base_dir)?;
-    parse_from_str(&resolved)
-        .map_err(|e| e.with_context("Failed to parse the parameter-resolved document"))
+    let (resolved, map) = super::resolve::resolve_parameters_with_map(remove_bom(xml), base_dir)?;
+    parse_resolved_str(&resolved, &map)
+}
+
+/// Parse the output of [`resolve_parameters_with_map`](super::resolve::resolve_parameters_with_map)
+/// as [`parse_from_str`] does, except that a typed-parse error is reported against the line
+/// `map` says it came from, rather than against its position in text the caller never wrote.
+fn parse_resolved_str(resolved: &str, map: &super::resolve::LineMap) -> Result<OpenScenario> {
+    let mut deserializer = quick_xml::de::Deserializer::from_str(resolved);
+    OpenScenario::deserialize(&mut deserializer).map_err(|source| {
+        // `error_position` only ever moves for an XML syntax error; the great majority of
+        // typed-parse failures are semantic (`serde::de::Error::custom`, raised while
+        // converting a well-formed attribute's text), which leaves it at 0. `buffer_position`
+        // tracks the reader regardless of why deserialization stopped: the byte just past the
+        // last event it read, which is the event that held the failing value.
+        let offset = deserializer.get_ref().get_ref().buffer_position() as usize;
+        let line = line_at(resolved, offset);
+        Error::resolved_parse_error(source, &map.locate(line))
+    })
+}
+
+/// The 1-based line of `text` containing byte offset `offset`.
+fn line_at(text: &str, offset: usize) -> usize {
+    text.as_bytes()[..offset.min(text.len())]
+        .iter()
+        .filter(|b| **b == b'\n')
+        .count()
+        + 1
 }
 
 /// Serialize an OpenSCENARIO document to XML string

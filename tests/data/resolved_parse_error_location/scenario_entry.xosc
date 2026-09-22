@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/>
+  <CatalogLocations>
+    <VehicleCatalog>
+      <Directory path="."/>
+    </VehicleCatalog>
+  </CatalogLocations>
+  <RoadNetwork/>
+  <Entities>
+    <ScenarioObject name="Ego">
+      <CatalogReference catalogName="Vehicles" entryName="brokenEntry"/>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard><Init><Actions/></Init><StopTrigger/></Storyboard>
+</OpenSCENARIO>

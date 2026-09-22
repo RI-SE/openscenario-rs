@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/>
+  <Catalog name="Vehicles">
+    <Vehicle name="sedan" vehicleCategory="car">
+      <BoundingBox>
+        <Center x="0" y="0" z="0"/>
+        <Dimensions width="2" length="4" height="1.5"/>
+      </BoundingBox>
+      <Performance maxSpeed="50" maxAcceleration="5" maxDeceleration="10"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="1.3" positionZ="0.3"/>
+        <RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="-1.3" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+    <Vehicle name="brokenEntry" vehicleCategory="car">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="topSpeed" parameterType="string" value="fast"/>
+      </ParameterDeclarations>
+      <BoundingBox>
+        <Center x="0" y="0" z="0"/>
+        <Dimensions width="2" length="4" height="1.5"/>
+      </BoundingBox>
+      <Performance maxSpeed="$topSpeed" maxAcceleration="5" maxDeceleration="10"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="1.3" positionZ="0.3"/>
+        <RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="-1.3" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>

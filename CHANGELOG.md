@@ -1990,6 +1990,35 @@ Breaking, unless noted.
   hand-built regression fixture, parsed and re-serialized through `quick_xml` rather than built
   from Rust values by hand.
 
+- **A typed-parse error following `parse_str_resolved` or `parse_file_resolved` named a position
+  in the resolved text, not in the document the caller wrote, and `Error::with_context` spliced a
+  generic description into the middle of a `ParameterError`'s message.** `resolve_parameters`
+  (`src/parser/resolve.rs`) parses the *resolved* XML, so a typed-parse error's own position was
+  always against that text. Substituting a `$name` reference or an `${expression}` never changes
+  a line count, since the replacement lands inside an existing attribute value, so the two line
+  numbers agreed everywhere except one place: once `resolve_parameters` began inlining a
+  `<CatalogReference>` as the entry it names, every line after the reference shifted by however
+  many lines the entry added or removed, and a failure inside an inlined entry pointed at a line
+  of the *scenario* file that held none of the entry's own text.
+
+  `resolve_parameters` now also returns a `LineMap`, built while writing the resolved document:
+  every element already carries the source line of its start tag, and elements read from a
+  catalog file are tagged with that file's path when the file is loaded, so the tag survives
+  cloning an entry out for a reference and resolving it. A typed-parse error's position is read
+  through `quick_xml::de::Deserializer::get_ref` (`buffer_position`, not `error_position`, which
+  quick-xml only advances for an XML syntax error and leaves at 0 for the `serde::de::Error`
+  custom errors a type mismatch raises), converted to a line of the resolved text, and looked up
+  in the map. The new `Error::ResolvedParseError` variant reports the result: the document's own
+  line when the failure sits outside any inlined entry, or the catalog file and the line inside
+  it otherwise.
+
+  Separately, `Error::with_context` prepended its context into `ParameterError`'s `message`
+  field, so wrapping one with a file-level description put that description between the
+  `Parameter '{param}' error: ` prefix and the actual reason, reading as though the whole file
+  had failed to parse before a second, unrelated cause followed a second colon. The context is
+  now appended instead, so the parameter's own message stays one unbroken sentence and the
+  wrapping context is a distinguishable trailing clause.
+
 ### Known gaps
 
 **`<TrafficAction>` does not deserialize.** The corpus expansion above brought the first corpus
