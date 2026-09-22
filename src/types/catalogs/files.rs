@@ -13,6 +13,19 @@ use serde::{Deserialize, Serialize};
 use crate::types::basic::OSString;
 
 /// Represents a complete catalog file as loaded from .xosc files
+///
+/// This is the narrow reader for inputs already known to be catalog documents: it
+/// models exactly the XSD `CatalogDefinition` branch (`:862`) of the document root,
+/// `FileHeader` followed by `Catalog`, and nothing else the root's other branches
+/// could contain. The conformance harness parses every catalog-branch corpus file
+/// through this type.
+///
+/// [`crate::types::scenario::storyboard::OpenScenario`] is the general document root
+/// and also reads catalog documents, through its own `Catalog` field, since the XSD
+/// makes `CatalogDefinition` one of three branches a root document can name. Both
+/// hold the catalog content in the same [`CatalogContent`], so a document parsed
+/// through either type produces the same catalog. `tests/catalog_root_agreement_test.rs`
+/// pins that agreement across the corpus.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename = "OpenSCENARIO")]
 pub struct CatalogFile {

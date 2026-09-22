@@ -28,6 +28,14 @@ use serde::{Deserialize, Serialize};
 /// The consequence is that the root cannot enforce its own choice cardinality: a value
 /// naming zero branches or two can be constructed, and [`Self::document_type`] reports
 /// both as [`OpenScenarioDocumentType::Unknown`] rather than silently picking one.
+///
+/// `OpenScenario` is the crate's general entry point: any `.xosc` file, of any of the
+/// three branches, parses through it. For the `CatalogDefinition` branch specifically,
+/// [`crate::types::catalogs::files::CatalogFile`] is a second, narrower reader that
+/// models only that branch and is what the conformance harness uses for catalog
+/// inputs. The two agree because both hold the catalog content in the same
+/// [`crate::types::catalogs::files::CatalogContent`]; `tests/catalog_root_agreement_test.rs`
+/// pins that agreement across the corpus rather than leaving it to be assumed.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename = "OpenSCENARIO")]
 pub struct OpenScenario {
