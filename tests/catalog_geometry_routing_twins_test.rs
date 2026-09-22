@@ -129,6 +129,40 @@ fn knot_and_nurbs_knot_parse_and_serialize_identically() {
 }
 
 #[test]
+fn nurbs_and_catalog_nurbs_both_reject_negative_order() {
+    let negative_order = r#"<Nurbs order="-3">
+    <ControlPoint><Position><WorldPosition x="0" y="0" z="0"/></Position></ControlPoint>
+    <ControlPoint><Position><WorldPosition x="1" y="1" z="1"/></Position></ControlPoint>
+    <Knot value="0.0"/>
+    <Knot value="1.0"/>
+</Nurbs>"#;
+
+    assert!(
+        quick_xml::de::from_str::<Nurbs>(negative_order).is_err(),
+        "Nurbs must reject a negative order (XSD :1520 order is UnsignedInt)"
+    );
+    assert!(
+        quick_xml::de::from_str::<CatalogNurbs>(negative_order).is_err(),
+        "CatalogNurbs must reject a negative order (XSD :1520 order is UnsignedInt)"
+    );
+}
+
+#[test]
+fn nurbs_and_catalog_nurbs_agree_on_order_type() {
+    let xml = r#"<Nurbs order="3">
+    <ControlPoint><Position><WorldPosition x="0" y="0" z="0"/></Position></ControlPoint>
+    <ControlPoint><Position><WorldPosition x="1" y="1" z="1"/></Position></ControlPoint>
+    <Knot value="0.0"/>
+    <Knot value="1.0"/>
+</Nurbs>"#;
+
+    let via_sibling: Nurbs = quick_xml::de::from_str(xml).unwrap();
+    let via_catalog: CatalogNurbs = quick_xml::de::from_str(xml).unwrap();
+
+    assert_eq!(via_sibling.order, via_catalog.order);
+}
+
+#[test]
 fn nurbs_and_catalog_nurbs_both_reject_one_control_point_and_one_knot() {
     let short = r#"<Nurbs order="3">
     <ControlPoint><Position><WorldPosition x="0" y="0" z="0"/></Position></ControlPoint>

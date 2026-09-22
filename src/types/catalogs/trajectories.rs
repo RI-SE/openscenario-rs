@@ -1,7 +1,9 @@
 //! `CatalogTrajectory`: a trajectory in its catalog-file form, with parameter
 //! declarations covering its shape.
 
-use crate::types::basic::{Boolean, Double, Int, MinVec, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{
+    Boolean, Double, MinVec, OSString, ParameterDeclarations, UnsignedInt, Value,
+};
 use crate::types::positions::Position;
 use serde::{Deserialize, Serialize};
 
@@ -157,7 +159,7 @@ pub struct CatalogClothoid {
 pub struct CatalogNurbs {
     /// Order of the NURBS curve (degree + 1)
     #[serde(rename = "@order")]
-    pub order: Int,
+    pub order: UnsignedInt,
 
     /// Control points defining the NURBS curve
     ///
@@ -298,14 +300,11 @@ impl CatalogTrajectory {
                 Shape::clothoid_spline(spline.clone())
             }
             CatalogTrajectoryShape::Nurbs(nurbs) => {
+                // `order` is `UnsignedInt` (`Value<u32>`), so `resolve` already
+                // yields a non-negative value; the deserializer rejects a negative
+                // literal before this method ever runs, and a resolved parameter
+                // or expression goes through the same `u32::from_str`.
                 let order = nurbs.order.resolve(parameters)?;
-                let order: u32 = u32::try_from(order).map_err(|_| {
-                    crate::error::Error::invalid_value(
-                        "Nurbs.order",
-                        &order.to_string(),
-                        "NURBS order must be a non-negative integer",
-                    )
-                })?;
 
                 let control_points: Vec<ControlPoint> = nurbs
                     .control_points
@@ -413,7 +412,7 @@ impl CatalogNurbs {
     /// `ControlPoint` and `Knot` carry `minOccurs="2"`. Fails if either list has fewer
     /// than two entries.
     pub fn new(
-        order: Int,
+        order: UnsignedInt,
         control_points: Vec<NurbsControlPoint>,
         knots: Vec<NurbsKnot>,
     ) -> crate::error::Result<Self> {
@@ -888,6 +887,23 @@ mod tests {
         let serialized = quick_xml::se::to_string(&clothoid).unwrap();
         let reparsed: CatalogClothoid = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(clothoid, reparsed);
+    }
+
+    /// `weight` carries `skip_serializing_if` but no `default`, unlike the sibling
+    /// `ControlPoint.weight` (`shapes.rs`). serde's derive special-cases `Option<T>`
+    /// fields: a missing map key deserializes to `None` regardless of `default`, so
+    /// the asymmetry with the sibling is cosmetic, not a parse defect. This guards
+    /// against that changing.
+    #[test]
+    fn test_nurbs_control_point_missing_weight_defaults_to_none() {
+        let xml = r#"<ControlPoint time="2.5">
+    <Position><WorldPosition x="0" y="0"/></Position>
+</ControlPoint>"#;
+        let result: Result<NurbsControlPoint, _> = quick_xml::de::from_str(xml);
+        match result {
+            Ok(cp) => assert!(cp.weight.is_none(), "expected None, got {:?}", cp.weight),
+            Err(e) => panic!("missing weight should not be a parse error: {e}"),
+        }
     }
 
     #[test]

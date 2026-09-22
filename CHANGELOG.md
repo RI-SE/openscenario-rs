@@ -746,6 +746,21 @@ Breaking, unless noted.
   of each container reject a list with fewer than the `minOccurs="2"` the schema requires. This
   is not a consolidation; it converts a silent divergence between the two copies into a failing
   test, which was one of three answers the duplication raised and the one chosen for this pass.
+  The pin covered the four leaf productions but not container attributes, which is where the
+  pair's one real divergence turned out to sit: **`CatalogNurbs.order` becomes `UnsignedInt`.**
+  Breaking. Its sibling `Nurbs.order` (`src/types/geometry/shapes.rs`) already types `@order` as
+  `UnsignedInt`, matching XSD `Nurbs` (`Schema/OpenSCENARIO.xsd:1520`), `<xsd:attribute
+  name="order" type="UnsignedInt" use="required"/>`. `CatalogNurbs.order` was `Int`, so a catalog
+  NURBS with `order="-3"` parsed and round-tripped where a document without a catalog reference
+  would have been rejected at the same attribute. `resolve_trajectory` resolved the value and then
+  converted it to `u32` by hand, checking the range itself; with the field typed correctly, the
+  deserializer performs that check, and the conversion is removed. A test now pins the two
+  `order` fields to the same type alongside the existing leaf pins. Separately, `NurbsControlPoint.weight`
+  carries `skip_serializing_if` but no `default`, unlike its sibling `ControlPoint.weight`. A
+  missing `@weight` was checked to still parse to `None`: serde's derive treats a field typed
+  `Option<T>` as implicitly defaulted on a missing key regardless of `#[serde(default)]`, so the
+  asymmetry is cosmetic. `Route`/`CatalogRoute` and `Polyline`/`CatalogPolyline` were swept the
+  same way and carry no equivalent mismatch; every attribute on both pairs already agrees in type.
 
 ### Removed
 
