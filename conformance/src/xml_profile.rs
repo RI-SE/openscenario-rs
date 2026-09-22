@@ -5,7 +5,7 @@
 //! don't matter. Anything present on the left but not the right is *dropped*; anything on the
 //! right but not the left is *invented*.
 //!
-//! The `#text` keys were added by OSP-14. Without them `profile()` could not see character
+//! The `#text` keys track character content. Without them `profile()` could not see character
 //! content at all, so a document carrying loose text in an element that forbids it parsed,
 //! silently lost the text, and was certified *lossless* by the one gate whose entire job is to
 //! notice that nothing was dropped. An unobservable difference must not be reported as no
@@ -405,8 +405,8 @@ mod tests {
         assert_eq!(counts.get("a/b#text").copied(), None);
     }
 
-    /// The OSP-14 defect in miniature: text present on the left, absent on the right, and the
-    /// comparator has to say so.
+    /// Text present on the left, absent on the right, and the comparator reports it.
+    /// Before this ability was added, such a transformation was certified as lossless.
     #[test]
     fn dropped_text_shows_up_in_the_diff() {
         let before = profile("<a><b/>stray</a>").expect("well-formed");

@@ -23,9 +23,8 @@ fn z_and_plus_zero_offset_compare_equal() {
 
 #[test]
 fn equal_spellings_still_serialize_as_written() {
-    // The equality fix must not touch the lexical-fidelity guarantee OSS-63 built: each
-    // spelling still round-trips through the real XML path byte-identical, even though the
-    // two values now compare equal.
+    // Each spelling still round-trips through the real XML path byte-identical, even though
+    // the two values now compare equal. Lexical fidelity is preserved.
     for date_time in ["2020-06-16T10:00:00Z", "2020-06-16T10:00:00+00:00"] {
         let xml = format!(r#"<TimeOfDayCondition dateTime="{date_time}" rule="greaterThan"/>"#);
         let condition: TimeOfDayCondition =

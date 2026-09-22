@@ -57,7 +57,7 @@ cargo run -p openscenario-roundtrip-harness --bin builder -- --coverage
 | `report` | Every corpus file parses, serializes, reparses and reserializes to the same XML twice in a row (a round-trip fixed point). |
 | `lossy` | The *first* serialization against the *original* file, so it can see data dropped or invented on the initial parse — the one thing `report` cannot see. It checks two things: names (did an element or attribute disappear or appear) and values (did an attribute or text value change at the same name). A number reserialized in a different lexical form, such as `1.0` becoming `1`, is reported separately and does not fail the gate, since the XSD types are numeric and the value space is unchanged. |
 | `validate` | The serialized output against `Schema/OpenSCENARIO.xsd`. |
-| `validate-input` | The corpus file *as it sits on disk* against `Schema/OpenSCENARIO.xsd`. The only gate that never parses the file with this crate, so its verdict is a fact about the corpus. It exists because a schema-invalid input whose invalid part the crate does not model is parsed, the content is dropped, and the output validates — `validate` then goes green *because* something was lost. Added by OSP-14. |
+| `validate-input` | The corpus file *as it sits on disk* against `Schema/OpenSCENARIO.xsd`. The only gate that never parses the file with this crate, so its verdict is a fact about the corpus. It exists because a schema-invalid input whose invalid part the crate does not model is parsed, the content is dropped, and the output validates — `validate` then goes green *because* something was lost. |
 | `mutate` | The other half of the question: does the crate **refuse** what the schema refuses? It breaks each schema-valid corpus file in XSD-guided ways — dropping a required child or a required attribute, duplicating a child whose `maxOccurs` is 1, adding a second branch to a choice, writing a value outside an enumeration — keeps the mutants libxml2 rejects, and requires the crate to reject them too. A mutant the crate accepts is a **hole**, reported by mutation kind and XSD type. It also runs an unmutated control per file, since refusing a valid document is a defect in the other direction. |
 | `builder` | Every builder fixture through the same three questions (round trip, fidelity, schema), using code as the corpus instead of files. With `--coverage`, reports how much of one real scenario the builder can reconstruct — a figure, not a gate. |
 
@@ -111,8 +111,8 @@ Both run for every entry, in every binary:
 
 That second assertion is how the `crate-defect` entry is designed to expire: when the crate is
 fixed and the gates stop failing, the assertion trips and the entry must be deleted — this is how
-the former TrafficAction exemption (`traffic_area_action_test_scenario.xosc`) expired when OSR-12
-landed.
+the former TrafficAction exemption (`traffic_area_action_test_scenario.xosc`) expired when choice
+wrappers were converted from `flatten` to `$value`.
 
 `path` is relative to `conformance/corpus/`, so the manifest is machine-independent, and every
 `path` must exist in the fetched corpus or the harness errors out.
@@ -180,9 +180,9 @@ The denominator of a green run is therefore not 212. `report` reports 2 excluded
 cleanly on `$?`. But a green `report` run means the round trip is **stable**, not **lossless**:
 serde drops unknown XML identically on every pass, so a field the Rust types never modeled
 produces a passing comparison anyway. `lossy` is what makes dropped or invented data visible —
-including dropped *character content*, which it could not see before OSP-14 — and the two
-`validate` binaries are the ones that consult the schema, one about the output and one about the
-input.
+including dropped *character content*, which the comparator could not see until it learned to
+count `#text` keys — and the two `validate` binaries are the ones that consult the schema, one
+about the output and one about the input.
 
 A green run of those four proves the crate **keeps what it is given**. It cannot prove the crate
 refuses what the schema refuses, because every file they read is valid: a type that accepts
@@ -216,14 +216,13 @@ Two further ways a green run can mislead, one of them still open:
   because `lossy` could not see character content and so could not see the crate dropping the
   stray text that made the input invalid. `profile()` now counts `path/to/Element#text` keys and
   the `validate-input` gate checks each input against the XSD, so the file is flagged by both and
-  carries an `expectations.toml` entry stating why. Fixed in OSP-14.
+  carries an `expectations.toml` entry stating why.
 - `conformance/build.rs` generates the round-trip tests from whatever is in `corpus/` at build
   time. Cargo tracks `corpus/` by the directory's own mtime and `mv` preserves it, so moving the
   corpus aside and back used to leave the empty generated file behind and let
   `bash scripts/gate.sh` exit 0 having run **zero** generated tests. The build script now records
   how many corpus files it saw and `tests/generated.rs` checks that against the corpus at run
-  time, so a stale suite fails and names its recovery, `touch conformance/build.rs`. Fixed in
-  OSP-15.
+  time, so a stale suite fails and names its recovery, `touch conformance/build.rs`.
 
 See [../docs/xsd_gaps.md](../docs/xsd_gaps.md) for the audit methods that find these gaps and
 the currently known gaps in the `mutate` gate (recorded as `[[hole]]` entries: the root choice's

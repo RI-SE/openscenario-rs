@@ -178,10 +178,9 @@ stage conformance "Conformance lossy (dropped/invented)"  -- cargo run -p opensc
 stage conformance "Conformance XSD validation (output)"   -- cargo run -p openscenario-roundtrip-harness --bin validate
 
 # The only stage that asks a question about the corpus rather than about this
-# crate: is each input file itself XSD-valid? Added by OSP-14, because a
-# schema-invalid input whose invalid part the crate does not model is parsed,
-# the content is dropped, and the output validates — so `validate` went green
-# *because* something was lost.
+# crate: is each input file itself XSD-valid? It exists because a schema-invalid input
+# whose invalid part the crate does not model is parsed, the content is dropped, and the
+# output validates — so `validate` went green *because* something was lost.
 stage conformance "Conformance XSD validation (input)"    -- cargo run -p openscenario-roundtrip-harness --bin validate-input
 
 # The only stage that asks whether the crate *refuses* what the schema refuses. The other five

@@ -8,7 +8,7 @@ the audit methods that find gaps, and the history of what has been fixed.
 three listed in `conformance/expectations.toml` round-trips with nothing dropped, nothing
 invented, and every output schema-valid. The parameterized-enumeration gap that pass 4
 identified is **closed** — see *Fixed in pass 5* below. One structural gap is open and
-tracked: the crate cannot deserialize `<TrafficAction>` (OSP-11), which is why one of those
+tracked: the crate cannot deserialize `<TrafficAction>`, which is why one of those
 three entries exists.
 
 ## Repository layout
@@ -43,7 +43,7 @@ hand for any change under `src/builder/`.
 | `cargo run -p openscenario-roundtrip-harness --bin report` | `xml1` vs `xml2` | parse failures, and instability across serialization |
 | `cargo run -p openscenario-roundtrip-harness --bin lossy` | **original file** vs `xml1` | data dropped or invented on the *first* parse |
 | `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs **the XSD** | schema-invalid output: invented fields, mis-ordered sequences, empty choice groups |
-| `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs **the XSD** | a schema-invalid *input*, which the crate may otherwise "improve" into a valid document by dropping the part that made it invalid (OSP-14) |
+| `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs **the XSD** | a schema-invalid *input*, which the crate may otherwise "improve" into a valid document by dropping the part that made it invalid |
 | `cargo run -p openscenario-roundtrip-harness --bin mutate` | every mutation of each corpus file, through the same three questions | the crate accepts an invalid document that the schema forbids; the gate breaks valid documents in XSD-guided ways and asserts the crate rejects every mutant libxml2 rejects |
 | `cargo run -p openscenario-roundtrip-harness --bin builder` (not in the pre-push gate) | every builder fixture, through the same three questions | the builder API producing non-schema-valid or lossy output, using code as the corpus instead of files |
 
@@ -77,11 +77,11 @@ Restricting the `find` to the files that no entry in `conformance/expectations.t
 exempts gives **165**. Both pipelines avoid `tr`, for the aliasing reason noted under
 *Audit methods*.
 
-That restricted set went 209 → 208 files in OSP-14, when `trajectory_shape.xosc` gained an
-entry, and the element figure did **not** move: re-running the pipeline with that file
-excluded as well still gives 165, because every element it contains occurs in some other
-non-exempt file. Measured 2026-09-17 by adding `! -name 'trajectory_shape.xosc'` to the
-`find` above and diffing the two `comm -12` outputs, which come out identical.
+The restricted set went 209 → 208 files when an entry was added for `trajectory_shape.xosc`,
+and the element figure did **not** move: re-running the pipeline with that file excluded as
+well still gives 165, because every element it contains occurs in some other non-exempt file.
+Measured 2026-09-17 by adding `! -name 'trajectory_shape.xosc'` to the `find` above and
+diffing the two `comm -12` outputs, which come out identical.
 
 **Which figure to trust: 165.** An excluded file is parsed by nothing and serialized by
 nothing, so counting its elements as "exercised" would credit the corpus for work no gate
@@ -135,12 +135,14 @@ excluded files are not skipped — a skip still counts as a failure, which is th
 reason the manifest exists. The 165-element figure above is that same accounting applied to
 the schema instead of to the file list.
 
-One file the manifest does **not** cover is worth naming, because the gates being green
-over it proves less than it looks like. `trajectory_shape.xosc` has no entry and is excluded
-from nothing; it passes `report`, `lossy` and `validate`. It is nevertheless
-`xmllint`-invalid, and it passes `lossy` only because `lossy` cannot see character content.
-That is a real hole in the instrument, tracked as OSP-14. The file is not handled; it is
-merely not caught.
+One file is worth naming, because for a while the gates were green over it and that proved
+less than it looked like. `trajectory_shape.xosc` is `xmllint`-invalid, and it used to pass
+`report`, `lossy` and `validate` with no entry in the manifest and no exemption anywhere — it
+passed `lossy` only because the comparator could not yet see character content, so it could not
+see the crate dropping the stray text that made the input invalid. The comparator now counts
+`#text` keys, the file fails `lossy`, and it carries an `expectations.toml` entry covering
+`lossy` and `validate-input` that records why. It still passes `report` and `validate`, because
+the output really is a stable, schema-valid document: the file is not handled, it is caught.
 
 **A green gate run could once be green over nothing.** `conformance/build.rs` generates the
 round-trip tests from whatever is in `conformance/corpus/` at build time, and cargo tracks
@@ -149,7 +151,7 @@ therefore left in place the empty generated file written while it was absent, an
 `bash scripts/gate.sh` would exit 0 having executed **zero** generated tests. The build script
 now records how many corpus files it saw, and `conformance/tests/generated.rs` compares that
 against the corpus at run time, so a stale suite fails instead of passing vacuously. Recovery
-is still `touch conformance/build.rs`, but you are now told to run it. Fixed in OSP-15.
+is still `touch conformance/build.rs`, but you are now told to run it.
 
 ## Corpus import, 2026-09-17
 
@@ -163,10 +165,10 @@ sources are MPL-2.0). Like them it is fetched on demand into gitignored
 - **Files:** `find conformance/corpus -name '*.xosc' | wc -l` went **172 → 212** (+40).
 - **Generated round-trip tests:** 172 → 210; `cargo test -p openscenario-roundtrip-harness`
   reported **218 passed, 0 failed** (210 generated + 2 lib unit + 1 builder fixture +
-  4 parameterized-enum + 1 generated-suite staleness check, the last added by OSP-15 after
-  this import). It is **225** since OSP-14, which added 4 `xml_profile` unit tests and the
-  3-test `tests/loose_text.rs` regression; the generated count is unchanged, because
-  `trajectory_shape.xosc` is not exempt from `report`.
+  4 parameterized-enum + 1 generated-suite staleness check). It is **225** after the
+  addition of 4 `xml_profile` unit tests and the 3-test `tests/loose_text.rs` regression;
+  the generated count is unchanged, because `trajectory_shape.xosc` is not exempt from
+  `report`.
 - **Elements present:** 156 → 175 of 294. **Elements proven by a passing gate:** 156 → 165.
   Nineteen element declarations appear in the corpus for the first time —
   `EntityDistribution`, `EntityDistributionEntry`, `Fog`, `GeoPosition`, `Precipitation`,
@@ -179,14 +181,14 @@ sources are MPL-2.0). Like them it is fetched on demand into gitignored
   total; `lossy` 210 lossless / 0 lossy / 0 skipped / 2 excluded / 212 total, 0 dropped and
   0 invented items; `validate` 209 schema-valid / 0 schema-invalid / 0 skipped / 3 excluded
   / 212 total, 0 validation errors. `bash scripts/gate.sh` exits 0 over all ten stages at that commit;
-  eleven since OSP-14 added the `validate-input` stage, twelve since OSS-47 added `mutate`.
+  eleven with the `validate-input` stage included, twelve with the `mutate` stage included.
 
 The import found one defect in this crate rather than in the data: the crate cannot
 deserialize `<TrafficAction>`, failing with `invalid type: map, expected a sequence` at the
-`#[serde(flatten)]` choice wrapper in `src/types/actions/wrappers.rs`. That is the
-`crate-defect` entry in `conformance/expectations.toml`, tracked by OSP-11, and it is
-designed to expire: when the crate is fixed, the manifest's "this gate must still fail"
-assertion trips and the entry has to be deleted.
+`#[serde(flatten)]` choice wrapper in `src/types/actions/wrappers.rs`. That is a
+`crate-defect` entry in `conformance/expectations.toml`, and it is designed to expire:
+when the crate is fixed, the manifest's "this gate must still fail" assertion trips and
+the entry has to be deleted.
 
 The single most valuable thing the import bought is negative evidence turning positive.
 `WorldPosition` was named in the previous revision of this section as a type the corpus
@@ -269,20 +271,20 @@ and `tr` are shadowed by a `trash-restore` alias in some setups, so prefix with
    names whose `type=` is one of the 37 enumeration `simpleType`s (37 types yield 39 attribute
    names — `type` and `displacement` each back two of the 37), then grep the corpus for a `$`
    in the value of any of them, anchored on the preceding whitespace so a bare `category`
-   cannot prefix-match `vehicleCategory`. Re-run for OSP-18 (2026-09-18) against the 212-file
-   corpus: 0 hits on the 39 enum-typed names, against 71 files that parameterize some other
-   attribute (31 distinct names — `value`, `laneId`, `s`, `catalogName`, ... — none enum-typed).
-   Confirms `conformance/tests/parameterized_enums.rs`'s claim that the corpus still cannot
-   cover the `vehicleCategory="$cat"` path the two hand-built fixtures exist for.
+   cannot prefix-match `vehicleCategory`. Re-measured 2026-09-18 against the 212-file corpus:
+   0 hits on the 39 enum-typed names, against 71 files that parameterize some other attribute
+   (31 distinct names — `value`, `laneId`, `s`, `catalogName`, ... — none enum-typed). This confirms
+   `conformance/tests/parameterized_enums.rs`'s claim that the corpus still cannot cover
+   the `vehicleCategory="$cat"` path the two hand-built fixtures exist for.
 
 ## Open gaps
 
 **`<TrafficAction>` does not deserialize.** The 2026-09-17 corpus import brought the first
 corpus file containing one, and the crate rejects it with `invalid type: map, expected a
 sequence`, localized to the `#[serde(flatten)]` choice wrapper in
-`src/types/actions/wrappers.rs`. It is the `crate-defect` entry in
-`conformance/expectations.toml` and is tracked by OSP-11. Ten element declarations are
-present in the corpus but unexercised solely because of it.
+`src/types/actions/wrappers.rs`. It is a `crate-defect` entry in
+`conformance/expectations.toml`. Ten element declarations are present in the corpus but
+unexercised solely because of it.
 
 The parameterized-enumeration gap that stood here through pass 4 was closed in pass 5; the
 entry moved to *Fixed in pass 5* below.

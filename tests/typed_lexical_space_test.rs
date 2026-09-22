@@ -37,8 +37,8 @@ fn timezoneless_datetime_parses_and_round_trips() {
     .expect("a dateTime with no timezone is schema-valid xsd:dateTime and must parse");
     assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
     // Probe through the parse path rather than hand-building the expected value: `XsdDateTime`
-    // keeps the text it was parsed from (OSS-63), so a hand-built value carries none and would
-    // not compare equal to one read from XML even when it names the same instant.
+    // keeps the text it was parsed from, so a hand-built value carries none and would not
+    // compare equal to one read from XML even when it names the same instant.
     let expected: XsdDateTime = "2020-06-16T10:00:00".parse().unwrap();
     assert_eq!(condition.date_time, Value::Literal(expected));
 
@@ -51,9 +51,9 @@ fn timezoneless_datetime_parses_and_round_trips() {
 
 #[test]
 fn declared_numeric_boolean_resolves_into_a_typed_bool_field() {
-    // The scenario OSS-58 names directly: `ParameterScope` already accepts a declared `1` as
-    // a valid Boolean (section 9.2.2), so a document declaring one must also resolve through to
-    // a typed `bool` -- not merely pass the declaration-time check and then fail on read.
+    // `ParameterScope` accepts a declared `1` as a valid Boolean (section 9.2.2), so a
+    // document declaring one must also resolve through to a typed `bool` -- not merely pass
+    // the declaration-time check and then fail on read.
     let mut scope = ParameterScope::new();
     scope
         .declare("flag", "boolean", "1")

@@ -1,13 +1,13 @@
 //! `Route`/`CatalogRoute`, `Polyline`/`CatalogPolyline` and `Nurbs`/`CatalogNurbs` each
 //! model the same XSD production twice: once for the scenario-body type and once for
-//! its catalog-file counterpart. Both copies were converted to `MinVec` independently
-//! (OSS-32), and both are live production paths — the catalog copies are read by
-//! `catalog/loader.rs` and held by `CatalogFile`; the scenario copies are read wherever
-//! a route or trajectory is used inline. Nothing keeps the two copies of each pair in
-//! step with each other, so this file pins that agreement: the leaf element every pair
-//! duplicates (`Waypoint`, `Vertex`, `ControlPoint`, `Knot`) must parse to the same
-//! content and re-serialize to the same bytes through both types, and the `minOccurs="2"`
-//! bound every container in every pair carries must reject a one-item list on both sides.
+//! its catalog-file counterpart. Both copies were converted to `MinVec` independently,
+//! and both are live production paths — the catalog copies are read by `catalog/loader.rs`
+//! and held by `CatalogFile`; the scenario copies are read wherever a route or trajectory
+//! is used inline. Nothing keeps the two copies of each pair in step with each other, so
+//! this file pins that agreement: the leaf element every pair duplicates (`Waypoint`,
+//! `Vertex`, `ControlPoint`, `Knot`) must parse to the same content and re-serialize to
+//! the same bytes through both types, and the `minOccurs="2"` bound every container in
+//! every pair carries must reject a one-item list on both sides.
 
 use openscenario_rs::types::catalogs::routes::{CatalogRoute, RouteWaypoint};
 use openscenario_rs::types::catalogs::trajectories::{

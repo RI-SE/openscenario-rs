@@ -3,13 +3,13 @@
 //! The corpus cannot cover this. All 212 corpus files spell every enum-typed attribute as a
 //! literal, so `report`, `lossy` and `validate` were green for four audit passes on a crate
 //! that rejected `vehicleCategory="$cat"` outright -- schema-valid input, hard parse error.
-//! This was re-measured for the 212-file corpus (OSP-18, 2026-09-18): of the 37
-//! `xsd:simpleType`s in `Schema/OpenSCENARIO.xsd` that carry `xsd:enumeration` children, 39
-//! `xsd:attribute` declarations reference one; a corpus-wide grep for `$` on any of those 39
-//! attribute names, anchored on the preceding whitespace so `category` cannot prefix-match
-//! `vehicleCategory`, finds zero hits, against 71 files that parameterize some other attribute
-//! (`value`, `laneId`, `s`, `catalogName`, ... -- 31 distinct names, none of them enum-typed).
-//! The corpus is also fetched and gitignored, so a file added to it would not survive.
+//! A sweep of the 212-file corpus shows this: of the 37 `xsd:simpleType`s in
+//! `Schema/OpenSCENARIO.xsd` that carry `xsd:enumeration` children, 39 `xsd:attribute`
+//! declarations reference one; a corpus-wide grep for `$` on any of those 39 attribute names,
+//! anchored on the preceding whitespace so `category` cannot prefix-match `vehicleCategory`,
+//! finds zero hits, against 71 files that parameterize some other attribute (`value`, `laneId`,
+//! `s`, `catalogName`, ... -- 31 distinct names, none of them enum-typed). The corpus is also
+//! fetched and gitignored, so a file added to it would not survive.
 //!
 //! These two fixtures live in `tests/data/` and are driven through exactly the same three
 //! questions the corpus binaries ask: does it round-trip to a fixed point, and does the

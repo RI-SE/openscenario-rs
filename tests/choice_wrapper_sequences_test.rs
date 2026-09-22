@@ -1,4 +1,4 @@
-//! OSR-12 — sequences below a `#[serde(flatten)]` choice wrapper.
+//! Sequences below a `#[serde(rename = "$value")]` choice wrapper.
 //!
 //! `#[serde(flatten)]` makes serde buffer an element's children into a `Content`
 //! map through `deserialize_any`. quick-xml cannot know at that point that a
@@ -12,13 +12,12 @@
 //! name rather than through a buffered map. Serde enforces "exactly one
 //! branch" structurally this way, so no hand-written `validate()` is needed.
 //!
-//! The cases in sections 1 to 5 fail on the source that predates this suite
-//! with `invalid type: map, expected a sequence`, except where marked as a
-//! control. The wrappers in sections 6 to 8 never hit that failure, because
-//! nothing in their schema subtree is repeatable; what they did do, before the
-//! conversion, was accept a document carrying two branches and keep whichever
-//! came first. Their rejection cases pin that, and fail on the earlier source
-//! by parsing successfully.
+//! The cases in sections 1 to 5 fail with `invalid type: map, expected a sequence`
+//! when using `#[serde(flatten)]`, except where marked as a control. The wrappers
+//! in sections 6 to 8 never hit that failure, because nothing in their schema
+//! subtree is repeatable; however, they did accept a document carrying two branches
+//! and keep whichever came first under `flatten`. Their rejection cases verify
+//! that, and fail under `flatten` by parsing successfully.
 //!
 //! The byte-exact round-trip fixtures are written in the order the crate emits.
 //! `TrafficAreaAction` and `FollowTrajectoryAction` are both `xsd:all`
@@ -68,10 +67,10 @@ const TRAFFIC_AREA_ACTION: &str = concat!(
     r#"</TrafficAreaAction></TrafficAction>"#
 );
 
-// ═══ 1. TrafficAction — the reported defect, OSP-07 §4 root cause B ════════
+// ═══ 1. TrafficAction — the reported defect ══════════════════════════════════════════════
 //
 // The six hand-built variants of that bisect, reproduced as assertions. Before
-// OSR-12, A / C / D / F failed and B / E passed.
+// conversion to `$value`, A / C / D / F failed and B / E passed.
 
 #[test]
 fn traffic_action_variant_a_original_payload_parses() {
@@ -94,7 +93,7 @@ fn traffic_action_variant_a_original_payload_parses() {
 
 #[test]
 fn traffic_action_variant_b_no_repeated_child_parses() {
-    // Control: passed before OSR-12 too.
+    // Control: passed both before and after conversion to `$value`.
     let action: TrafficAction = de(r#"<TrafficAction><TrafficStopAction/></TrafficAction>"#);
     assert!(matches!(
         action.action,
@@ -153,7 +152,7 @@ fn traffic_action_variant_d_traffic_source_action_parses() {
 
 #[test]
 fn traffic_action_variant_e_no_sequence_field_parses() {
-    // Control: passed before OSR-12 too.
+    // Control: passed both before and after conversion to `$value`.
     let xml = concat!(
         r#"<TrafficAction><TrafficSinkAction radius="10">"#,
         r#"<Position><WorldPosition x="0" y="0" z="0"/></Position>"#,
@@ -245,11 +244,12 @@ fn global_action_element_with_traffic_area_action_parses() {
     assert_eq!(out, xml);
 }
 
-// ═══ 4. PrivateActionElement — same shape; OSP-07 believed it worked ══════
+// ═══ 4. PrivateActionElement — same shape; nothing repeatable below it ══════
 //
-// It did not. No corpus file routes through it: the document model reaches a
+// No corpus file routes through it: the document model reaches a
 // story-level `<PrivateAction>` via `scenario::story::StoryPrivateAction`,
-// which is already a parallel-`Option` struct with no `flatten` at all.
+// which is already a parallel-`Option` struct with no `flatten` at all. Nothing in this
+// wrapper's XSD subtree is repeatable, which is why it was believed to work. It did not.
 
 #[test]
 fn private_action_element_with_sequence_below_parses() {

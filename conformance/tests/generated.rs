@@ -6,7 +6,7 @@ include!(concat!(env!("OUT_DIR"), "/generated_roundtrip.rs"));
 /// tracks a directory by the directory's own mtime and `mv` preserves mtime. Moving the corpus
 /// aside and back therefore leaves cargo believing nothing changed, so the empty file written
 /// while the corpus was absent survives: `cargo test` reports `0 passed` and `scripts/gate.sh`
-/// goes green having round-tripped nothing (OSP-15).
+/// goes green having round-tripped nothing.
 ///
 /// Comparing the build-time counts against the corpus at run time cannot go vacuous. An empty
 /// suite either matches an empty corpus — a fresh checkout, which must still build and only

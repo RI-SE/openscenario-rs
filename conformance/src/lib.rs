@@ -278,7 +278,7 @@ pub fn assert_catalog_roundtrip_fixed_point(path: &str) {
 ///
 /// `ValidateInput` is the odd one out among the per-file gates: it asks about the **input** file rather than about
 /// anything this crate produced, so it is the only gate whose result is independent of the code.
-/// Added by OSP-14, because `report`, `lossy` and `validate` between them could all stay green
+/// It was added because `report`, `lossy` and `validate` between them could all stay green
 /// over a schema-invalid input that the crate quietly improved into a valid document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]

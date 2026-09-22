@@ -1,10 +1,10 @@
-//! Round-trip tests for every `#[serde(flatten)]`-over-externally-tagged-enum site.
+//! Round-trip tests for choice wrappers using `#[serde(rename = "$value")]`.
 //!
-//! These sites model an XSD `xsd:choice` as a struct holding a flattened enum.
-//! Externally tagged enums serialize using the *variant* name, so the variant name
-//! must match the **XSD element name**, not the XSD type name. Each test below
-//! feeds a minimal schema-valid XML snippet in, checks the deserialized variant and
-//! its field values, re-serializes, and asserts the XSD element name is emitted.
+//! These sites model an XSD `xsd:choice` as a struct holding an externally-tagged enum
+//! behind a `$value` field. Externally-tagged enums serialize using the *variant* name,
+//! so the variant name must match the **XSD element name**, not the XSD type name.
+//! Each test below feeds a minimal schema-valid XML snippet in, checks the deserialized
+//! variant and its field values, re-serializes, and asserts the XSD element name is emitted.
 
 use openscenario_rs::types::actions::control::{
     BrakeInput, Gear, OverrideBrakeAction, OverrideGearAction, OverrideParkingBrakeAction,

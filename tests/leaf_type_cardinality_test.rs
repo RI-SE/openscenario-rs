@@ -119,8 +119,8 @@ const POLYGON_THREE: &str = r#"<Polygon><Position><WorldPosition x="0" y="0"/></
 
 #[test]
 fn polygon_with_two_positions_is_rejected() {
-    // XSD:1730 — `Position` minOccurs="3", the only such field in the crate. OSS-19 proved
-    // MIN=2 and OSS-31 MIN=1; this is the first exercise of MIN=3.
+    // XSD:1730 — `Position` minOccurs="3", the only such field in the crate. This test
+    // exercises the minimum of three, after earlier tests verified two and one.
     let e =
         quick_xml::de::from_str::<openscenario_rs::types::actions::traffic::Polygon>(POLYGON_TWO)
             .unwrap_err();

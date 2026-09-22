@@ -1,15 +1,15 @@
-//! OSP-14 regression: character content the crate drops must be visible to `lossy`.
+//! Character content the crate drops must be visible to `lossy`.
 //!
 //! `tests/data/loose_text_in_parameter_declarations.xosc` is a hand-built eighteen-line
-//! reproduction of the upstream typo in
+//! reproduction of an upstream typo in
 //! `corpus/openscenario1-engine/engine/tests/data/Scenarios/trajectory_shape.xosc`: loose text
 //! inside `<ParameterDeclarations>`, whose XSD content type is element-only.
 //!
-//! Before OSP-14 all three assertions below were provable facts about the crate and only the
-//! third was *reported* by a gate — `profile()` discarded `Event::Text`, so the first two tests
-//! fail against the pre-OSP-14 comparator. The third is the hole itself, and it still passes: an
-//! invalid input really is turned into a valid document. That is not a bug to fix here, it is the
-//! fact `lossy` and the `validate-input` gate now make visible instead of swallowing.
+//! All three assertions below verify facts about the crate. Initially `profile()` discarded
+//! `Event::Text`, so the first two tests would fail against an older comparator. The third is
+//! the defect these tests verify: an invalid input is turned into a valid document. That is not
+//! a bug to fix here, it is the fact `lossy` and the `validate-input` gate now make visible
+//! instead of swallowing.
 //!
 //! The fixture deliberately does not live in `corpus/`, which is gitignored third-party content
 //! fetched on demand; a regression test may not depend on a network fetch.
@@ -36,8 +36,8 @@ fn serialized_fixture() -> String {
     serialize_to_string(&doc).expect("a parsed document serializes")
 }
 
-/// `profile()` sees character content at all. Fails before OSP-14: `Event::Text` fell into the
-/// catch-all arm, so this key never existed.
+/// `profile()` sees character content at all. `Event::Text` now yields a `#text` key instead
+/// of falling into a catch-all, so this key exists.
 #[test]
 fn profile_sees_loose_character_content() {
     let counts = profile(&fixture()).expect("the fixture is well-formed XML");
@@ -53,8 +53,9 @@ fn profile_sees_loose_character_content() {
     );
 }
 
-/// The comparator `lossy` runs reports the dropped text. This is the defect OSP-14 fixes: a
-/// transformation that discarded content was certified as having discarded nothing.
+/// The comparator `lossy` runs reports the dropped text. Before it could see character
+/// content, a transformation that discarded content was certified as having discarded
+/// nothing.
 #[test]
 fn the_dropped_text_is_reported_as_dropped() {
     let before = profile(&fixture()).expect("the fixture is well-formed XML");
@@ -104,6 +105,6 @@ fn an_invalid_input_becomes_a_valid_output() {
         output_errors.is_empty(),
         "the crate is expected to quietly produce a VALID document from this INVALID input — \
          that is the whole point of the fixture. If this now fails, the crate changed and the \
-         OSP-14 story needs rewriting rather than this assertion loosening: {output_errors:?}"
+         test expectations need rewriting rather than this assertion loosening: {output_errors:?}"
     );
 }

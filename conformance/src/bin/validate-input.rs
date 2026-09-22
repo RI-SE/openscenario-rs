@@ -5,7 +5,7 @@
 //! checks `xml1` against the schema. None of them asks whether the *input* was conforming in the
 //! first place, and that gap is not academic. A schema-invalid input whose invalid part the crate
 //! does not model is parsed, the offending content is dropped, and the output is schema-valid —
-//! so `validate` goes green precisely *because* something was lost, and before OSP-14 `lossy`
+//! so `validate` goes green precisely *because* something was lost, and earlier `lossy`
 //! could not see the loss either, because it could not see character content at all.
 //!
 //! This binary closes that hole from the other side: a corpus file that is not itself XSD-valid

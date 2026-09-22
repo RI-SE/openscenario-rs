@@ -196,9 +196,9 @@ fn condition_round_trips_byte_exact() {
 
 #[test]
 fn condition_rejects_zero_branches() {
-    // OSS-14 probed this directly: the pre-conversion `Condition` accepted a document with
-    // neither `ByEntityCondition` nor `ByValueCondition`, silently constructing an all-`None`
-    // value. The externally-tagged `$value` enum makes that structurally impossible.
+    // Before conversion to `$value`, `Condition` accepted a document with neither
+    // `ByEntityCondition` nor `ByValueCondition`, silently constructing an all-`None` value.
+    // The externally-tagged `$value` enum makes that structurally impossible.
     let xml = r#"<Condition name="C3" conditionEdge="rising" delay="0"></Condition>"#;
     let result: Result<Condition, _> = quick_xml::de::from_str(xml);
     assert!(result.is_err(), "zero branches must be rejected");
@@ -206,8 +206,8 @@ fn condition_rejects_zero_branches() {
 
 #[test]
 fn condition_rejects_two_branches() {
-    // OSS-14 probed this directly: the pre-conversion `Condition` accepted both branches at
-    // once and kept both, re-serializing a document no schema-valid tool would accept.
+    // Before conversion to `$value`, `Condition` accepted both branches at once and kept both,
+    // re-serializing a document no schema-valid tool would accept.
     let xml = r#"<Condition name="C4" conditionEdge="rising" delay="0"><ByValueCondition><SimulationTimeCondition value="5" rule="greaterThan"/></ByValueCondition><ByEntityCondition><TriggeringEntities triggeringEntitiesRule="any"><EntityRef entityRef="Ego"/></TriggeringEntities><EntityCondition><StandStillCondition duration="1"/></EntityCondition></ByEntityCondition></Condition>"#;
     let result: Result<Condition, _> = quick_xml::de::from_str(xml);
     assert!(result.is_err(), "two branches must be rejected");

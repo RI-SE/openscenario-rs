@@ -173,8 +173,8 @@ impl ValidateDistribution for UserDefinedDistribution {
 // unused scaffolding — neither type was reachable from a parsed document. Now that
 // `ParameterValueDistribution` and `DeterministicSingleParameterDistribution` hold those two
 // enums directly behind `$value`, the duplicates model nothing the wired-in types do not
-// already model, so they are removed rather than converted; see OSS-12's note that a second
-// model of the same group is worse than none.
+// already model, so they are removed rather than converted. A second model of the same group
+// is worse than none.
 //
 // `DeterministicParameterDistributionGroup` (below) is the one group wrapper this file keeps
 // as a first-class type: `Deterministic.distributions` uses it directly as the per-entry

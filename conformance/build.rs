@@ -28,7 +28,7 @@ struct Manifest {
 /// time. Cargo tracks a `rerun-if-changed` directory by the directory's own mtime and `mv`
 /// preserves mtime, so restoring a corpus that was moved aside does not always re-run this
 /// script; without that comparison the empty file written while the corpus was absent survives
-/// and `cargo test` reports `0 passed` as success (OSP-15).
+/// and `cargo test` reports `0 passed` as success if the corpus is later restored.
 fn counts_prelude(corpus_files: usize, generated_tests: usize) -> String {
     format!(
         "/// Number of `.xosc` files the build script saw under `conformance/corpus/`.\n\

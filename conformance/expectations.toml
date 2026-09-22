@@ -69,9 +69,9 @@ loose inside <ParameterDeclarations> after an edit, and xmllint reports "Element
 content type is 'element-only'". The crate has nowhere to put character content inside that \
 element, so it drops the text and emits a document that is schema-VALID — an invalid input \
 quietly improved into a valid one. That is why this file needs two exemptions and no more: \
-`lossy` sees the dropped `OpenSCENARIO/ParameterDeclarations#text` key (it could not see \
-character content at all before OSP-14, which is how this file passed everything) and \
-`validate-input` sees the invalid input. It stays live on `report`, which it passes as a \
+`lossy` sees the dropped `OpenSCENARIO/ParameterDeclarations#text` key (the comparator gained \
+the ability to see character content, so this file that was invisible to detection is now flagged) \
+and `validate-input` sees the invalid input. It stays live on `report`, which it passes as a \
 fixed point, and on `validate`, which it passes because the output really is valid — recording \
 that the improvement happened rather than pretending it did not. If upstream fixes the typo, \
 both the `input-schema-invalid` premise and both gate assertions trip at once and this entry \
