@@ -245,10 +245,6 @@ const NOT_XSD_BACKED: &[(&str, &str)] = &[
         "CatalogResolver",
         "Catalog subsystem state (`src/catalog/`), never serialized.",
     ),
-    (
-        "ParameterSubstitutionEngine",
-        "Catalog subsystem state (`src/catalog/`), never serialized.",
-    ),
 ];
 
 /// Builds a copy of the bundled schema carrying one global `Probe_T` element per registered

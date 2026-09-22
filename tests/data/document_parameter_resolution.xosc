@@ -5,7 +5,6 @@
     <ParameterDeclaration name="p" parameterType="string" value="120"/>
     <ParameterDeclaration name="ego_speed" parameterType="double" value="10"/>
     <ParameterDeclaration name="double_speed" parameterType="double" value="${$ego_speed * 2}"/>
-    <ParameterDeclaration name="car_catalog" parameterType="string" value="Vehicles"/>
   </ParameterDeclarations>
   <CatalogLocations/>
   <RoadNetwork/>
@@ -25,13 +24,6 @@
           <Property name="speedLimit" value="$p"/>
         </Properties>
       </Vehicle>
-    </ScenarioObject>
-    <ScenarioObject name="Target">
-      <CatalogReference catalogName="$car_catalog" entryName="sedan">
-        <ParameterAssignments>
-          <ParameterAssignment parameterRef="speed" value="$ego_speed"/>
-        </ParameterAssignments>
-      </CatalogReference>
     </ScenarioObject>
   </Entities>
   <Storyboard>

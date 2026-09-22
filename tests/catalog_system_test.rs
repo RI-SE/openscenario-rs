@@ -2,24 +2,21 @@
 //!
 //! This test suite covers:
 //! - Loading real catalog files from the xosc/ directory
-//! - Parameter substitution with various parameter combinations
 //! - Catalog reference resolution end-to-end
 //! - Error handling for missing catalogs and entities
 //! - Circular dependency detection
 //! - Performance characteristics under load
 
-use openscenario_rs::catalog::{CatalogLoader, CatalogManager, ParameterSubstitutionEngine};
+use openscenario_rs::catalog::{CatalogLoader, CatalogManager};
 
 use openscenario_rs::parser::xml::{parse_catalog_from_str, serialize_catalog_to_string};
 use openscenario_rs::types::basic::{Directory, Value};
 use openscenario_rs::types::basic::{Double, OSString};
 use openscenario_rs::types::catalogs::{
-    entities::ParameterDefinition,
     files::CatalogFile,
     locations::{ControllerCatalogLocation, VehicleCatalogLocation},
     references::{ParameterAssignment, VehicleCatalogReference},
 };
-use std::collections::HashMap;
 use std::fs;
 
 use tempfile::TempDir;
@@ -102,47 +99,6 @@ fn test_catalog_serialization_roundtrip() {
 }
 
 #[test]
-fn test_parameter_substitution_engine() {
-    let mut engine = ParameterSubstitutionEngine::new();
-
-    // Add parameters
-    engine
-        .set_parameter("MaxSpeed".to_string(), "60.0".to_string())
-        .unwrap();
-    engine
-        .set_parameter("VehicleName".to_string(), "SportsCar".to_string())
-        .unwrap();
-    engine
-        .set_parameter("Color".to_string(), "Red".to_string())
-        .unwrap();
-
-    // Test simple parameter resolution
-    let result = engine.resolve_parameter_expression("${MaxSpeed}").unwrap();
-    assert_eq!(result, "60.0");
-
-    // Test complex parameter expression
-    let result = engine
-        .resolve_parameter_expression(
-            "Vehicle ${VehicleName} with max speed ${MaxSpeed} and color ${Color}",
-        )
-        .unwrap();
-    assert_eq!(
-        result,
-        "Vehicle SportsCar with max speed 60.0 and color Red"
-    );
-
-    // Test Value<T> resolution
-    let speed_value: Double = Value::Parameter("MaxSpeed".to_string());
-    let resolved_speed = engine.resolve_value(&speed_value).unwrap();
-    assert_eq!(resolved_speed, 60.0);
-
-    // Test expression resolution
-    let expr_value: OSString = Value::Expression("${VehicleName} (${Color})".to_string());
-    let resolved_expr = engine.resolve_value(&expr_value).unwrap();
-    assert_eq!(resolved_expr, "SportsCar (Red)");
-}
-
-#[test]
 fn test_catalog_loader_with_temporary_files() {
     // Create a temporary directory with a test catalog file
     let temp_dir = TempDir::new().unwrap();
@@ -218,27 +174,18 @@ fn test_catalog_reference_creation() {
             .len(),
         2
     );
-    // Check first parameter
-    let param_map = param_vehicle_ref
-        .build_parameter_map(&HashMap::new())
-        .unwrap();
-    assert_eq!(param_map.get("MaxSpeed").unwrap(), "80.0");
-    assert_eq!(param_map.get("Color").unwrap(), "Blue");
-}
-
-#[test]
-fn test_catalog_error_handling() {
-    // Test parameter engine error handling
-    let engine = ParameterSubstitutionEngine::new();
-
-    // Missing parameter should error
-    let result = engine.resolve_parameter_expression("${NonExistentParam}");
-    assert!(result.is_err());
-
-    // Invalid type conversion should error
-    let invalid_value: Double = Value::Parameter("NonExistentParam".to_string());
-    let result = engine.resolve_value(&invalid_value);
-    assert!(result.is_err());
+    let assignments = &param_vehicle_ref
+        .parameter_assignments
+        .as_ref()
+        .unwrap()
+        .assignments;
+    assert_eq!(
+        assignments[0].parameter_ref.as_literal().unwrap(),
+        "MaxSpeed"
+    );
+    assert_eq!(assignments[0].value.as_literal().unwrap(), "80.0");
+    assert_eq!(assignments[1].parameter_ref.as_literal().unwrap(), "Color");
+    assert_eq!(assignments[1].value.as_literal().unwrap(), "Blue");
 }
 
 #[test]
@@ -303,21 +250,6 @@ fn test_real_catalog_file_structure() {
 }
 
 #[test]
-fn test_parameter_definition_creation() {
-    let param_def = ParameterDefinition {
-        name: "MaxSpeed".to_string(),
-        parameter_type: "Double".to_string(),
-        default_value: Some("50.0".to_string()),
-        description: Some("Maximum vehicle speed in m/s".to_string()),
-    };
-
-    assert_eq!(param_def.name, "MaxSpeed");
-    assert_eq!(param_def.parameter_type, "Double");
-    assert_eq!(param_def.default_value.as_ref().unwrap(), "50.0");
-    assert!(param_def.description.is_some());
-}
-
-#[test]
 fn test_directory_creation_and_access() {
     let dir = Directory::new("/path/to/catalogs".to_string());
     assert_eq!(dir.path.as_literal().unwrap(), "/path/to/catalogs");
@@ -334,14 +266,9 @@ fn test_catalog_system_performance() {
     // Create multiple catalog managers
     let _managers: Vec<CatalogManager> = (0..10).map(|_| CatalogManager::new()).collect();
 
-    // Create multiple parameter engines
-    let _engines: Vec<ParameterSubstitutionEngine> = (0..100)
-        .map(|_| ParameterSubstitutionEngine::new())
-        .collect();
-
     let duration = start.elapsed();
 
-    // Should be able to create 10 managers and 100 engines reasonably quickly
+    // Should be able to create 10 managers reasonably quickly
     assert!(
         duration.as_millis() < 500,
         "Catalog system creation took too long: {:?}",
@@ -380,25 +307,4 @@ fn test_catalog_reference_with_many_parameters() {
         vehicle_ref.catalog_name.as_literal().unwrap(),
         "LargeCatalog"
     );
-}
-
-#[test]
-fn test_catalog_manager_parameter_operations() {
-    let mut manager = CatalogManager::new();
-
-    // Test setting and managing parameters
-    for i in 0..5 {
-        let mut params = HashMap::new();
-        params.insert(format!("Param{}", i), format!("Value{}", i));
-        manager.set_global_parameters(params).unwrap();
-
-        // Verify parameter was set
-        assert_eq!(
-            *manager
-                .parameter_engine()
-                .get_parameter(&format!("Param{}", i))
-                .unwrap(),
-            format!("Value{}", i)
-        );
-    }
 }

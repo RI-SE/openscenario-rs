@@ -204,30 +204,39 @@ pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     parse_from_file_internal(path, false)
 }
 
-/// Parse an OpenSCENARIO document from a string with its parameter references resolved.
+/// Parse an OpenSCENARIO document from a string with its parameter references and catalog
+/// references resolved.
 ///
 /// The document is first passed through [`resolve_parameters`](super::resolve::resolve_parameters),
 /// which replaces every `$name` and `${expression}` attribute value by its value under the
-/// document's own `<ParameterDeclarations>`, and the result is then parsed as
-/// [`parse_from_str`] would. A `<CatalogReference>` is left unresolved.
+/// document's own `<ParameterDeclarations>` and every `<CatalogReference>` by the catalog entry
+/// it names. The result is then parsed as [`parse_from_str`] would. A string has no location of
+/// its own, so a relative catalog directory is taken relative to the current working directory;
+/// [`parse_from_file_resolved`] takes it relative to the file instead.
 #[must_use = "parsing result should be handled"]
 pub fn parse_from_str_resolved(xml: &str) -> Result<OpenScenario> {
-    let resolved = super::resolve::resolve_parameters(remove_bom(xml))?;
-    parse_from_str(&resolved)
-        .map_err(|e| e.with_context("Failed to parse the parameter-resolved document"))
+    parse_resolved(xml, Path::new(""))
 }
 
-/// Parse an OpenSCENARIO document from a file with its parameter references resolved, as
-/// [`parse_from_str_resolved`] does for a string.
+/// Parse an OpenSCENARIO document from a file with its parameter references and catalog
+/// references resolved, as [`parse_from_str_resolved`] does for a string. A relative catalog
+/// directory is taken relative to the directory holding the file.
 #[must_use = "parsing result should be handled"]
 pub fn parse_from_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     let xml_content = read_scenario_file(&path)?;
-    parse_from_str_resolved(&xml_content).map_err(|e| {
+    let base_dir = path.as_ref().parent().unwrap_or(Path::new(""));
+    parse_resolved(&xml_content, base_dir).map_err(|e| {
         e.with_context(&format!(
             "Failed to parse file: {}",
             path.as_ref().display()
         ))
     })
+}
+
+fn parse_resolved(xml: &str, base_dir: &Path) -> Result<OpenScenario> {
+    let resolved = super::resolve::resolve_parameters(remove_bom(xml), base_dir)?;
+    parse_from_str(&resolved)
+        .map_err(|e| e.with_context("Failed to parse the parameter-resolved document"))
 }
 
 /// Serialize an OpenSCENARIO document to XML string

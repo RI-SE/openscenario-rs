@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="Defines an entry that vehicles.xosc defines too" author="openscenario-rs"/>
+  <Catalog name="Vehicles">
+    <Vehicle name="twin" vehicleCategory="car">
+      <BoundingBox>
+        <Center x="1.4" y="0" z="0.75"/>
+        <Dimensions width="2" length="4.5" height="1.5"/>
+      </BoundingBox>
+      <Performance maxSpeed="36" maxAcceleration="5" maxDeceleration="10"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="3.1" positionZ="0.3"/>
+        <RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="0" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>

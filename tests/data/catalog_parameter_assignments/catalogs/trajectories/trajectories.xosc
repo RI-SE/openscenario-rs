@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="A NURBS trajectory entry with a parameterized order" author="openscenario-rs"/>
+  <Catalog name="Trajectories">
+    <Trajectory name="curve" closed="false">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="order" parameterType="unsignedInt" value="2"/>
+      </ParameterDeclarations>
+      <Shape>
+        <Nurbs order="$order">
+          <ControlPoint>
+            <Position>
+              <WorldPosition x="0" y="0"/>
+            </Position>
+          </ControlPoint>
+          <ControlPoint>
+            <Position>
+              <WorldPosition x="10" y="0"/>
+            </Position>
+          </ControlPoint>
+          <Knot value="0"/>
+          <Knot value="0"/>
+          <Knot value="1"/>
+          <Knot value="1"/>
+        </Nurbs>
+      </Shape>
+    </Trajectory>
+  </Catalog>
+</OpenSCENARIO>

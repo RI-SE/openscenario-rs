@@ -3,7 +3,6 @@
 //! resolves to the type it names and not to a common enum.
 
 use super::entities::CatalogEntity;
-use crate::catalog::{CatalogManager, ResolvedCatalog};
 use crate::error::Result;
 use crate::types::basic::Value;
 use serde::{Deserialize, Serialize};
@@ -55,12 +54,6 @@ pub struct ParameterAssignment {
     pub value: OSString,
 }
 
-/// Trait for types that can resolve catalog references
-pub trait CatalogResolvable<T: CatalogEntity> {
-    /// Resolve this catalog reference to the actual entity
-    fn resolve(&self, manager: &CatalogManager) -> Result<ResolvedCatalog<T::ResolvedType>>;
-}
-
 impl<T: CatalogEntity> CatalogReference<T> {
     /// Create a new catalog reference
     pub fn new(catalog_name: String, entry_name: String) -> Self {
@@ -97,24 +90,6 @@ impl<T: CatalogEntity> CatalogReference<T> {
     pub fn get_entry_name(&self, context_params: &HashMap<String, String>) -> Result<String> {
         self.entry_name.resolve(context_params)
     }
-
-    /// Build parameter map from assignments
-    pub fn build_parameter_map(
-        &self,
-        context_params: &HashMap<String, String>,
-    ) -> Result<HashMap<String, String>> {
-        let mut parameters = HashMap::new();
-
-        if let Some(assignments) = &self.parameter_assignments {
-            for assignment in &assignments.assignments {
-                let param_name = assignment.parameter_ref.resolve(context_params)?;
-                let param_value = assignment.value.resolve(context_params)?;
-                parameters.insert(param_name, param_value);
-            }
-        }
-
-        Ok(parameters)
-    }
 }
 
 impl<T: CatalogEntity> Default for CatalogReference<T> {
@@ -125,21 +100,6 @@ impl<T: CatalogEntity> Default for CatalogReference<T> {
             parameter_assignments: None,
             phantom: PhantomData,
         }
-    }
-}
-
-impl<T: CatalogEntity> CatalogResolvable<T> for CatalogReference<T> {
-    fn resolve(&self, _manager: &CatalogManager) -> Result<ResolvedCatalog<T::ResolvedType>> {
-        let context_params = HashMap::new();
-        let catalog_name = self.get_catalog_name(&context_params)?;
-        let entry_name = self.get_entry_name(&context_params)?;
-        let _parameters = self.build_parameter_map(&context_params)?;
-
-        // Catalog file loading is not yet implemented
-        Err(crate::error::Error::catalog_error(&format!(
-            "Catalog resolution not yet implemented: {}::{}",
-            catalog_name, entry_name
-        )))
     }
 }
 
@@ -201,11 +161,15 @@ mod tests {
             assignments,
         );
 
-        let context_params = HashMap::new();
-        let param_map = reference.build_parameter_map(&context_params).unwrap();
-
-        assert_eq!(param_map.get("MaxSpeed").unwrap(), "200.0");
-        assert_eq!(param_map.get("Color").unwrap(), "Red");
+        let assignments = &reference.parameter_assignments.unwrap().assignments;
+        assert_eq!(assignments.len(), 2);
+        assert_eq!(
+            assignments[0].parameter_ref.as_literal().unwrap(),
+            "MaxSpeed"
+        );
+        assert_eq!(assignments[0].value.as_literal().unwrap(), "200.0");
+        assert_eq!(assignments[1].parameter_ref.as_literal().unwrap(), "Color");
+        assert_eq!(assignments[1].value.as_literal().unwrap(), "Red");
     }
 
     #[test]
@@ -305,34 +269,5 @@ mod tests {
             assignment.value.resolve(&context_params).unwrap(),
             "DynamicValue"
         );
-    }
-
-    #[test]
-    fn test_build_parameter_map_with_parameters() {
-        let assignments = vec![
-            ParameterAssignment::with_values(
-                Value::Literal("Speed".to_string()),
-                Value::Parameter("SpeedParam".to_string()),
-            ),
-            ParameterAssignment::with_values(
-                Value::Parameter("ColorParamName".to_string()),
-                Value::Literal("Blue".to_string()),
-            ),
-        ];
-
-        let reference = VehicleCatalogReference::with_parameters(
-            "TestCatalog".to_string(),
-            "TestVehicle".to_string(),
-            assignments,
-        );
-
-        let mut context_params = HashMap::new();
-        context_params.insert("SpeedParam".to_string(), "150.0".to_string());
-        context_params.insert("ColorParamName".to_string(), "Color".to_string());
-
-        let param_map = reference.build_parameter_map(&context_params).unwrap();
-
-        assert_eq!(param_map.get("Speed").unwrap(), "150.0");
-        assert_eq!(param_map.get("Color").unwrap(), "Blue");
     }
 }

@@ -8,10 +8,9 @@
 //! never substituted. The field is now `OSString`, so a catalog entry can name
 //! itself with a parameter reference that resolves through the same path every
 //! other parameterizable attribute already uses.
-use openscenario_rs::catalog::ParameterSubstitutionEngine;
 use openscenario_rs::types::catalogs::entities::CatalogVehicle;
 use openscenario_rs::types::catalogs::CatalogFile;
-use std::collections::HashMap;
+use openscenario_rs::types::scope::ParameterScope;
 
 const VEHICLE_WITH_PARAMETERIZED_NAME: &str = concat!(
     r#"<Vehicle name="$vehicleName" vehicleCategory="car">"#,
@@ -40,8 +39,8 @@ const LITERAL_NAME_CATALOG_FILE: &str = concat!(
 
 /// A `$vehicleName` catalog entry name parses as a parameter reference, not as
 /// the literal text `$vehicleName`, and resolves through
-/// `ParameterSubstitutionEngine::resolve_value` exactly as any other
-/// parameterizable attribute does.
+/// `ParameterScope::resolve` exactly as any other parameterizable attribute
+/// does.
 #[test]
 fn catalog_entry_name_parameter_reference_resolves() {
     let vehicle: CatalogVehicle = quick_xml::de::from_str(VEHICLE_WITH_PARAMETERIZED_NAME)
@@ -52,13 +51,14 @@ fn catalog_entry_name_parameter_reference_resolves() {
         "name must parse as a parameter reference, not a literal"
     );
 
-    let mut context = HashMap::new();
-    context.insert("vehicleName".to_string(), "SportsCar".to_string());
-    let engine = ParameterSubstitutionEngine::with_context(context);
+    let mut scope = ParameterScope::new();
+    scope
+        .declare("vehicleName", "string", "SportsCar")
+        .expect("declaration is valid");
 
-    let resolved = engine
-        .resolve_value(&vehicle.name)
-        .expect("the parameter must resolve against the substitution context");
+    let resolved = scope
+        .resolve(&vehicle.name)
+        .expect("the parameter must resolve against the scope");
     assert_eq!(resolved, "SportsCar");
 }
 

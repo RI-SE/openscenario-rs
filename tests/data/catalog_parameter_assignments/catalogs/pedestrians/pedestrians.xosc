@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="A pedestrian entry with a parameterized mass" author="openscenario-rs"/>
+  <Catalog name="Pedestrians">
+    <Pedestrian name="walker" pedestrianCategory="pedestrian" mass="$mass">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="mass" parameterType="double" value="80"/>
+      </ParameterDeclarations>
+      <BoundingBox>
+        <Center x="0" y="0" z="0.9"/>
+        <Dimensions width="0.5" length="0.5" height="1.8"/>
+      </BoundingBox>
+    </Pedestrian>
+  </Catalog>
+</OpenSCENARIO>

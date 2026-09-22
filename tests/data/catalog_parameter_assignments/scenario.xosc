@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="Catalog references assigning values to the parameters of their entries" author="openscenario-rs"/>
+  <ParameterDeclarations>
+    <ParameterDeclaration name="top_speed" parameterType="double" value="70"/>
+    <ParameterDeclaration name="catalog" parameterType="string" value="Vehicles"/>
+  </ParameterDeclarations>
+  <CatalogLocations>
+    <VehicleCatalog>
+      <Directory path="catalogs/vehicles"/>
+    </VehicleCatalog>
+    <ManeuverCatalog>
+      <Directory path="catalogs/maneuvers"/>
+    </ManeuverCatalog>
+    <ControllerCatalog>
+      <Directory path="catalogs/controllers"/>
+    </ControllerCatalog>
+    <PedestrianCatalog>
+      <Directory path="catalogs/pedestrians"/>
+    </PedestrianCatalog>
+    <TrajectoryCatalog>
+      <Directory path="catalogs/trajectories"/>
+    </TrajectoryCatalog>
+  </CatalogLocations>
+  <RoadNetwork/>
+  <Entities>
+    <ScenarioObject name="Assigned">
+      <CatalogReference catalogName="Vehicles" entryName="sedan">
+        <ParameterAssignments>
+          <ParameterAssignment parameterRef="top_speed" value="55"/>
+        </ParameterAssignments>
+      </CatalogReference>
+    </ScenarioObject>
+    <ScenarioObject name="Defaults">
+      <CatalogReference catalogName="Vehicles" entryName="sedan"/>
+    </ScenarioObject>
+    <ScenarioObject name="FromDocument">
+      <CatalogReference catalogName="$catalog" entryName="sedan">
+        <ParameterAssignments>
+          <ParameterAssignment parameterRef="top_speed" value="$top_speed"/>
+        </ParameterAssignments>
+      </CatalogReference>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init>
+      <Actions/>
+    </Init>
+    <Story name="Story">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="top_speed" parameterType="double" value="12"/>
+      </ParameterDeclarations>
+      <Act name="Act">
+        <ManeuverGroup name="Group" maximumExecutionCount="1">
+          <Actors selectTriggeringEntities="false">
+            <EntityRef entityRef="Assigned"/>
+          </Actors>
+          <CatalogReference catalogName="Maneuvers" entryName="accelerate">
+            <ParameterAssignments>
+              <ParameterAssignment parameterRef="target_speed" value="$top_speed"/>
+            </ParameterAssignments>
+          </CatalogReference>
+        </ManeuverGroup>
+        <StartTrigger>
+          <ConditionGroup>
+            <Condition name="AtStart" delay="0" conditionEdge="none">
+              <ByValueCondition>
+                <SimulationTimeCondition value="0" rule="greaterThan"/>
+              </ByValueCondition>
+            </Condition>
+          </ConditionGroup>
+        </StartTrigger>
+      </Act>
+    </Story>
+  </Storyboard>
+</OpenSCENARIO>

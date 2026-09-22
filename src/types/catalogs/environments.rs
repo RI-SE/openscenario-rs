@@ -450,38 +450,6 @@ impl CatalogWeather {
 /// Catalog entity integration so `CatalogEnvironment` can be used as the entry type
 /// in `CatalogContent` and behind a `CatalogReference`.
 impl crate::types::catalogs::entities::CatalogEntity for CatalogEnvironment {
-    type ResolvedType = Environment;
-
-    fn into_scenario_entity(
-        self,
-        parameters: std::collections::HashMap<String, String>,
-    ) -> crate::error::Result<Self::ResolvedType> {
-        self.resolve_environment(&parameters)
-    }
-
-    fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
-        vec![
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "TimeOfDay".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("12:00:00".to_string()),
-                description: Some("Time of day in HH:MM:SS format".to_string()),
-            },
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "WeatherCondition".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("dry".to_string()),
-                description: Some("Weather condition (dry, wet, snow, fog)".to_string()),
-            },
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "RoadCondition".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("dry".to_string()),
-                description: Some("Road surface condition (dry, wet, snow, ice)".to_string()),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -656,46 +624,6 @@ mod tests {
                 .unwrap(),
             &1.0
         );
-    }
-
-    /// `CatalogEnvironment` resolves to a real scenario `Environment`, with
-    /// parameterized values substituted from the assignment map.
-    #[test]
-    fn test_catalog_environment_into_scenario_entity() {
-        use crate::types::catalogs::entities::CatalogEntity;
-
-        let mut catalog_env = CatalogEnvironment::new("Rainy".to_string());
-        catalog_env.set_weather(CatalogWeather::rainy(Value::Parameter(
-            "rainIntensity".to_string(),
-        )));
-        catalog_env.set_road_condition(CatalogRoadCondition {
-            friction_scale_factor: Value::Parameter("friction".to_string()),
-            wetness: Some(Value::Literal(Wetness::Moist)),
-            properties: None,
-        });
-
-        let mut parameters = std::collections::HashMap::new();
-        parameters.insert("friction".to_string(), "0.6".to_string());
-
-        let resolved = catalog_env.into_scenario_entity(parameters).unwrap();
-
-        assert_eq!(resolved.name.as_literal().unwrap(), "Rainy");
-        let weather = resolved.weather.as_ref().unwrap();
-        assert_eq!(
-            weather.precipitation.as_ref().unwrap().precipitation_type,
-            Value::Literal(crate::types::enums::PrecipitationType::Rain)
-        );
-        assert_eq!(
-            weather.fog.as_ref().unwrap().visual_range,
-            Value::Literal(5000.0)
-        );
-
-        let road_condition = resolved.road_condition.as_ref().unwrap();
-        assert_eq!(
-            road_condition.friction_scale_factor.as_literal().unwrap(),
-            &0.6
-        );
-        assert_eq!(road_condition.wetness, Some(Value::Literal(Wetness::Moist)));
     }
 
     #[test]

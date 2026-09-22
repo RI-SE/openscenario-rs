@@ -65,7 +65,7 @@ pub use parser::choice_groups::{
 };
 pub use expression::evaluate_expression;
 pub use catalog::{
-    CatalogLoader, CatalogManager, CatalogResolver, ParameterSubstitutionEngine, ResolvedCatalog,
+    CatalogLoader, CatalogManager, CatalogResolver, ResolvedCatalog,
 };
 
 #[cfg(feature = "builder")]
@@ -402,8 +402,6 @@ impl CatalogManager {
     pub fn resolve_controller_reference(/* ... */) -> Result<ResolvedCatalog<Controller>>;
     pub fn resolve_pedestrian_reference(/* ... */) -> Result<ResolvedCatalog<Pedestrian>>;
     pub fn discover_and_load_catalogs(&mut self, locations: &CatalogLocations) -> Result<()>;
-    pub fn parameter_engine(&mut self) -> &mut ParameterSubstitutionEngine;
-    pub fn set_global_parameters(&mut self, parameters: HashMap<String, String>) -> Result<()>;
 }
 
 pub struct ResolvedCatalog<T> {
@@ -421,8 +419,10 @@ pub struct ResolutionMetadata {
 Free functions in `catalog`: `extract_scenario_parameters(&Option<ParameterDeclarations>) ->
 HashMap<String, String>` and `resolve_catalog_reference_simple`.
 
-`CatalogResolver` tracks a resolution stack to detect circular dependencies.
-`ParameterSubstitutionEngine` handles substitution into catalog entities.
+`CatalogResolver` tracks a resolution stack to detect circular dependencies. The
+`resolve_*_reference` methods resolve through `parser::resolve`, the pass behind
+`parse_file_resolved`, so a single reference and a reference inside a document follow the same
+rules.
 
 > **Name collision.** Two different types are called `CatalogManager`. The one re-exported at
 > the crate root is `catalog::CatalogManager`, documented above. A second, unrelated

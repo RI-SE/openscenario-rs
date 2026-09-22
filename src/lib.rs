@@ -81,9 +81,7 @@ pub use parser::choice_groups::{
 pub use expression::evaluate_expression;
 
 // Re-export catalog system
-pub use catalog::{
-    CatalogLoader, CatalogManager, CatalogResolver, ParameterSubstitutionEngine, ResolvedCatalog,
-};
+pub use catalog::{CatalogLoader, CatalogManager, CatalogResolver, ResolvedCatalog};
 
 // Feature-gated re-exports
 #[cfg(feature = "builder")]
@@ -181,8 +179,13 @@ pub fn parse_str(xml: &str) -> Result<OpenScenario> {
 /// 9.1, and returns the document with literal values in their place. The name pairs with
 /// [`parse_str`] because the two take the same input and differ only in that step.
 ///
-/// A `<CatalogReference>` is returned unresolved. An undeclared parameter, a failing
-/// expression, or an invalid declaration is an error naming the element path and line.
+/// Each `<CatalogReference>` is replaced by the catalog entry it names, with the reference's
+/// `<ParameterAssignments>` overriding the entry's defaults as section 9.5 describes; see
+/// [`parser::resolve`] for the rules. A string has no location of its own, so a relative
+/// catalog directory is taken relative to the current working directory; use
+/// [`parse_file_resolved`] to take it relative to the scenario file. An undeclared parameter, a
+/// failing expression, an invalid declaration or a catalog entry that cannot be located is an
+/// error naming the element path and line.
 ///
 /// # Example
 /// ```rust
@@ -210,8 +213,9 @@ pub fn parse_str_resolved(xml: &str) -> Result<OpenScenario> {
     parse_from_str_resolved(xml)
 }
 
-/// Parse an OpenSCENARIO file and resolve its parameter references, as [`parse_str_resolved`]
-/// does for a string
+/// Parse an OpenSCENARIO file and resolve its parameter references and catalog references, as
+/// [`parse_str_resolved`] does for a string. A relative catalog directory is taken relative to
+/// the directory holding the file.
 pub fn parse_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     parse_from_file_resolved(path)
 }

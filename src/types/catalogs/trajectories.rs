@@ -454,40 +454,6 @@ impl NurbsKnot {
 /// Catalog entity integration so `CatalogTrajectory` can be used as the entry type
 /// in `CatalogContent` and behind a `CatalogReference`.
 impl crate::types::catalogs::entities::CatalogEntity for CatalogTrajectory {
-    type ResolvedType = crate::types::actions::movement::Trajectory;
-
-    fn into_scenario_entity(
-        self,
-        parameters: std::collections::HashMap<String, String>,
-    ) -> crate::error::Result<Self::ResolvedType> {
-        self.resolve_trajectory(&parameters)
-    }
-
-    fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
-        vec![
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "StartTime".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("0.0".to_string()),
-                description: Some("Start time of the trajectory in seconds".to_string()),
-            },
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "Duration".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("60.0".to_string()),
-                description: Some("Duration of the trajectory in seconds".to_string()),
-            },
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "Closed".to_string(),
-                parameter_type: "Boolean".to_string(),
-                default_value: Some("false".to_string()),
-                description: Some(
-                    "Whether the trajectory is closed (loops back to start)".to_string(),
-                ),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -752,68 +718,6 @@ mod tests {
             .expect("expected polyline shape");
         assert_eq!(polyline.vertices.len(), 2);
         assert_eq!(polyline.vertices[1].time, Some(Value::Literal(5.0)));
-    }
-
-    /// NURBS and clothoid-spline trajectories used to collapse into an empty
-    /// polyline; they now map onto their real `Shape` variants.
-    #[test]
-    fn test_resolve_trajectory_nurbs_and_clothoid() {
-        use crate::types::catalogs::entities::CatalogEntity;
-
-        let control_points = vec![
-            NurbsControlPoint {
-                position: Position::world_origin(),
-                time: None,
-                weight: Some(Value::Literal(1.0)),
-            },
-            NurbsControlPoint {
-                position: Position::world_origin(),
-                time: None,
-                weight: None,
-            },
-        ];
-        let knots = vec![
-            NurbsKnot {
-                value: Value::Literal(0.0),
-            },
-            NurbsKnot {
-                value: Value::Literal(1.0),
-            },
-        ];
-        let nurbs = CatalogNurbs::new(Value::Literal(3), control_points, knots).unwrap();
-
-        let trajectory = CatalogTrajectory::new(
-            "NurbsPath".to_string(),
-            CatalogTrajectoryShape::Nurbs(nurbs),
-        )
-        .into_scenario_entity(std::collections::HashMap::new())
-        .unwrap();
-
-        let resolved_nurbs = trajectory.shape.as_nurbs().expect("expected NURBS shape");
-        assert_eq!(resolved_nurbs.order.as_literal(), Some(&3u32));
-        assert_eq!(resolved_nurbs.control_points.len(), 2);
-        assert_eq!(resolved_nurbs.knots.len(), 2);
-        assert!(trajectory.shape.as_polyline().is_none());
-
-        let clothoid_trajectory = CatalogTrajectory::new(
-            "ClothoidPath".to_string(),
-            CatalogTrajectoryShape::Clothoid(CatalogClothoid::new(
-                Value::Literal(0.1),
-                Value::Literal(0.01),
-                Value::Parameter("segmentLength".to_string()),
-                Position::world_origin(),
-            )),
-        );
-
-        let mut parameters = std::collections::HashMap::new();
-        parameters.insert("segmentLength".to_string(), "42.0".to_string());
-
-        let resolved = clothoid_trajectory
-            .into_scenario_entity(parameters)
-            .unwrap();
-        let clothoid = resolved.shape.as_clothoid().expect("expected clothoid");
-        assert_eq!(clothoid.length.as_literal(), Some(&42.0));
-        assert_eq!(clothoid.curvature.as_literal(), Some(&0.1));
     }
 
     #[test]

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="A controller entry whose parameter a CatalogReference assigns" author="openscenario-rs"/>
+  <Catalog name="Controllers">
+    <Controller name="driver" controllerType="movement">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="aggressiveness" parameterType="double" value="0.5"/>
+      </ParameterDeclarations>
+      <Properties>
+        <Property name="aggressiveness" value="$aggressiveness"/>
+      </Properties>
+    </Controller>
+  </Catalog>
+</OpenSCENARIO>

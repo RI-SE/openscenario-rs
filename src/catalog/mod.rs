@@ -5,24 +5,25 @@
 //! loads those files from the `Directory` paths declared in `CatalogLocations` and
 //! resolves each reference into the content it names.
 
-use crate::types::basic::Directory;
+use crate::types::basic::{Directory, OSString};
 
+use crate::types::catalogs::entities::CatalogEntity;
 use crate::types::catalogs::locations::{
     CatalogLocations, ControllerCatalogLocation, PedestrianCatalogLocation, VehicleCatalogLocation,
 };
 use crate::types::catalogs::references::{
-    ControllerCatalogReference, PedestrianCatalogReference, VehicleCatalogReference,
+    CatalogReference, ControllerCatalogReference, PedestrianCatalogReference,
+    VehicleCatalogReference,
 };
 use crate::types::controllers::Controller;
 use crate::types::entities::vehicle::Vehicle;
+use std::path::{Path, PathBuf};
 
 pub mod loader;
-pub mod parameters;
 pub mod resolver;
 
 // Re-export key types for convenience
 pub use loader::CatalogLoader;
-pub use parameters::ParameterSubstitutionEngine;
 pub use resolver::{CatalogResolver, ResolvedCatalog};
 
 /// Trait for types that can be loaded from catalog directories
@@ -59,10 +60,16 @@ pub trait ScenarioResolver: Sized {
 }
 
 /// Main catalog manager that coordinates loading and resolution
+///
+/// A single reference is resolved by the same code that resolves the references of a whole
+/// document in [`crate::parser::resolve`]: the entry is located by catalog name and entry name,
+/// and its own declarations, overridden by the reference's assignments, are the only
+/// parameters it sees.
 pub struct CatalogManager {
     loader: CatalogLoader,
-    resolver: CatalogResolver,
-    parameter_engine: ParameterSubstitutionEngine,
+    /// The directory a relative catalog directory is taken from; the current working directory
+    /// when unset.
+    base_path: Option<PathBuf>,
 }
 
 impl CatalogManager {
@@ -70,17 +77,15 @@ impl CatalogManager {
     pub fn new() -> Self {
         Self {
             loader: CatalogLoader::new(),
-            resolver: CatalogResolver::new(),
-            parameter_engine: ParameterSubstitutionEngine::new(),
+            base_path: None,
         }
     }
 
     /// Create a catalog manager with a specific base path for relative path resolution
     pub fn with_base_path<P: AsRef<std::path::Path>>(base_path: P) -> Self {
         Self {
-            loader: CatalogLoader::with_base_path(base_path),
-            resolver: CatalogResolver::new(),
-            parameter_engine: ParameterSubstitutionEngine::new(),
+            loader: CatalogLoader::with_base_path(&base_path),
+            base_path: Some(base_path.as_ref().to_path_buf()),
         }
     }
 
@@ -89,7 +94,6 @@ impl CatalogManager {
         &mut self,
         location: &T,
     ) -> Result<T::CatalogType, crate::error::Error> {
-        // Implementation will be added in loader module
         location.load_catalog()
     }
 
@@ -99,85 +103,7 @@ impl CatalogManager {
         reference: &VehicleCatalogReference,
         location: &VehicleCatalogLocation,
     ) -> Result<ResolvedCatalog<Vehicle>, crate::error::Error> {
-        use crate::types::catalogs::entities::CatalogEntity;
-
-        // Start resolution tracking for circular dependency detection
-        let reference_key = format!(
-            "vehicle:{}:{}",
-            reference
-                .catalog_name
-                .as_literal()
-                .unwrap_or(&"unknown".to_string()),
-            reference
-                .entry_name
-                .as_literal()
-                .unwrap_or(&"unknown".to_string())
-        );
-        self.resolver.begin_resolution(&reference_key)?;
-
-        // Load catalog files from the location and track file paths
-        let catalog_files = self.loader.discover_catalog_files(&location.directory)?;
-        let mut catalog_vehicle = None;
-        let mut catalog_file_path = String::new();
-
-        // Find the specific vehicle across all catalog files
-        let entry_name = reference.entry_name.as_literal().ok_or_else(|| {
-            crate::error::Error::catalog_error("Cannot resolve parameterized entry names yet")
-        })?;
-
-        for file_path in catalog_files {
-            let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
-            for vehicle in catalog.vehicles() {
-                if vehicle.entity_name() == entry_name {
-                    catalog_vehicle = Some(vehicle.clone());
-                    catalog_file_path = file_path.to_string_lossy().to_string();
-                    break;
-                }
-            }
-            if catalog_vehicle.is_some() {
-                break;
-            }
-        }
-
-        let catalog_vehicle = catalog_vehicle.ok_or_else(|| {
-            crate::error::Error::catalog_error(&format!(
-                "Vehicle '{}' not found in catalog",
-                entry_name
-            ))
-        })?;
-
-        // Resolve parameters if any
-        let mut parameters = std::collections::HashMap::new();
-        if let Some(assignments) = &reference.parameter_assignments {
-            for assignment in assignments.assignments.iter() {
-                let resolved_name = assignment.parameter_ref.as_literal().ok_or_else(|| {
-                    crate::error::Error::catalog_error(
-                        "Cannot resolve parameterized parameter names",
-                    )
-                })?;
-                let resolved_value = assignment.value.as_literal().ok_or_else(|| {
-                    crate::error::Error::catalog_error(
-                        "Cannot resolve parameterized parameter values",
-                    )
-                })?;
-                parameters.insert(resolved_name.clone(), resolved_value.clone());
-            }
-        }
-
-        // Convert catalog vehicle to scenario vehicle
-        let resolved_vehicle = catalog_vehicle
-            .clone()
-            .into_scenario_entity(parameters.clone())?;
-
-        // End resolution tracking
-        self.resolver.end_resolution(&reference_key);
-
-        Ok(ResolvedCatalog::with_parameters(
-            resolved_vehicle,
-            catalog_file_path,
-            entry_name.clone(),
-            parameters,
-        ))
+        self.resolve_reference(reference, "VehicleCatalog", &location.directory)
     }
 
     /// Resolve a controller catalog reference to an actual controller
@@ -186,85 +112,7 @@ impl CatalogManager {
         reference: &ControllerCatalogReference,
         location: &ControllerCatalogLocation,
     ) -> Result<ResolvedCatalog<Controller>, crate::error::Error> {
-        use crate::types::catalogs::entities::CatalogEntity;
-
-        // Start resolution tracking
-        let reference_key = format!(
-            "controller:{}:{}",
-            reference
-                .catalog_name
-                .as_literal()
-                .unwrap_or(&"unknown".to_string()),
-            reference
-                .entry_name
-                .as_literal()
-                .unwrap_or(&"unknown".to_string())
-        );
-        self.resolver.begin_resolution(&reference_key)?;
-
-        // Load catalog files from the location and track file paths
-        let catalog_files = self.loader.discover_catalog_files(&location.directory)?;
-        let mut catalog_controller = None;
-        let mut catalog_file_path = String::new();
-
-        // Find the specific controller across all catalog files
-        let entry_name = reference.entry_name.as_literal().ok_or_else(|| {
-            crate::error::Error::catalog_error("Cannot resolve parameterized entry names yet")
-        })?;
-
-        for file_path in catalog_files {
-            let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
-            for controller in catalog.controllers() {
-                if controller.entity_name() == entry_name {
-                    catalog_controller = Some(controller.clone());
-                    catalog_file_path = file_path.to_string_lossy().to_string();
-                    break;
-                }
-            }
-            if catalog_controller.is_some() {
-                break;
-            }
-        }
-
-        let catalog_controller = catalog_controller.ok_or_else(|| {
-            crate::error::Error::catalog_error(&format!(
-                "Controller '{}' not found in catalog",
-                entry_name
-            ))
-        })?;
-
-        // Resolve parameters
-        let mut parameters = std::collections::HashMap::new();
-        if let Some(assignments) = &reference.parameter_assignments {
-            for assignment in assignments.assignments.iter() {
-                let resolved_name = assignment.parameter_ref.as_literal().ok_or_else(|| {
-                    crate::error::Error::catalog_error(
-                        "Cannot resolve parameterized parameter names",
-                    )
-                })?;
-                let resolved_value = assignment.value.as_literal().ok_or_else(|| {
-                    crate::error::Error::catalog_error(
-                        "Cannot resolve parameterized parameter values",
-                    )
-                })?;
-                parameters.insert(resolved_name.clone(), resolved_value.clone());
-            }
-        }
-
-        // Convert catalog controller to scenario controller
-        let resolved_controller = catalog_controller
-            .clone()
-            .into_scenario_entity(parameters.clone())?;
-
-        // End resolution tracking
-        self.resolver.end_resolution(&reference_key);
-
-        Ok(ResolvedCatalog::with_parameters(
-            resolved_controller,
-            catalog_file_path,
-            entry_name.clone(),
-            parameters,
-        ))
+        self.resolve_reference(reference, "ControllerCatalog", &location.directory)
     }
 
     /// Resolve a pedestrian catalog reference to an actual pedestrian
@@ -274,84 +122,59 @@ impl CatalogManager {
         location: &PedestrianCatalogLocation,
     ) -> Result<ResolvedCatalog<crate::types::entities::pedestrian::Pedestrian>, crate::error::Error>
     {
-        use crate::types::catalogs::entities::CatalogEntity;
+        self.resolve_reference(reference, "PedestrianCatalog", &location.directory)
+    }
 
-        // Start resolution tracking
-        let reference_key = format!(
-            "pedestrian:{}:{}",
-            reference
-                .catalog_name
-                .as_literal()
-                .unwrap_or(&"unknown".to_string()),
-            reference
-                .entry_name
-                .as_literal()
-                .unwrap_or(&"unknown".to_string())
-        );
-        self.resolver.begin_resolution(&reference_key)?;
-
-        // Load catalog files from the location and track file paths
-        let catalog_files = self.loader.discover_catalog_files(&location.directory)?;
-        let mut catalog_pedestrian = None;
-        let mut catalog_file_path = String::new();
-
-        // Find the specific pedestrian across all catalog files
-        let entry_name = reference.entry_name.as_literal().ok_or_else(|| {
-            crate::error::Error::catalog_error("Cannot resolve parameterized entry names yet")
-        })?;
-
-        for file_path in catalog_files {
-            let catalog = self.loader.load_and_parse_catalog_file(&file_path)?;
-            for pedestrian in catalog.pedestrians() {
-                if pedestrian.entity_name() == entry_name {
-                    catalog_pedestrian = Some(pedestrian.clone());
-                    catalog_file_path = file_path.to_string_lossy().to_string();
-                    break;
-                }
-            }
-            if catalog_pedestrian.is_some() {
-                break;
+    /// Resolve `reference` against the catalogs in `directory`, the directory of the
+    /// `CatalogLocations` child named `location`, and read the resolved entry as `R`.
+    ///
+    /// A reference built outside a document has no enclosing scope, so its names and values
+    /// must be literal.
+    fn resolve_reference<T, R>(
+        &self,
+        reference: &CatalogReference<T>,
+        location: &str,
+        directory: &Directory,
+    ) -> Result<ResolvedCatalog<R>, crate::error::Error>
+    where
+        T: CatalogEntity,
+        R: serde::de::DeserializeOwned,
+    {
+        let catalog_name = literal(&reference.catalog_name, "catalogName")?;
+        let entry_name = literal(&reference.entry_name, "entryName")?;
+        let mut assignments = Vec::new();
+        if let Some(list) = &reference.parameter_assignments {
+            for assignment in &list.assignments {
+                assignments.push((
+                    literal(&assignment.parameter_ref, "parameterRef")?,
+                    literal(&assignment.value, "value")?,
+                ));
             }
         }
+        let directory = literal(&directory.path, "Directory path")?;
+        let directory = match &self.base_path {
+            Some(base) => base.join(&directory),
+            None => Path::new(&directory).to_path_buf(),
+        };
 
-        let catalog_pedestrian = catalog_pedestrian.ok_or_else(|| {
+        let (xml, file) = crate::parser::resolve::resolve_catalog_entry(
+            location,
+            &directory,
+            &catalog_name,
+            &entry_name,
+            &assignments,
+        )?;
+        let entity = quick_xml::de::from_str(&xml).map_err(|e| {
             crate::error::Error::catalog_error(&format!(
-                "Pedestrian '{}' not found in catalog",
-                entry_name
+                "resolved entry `{}` of catalog `{}` could not be read: {}",
+                entry_name, catalog_name, e
             ))
         })?;
-
-        // Resolve parameters
-        let mut parameters = std::collections::HashMap::new();
-        if let Some(assignments) = &reference.parameter_assignments {
-            for assignment in assignments.assignments.iter() {
-                let resolved_name = assignment.parameter_ref.as_literal().ok_or_else(|| {
-                    crate::error::Error::catalog_error(
-                        "Cannot resolve parameterized parameter names",
-                    )
-                })?;
-                let resolved_value = assignment.value.as_literal().ok_or_else(|| {
-                    crate::error::Error::catalog_error(
-                        "Cannot resolve parameterized parameter values",
-                    )
-                })?;
-                parameters.insert(resolved_name.clone(), resolved_value.clone());
-            }
-        }
-
-        // Convert catalog pedestrian to scenario pedestrian
-        let resolved_pedestrian = catalog_pedestrian
-            .clone()
-            .into_scenario_entity(parameters.clone())?;
-
-        // End resolution tracking
-        self.resolver.end_resolution(&reference_key);
-
         Ok(ResolvedCatalog::with_parameters(
-            resolved_pedestrian,
-            catalog_file_path,
-            entry_name.clone(),
-            parameters,
+            entity,
+            file.to_string_lossy().into_owned(),
+            entry_name,
+            assignments.into_iter().collect(),
         ))
     }
 
@@ -403,19 +226,19 @@ impl CatalogManager {
 
         Ok(())
     }
+}
 
-    /// Get access to the parameter engine for custom parameter operations
-    pub fn parameter_engine(&mut self) -> &mut ParameterSubstitutionEngine {
-        &mut self.parameter_engine
-    }
-
-    /// Set global parameters that will be used for all catalog resolutions
-    pub fn set_global_parameters(
-        &mut self,
-        parameters: std::collections::HashMap<String, String>,
-    ) -> Result<(), crate::error::Error> {
-        self.parameter_engine.set_parameters(parameters)
-    }
+/// The literal text of `value`, or an error naming `attribute` when it is a parameter
+/// reference or an expression, which only a document scope could resolve.
+fn literal(value: &OSString, attribute: &str) -> Result<String, crate::error::Error> {
+    value.as_literal().cloned().ok_or_else(|| {
+        crate::error::Error::catalog_error(&format!(
+            "{} `{}` is a parameter reference, and a reference resolved on its own has no \
+             enclosing scope to resolve it in; resolve the whole document with \
+             `parse_file_resolved` instead",
+            attribute, value
+        ))
+    })
 }
 
 impl Default for CatalogManager {
@@ -444,25 +267,6 @@ mod tests {
     fn test_catalog_manager_default() {
         let _manager = CatalogManager::default();
         // Default manager created successfully
-    }
-
-    #[test]
-    fn test_catalog_manager_parameter_engine() {
-        let mut manager = CatalogManager::new();
-
-        // Set global parameters
-        let mut params = std::collections::HashMap::new();
-        params.insert("GlobalParam".to_string(), "GlobalValue".to_string());
-        manager.set_global_parameters(params).unwrap();
-
-        // Check parameter engine has the parameter
-        assert_eq!(
-            manager
-                .parameter_engine()
-                .get_parameter("GlobalParam")
-                .unwrap(),
-            "GlobalValue"
-        );
     }
 }
 

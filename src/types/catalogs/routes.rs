@@ -184,84 +184,9 @@ impl RouteParameterAssignment {
     }
 }
 
-/// Converts canonical `basic::ParameterDeclarations` into the
-/// `routing::ParameterDeclarations` used by the scenario `Route` type.
-///
-/// `routing::ValueConstraint`/`ValueConstraintGroup` are re-exports of the
-/// `basic` types, so constraint groups carry over unchanged.
-fn route_parameter_declarations(
-    declarations: ParameterDeclarations,
-) -> crate::error::Result<crate::types::routing::ParameterDeclarations> {
-    let parameter_declarations = declarations
-        .parameter_declarations
-        .into_iter()
-        .map(|decl| {
-            Ok(crate::types::routing::ParameterDeclaration {
-                name: decl.name,
-                parameter_type: decl.parameter_type,
-                value: decl.value,
-                constraint_groups: decl.constraint_groups,
-            })
-        })
-        .collect::<crate::error::Result<Vec<_>>>()?;
-
-    Ok(crate::types::routing::ParameterDeclarations {
-        parameter_declarations,
-    })
-}
-
 /// Catalog entity integration so `CatalogRoute` can be used as the entry type
 /// in `CatalogContent` and behind a `CatalogReference`.
 impl crate::types::catalogs::entities::CatalogEntity for CatalogRoute {
-    type ResolvedType = crate::types::routing::Route;
-
-    fn into_scenario_entity(
-        self,
-        parameters: std::collections::HashMap<String, String>,
-    ) -> crate::error::Result<Self::ResolvedType> {
-        let waypoints = self
-            .waypoints
-            .into_iter()
-            .map(|w| crate::types::routing::Waypoint {
-                position: w.position,
-                route_strategy: w.route_strategy,
-            })
-            .collect::<Vec<_>>();
-
-        Ok(crate::types::routing::Route {
-            name: OSString::literal(self.name.resolve(&parameters)?),
-            closed: Boolean::literal(self.closed.resolve(&parameters)?),
-            parameter_declarations: self
-                .parameter_declarations
-                .map(route_parameter_declarations)
-                .transpose()?,
-            waypoints: crate::types::basic::MinVec::new(waypoints)?,
-        })
-    }
-
-    fn parameter_schema() -> Vec<crate::types::catalogs::entities::ParameterDefinition> {
-        vec![
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "StartRoadId".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("road_1".to_string()),
-                description: Some("ID of the starting road".to_string()),
-            },
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "EndRoadId".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("road_2".to_string()),
-                description: Some("ID of the ending road".to_string()),
-            },
-            crate::types::catalogs::entities::ParameterDefinition {
-                name: "Closed".to_string(),
-                parameter_type: "Boolean".to_string(),
-                default_value: Some("false".to_string()),
-                description: Some("Whether the route is closed (loops back to start)".to_string()),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -409,35 +334,6 @@ mod tests {
             assignments.assignments[1].parameter_ref,
             Value::Parameter(_)
         ));
-    }
-
-    #[test]
-    fn test_catalog_route_into_scenario_entity() {
-        use crate::types::catalogs::entities::CatalogEntity;
-
-        let waypoints = vec![
-            RouteWaypoint::with_strategy(Position::world_origin(), RouteStrategy::Shortest),
-            RouteWaypoint::with_strategy(Position::world_origin(), RouteStrategy::Fastest),
-        ];
-        let mut route = CatalogRoute::new("ResolvedRoute".to_string(), waypoints).unwrap();
-        route.closed = Value::Parameter("isClosed".to_string());
-
-        let mut parameters = std::collections::HashMap::new();
-        parameters.insert("isClosed".to_string(), "true".to_string());
-
-        let resolved = route.into_scenario_entity(parameters).unwrap();
-
-        assert_eq!(resolved.name.as_literal().unwrap(), "ResolvedRoute");
-        assert_eq!(resolved.closed.as_literal(), Some(&true));
-        assert_eq!(resolved.waypoints.len(), 2);
-        assert_eq!(
-            resolved.waypoints[0].route_strategy,
-            Value::Literal(RouteStrategy::Shortest)
-        );
-        assert_eq!(
-            resolved.waypoints[1].route_strategy,
-            Value::Literal(RouteStrategy::Fastest)
-        );
     }
 
     #[test]

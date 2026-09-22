@@ -638,11 +638,10 @@ prior "done" status.
 fabricating:**
 
 - `catalog/loader.rs` `CatalogLoader`, `catalog/mod.rs` `CatalogManager`, `catalog/resolver.rs`
-  `CatalogManager`/`CatalogResolver`, `catalog/parameters.rs` `ParameterSubstitutionEngine`,
+  `CatalogManager`/`CatalogResolver`,
   `builder/catalog.rs` `CatalogEntityBuilder`, `builder/scenario.rs`
   `ScenarioBuilder<Empty>` — all pure delegations to a non-fabricating `::new()`; no field is
-  invented, only empty collections/`None`/a fixed regex pattern used purely as an implementation
-  detail (`ParameterSubstitutionEngine`'s parameter-placeholder regex), not scenario content.
+  invented, only empty collections/`None`.
 - `parser/validation.rs` `ValidationConfig`/`ScenarioValidator`/`ValidationResult`,
   `parser/choice_groups.rs` `ChoiceGroupRegistry` — non-XSD tooling types (validation feature
   toggles, a zero-field parser registry, an empty validation-run result). These describe the

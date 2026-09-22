@@ -25,43 +25,134 @@
 //! * Attributes of a `<ParameterDeclaration>` are declarations, not uses, and are resolved only
 //!   through the scope. The name attribute of an element referring to a parameter by name, such
 //!   as `parameterRef`, carries no `$` and is a literal to the pass.
-//! * A `<CatalogReference>` and its whole subtree are passed through unchanged. Its
-//!   `<ParameterAssignments>` assign values to the referenced catalog entry's parameters, which
-//!   is resolution across two documents and is not done here.
+//! * A `<CatalogReference>` is replaced by the catalog entry it names, resolved with the
+//!   reference's `<ParameterAssignments>`, as the next section describes.
+//!
+//! # Catalog references
+//!
+//! Section 9.6 resolves a reference "by locating the catalog by name and the entry within this
+//! catalog by its entry name", and section 9.5 gives the parameters of that one use: "any
+//! reference to "$x" should be replaced with "0", and any reference to "$y" should be replaced
+//! with the default value of "7"". The resolved document says the same thing in XML. Each
+//! `<CatalogReference>` is replaced in place by a copy of the entry, whose own references are
+//! resolved for that use. Every element that holds a `<CatalogReference>` also accepts the
+//! entry element in the same position, so the result is read by the typed parser like a
+//! document that never used a catalog.
+//!
+//! * **Locating the entry.** The element holding the reference fixes the kind of entry: a
+//!   `<ManeuverGroup>` takes a `Maneuver` from the `ManeuverCatalog` directory, a
+//!   `<ScenarioObject>` a `Vehicle`, `Pedestrian` or `MiscObject` from the matching directories,
+//!   and so on. Every `.xosc` file in such a directory whose `<Catalog>` carries the reference's
+//!   `catalogName` is searched. A relative directory is taken relative to the base directory
+//!   given to [`resolve_parameters`], which for a scenario file is the file's own directory.
+//!   No entry, or more than one, is an error.
+//! * **The entry's scope.** Section 9.5: "No other parameters may be referenced from within the
+//!   catalog." The entry is therefore resolved in a scope of its own, holding nothing but its
+//!   own declarations, and a reference to a parameter of the referencing document fails there.
+//! * **Assignments.** An assignment's attributes belong to the referencing document, so a
+//!   `$name` in its `value` is resolved in the document's scope at the reference. The entry's
+//!   declarations are then read in order, and a declaration that an assignment names takes the
+//!   assigned value in place of its default. Thus, a later default computed from an assigned
+//!   parameter sees the assigned value. The model reference for `ParameterAssignment` defines
+//!   `parameterRef` as the "name of the parameter that must be declared in the catalog", so an
+//!   assignment naming anything else is an error, as are two assignments to one parameter,
+//!   since the specification gives no rule for choosing between them. An assigned value is
+//!   checked against the declared `parameterType` like a default.
+//! * **The written entry** keeps its `<ParameterDeclarations>`, holding the values that were
+//!   used, so the resolved document still says what each instance was given.
+//! * **Nested references.** A reference inside an entry, such as a vehicle's trailer, is
+//!   resolved in the entry's scope and located through the same catalog directories. A
+//!   reference that reaches an entry already being resolved is an error, since resolving it
+//!   would never end.
 //!
 //! Every error names the element path and the source line of the element that failed, since
 //! the name of an undeclared parameter alone does not locate it in a long scenario.
 
+use crate::catalog::CatalogResolver;
 use crate::error::{Error, Result};
 use crate::types::scope::ParameterScope;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, Writer};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 /// Resolve every parameter reference and expression in an OpenSCENARIO document against the
-/// document's own `<ParameterDeclarations>`, returning the resolved XML.
+/// document's own `<ParameterDeclarations>`, replacing each `<CatalogReference>` by the entry
+/// it names, and return the resolved XML.
+///
+/// `base_dir` is the directory a relative catalog `Directory` path is taken from; for a
+/// scenario read from a file, pass the file's directory.
 ///
 /// See the [module documentation](self) for the rules. The output is the input with attribute
-/// values replaced; comments, whitespace and the unchanged attributes are written back as read.
-pub fn resolve_parameters(xml: &str) -> Result<String> {
+/// values replaced and catalog references expanded; comments, whitespace and the unchanged
+/// attributes are written back as read.
+pub fn resolve_parameters(xml: &str, base_dir: &Path) -> Result<String> {
     let mut document = read_tree(xml)?;
+    let mut catalogs = Catalogs::new(base_dir);
     let mut scope = ParameterScope::new();
     let mut path = Vec::new();
     for node in &mut document {
         if let Node::Element(root) = node {
-            resolve_element(root, &mut scope, &mut path, true)?;
+            resolve_element(root, &mut catalogs, &mut scope, &mut path, Frame::Root)?;
         }
     }
     write_tree(&document)
 }
 
+/// Resolve one catalog entry for a single reference made outside any document, and return the
+/// entry's resolved XML with the catalog file it came from.
+///
+/// `location` names the `CatalogLocations` child whose directory is searched, such as
+/// `VehicleCatalog`, and `assignments` are the reference's `(parameterRef, value)` pairs,
+/// which must already be literal since no document scope surrounds them. The rules are the
+/// ones the [module documentation](self) gives for a reference inside a document.
+pub(crate) fn resolve_catalog_entry(
+    location: &str,
+    directory: &Path,
+    catalog_name: &str,
+    entry_name: &str,
+    assignments: &[(String, String)],
+) -> Result<(String, PathBuf)> {
+    let mut kinds: Vec<(&'static str, &'static str)> = ENTRY_KINDS
+        .iter()
+        .flat_map(|(_, kinds)| kinds.iter().copied())
+        .filter(|(loc, _)| *loc == location)
+        .collect();
+    // Several holders share one list of entry kinds, so the same pair can appear more than once.
+    kinds.dedup();
+    if kinds.is_empty() {
+        return Err(Error::catalog_error(&format!(
+            "`{}` is not a catalog location",
+            location
+        )));
+    }
+    let mut catalogs = Catalogs::new(Path::new("."));
+    catalogs
+        .locations
+        .insert(kinds[0].0, directory.to_path_buf());
+    let assignments = assignments
+        .iter()
+        .map(|(name, value)| Assignment {
+            name: name.clone(),
+            value: value.clone(),
+        })
+        .collect();
+    let mut path = Vec::new();
+    let (entry, file) =
+        catalogs.instantiate(&kinds, catalog_name, entry_name, assignments, &mut path)?;
+    Ok((write_tree(&[Node::Element(entry)])?, file))
+}
+
 /// One node of the document tree. Everything that is not an element is kept as the event it
 /// was read as, so it can be written back unchanged.
+#[derive(Clone)]
 enum Node {
     Element(Element),
     Other(Event<'static>),
 }
 
+#[derive(Clone)]
 struct Element {
     start: BytesStart<'static>,
     /// Written as `<Name/>` when true, `<Name>...</Name>` otherwise.
@@ -138,16 +229,321 @@ impl Element {
 const PARAMETER_DECLARATIONS: &str = "ParameterDeclarations";
 const PARAMETER_DECLARATION: &str = "ParameterDeclaration";
 const CATALOG_REFERENCE: &str = "CatalogReference";
+const CATALOG_LOCATIONS: &str = "CatalogLocations";
+
+/// For each element that can hold a `<CatalogReference>` (`Schema/OpenSCENARIO.xsd`), the
+/// entries it accepts, as pairs of the `CatalogLocations` child naming the directory and the
+/// entry's element name. `Trailer` is the inner element of that name, whose type is
+/// `ScenarioObject`.
+const ENTRY_KINDS: &[(&str, &[(&str, &str)])] = &[
+    ("ScenarioObject", ENTITY_ENTRIES),
+    ("ScenarioObjectTemplate", ENTITY_ENTRIES),
+    ("Trailer", ENTITY_ENTRIES),
+    ("AssignControllerAction", CONTROLLER_ENTRIES),
+    ("ControllerDistributionEntry", CONTROLLER_ENTRIES),
+    ("ObjectController", CONTROLLER_ENTRIES),
+    ("AssignRouteAction", ROUTE_ENTRIES),
+    ("RouteRef", ROUTE_ENTRIES),
+    ("FollowTrajectoryAction", TRAJECTORY_ENTRIES),
+    ("TrajectoryRef", TRAJECTORY_ENTRIES),
+    (
+        "EnvironmentAction",
+        &[("EnvironmentCatalog", "Environment")],
+    ),
+    ("ManeuverGroup", &[("ManeuverCatalog", "Maneuver")]),
+];
+const ENTITY_ENTRIES: &[(&str, &str)] = &[
+    ("VehicleCatalog", "Vehicle"),
+    ("PedestrianCatalog", "Pedestrian"),
+    ("MiscObjectCatalog", "MiscObject"),
+];
+const CONTROLLER_ENTRIES: &[(&str, &str)] = &[("ControllerCatalog", "Controller")];
+const ROUTE_ENTRIES: &[(&str, &str)] = &[("RouteCatalog", "Route")];
+const TRAJECTORY_ENTRIES: &[(&str, &str)] = &[("TrajectoryCatalog", "Trajectory")];
+
+/// Where an element sits, which decides where its declarations go.
+#[derive(Clone, Copy)]
+enum Frame<'a> {
+    /// The document's root element, whose declarations are the global ones.
+    Root,
+    /// Any element below the root, which opens a frame of its own.
+    Nested,
+    /// A catalog entry being instantiated. It is the root of its own scope, and its
+    /// declarations take the reference's assignments.
+    Entry(&'a [Assignment]),
+}
+
+/// One `<ParameterAssignment>` of a reference, with both attributes already resolved in the
+/// referencing scope.
+#[derive(Clone)]
+struct Assignment {
+    name: String,
+    value: String,
+}
+
+/// The catalog directories a document declares, and the catalog files read from them.
+struct Catalogs {
+    base_dir: PathBuf,
+    /// Directory per `CatalogLocations` child, such as `VehicleCatalog`.
+    locations: HashMap<&'static str, PathBuf>,
+    /// The catalog documents of each directory, read on first use.
+    loaded: HashMap<PathBuf, Vec<CatalogDocument>>,
+    /// The entries being instantiated, so that a reference reaching one of them again is
+    /// refused rather than followed forever.
+    resolving: CatalogResolver,
+}
+
+/// One catalog file: its path, its `<Catalog name>` and its entries.
+struct CatalogDocument {
+    path: PathBuf,
+    name: String,
+    entries: Vec<Element>,
+}
+
+impl Catalogs {
+    fn new(base_dir: &Path) -> Self {
+        Self {
+            base_dir: base_dir.to_path_buf(),
+            locations: HashMap::new(),
+            loaded: HashMap::new(),
+            resolving: CatalogResolver::new(),
+        }
+    }
+
+    /// Record the directories of a resolved `<CatalogLocations>`.
+    fn record_locations(&mut self, locations: &Element) -> Result<()> {
+        for child in &locations.children {
+            let Node::Element(location) = child else {
+                continue;
+            };
+            let name = location.name();
+            let Some(key) = ENTRY_KINDS
+                .iter()
+                .flat_map(|(_, kinds)| kinds.iter())
+                .map(|(loc, _)| *loc)
+                .find(|loc| *loc == name)
+            else {
+                continue;
+            };
+            for grandchild in &location.children {
+                if let Node::Element(directory) = grandchild {
+                    if directory.name() == "Directory" {
+                        if let Some(path) = directory.attribute("path")? {
+                            self.locations.insert(key, self.base_dir.join(path));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// The catalog documents in `directory`, reading them on first use. A file whose root holds
+    /// no `<Catalog>` is some other kind of document and is skipped; a file that is not
+    /// well-formed XML is an error, since skipping it could hide the entry being looked for.
+    fn documents(&mut self, directory: &Path) -> Result<&[CatalogDocument]> {
+        if !self.loaded.contains_key(directory) {
+            let listing = std::fs::read_dir(directory).map_err(|e| {
+                Error::catalog_error(&format!(
+                    "cannot read catalog directory {}: {}",
+                    directory.display(),
+                    e
+                ))
+            })?;
+            let mut files: Vec<PathBuf> = listing
+                .filter_map(|entry| entry.ok().map(|e| e.path()))
+                .filter(|p| p.is_file() && p.extension().is_some_and(|x| x == "xosc"))
+                .collect();
+            files.sort();
+            let mut documents = Vec::new();
+            for file in files {
+                let text = std::fs::read_to_string(&file)
+                    .map_err(|e| Error::file_read_error(&file.to_string_lossy(), &e.to_string()))?;
+                let tree = read_tree(text.trim_start_matches('\u{feff}'))
+                    .map_err(|e| e.with_context(&format!("catalog file {}", file.display())))?;
+                for node in tree {
+                    let Node::Element(root) = node else {
+                        continue;
+                    };
+                    for child in root.children {
+                        let Node::Element(catalog) = child else {
+                            continue;
+                        };
+                        if catalog.name() != "Catalog" {
+                            continue;
+                        }
+                        let name = catalog.attribute("name")?.unwrap_or_default();
+                        let entries = catalog
+                            .children
+                            .into_iter()
+                            .filter_map(|n| match n {
+                                Node::Element(e) => Some(e),
+                                Node::Other(_) => None,
+                            })
+                            .collect();
+                        documents.push(CatalogDocument {
+                            path: file.clone(),
+                            name,
+                            entries,
+                        });
+                    }
+                }
+            }
+            self.loaded.insert(directory.to_path_buf(), documents);
+        }
+        Ok(&self.loaded[directory])
+    }
+
+    /// Replace the reference `reference`, held by an element named `holder`, by the entry it
+    /// names. `scope` is the referencing scope, in which the reference's own attributes resolve.
+    fn expand(
+        &mut self,
+        reference: &mut Element,
+        holder: &str,
+        scope: &ParameterScope,
+        path: &mut Vec<String>,
+    ) -> Result<Element> {
+        path.push(reference.segment());
+        resolve_subtree_attributes(reference, scope, path)?;
+        let catalog_name = reference.attribute("catalogName")?.unwrap_or_default();
+        let entry_name = reference.attribute("entryName")?.unwrap_or_default();
+        let mut assignments = Vec::new();
+        for child in &reference.children {
+            let Node::Element(list) = child else { continue };
+            for grandchild in &list.children {
+                let Node::Element(assignment) = grandchild else {
+                    continue;
+                };
+                assignments.push(Assignment {
+                    name: assignment.attribute("parameterRef")?.unwrap_or_default(),
+                    value: assignment.attribute("value")?.unwrap_or_default(),
+                });
+            }
+        }
+        let kinds = ENTRY_KINDS
+            .iter()
+            .find(|(name, _)| *name == holder)
+            .map(|(_, kinds)| *kinds)
+            .ok_or_else(|| {
+                reference.xml_error(&format!(
+                    "a CatalogReference inside <{}> names no known kind of catalog entry",
+                    holder
+                ))
+            })?;
+        let (entry, _) = self
+            .instantiate(kinds, &catalog_name, &entry_name, assignments, path)
+            .map_err(|e| {
+                e.with_context(&format!("/{} (line {})", path.join("/"), reference.line))
+            })?;
+        path.pop();
+        Ok(entry)
+    }
+
+    /// Find the entry `entry_name` of the catalog `catalog_name` among `kinds`, and resolve a
+    /// copy of it with `assignments` in a scope of its own. Returns the resolved entry and the
+    /// catalog file holding it.
+    fn instantiate(
+        &mut self,
+        kinds: &[(&'static str, &'static str)],
+        catalog_name: &str,
+        entry_name: &str,
+        assignments: Vec<Assignment>,
+        path: &mut Vec<String>,
+    ) -> Result<(Element, PathBuf)> {
+        let mut searched = Vec::new();
+        let mut found: Vec<(Element, PathBuf)> = Vec::new();
+        for (location, element_name) in kinds {
+            let Some(directory) = self.locations.get(location).cloned() else {
+                continue;
+            };
+            searched.push(format!("{} {}", location, directory.display()));
+            for document in self.documents(&directory)? {
+                if document.name != catalog_name {
+                    continue;
+                }
+                for entry in &document.entries {
+                    if entry.name() == *element_name
+                        && entry.attribute("name")?.as_deref() == Some(entry_name)
+                    {
+                        found.push((entry.clone(), document.path.clone()));
+                    }
+                }
+            }
+        }
+        let expected: Vec<&str> = kinds.iter().map(|(location, _)| *location).collect();
+        let (mut entry, file) = match found.len() {
+            1 => found.pop().expect("one entry"),
+            0 if searched.is_empty() => {
+                return Err(Error::catalog_error(&format!(
+                    "entry `{}` of catalog `{}` cannot be located: CatalogLocations declares \
+                     none of {}",
+                    entry_name,
+                    catalog_name,
+                    expected.join(", ")
+                )))
+            }
+            0 => {
+                return Err(Error::catalog_error(&format!(
+                    "catalog `{}` has no entry `{}` (searched {})",
+                    catalog_name,
+                    entry_name,
+                    searched.join("; ")
+                )))
+            }
+            _ => {
+                let files: Vec<String> = found
+                    .iter()
+                    .map(|(_, file)| file.display().to_string())
+                    .collect();
+                return Err(Error::catalog_error(&format!(
+                    "entry `{}` of catalog `{}` is defined {} times, in {}",
+                    entry_name,
+                    catalog_name,
+                    found.len(),
+                    files.join(", ")
+                )));
+            }
+        };
+
+        let key = format!("{}/{}", catalog_name, entry_name);
+        if self.resolving.is_resolving(&key) {
+            return Err(Error::circular_dependency(&format!(
+                "entry `{}` of catalog `{}` references itself through {}",
+                entry_name,
+                catalog_name,
+                path.join("/")
+            )));
+        }
+        self.resolving.begin_resolution(&key)?;
+        let mut scope = ParameterScope::new();
+        let result = resolve_element(
+            &mut entry,
+            self,
+            &mut scope,
+            path,
+            Frame::Entry(&assignments),
+        );
+        self.resolving.end_resolution(&key);
+        result.map_err(|e| match e {
+            Error::CircularDependency { .. } => e,
+            e => e.with_context(&format!(
+                "entry `{}` of catalog `{}` ({})",
+                entry_name,
+                catalog_name,
+                file.display()
+            )),
+        })?;
+        Ok((entry, file))
+    }
+}
 
 fn resolve_element(
     element: &mut Element,
+    catalogs: &mut Catalogs,
     scope: &mut ParameterScope,
     path: &mut Vec<String>,
-    is_root: bool,
+    frame: Frame<'_>,
 ) -> Result<()> {
-    if element.name() == CATALOG_REFERENCE {
-        return Ok(());
-    }
     path.push(element.segment());
 
     let declarations = element
@@ -155,24 +551,42 @@ fn resolve_element(
         .iter()
         .position(|child| matches!(child, Node::Element(e) if e.name() == PARAMETER_DECLARATIONS));
     // The root element's declarations are the document's globals, which live in the scope's
-    // root frame; every other declaring element opens a frame of its own.
-    let pushed = declarations.is_some() && !is_root;
+    // root frame; a catalog entry is the root of a scope of its own. Every other declaring
+    // element opens a frame.
+    let pushed = declarations.is_some() && matches!(frame, Frame::Nested);
     if pushed {
         scope.push_frame();
     }
-    if let Some(index) = declarations {
-        if let Node::Element(declarations) = &mut element.children[index] {
-            declare(declarations, scope, path)?;
+    let assignments = match frame {
+        Frame::Entry(assignments) => assignments,
+        Frame::Root | Frame::Nested => &[],
+    };
+    match declarations {
+        Some(index) => {
+            if let Node::Element(declarations) = &mut element.children[index] {
+                declare(declarations, scope, path, assignments)?;
+            }
         }
+        None => check_assignments(assignments, &[])?,
     }
 
     resolve_attributes(element, scope, path)?;
+    let holder = element.name();
     for (index, child) in element.children.iter_mut().enumerate() {
         if Some(index) == declarations {
             continue;
         }
-        if let Node::Element(child) = child {
-            resolve_element(child, scope, path, false)?;
+        let Node::Element(child) = child else {
+            continue;
+        };
+        if child.name() == CATALOG_REFERENCE {
+            let entry = catalogs.expand(child, &holder, scope, path)?;
+            *child = entry;
+            continue;
+        }
+        resolve_element(child, catalogs, scope, path, Frame::Nested)?;
+        if matches!(frame, Frame::Root) && child.name() == CATALOG_LOCATIONS {
+            catalogs.record_locations(child)?;
         }
     }
 
@@ -183,11 +597,64 @@ fn resolve_element(
     Ok(())
 }
 
+/// Refuse an assignment that names no parameter in `declared`, and two assignments naming the
+/// same parameter.
+fn check_assignments(assignments: &[Assignment], declared: &[String]) -> Result<()> {
+    for (index, assignment) in assignments.iter().enumerate() {
+        if assignments[..index]
+            .iter()
+            .any(|earlier| earlier.name == assignment.name)
+        {
+            return Err(Error::parameter_error(
+                &assignment.name,
+                "assigned more than once by the same CatalogReference; the specification \
+                 gives no rule for choosing between the values",
+            ));
+        }
+        if !declared.contains(&assignment.name) {
+            let declared = if declared.is_empty() {
+                "none".to_string()
+            } else {
+                declared.join(", ")
+            };
+            return Err(Error::parameter_error(
+                &assignment.name,
+                &format!(
+                    "assigned by a CatalogReference but not declared by the catalog entry; a \
+                     ParameterAssignment must name a parameter the entry declares (declared: {})",
+                    declared
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Resolve the attributes of `element` and of every element below it in `scope`. Used for a
+/// `<CatalogReference>`, whose subtree declares nothing.
+fn resolve_subtree_attributes(
+    element: &mut Element,
+    scope: &ParameterScope,
+    path: &mut Vec<String>,
+) -> Result<()> {
+    resolve_attributes(element, scope, path)?;
+    for child in &mut element.children {
+        if let Node::Element(child) = child {
+            path.push(child.segment());
+            resolve_subtree_attributes(child, scope, path)?;
+            path.pop();
+        }
+    }
+    Ok(())
+}
+
 /// Declare the entries of one `<ParameterDeclarations>` and write their resolved values back.
+/// A declaration named by one of `assignments` takes the assigned value in place of its own.
 fn declare(
     declarations: &mut Element,
     scope: &mut ParameterScope,
     path: &mut Vec<String>,
+    assignments: &[Assignment],
 ) -> Result<()> {
     path.push(declarations.segment());
     let mut raw = Vec::new();
@@ -205,11 +672,12 @@ fn declare(
             }
         }
     }
-    let entries: Vec<(&str, &str, &str)> = raw
+    let mut entries: Vec<(&str, &str, &str)> = raw
         .iter()
         .map(|[n, t, v]| (n.as_str(), t.as_str(), v.as_str()))
         .collect();
 
+    let mut declared = Vec::new();
     let mut index = 0;
     for child in &mut declarations.children {
         let Node::Element(declaration) = child else {
@@ -219,9 +687,22 @@ fn declare(
             continue;
         }
         path.push(declaration.segment());
+        if !assignments.is_empty() {
+            // The declarations before this one are in scope, so a name that is itself a
+            // reference resolves here to the name an assignment would use. A name that fails
+            // to resolve is left for the declaration itself to report.
+            let name = match scope.resolve_attribute(entries[index].0) {
+                Ok(Some(name)) => name,
+                _ => entries[index].0.to_string(),
+            };
+            if let Some(assignment) = assignments.iter().find(|a| a.name == name) {
+                entries[index].2 = assignment.value.as_str();
+            }
+        }
         let (resolved_name, binding) = scope
             .declare_in_sequence(&entries, index)
             .map_err(|e| locate(e, path, declaration.line, None))?;
+        declared.push(resolved_name.clone());
         let [name, parameter_type, value] = &raw[index];
         index += 1;
 
@@ -241,6 +722,8 @@ fn declare(
         declaration.replace_attributes(&replacements)?;
         path.pop();
     }
+    check_assignments(assignments, &declared)
+        .map_err(|e| locate(e, path, declarations.line, None))?;
 
     // A declaration's constraint groups are uses, and like every use in the subtree they see
     // all of the element's declarations.
@@ -251,7 +734,14 @@ fn declare(
         path.push(declaration.segment());
         for grandchild in &mut declaration.children {
             if let Node::Element(e) = grandchild {
-                resolve_element(e, scope, path, false)?;
+                // A constraint group holds no catalog reference, so no catalog is needed.
+                resolve_element(
+                    e,
+                    &mut Catalogs::new(Path::new(".")),
+                    scope,
+                    path,
+                    Frame::Nested,
+                )?;
             }
         }
         path.pop();

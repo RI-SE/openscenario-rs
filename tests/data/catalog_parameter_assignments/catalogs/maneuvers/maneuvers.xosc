@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" description="A maneuver entry whose parameter a CatalogReference assigns" author="openscenario-rs"/>
+  <Catalog name="Maneuvers">
+    <Maneuver name="accelerate">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="target_speed" parameterType="double" value="20"/>
+      </ParameterDeclarations>
+      <Event name="SpeedUp" priority="override">
+        <Action name="SpeedUpAction">
+          <PrivateAction>
+            <LongitudinalAction>
+              <SpeedAction>
+                <SpeedActionDynamics dynamicsShape="step" value="0" dynamicsDimension="time"/>
+                <SpeedActionTarget>
+                  <AbsoluteTargetSpeed value="$target_speed"/>
+                </SpeedActionTarget>
+              </SpeedAction>
+            </LongitudinalAction>
+          </PrivateAction>
+        </Action>
+        <StartTrigger>
+          <ConditionGroup>
+            <Condition name="AtStart" delay="0" conditionEdge="none">
+              <ByValueCondition>
+                <SimulationTimeCondition value="0" rule="greaterThan"/>
+              </ByValueCondition>
+            </Condition>
+          </ConditionGroup>
+        </StartTrigger>
+      </Event>
+    </Maneuver>
+  </Catalog>
+</OpenSCENARIO>

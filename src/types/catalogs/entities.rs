@@ -1,52 +1,23 @@
 //! Catalog-file forms of the three entity kinds: vehicle, pedestrian, and misc
 //! object. Each adds parameter declarations to the scenario type it mirrors.
 
-use crate::error::Result;
 use crate::types::basic::{Double, MinVec, OSString, Value};
-use crate::types::controllers::Controller;
-use crate::types::entities::{pedestrian, vehicle};
+use crate::types::entities::vehicle;
 use crate::types::enums::{
     ControllerType, MiscObjectCategory, PedestrianCategory, Role, VehicleCategory,
 };
 use crate::types::geometry::BoundingBox;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
-/// Trait for types that can be loaded from catalog files and resolved into scenario entities
+/// A catalog entry type: one of the element kinds a `<Catalog>` holds.
+///
+/// Resolving a reference to an entry is not a method of the entry type. It is done on the XML,
+/// by [`crate::parser::resolve`], because section 9.5 of ASAM OpenSCENARIO XML resolves the
+/// entry against its own `<ParameterDeclarations>`, and a per-type conversion had to repeat
+/// that rule for every field of every entry kind.
 pub trait CatalogEntity: Clone + Send + Sync {
-    /// The type this catalog entity resolves to in scenarios
-    type ResolvedType;
-
-    /// Convert this catalog entity into a scenario entity with parameter substitution
-    fn into_scenario_entity(
-        self,
-        parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType>;
-
-    /// Get the parameter schema for this catalog entity
-    fn parameter_schema() -> Vec<ParameterDefinition>;
-
     /// Get the name of this catalog entity
     fn entity_name(&self) -> &str;
-}
-
-/// In-memory description of a parameter accepted by a catalog entity.
-///
-/// This is *not* an XML type: the wire representation of
-/// `<ParameterDeclarations>` is [`crate::types::basic::ParameterDeclarations`].
-/// `ParameterDefinition` is only used by [`CatalogEntity::parameter_schema`] and
-/// the parameter substitution engine in `crate::catalog::parameters` to describe
-/// and validate the parameters an entity understands.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ParameterDefinition {
-    /// Parameter name
-    pub name: String,
-    /// Parameter type (e.g. "String", "Double", "Boolean")
-    pub parameter_type: String,
-    /// Default value, if any
-    pub default_value: Option<String>,
-    /// Human-readable description
-    pub description: Option<String>,
 }
 
 /// Vehicle entity definition for catalogs
@@ -189,162 +160,6 @@ pub struct CatalogRearAxle {
 }
 
 impl CatalogEntity for CatalogVehicle {
-    type ResolvedType = vehicle::Vehicle;
-
-    fn into_scenario_entity(
-        self,
-        parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        // Resolve parameters in the catalog vehicle
-        let resolved_vehicle = vehicle::Vehicle {
-            name: Value::literal(self.name.resolve(&parameters)?),
-            vehicle_category: self.vehicle_category,
-            role: self.role,
-            mass: self
-                .mass
-                .as_ref()
-                .map(|m| {
-                    m.resolve(&parameters)
-                        .map(crate::types::basic::Double::literal)
-                })
-                .transpose()?,
-            model3d: self
-                .model3d
-                .as_ref()
-                .map(|m| m.resolve(&parameters).map(Value::literal))
-                .transpose()?,
-            parameter_declarations: None,
-            bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
-            performance: vehicle::Performance {
-                max_speed: crate::types::basic::Double::literal(
-                    self.performance.max_speed.resolve(&parameters)?,
-                ),
-                max_acceleration: crate::types::basic::Double::literal(
-                    self.performance.max_acceleration.resolve(&parameters)?,
-                ),
-                max_acceleration_rate: self
-                    .performance
-                    .max_acceleration_rate
-                    .as_ref()
-                    .map(|v| {
-                        v.resolve(&parameters)
-                            .map(crate::types::basic::Double::literal)
-                    })
-                    .transpose()?,
-                max_deceleration: crate::types::basic::Double::literal(
-                    self.performance.max_deceleration.resolve(&parameters)?,
-                ),
-                max_deceleration_rate: self
-                    .performance
-                    .max_deceleration_rate
-                    .as_ref()
-                    .map(|v| {
-                        v.resolve(&parameters)
-                            .map(crate::types::basic::Double::literal)
-                    })
-                    .transpose()?,
-            },
-            axles: crate::types::Axles {
-                front_axle: match self.axles.front_axle {
-                    Some(front_axle) => Some(crate::types::Axle {
-                        max_steering: crate::types::basic::Double::literal(
-                            front_axle.max_steering.resolve(&parameters)?,
-                        ),
-                        wheel_diameter: crate::types::basic::Double::literal(
-                            front_axle.wheel_diameter.resolve(&parameters)?,
-                        ),
-                        track_width: crate::types::basic::Double::literal(
-                            front_axle.track_width.resolve(&parameters)?,
-                        ),
-                        position_x: crate::types::basic::Double::literal(
-                            front_axle.position_x.resolve(&parameters)?,
-                        ),
-                        position_z: crate::types::basic::Double::literal(
-                            front_axle.position_z.resolve(&parameters)?,
-                        ),
-                    }),
-                    None => None,
-                },
-                rear_axle: crate::types::Axle {
-                    max_steering: crate::types::basic::Double::literal(
-                        self.axles.rear_axle.max_steering.resolve(&parameters)?,
-                    ),
-                    wheel_diameter: crate::types::basic::Double::literal(
-                        self.axles.rear_axle.wheel_diameter.resolve(&parameters)?,
-                    ),
-                    track_width: crate::types::basic::Double::literal(
-                        self.axles.rear_axle.track_width.resolve(&parameters)?,
-                    ),
-                    position_x: crate::types::basic::Double::literal(
-                        self.axles.rear_axle.position_x.resolve(&parameters)?,
-                    ),
-                    position_z: crate::types::basic::Double::literal(
-                        self.axles.rear_axle.position_z.resolve(&parameters)?,
-                    ),
-                },
-                additional_axles: self
-                    .axles
-                    .additional_axles
-                    .iter()
-                    .map(|axle| -> Result<crate::types::Axle> {
-                        Ok(crate::types::Axle {
-                            max_steering: crate::types::basic::Double::literal(
-                                axle.max_steering.resolve(&parameters)?,
-                            ),
-                            wheel_diameter: crate::types::basic::Double::literal(
-                                axle.wheel_diameter.resolve(&parameters)?,
-                            ),
-                            track_width: crate::types::basic::Double::literal(
-                                axle.track_width.resolve(&parameters)?,
-                            ),
-                            position_x: crate::types::basic::Double::literal(
-                                axle.position_x.resolve(&parameters)?,
-                            ),
-                            position_z: crate::types::basic::Double::literal(
-                                axle.position_z.resolve(&parameters)?,
-                            ),
-                        })
-                    })
-                    .collect::<Result<Vec<_>>>()?,
-            },
-            properties: self.properties,
-            trailer_hitch: self.trailer_hitch,
-            trailer_coupler: self.trailer_coupler,
-            trailer: self.trailer,
-        };
-
-        Ok(resolved_vehicle)
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "MaxSpeed".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("200.0".to_string()),
-                description: Some("Maximum speed of the vehicle in m/s".to_string()),
-            },
-            ParameterDefinition {
-                name: "MaxAcceleration".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("200.0".to_string()),
-                description: Some("Maximum acceleration of the vehicle in m/s²".to_string()),
-            },
-            ParameterDefinition {
-                name: "MaxDeceleration".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("10.0".to_string()),
-                description: Some("Maximum deceleration of the vehicle in m/s²".to_string()),
-            },
-            ParameterDefinition {
-                name: "VehicleCategory".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("car".to_string()),
-                description: Some("Category of the vehicle (car, truck, bus, etc.)".to_string()),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -381,36 +196,6 @@ pub struct CatalogController {
 }
 
 impl CatalogEntity for CatalogController {
-    type ResolvedType = Controller;
-
-    fn into_scenario_entity(
-        self,
-        parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        let resolved_controller = Controller {
-            name: Value::literal(self.name.resolve(&parameters)?),
-            controller_type: Some(
-                self.controller_type
-                    .unwrap_or(Value::Literal(ControllerType::Movement)),
-            ), // Default to Movement when not specified
-            parameter_declarations: None,
-            properties: self.properties,
-        };
-
-        Ok(resolved_controller)
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![ParameterDefinition {
-            name: "ControllerType".to_string(),
-            parameter_type: "String".to_string(),
-            default_value: Some("movement".to_string()),
-            description: Some(
-                "Type of controller (movement, lateral, longitudinal, etc.)".to_string(),
-            ),
-        }]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -462,57 +247,6 @@ pub struct CatalogPedestrian {
 }
 
 impl CatalogEntity for CatalogPedestrian {
-    type ResolvedType = pedestrian::Pedestrian;
-
-    fn into_scenario_entity(
-        self,
-        parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        let resolved_mass = self.mass.resolve(&parameters)?;
-        let mass_value = resolved_mass.parse::<f64>().map_err(|e| {
-            crate::error::Error::catalog_error(&format!("Failed to parse mass value: {}", e))
-        })?;
-
-        let resolved_pedestrian = pedestrian::Pedestrian {
-            name: Value::literal(self.name.resolve(&parameters)?),
-            pedestrian_category: self.pedestrian_category,
-            mass: crate::types::basic::Double::literal(mass_value),
-            role: self.role,
-            model: None,
-            model3d: self.model3d,
-            bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
-            properties: self.properties,
-            parameter_declarations: None,
-        };
-
-        Ok(resolved_pedestrian)
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "PedestrianCategory".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("pedestrian".to_string()),
-                description: Some(
-                    "Category of pedestrian (pedestrian, wheelchair, animal)".to_string(),
-                ),
-            },
-            ParameterDefinition {
-                name: "Mass".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("75.0".to_string()),
-                description: Some("Mass of pedestrian in kg".to_string()),
-            },
-            ParameterDefinition {
-                name: "Role".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("none".to_string()),
-                description: Some("Role of pedestrian (civil, police, etc.)".to_string()),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -591,62 +325,6 @@ pub struct CatalogManeuver {
 // These will be expanded when the corresponding entity types are fully implemented
 
 impl CatalogEntity for CatalogMiscObject {
-    type ResolvedType = crate::types::entities::MiscObject;
-
-    fn into_scenario_entity(
-        self,
-        parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        Ok(crate::types::entities::MiscObject {
-            name: Value::literal(self.name.resolve(&parameters)?),
-            mass: Double::literal(self.mass.resolve(&parameters)?),
-            misc_object_category: self.misc_object_category,
-            model3d: self
-                .model3d
-                .as_ref()
-                .map(|m| m.resolve(&parameters).map(Value::literal))
-                .transpose()?,
-            parameter_declarations: self.parameter_declarations,
-            bounding_box: self.bounding_box.resolve_parameters(&parameters)?,
-            properties: self.properties,
-        })
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "Width".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("1.0".to_string()),
-                description: Some("Width of the miscellaneous object in meters".to_string()),
-            },
-            ParameterDefinition {
-                name: "Length".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("1.0".to_string()),
-                description: Some("Length of the miscellaneous object in meters".to_string()),
-            },
-            ParameterDefinition {
-                name: "Height".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("1.0".to_string()),
-                description: Some("Height of the miscellaneous object in meters".to_string()),
-            },
-            ParameterDefinition {
-                name: "Mass".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("1.0".to_string()),
-                description: Some("Mass of the miscellaneous object in kg".to_string()),
-            },
-            ParameterDefinition {
-                name: "MiscObjectCategory".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("obstacle".to_string()),
-                description: Some("Category of the miscellaneous object".to_string()),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -656,48 +334,6 @@ impl CatalogEntity for CatalogMiscObject {
 }
 
 impl CatalogEntity for CatalogManeuver {
-    type ResolvedType = crate::types::scenario::story::Maneuver;
-
-    fn into_scenario_entity(
-        self,
-        parameters: HashMap<String, String>,
-    ) -> Result<Self::ResolvedType> {
-        // The hand-written "has no <Event>" guard that used to stand here is gone.
-        // `Maneuver::events` is a `MinVec<Event, 1>`, and now so is
-        // `CatalogManeuver::events`, so the bound already holds on `self.events` and
-        // needs no re-checking here.
-        Ok(crate::types::scenario::story::Maneuver {
-            name: Value::literal(self.name.resolve(&parameters)?),
-            parameter_declarations: self.parameter_declarations,
-            events: self.events,
-        })
-    }
-
-    fn parameter_schema() -> Vec<ParameterDefinition> {
-        vec![
-            ParameterDefinition {
-                name: "Duration".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("10.0".to_string()),
-                description: Some("Duration of the maneuver in seconds".to_string()),
-            },
-            ParameterDefinition {
-                name: "TargetSpeed".to_string(),
-                parameter_type: "Double".to_string(),
-                default_value: Some("30.0".to_string()),
-                description: Some("Target speed for the maneuver in m/s".to_string()),
-            },
-            ParameterDefinition {
-                name: "ManeuverType".to_string(),
-                parameter_type: "String".to_string(),
-                default_value: Some("lane_change".to_string()),
-                description: Some(
-                    "Type of maneuver (lane_change, overtake, merge, etc.)".to_string(),
-                ),
-            },
-        ]
-    }
-
     fn entity_name(&self) -> &str {
         self.name
             .as_literal()
@@ -709,26 +345,6 @@ impl CatalogEntity for CatalogManeuver {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_catalog_vehicle_parameter_schema() {
-        let schema = CatalogVehicle::parameter_schema();
-        assert_eq!(schema.len(), 4);
-
-        let max_speed_param = schema.iter().find(|p| p.name == "MaxSpeed").unwrap();
-        assert_eq!(max_speed_param.parameter_type, "Double");
-        assert_eq!(max_speed_param.default_value.as_ref().unwrap(), "200.0");
-    }
-
-    #[test]
-    fn test_parameter_resolution() {
-        let mut parameters = HashMap::new();
-        parameters.insert("TestParam".to_string(), "42.0".to_string());
-
-        let value: Double = Value::Parameter("TestParam".to_string());
-        let resolved = value.resolve(&parameters).unwrap();
-        assert_eq!(resolved, 42.0);
-    }
 
     #[test]
     fn test_catalog_vehicle_entity_name() {
@@ -777,70 +393,6 @@ mod tests {
     }
 
     #[test]
-    fn test_catalog_vehicle_resolution() {
-        let catalog_vehicle = CatalogVehicle {
-            name: OSString::literal("TestVehicle".to_string()),
-            vehicle_category: Value::Literal(VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            performance: CatalogPerformance {
-                max_speed: Value::Parameter("MaxSpeedParam".to_string()),
-                max_acceleration: Value::Literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Value::Literal(8.0),
-                max_deceleration_rate: None,
-            },
-            axles: CatalogAxles {
-                front_axle: Some(CatalogFrontAxle {
-                    max_steering: Value::Literal(0.5),
-                    wheel_diameter: Value::Literal(0.6),
-                    track_width: Value::Literal(1.7),
-                    position_x: Value::Literal(2.8),
-                    position_z: Value::Literal(0.25),
-                }),
-                rear_axle: CatalogRearAxle {
-                    max_steering: Value::Literal(0.0),
-                    wheel_diameter: Value::Literal(0.6),
-                    track_width: Value::Literal(1.7),
-                    position_x: Value::Literal(0.0),
-                    position_z: Value::Literal(0.25),
-                },
-                additional_axles: vec![],
-            },
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-            parameter_declarations: None,
-        };
-
-        let mut parameters = HashMap::new();
-        parameters.insert("MaxSpeedParam".to_string(), "180.0".to_string());
-
-        let resolved = catalog_vehicle.into_scenario_entity(parameters).unwrap();
-        assert_eq!(resolved.performance.max_speed.as_literal().unwrap(), &180.0);
-        assert_eq!(resolved.name.as_literal().unwrap(), "TestVehicle");
-    }
-
-    #[test]
-    fn test_catalog_controller_parameter_schema() {
-        let schema = CatalogController::parameter_schema();
-        assert_eq!(schema.len(), 1);
-
-        let controller_type_param = schema.iter().find(|p| p.name == "ControllerType").unwrap();
-        assert_eq!(controller_type_param.parameter_type, "String");
-        assert_eq!(
-            controller_type_param.default_value.as_ref().unwrap(),
-            "movement"
-        );
-    }
-
-    #[test]
     fn test_catalog_controller_entity_name() {
         let catalog_controller = CatalogController {
             name: OSString::literal("AIDriver".to_string()),
@@ -850,42 +402,6 @@ mod tests {
         };
 
         assert_eq!(catalog_controller.entity_name(), "AIDriver");
-    }
-
-    #[test]
-    fn test_catalog_controller_resolution() {
-        let catalog_controller = CatalogController {
-            name: OSString::literal("TestController".to_string()),
-            controller_type: Some(Value::Literal(ControllerType::Lateral)),
-            parameter_declarations: None,
-            properties: None,
-        };
-
-        let resolved = catalog_controller
-            .into_scenario_entity(HashMap::new())
-            .unwrap();
-        assert_eq!(
-            resolved.controller_type.unwrap(),
-            Value::Literal(ControllerType::Lateral)
-        );
-        assert_eq!(resolved.name.as_literal().unwrap(), "TestController");
-    }
-
-    #[test]
-    fn test_catalog_controller_type_resolution() {
-        let catalog_controller = CatalogController {
-            name: OSString::literal("FlexController".to_string()),
-            controller_type: Some(Value::Literal(ControllerType::Longitudinal)),
-            parameter_declarations: None,
-            properties: None,
-        };
-
-        let parameters = HashMap::new();
-        let resolved = catalog_controller.into_scenario_entity(parameters).unwrap();
-        assert_eq!(
-            resolved.controller_type.unwrap(),
-            Value::Literal(ControllerType::Longitudinal)
-        );
     }
 
     /// Schema-validity guard: `controllerType` is an XSD enumeration
@@ -899,30 +415,6 @@ mod tests {
             result.is_err(),
             "invalid controllerType value should be rejected"
         );
-    }
-
-    #[test]
-    fn test_catalog_pedestrian_parameter_schema() {
-        let schema = CatalogPedestrian::parameter_schema();
-        assert_eq!(schema.len(), 3);
-
-        let pedestrian_category_param = schema
-            .iter()
-            .find(|p| p.name == "PedestrianCategory")
-            .unwrap();
-        assert_eq!(pedestrian_category_param.parameter_type, "String");
-        assert_eq!(
-            pedestrian_category_param.default_value.as_ref().unwrap(),
-            "pedestrian"
-        );
-
-        let mass_param = schema.iter().find(|p| p.name == "Mass").unwrap();
-        assert_eq!(mass_param.parameter_type, "Double");
-        assert_eq!(mass_param.default_value.as_ref().unwrap(), "75.0");
-
-        let role_param = schema.iter().find(|p| p.name == "Role").unwrap();
-        assert_eq!(role_param.parameter_type, "String");
-        assert_eq!(role_param.default_value.as_ref().unwrap(), "none");
     }
 
     #[test]
@@ -944,36 +436,6 @@ mod tests {
         assert_eq!(catalog_pedestrian.entity_name(), "WalkingPerson");
     }
 
-    #[test]
-    fn test_catalog_pedestrian_resolution() {
-        let catalog_pedestrian = CatalogPedestrian {
-            name: OSString::literal("TestPedestrian".to_string()),
-            pedestrian_category: Value::Literal(PedestrianCategory::Wheelchair),
-            mass: Value::Literal("75.0".to_string()),
-            role: Some(Value::Literal(crate::types::enums::Role::Civil)),
-            model3d: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            properties: None,
-            parameter_declarations: None,
-        };
-
-        let resolved = catalog_pedestrian
-            .into_scenario_entity(HashMap::new())
-            .unwrap();
-        assert_eq!(
-            resolved.pedestrian_category,
-            Value::Literal(PedestrianCategory::Wheelchair)
-        );
-        assert_eq!(resolved.name.as_literal().unwrap(), "TestPedestrian");
-        assert_eq!(
-            resolved.role.unwrap(),
-            Value::Literal(crate::types::enums::Role::Civil)
-        );
-    }
-
     /// Schema-validity guard: `pedestrianCategory` is an XSD enumeration
     /// (`PedestrianCategory`), so an invalid string must be rejected at parse
     /// time rather than silently round-tripped as a plain string.
@@ -992,69 +454,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_catalog_misc_object_resolution() {
-        let catalog_misc_object = CatalogMiscObject {
-            name: OSString::literal("TrafficCone".to_string()),
-            mass: Value::Parameter("ConeMass".to_string()),
-            misc_object_category: Value::Literal(MiscObjectCategory::Obstacle),
-            model3d: Some(Value::Literal("cone.obj".to_string())),
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            properties: None,
-            parameter_declarations: None,
-        };
-
-        assert_eq!(catalog_misc_object.entity_name(), "TrafficCone");
-
-        let mut parameters = HashMap::new();
-        parameters.insert("ConeMass".to_string(), "5.0".to_string());
-
-        let resolved = catalog_misc_object
-            .into_scenario_entity(parameters)
-            .unwrap();
-        assert_eq!(resolved.name.as_literal().unwrap(), "TrafficCone");
-        assert_eq!(resolved.mass.as_literal().unwrap(), &5.0);
-        assert_eq!(
-            resolved.misc_object_category,
-            Value::Literal(MiscObjectCategory::Obstacle)
-        );
-        assert_eq!(
-            resolved.model3d.as_ref().unwrap().as_literal().unwrap(),
-            "cone.obj"
-        );
-    }
-
-    #[test]
-    fn test_catalog_maneuver_resolution() {
-        let xml = r#"<Maneuver name="LogAndSetVariables">
-    <Event name="AtCollision" priority="parallel" maximumExecutionCount="1">
-        <Action name="SetCollisionVariable">
-            <GlobalAction>
-                <VariableAction variableRef="collisionDetected">
-                    <SetAction value="true"/>
-                </VariableAction>
-            </GlobalAction>
-        </Action>
-    </Event>
-</Maneuver>"#;
-
-        let catalog_maneuver: CatalogManeuver = quick_xml::de::from_str(xml).unwrap();
-        let resolved = catalog_maneuver
-            .into_scenario_entity(HashMap::new())
-            .unwrap();
-
-        assert_eq!(resolved.name.as_literal().unwrap(), "LogAndSetVariables");
-        assert_eq!(resolved.events.len(), 1);
-        assert_eq!(resolved.events[0].name.as_literal().unwrap(), "AtCollision");
-    }
-
     /// The XSD requires a Maneuver to carry at least one Event (`Maneuver` :1453,
     /// `Event` at the default `minOccurs="1"`).
     ///
-    /// This used to be checked by a hand-written guard in `into_scenario_entity`, tested
+    /// This used to be checked by a hand-written guard in the typed catalog conversion, tested
     /// by building an event-less `CatalogManeuver` and asserting resolution failed. That
     /// value can no longer be built at all, so there is nothing left for the guard to
     /// report and nothing for a resolution test to construct. The bound is asserted here
@@ -1136,28 +539,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_all_catalog_entity_schemas() {
-        // Test that all entity types have valid parameter schemas
-        let vehicle_schema = CatalogVehicle::parameter_schema();
-        let controller_schema = CatalogController::parameter_schema();
-        let pedestrian_schema = CatalogPedestrian::parameter_schema();
-        let misc_object_schema = CatalogMiscObject::parameter_schema();
-
-        // Should not panic and should return valid schemas
-        assert!(vehicle_schema.len() >= 1);
-        assert!(controller_schema.len() >= 1);
-        assert!(pedestrian_schema.len() >= 3); // Has PedestrianCategory, Mass, Role
-        assert!(misc_object_schema.len() >= 3);
-    }
-
     // ---------------------------------------------------------------------------
     // Regression tests: ParameterDeclarations XML round-trip
     // ---------------------------------------------------------------------------
 
     /// Verify that a Vehicle with a <ParameterDeclarations> block deserializes
-    /// correctly.  This was previously broken because ParameterDefinition lacked
-    /// #[serde(rename = "@...")] on its fields, causing quick-xml to look for
+    /// correctly.  This was previously broken because the declaration type it used
+    /// lacked #[serde(rename = "@...")] on its fields, causing quick-xml to look for
     /// child elements instead of XML attributes.
     #[test]
     fn test_catalog_vehicle_with_parameter_declarations_parses() {
@@ -1370,15 +758,6 @@ mod tests {
         let serialized = quick_xml::se::to_string(&vehicle).unwrap();
         let reparsed: CatalogVehicle = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(vehicle, reparsed);
-
-        let resolved = vehicle.into_scenario_entity(HashMap::new()).unwrap();
-        assert_eq!(
-            resolved.role,
-            Some(Value::Literal(crate::types::enums::Role::Police))
-        );
-        assert_eq!(resolved.mass.unwrap().as_literal(), Some(&1500.0));
-        assert!(resolved.trailer_hitch.is_some());
-        assert!(resolved.trailer_coupler.is_some());
     }
 
     #[test]

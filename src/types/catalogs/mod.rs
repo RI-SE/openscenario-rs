@@ -12,7 +12,7 @@ pub mod trajectories;
 // Catalog entity types (from entities module - these are the primary definitions)
 pub use entities::{
     CatalogAxles, CatalogEntity, CatalogFrontAxle, CatalogManeuver, CatalogMiscObject,
-    CatalogPedestrian, CatalogPerformance, CatalogRearAxle, CatalogVehicle, ParameterDefinition,
+    CatalogPedestrian, CatalogPerformance, CatalogRearAxle, CatalogVehicle,
 };
 
 pub use entities::CatalogController;

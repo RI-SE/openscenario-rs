@@ -209,27 +209,35 @@ element. The rules it applies:
 - The `<ParameterDeclarations>` stay in the result, with their own references resolved.
 - An expression is evaluated as a Boolean when its outermost operation is `not`, `and`, `or` or
   a comparison, or when it is a lone reference to a `boolean` parameter; otherwise as a number.
-- A `<CatalogReference>` is left as written, parameter assignments included.
+- A `<CatalogReference>` is replaced by the catalog entry it names. The element holding the
+  reference decides the kind of entry and the `CatalogLocations` directory it is looked up in;
+  a relative directory is taken relative to the scenario file (`parse_str_resolved` has no file
+  and takes it relative to the working directory). The entry sees only its own declarations,
+  as section 9.5 requires ("No other parameters may be referenced from within the catalog").
+  Each `<ParameterAssignment>` overrides the default of the declaration it names, and its
+  `value` resolves in the scope of the reference, not of the entry. An assignment to a
+  parameter the entry does not declare, two assignments to one parameter, a missing entry and
+  a reference that reaches itself are errors. The inlined entry keeps its
+  `<ParameterDeclarations>`, holding the values that were used.
 
-An undeclared parameter, a failing expression, or an invalid declaration is an error naming
+An undeclared parameter, a failing expression, an invalid declaration or an unresolvable
+catalog reference is an error naming
 the element path and the source line, for example
 `/OpenSCENARIO/Storyboard/Story[@name='Main']/Act[@name='A1']/... (line 212)`.
 `parser::resolve::resolve_parameters` returns the resolved XML itself, for callers that want
-to inspect or store it.
+to inspect or store it; it takes the directory relative catalog paths start from.
 
 ## Catalogs
 
 Catalogs hold reusable vehicles, pedestrians, controllers, trajectories, routes and
-environments, referenced from a scenario by catalog name and entry name. `CatalogManager`
-loads and resolves them.
+environments, referenced from a scenario by catalog name and entry name. `parse_file_resolved`
+resolves every reference of a document, as described above. `CatalogManager` loads catalogs
+and resolves a single reference built outside a document, by the same rules.
 
 ```rust
 use openscenario_rs::CatalogManager;
 
 let mut manager = CatalogManager::with_base_path("./scenarios");
-
-// Parameters declared by the scenario are needed to resolve parameterized catalog names
-manager.set_global_parameters(params)?;
 
 if let Some(locations) = &document.catalog_locations {
     manager.discover_and_load_catalogs(locations)?;
@@ -237,7 +245,8 @@ if let Some(locations) = &document.catalog_locations {
 ```
 
 Resolving a reference needs both the reference and the catalog location it should be looked up
-in:
+in. Such a reference has no enclosing document, so its names and assigned values must be
+literal:
 
 ```rust
 let resolved = manager.resolve_vehicle_reference(&reference, &vehicle_location)?;
@@ -247,7 +256,7 @@ println!("resolved from {}", resolved.metadata.catalog_path);
 ```
 
 `ResolvedCatalog<T>` carries the entity alongside `ResolutionMetadata`, which records the
-catalog file it came from, the entry name and every parameter substituted during resolution.
+catalog file it came from, the entry name and the reference's parameter assignments.
 The path is `metadata.catalog_path`, not a field on the resolved value itself.
 
 `resolve_controller_reference` and `resolve_pedestrian_reference` follow the same shape.

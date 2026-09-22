@@ -9,6 +9,7 @@ use openscenario_rs::parser::resolve::resolve_parameters;
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::entities::EntityObjectChoice;
 use openscenario_rs::{parse_str, parse_str_resolved, OpenScenario};
+use std::path::Path;
 
 const FIXTURE: &str = include_str!("data/document_parameter_resolution.xosc");
 
@@ -93,7 +94,7 @@ fn an_element_sees_its_own_declarations_in_its_own_attributes() {
         r#"<Maneuver name="Overtake">"#,
         r#"<Maneuver name="$ego_speed">"#,
     );
-    let resolved = resolve_parameters(&xml).expect("fixture resolves");
+    let resolved = resolve_parameters(&xml, Path::new("")).expect("fixture resolves");
     assert!(resolved.contains(r#"<Maneuver name="30">"#), "{resolved}");
 }
 
@@ -130,7 +131,7 @@ fn a_boolean_expression_is_evaluated_as_a_boolean() {
         r#"<Actors selectTriggeringEntities="false">"#,
         r#"<Actors selectTriggeringEntities="${$ego_speed > 20}">"#,
     );
-    let resolved = resolve_parameters(&xml).expect("fixture resolves");
+    let resolved = resolve_parameters(&xml, Path::new("")).expect("fixture resolves");
     assert!(
         resolved.contains(r#"selectTriggeringEntities="false""#),
         "{resolved}"
@@ -154,7 +155,7 @@ fn an_undeclared_parameter_fails_naming_it_and_its_element_path() {
         ),
         "{msg}"
     );
-    assert!(msg.contains("line 25"), "{msg}");
+    assert!(msg.contains("line 24"), "{msg}");
 }
 
 #[test]
@@ -190,7 +191,7 @@ fn an_invalid_declaration_fails_naming_it_and_its_path() {
 
 #[test]
 fn a_declaration_referencing_an_earlier_one_resolves_and_is_written_back() {
-    let resolved = resolve_parameters(FIXTURE).expect("fixture resolves");
+    let resolved = resolve_parameters(FIXTURE, Path::new("")).expect("fixture resolves");
     assert!(
         resolved.contains(
             r#"<ParameterDeclaration name="double_speed" parameterType="double" value="20"/>"#
@@ -215,28 +216,17 @@ fn a_declaration_referencing_a_later_one_fails_naming_both() {
 // --- What is not resolved --------------------------------------------------------------------
 
 #[test]
-fn a_catalog_reference_passes_through_unresolved() {
-    let document = parse_str_resolved(FIXTURE).expect("fixture resolves");
-    let entities = document.entities.as_ref().unwrap();
-    let EntityObjectChoice::CatalogReference(reference) = &entities.scenario_objects[1].entity
-    else {
-        panic!("Target is a CatalogReference");
-    };
-    let xml = quick_xml::se::to_string(reference).expect("reference serializes");
-    assert!(xml.contains(r#"catalogName="$car_catalog""#), "{xml}");
-    assert!(xml.contains(r#"value="$ego_speed""#), "{xml}");
-}
-
-#[test]
 fn a_document_without_references_is_written_back_unchanged() {
     let xml = FIXTURE
         .replace("$p", "120")
         .replace("$ego_speed", "10")
         .replace("${10 * 2}", "20")
-        .replace("${10 + 40}", "50")
-        .replace("$car_catalog", "Vehicles");
+        .replace("${10 + 40}", "50");
     assert!(!xml.contains('$'));
-    assert_eq!(resolve_parameters(&xml).expect("resolves"), xml);
+    assert_eq!(
+        resolve_parameters(&xml, Path::new("")).expect("resolves"),
+        xml
+    );
 }
 
 #[test]
@@ -256,6 +246,9 @@ fn a_parameter_value_distribution_has_nothing_to_resolve() {
     </Deterministic>
   </ParameterValueDistribution>
 </OpenSCENARIO>"#;
-    assert_eq!(resolve_parameters(xml).expect("resolves"), xml);
+    assert_eq!(
+        resolve_parameters(xml, Path::new("")).expect("resolves"),
+        xml
+    );
     parse_str_resolved(xml).expect("distribution parses");
 }

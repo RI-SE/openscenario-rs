@@ -56,15 +56,55 @@ The conformance ledger, including what the test corpus does and does not prove, 
   `<ParameterDeclarations>`, and replaces each attribute value that is a reference or an
   expression by its value. Working on the XML covers every attribute of every element with no
   per-type code. The declarations are kept in the output with their own references resolved.
-  A `<CatalogReference>` and its subtree, including its `<ParameterAssignments>`, are left as
-  written, since resolving them needs the referenced catalog entry. The attribute's schema type
+  A `<CatalogReference>` is replaced by the entry it names, as the next entry describes. The
+  attribute's schema type
   is not known at the XML level, so an expression is evaluated as a Boolean when its outermost
   operation is `not`, `and`, `or` or a comparison, or when it is a lone reference to a `boolean`
   parameter, and as a number otherwise. An undeclared parameter, a failing expression and an
   invalid declaration are errors naming the element path and source line. `parse_str` and
-  `parse_file` are unchanged. Over the conformance corpus, 200 of 212 files resolve and parse;
-  ten use `pi` in an expression, which section 9.2 does not define, and two are deliberately
-  invalid upstream fixtures.
+  `parse_file` are unchanged.
+
+- **The resolving entry points replace each `<CatalogReference>` by the entry it names, with
+  the reference's `<ParameterAssignments>` applied** (`src/parser/resolve.rs`). Section 9.5
+  gives the rule: an entry declares its parameters with defaults, and "the ParameterAssignment
+  element within CatalogReference may be used to override these defaults"; for that one use an
+  assigned parameter takes the assigned value and every other parameter keeps its default.
+  Before this change the resolved document still held the reference, so none of that was
+  applied. The pass now locates the entry as section 9.6 describes, by `catalogName` among the
+  catalogs in the `CatalogLocations` directory for the kind of entry the enclosing element
+  accepts, and writes a copy of it in place of the reference. The schema accepts the entry
+  element wherever it accepts a reference, so the result parses like a document that never used
+  a catalog. The entry is resolved in a scope holding only its own declarations, since "No
+  other parameters may be referenced from within the catalog". An assignment's `value` belongs
+  to the referencing document and resolves in its scope, so `$top_speed` there means the
+  document's `top_speed` even when the entry declares one of the same name. An assigned value
+  replaces the default of the declaration it names before later declarations are read, and is
+  checked against the declared `parameterType`. The model reference defines `parameterRef` as
+  the "name of the parameter that must be declared in the catalog", so an assignment to an
+  undeclared name is an error, as is a second assignment to the same name. A missing entry, an
+  entry defined twice and a reference that reaches an entry already being resolved are errors
+  too. The inlined entry keeps its `<ParameterDeclarations>` with the values that were used.
+  `parse_file_resolved` takes a relative catalog directory relative to the scenario file;
+  `parse_str_resolved` takes it relative to the working directory. **Breaking:**
+  `parser::resolve::resolve_parameters` takes that base directory as a second argument, and a
+  document whose references cannot be located no longer resolves. Over the conformance corpus,
+  176 of 212 files resolve and parse, against 200 before. Of the 24 that no longer resolve, 15
+  reference an NCAP environment catalog whose expressions use `pi`, which section 9.2 does not
+  define; 8 reference catalog entries that are not in the corpus; and one points its catalog
+  directory at a folder that does not exist, deliberately. Every resolved output of a
+  schema-valid input validates against `Schema/OpenSCENARIO.xsd` and holds no
+  `<CatalogReference>`.
+
+- **`CatalogManager::resolve_vehicle_reference`, `resolve_controller_reference` and
+  `resolve_pedestrian_reference` now resolve through the same pass** (`src/catalog/mod.rs`).
+  They used to convert each typed catalog entry field by field with a flat map built from the
+  reference's assignments alone. That conversion ignored the entry's own declarations, so every
+  unassigned parameter failed as "parameter not found"; it accepted an assignment to a name the
+  entry does not declare; it ignored `catalogName` and matched on `entryName` across every file;
+  and it refused any assigned value that was a parameter reference. The methods now find the
+  entry by both names, apply the rules above, and read the resolved entry as the scenario type.
+  A reference resolved on its own has no enclosing document, so a `$name` in it is an error
+  that says to resolve the whole document instead.
 
 - **The expression evaluator now implements all of ASAM OpenSCENARIO XML section 9.2's
   functions and Boolean operators.** `ExpressionEvaluator::evaluate_function`
@@ -840,6 +880,27 @@ Breaking, unless noted.
   binary as its twelfth stage.
 
 ### Removed
+
+- **`catalog::ParameterSubstitutionEngine`, `CatalogManager::parameter_engine` and
+  `CatalogManager::set_global_parameters`.** Breaking. The engine applied a flat map of
+  parameters to a catalog entry, including "global" parameters from outside the entry, which
+  section 9.5 forbids. Its expression substitution replaced `${name}` text without evaluating
+  anything. Catalog parameters are resolved by `parser::resolve`, through `parse_file_resolved`
+  for a document and the `CatalogManager::resolve_*_reference` methods for a single reference.
+
+- **`CatalogEntity::into_scenario_entity`, `CatalogEntity::parameter_schema`, the associated
+  type `CatalogEntity::ResolvedType` and `types::catalogs::entities::ParameterDefinition`.**
+  Breaking. `into_scenario_entity` was a second, per-type catalog-parameter resolution path,
+  and it did not follow section 9.5: it never read the entry's own `<ParameterDeclarations>`,
+  so a default was never applied. `parameter_schema` returned hard-coded parameter lists (a
+  vehicle "accepted" `MaxSpeed` with a default of `200.0` whatever its catalog declared), and
+  `ParameterDefinition` existed only to describe those lists. `CatalogEntity` keeps
+  `entity_name`. A resolved entry is obtained from `parser::resolve`, as above.
+
+- **`CatalogReference::build_parameter_map` and the `CatalogResolvable` trait.** Breaking.
+  `build_parameter_map` resolved a reference's assignments against a flat map, which placed
+  them in no scope at all. `CatalogResolvable::resolve` had one implementation, and it always
+  returned "Catalog resolution not yet implemented".
 
 - **`types::ParameterContext`.** Breaking. Replaced by `types::ParameterScope`. Its `scope:
   Vec<String>` field was never read by any code, including its own `Resolve` impl, which
