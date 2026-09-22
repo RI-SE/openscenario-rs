@@ -713,6 +713,16 @@ Breaking, unless noted.
   each one produces, and the guide now names the externally tagged enum behind `$value` as the
   one shape to write. The pointer to a single dedicated round-trip test file is replaced with
   the same neighbor-file rule the guide already states for every other test.
+- **Route waypoints, polyline vertices and NURBS control points/knots are pinned against their
+  catalog-file twins.** `Route`/`CatalogRoute`, `Polyline`/`CatalogPolyline` and
+  `Nurbs`/`CatalogNurbs` each model the same XSD production twice, once for the type read inline
+  in a scenario body and once for the type read from a catalog file, and both copies are live:
+  the catalog loader parses through the catalog-file types, and every inline use goes through
+  their siblings. A test pins each pair's leaf element (`Waypoint`, `Vertex`, `ControlPoint`,
+  `Knot`) to the same parsed content and the same re-serialized bytes, and pins that both copies
+  of each container reject a list with fewer than the `minOccurs="2"` the schema requires. This
+  is not a consolidation; it converts a silent divergence between the two copies into a failing
+  test, which was one of three answers the duplication raised and the one chosen for this pass.
 
 ### Removed
 
