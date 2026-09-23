@@ -41,7 +41,7 @@ validation = []
 # serialize a bare type under a chosen root element (`se::to_string_with_root`).
 quick-xml = { version = "0.38", features = ["serialize"] }
 proptest = "1.0"
-criterion = "0.7"
+criterion = "0.8"
 tempfile = "3.0"
 
 [[bin]]
