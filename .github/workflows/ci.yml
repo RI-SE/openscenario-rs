@@ -34,5 +34,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y libxml2-dev pkg-config
-      - uses: dtolnay/rust-toolchain@1.90
+      - uses: dtolnay/rust-toolchain@1.120
       - run: cargo build --locked --features builder,validation --all-targets
