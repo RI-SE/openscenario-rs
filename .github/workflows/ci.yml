@@ -23,7 +23,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: conformance/corpus/
           key: corpus-${{ hashFiles('scripts/fetch-corpus.sh') }}
