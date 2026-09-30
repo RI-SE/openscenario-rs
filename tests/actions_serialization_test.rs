@@ -52,9 +52,8 @@ fn test_global_action_variants() {
 #[test]
 fn test_entity_action_types() {
     // Test AddEntityAction
-    let add_action = AddEntityAction {
-        position: Position::world_origin(),
-    };
+    let add_action = AddEntityAction::new(Position::world_origin());
+    assert_eq!(add_action.position, Position::world_origin());
     let entity_action = EntityAction {
         entity_ref: OSString::literal("new_entity".to_string()),
         action: EntityActionChoice::AddEntityAction(add_action),
@@ -227,9 +226,9 @@ fn test_action_wrapper() {
 
 #[test]
 fn test_user_defined_action() {
-    let user_action = UserDefinedAction {
-        custom_command_action: CustomCommandAction::new("default", ""),
-    };
+    let custom_command = CustomCommandAction::new("default", "");
+    let user_action = UserDefinedAction::new(custom_command.clone());
+    assert_eq!(user_action.custom_command_action, custom_command);
 
     let core_action = Action::UserDefinedAction(user_action);
     let serialized = serde_json::to_string(&core_action).unwrap();
@@ -278,16 +277,20 @@ fn test_variable_action_system() {
     assert!(serialized.contains("testVar"));
     assert!(serialized.contains("42"));
 
-    // Test VariableModifyAction with AddValueRule
-    let add_rule = VariableAddValueRule {
-        value: Double::literal(10.5),
-    };
+    // Test VariableModifyAction with AddValueRule, built through the named
+    // constructors (VariableAddValueRule::new, VariableModifyRule::add_value,
+    // VariableModifyAction::new) rather than struct literals.
+    let add_rule = VariableAddValueRule::new(10.5);
+    assert_eq!(add_rule.value, Double::literal(10.5));
 
-    let var_modify = VariableModifyAction {
-        rule: VariableModifyRule {
-            rule: VariableModifyRuleChoice::VariableAddValueRule(add_rule),
-        },
-    };
+    let modify_rule = VariableModifyRule::add_value(10.5);
+    assert_eq!(
+        modify_rule.rule,
+        VariableModifyRuleChoice::VariableAddValueRule(add_rule)
+    );
+
+    let var_modify = VariableModifyAction::new(modify_rule.clone());
+    assert_eq!(var_modify.rule, modify_rule);
 
     let var_action = VariableAction {
         variable_ref: OSString::literal("modifyVar".to_string()),
@@ -321,44 +324,55 @@ fn test_variable_action_system() {
 
 #[test]
 fn test_parameter_action_system() {
-    // Test ParameterSetAction
-    let param_set = ParameterSetAction {
-        value: OSString::literal("100".to_string()),
-    };
+    // Test ParameterSetAction, via the named constructors
+    // (ParameterSetAction::new, ParameterAction::new).
+    let param_set = ParameterSetAction::new("100");
+    assert_eq!(param_set.value, OSString::literal("100".to_string()));
 
-    let param_action = ParameterAction {
-        parameter_ref: OSString::literal("testParam".to_string()),
-        action: ParameterActionChoice::ParameterSetAction(param_set),
-    };
+    let param_action = ParameterAction::new(
+        "testParam",
+        ParameterActionChoice::ParameterSetAction(param_set),
+    );
+    assert_eq!(
+        param_action.parameter_ref,
+        OSString::literal("testParam".to_string())
+    );
 
     let serialized = serde_json::to_string(&param_action).unwrap();
     assert!(serialized.contains("testParam"));
     assert!(serialized.contains("100"));
 
-    // Test ParameterModifyAction with AddValueRule
-    let add_rule = ParameterAddValueRule {
-        value: Double::literal(5.0),
-    };
+    // Test ParameterModifyAction with AddValueRule, built through the named
+    // constructors (ParameterAddValueRule::new, ModifyRule::add_value,
+    // ParameterModifyAction::new, ParameterAction::new) rather than struct literals.
+    let add_rule = ParameterAddValueRule::new(5.0);
+    assert_eq!(add_rule.value, Double::literal(5.0));
 
-    let param_modify = ParameterModifyAction {
-        rule: ModifyRule {
-            rule: ModifyRuleChoice::ParameterAddValueRule(add_rule),
-        },
-    };
+    let modify_rule = ModifyRule::add_value(5.0);
+    assert_eq!(
+        modify_rule.rule,
+        ModifyRuleChoice::ParameterAddValueRule(add_rule)
+    );
 
-    let param_action = ParameterAction {
-        parameter_ref: OSString::literal("modifyParam".to_string()),
-        action: ParameterActionChoice::ParameterModifyAction(param_modify),
-    };
+    let param_modify = ParameterModifyAction::new(modify_rule.clone());
+    assert_eq!(param_modify.rule, modify_rule);
+
+    let param_action = ParameterAction::new(
+        "modifyParam",
+        ParameterActionChoice::ParameterModifyAction(param_modify),
+    );
+    assert_eq!(
+        param_action.parameter_ref,
+        OSString::literal("modifyParam".to_string())
+    );
 
     let serialized = serde_json::to_string(&param_action).unwrap();
     assert!(serialized.contains("modifyParam"));
     assert!(serialized.contains("AddValue"));
 
-    // Test ParameterMultiplyByValueRule
-    let multiply_rule = ParameterMultiplyByValueRule {
-        value: Double::literal(3.0),
-    };
+    // Test ParameterMultiplyByValueRule, via ParameterMultiplyByValueRule::new.
+    let multiply_rule = ParameterMultiplyByValueRule::new(3.0);
+    assert_eq!(multiply_rule.value, Double::literal(3.0));
 
     let param_modify = ParameterModifyAction {
         rule: ModifyRule {
@@ -405,97 +419,4 @@ fn test_random_route_action() {
 
     let serialized = serde_json::to_string(&random_route).unwrap();
     assert_eq!(serialized, "{}");
-}
-
-#[test]
-fn test_type_aliases() {
-    // These types' `Default` impls fabricated content
-    // (a name, an enum branch) for XSD `use="required"` attributes/choices
-    // and were removed; exercise the named constructors instead.
-    let _entity_action: EntityAction = EntityAction::delete("defaultEntity");
-    let _infra_action: InfrastructureAction = InfrastructureAction::new(
-        TrafficSignalAction::state_action("TestSignal".to_string(), "green".to_string()),
-    );
-    let _user_action: UserDefinedAction =
-        UserDefinedAction::new(CustomCommandAction::new("default", ""));
-    let _var_action: VariableAction = VariableAction::new(
-        "defaultVariable",
-        VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
-    );
-    let _param_action: ParameterAction = ParameterAction::new(
-        "defaultParameter",
-        ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("0")),
-    );
-    let _monitor_action: SetMonitorAction = SetMonitorAction::new("defaultMonitor", true);
-    let _traffic_action: TrafficAction = TrafficAction::new(
-        TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
-    );
-
-    // All should compile without issues
-    assert!(true);
-}
-
-#[test]
-fn test_constructors_and_benign_defaults() {
-    // Choice/container structs that default to all-`None` keep their `Default` only when
-    // the schema permits the empty form (category 2 in `docs/type_system_guide.md`).
-    // `TeleportAction`/`AddEntityAction` do not qualify — XSD `Position` (`:1738-1751`) is a
-    // bare `xsd:choice`, so `<Position />` is schema-invalid (category 3). These
-    // now name a branch.
-    let _global_action = GlobalAction::TrafficAction(TrafficAction::new(
-        TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
-    ));
-    let _private_action = PrivateAction::TeleportAction(TeleportAction::new(Position::world(
-        WorldPosition::new(1.0, 2.0),
-    )));
-    let _entity_action = EntityAction::delete("defaultEntity");
-    let _traffic_action = TrafficAction::new(TrafficActionChoice::TrafficStopAction(
-        TrafficStopAction::default(),
-    ));
-    let _infra_action = InfrastructureAction::new(TrafficSignalAction::state_action(
-        "TestSignal".to_string(),
-        "green".to_string(),
-    ));
-    let _add_entity = AddEntityAction::new(Position::world(WorldPosition::new(3.0, 4.0)));
-    let _delete_entity = DeleteEntityAction::default();
-    let _user_action = UserDefinedAction::new(CustomCommandAction::new("default", ""));
-
-    // `NamedAction` now models the XSD `Action` choice (:705-712) as
-    // parallel `Option` fields and round-trips every branch; the earlier serialize-only
-    // limitation is gone. Named per-branch constructors below.
-    let _action_wrapper = NamedAction::private(
-        "defaultTraffic",
-        PrivateAction::TeleportAction(TeleportAction::new(Position::world(WorldPosition::new(
-            1.0, 2.0,
-        )))),
-    );
-
-    // Named per-branch / `::new` constructors for the previously-fabricating types.
-    let _action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
-        Position::world(WorldPosition::new(1.0, 2.0)),
-    )));
-    let _private_action_wrapper = PrivateAction::TeleportAction(TeleportAction::new(
-        Position::world(WorldPosition::new(1.0, 2.0)),
-    ));
-    let _monitor_action = SetMonitorAction::new("defaultMonitor", true);
-    let _var_action = VariableAction::new(
-        "defaultVariable",
-        VariableActionChoice::VariableSetAction(VariableSetAction::new("0")),
-    );
-    let _var_set = VariableSetAction::new("0");
-    let _var_modify = VariableModifyAction::new(VariableModifyRule::add_value(0.0));
-    let _var_add_rule = VariableAddValueRule::new(0.0);
-    let _var_multiply_rule = VariableMultiplyByValueRule::new(1.0);
-    let _param_action = ParameterAction::new(
-        "defaultParameter",
-        ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("0")),
-    );
-    let _param_set = ParameterSetAction::new("0");
-    let _param_modify = ParameterModifyAction::new(ModifyRule::add_value(0.0));
-    let _param_add_rule = ParameterAddValueRule::new(0.0);
-    let _param_multiply_rule = ParameterMultiplyByValueRule::new(1.0);
-    let _random_route = RandomRouteAction::default();
-
-    // All should compile and not panic
-    assert!(true);
 }

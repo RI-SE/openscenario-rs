@@ -403,35 +403,6 @@ fn test_parameter_support_in_entity_selection() {
 }
 
 #[test]
-fn test_all_defaults() {
-    // these types no longer fabricate content via `Default` — each
-    // requires an explicit, stated value instead. `SelectedEntities`'s choice
-    // requires at least one branch member, so it is built from names or a
-    // type rather than an empty constructor; `EntityDistribution` keeps its
-    // explicit `new()` for the same reason.
-    let _entity_selection =
-        EntitySelection::new("Selection1", SelectedEntities::from_names(vec!["Ego"]));
-    let _selected_entities = SelectedEntities::from_names(vec!["Ego"]);
-    let _entity_distribution = EntityDistribution::new(vec![EntityDistributionEntry::new(
-        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-        1.0,
-    )])
-    .unwrap();
-    let _entity_distribution_entry = EntityDistributionEntry::new(
-        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-        1.0,
-    );
-    let _scenario_object_template =
-        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
-    let _external_object_reference = ExternalObjectReference::new("Sedan");
-    let _by_object_type = ByObjectType::vehicle();
-    let _by_type = ByType::new(ObjectType::Vehicle);
-
-    // All values should be created without panicking
-    assert!(true);
-}
-
-#[test]
 fn test_serialization_roundtrip() {
     // Test that all types can be serialized and deserialized
     let members = SelectedEntities::from_by_type(ObjectType::Vehicle);

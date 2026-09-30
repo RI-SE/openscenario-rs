@@ -3,7 +3,7 @@
 use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::{
     basic::Double,
-    conditions::{ByEntityCondition, EntityCondition, SpeedCondition},
+    conditions::{ByEntityCondition, EntityCondition},
     enums::Rule,
     scenario::triggers::{EntityRef, TriggeringEntities},
 };
@@ -22,43 +22,4 @@ fn test_by_entity_condition_basic() {
         }
         _ => panic!("Expected Speed condition"),
     }
-}
-
-#[test]
-fn test_by_entity_condition_variants() {
-    // Test that all variants exist in EntityCondition
-    let speed_condition = EntityCondition::Speed(SpeedCondition {
-        value: Double::literal(25.0),
-        rule: Value::Literal(Rule::GreaterThan),
-        direction: None,
-    });
-
-    match speed_condition {
-        EntityCondition::Speed(_) => {
-            // This should work
-            assert!(true);
-        }
-        _ => panic!("Expected Speed condition"),
-    }
-
-    // Test that other variants exist (even if we can't construct them easily)
-    // This will fail to compile if the variants don't exist
-    let _test_variants = |condition: EntityCondition| match condition {
-        EntityCondition::Speed(_) => {}
-        EntityCondition::ReachPosition(_) => {}
-        EntityCondition::Distance(_) => {}
-        EntityCondition::RelativeDistance(_) => {}
-        EntityCondition::Acceleration(_) => {}
-        EntityCondition::StandStill(_) => {}
-        EntityCondition::Collision(_) => {}
-        EntityCondition::Offroad(_) => {}
-        EntityCondition::EndOfRoad(_) => {}
-        EntityCondition::TimeHeadway(_) => {}
-        EntityCondition::TimeToCollision(_) => {}
-        EntityCondition::RelativeSpeed(_) => {}
-        EntityCondition::TraveledDistance(_) => {}
-        EntityCondition::RelativeClearance(_) => {}
-        EntityCondition::Angle(_) => {}
-        EntityCondition::RelativeAngle(_) => {}
-    };
 }

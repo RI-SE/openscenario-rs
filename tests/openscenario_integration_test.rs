@@ -215,40 +215,6 @@ fn can_use_public_api_convenience_functions() {
 }
 
 #[test]
-fn can_create_and_serialize_actions() {
-    use openscenario_rs::types::actions::movement::{
-        AbsoluteTargetSpeed, SpeedAction, SpeedActionTarget, SpeedActionTargetChoice,
-        TeleportAction, TransitionDynamics,
-    };
-
-    use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
-    use openscenario_rs::types::positions::Position;
-
-    // Test creating a SpeedAction
-    let _speed_action = SpeedAction {
-        speed_action_dynamics: TransitionDynamics {
-            dynamics_dimension: Value::Literal(DynamicsDimension::Time),
-            dynamics_shape: Value::Literal(DynamicsShape::Linear),
-            following_mode: None,
-            value: openscenario_rs::types::Double::literal(5.0),
-        },
-        speed_action_target: SpeedActionTarget {
-            target: SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed {
-                value: openscenario_rs::types::Double::literal(30.0),
-            }),
-        },
-    };
-
-    // Test creating a TeleportAction
-    let _teleport_action = TeleportAction {
-        position: Position::world_origin(),
-    };
-
-    // If we get here without compile errors, the actions are working
-    assert!(true);
-}
-
-#[test]
 fn can_create_and_serialize_conditions() {
     use openscenario_rs::types::conditions::entity::SpeedCondition;
     use openscenario_rs::types::conditions::value::SimulationTimeCondition;

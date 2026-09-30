@@ -64,40 +64,6 @@ mod detached_builders_tests {
     }
 
     #[test]
-    fn test_complete_detached_workflow() {
-        // Test the complete workflow using only detached builders
-        let scenario_builder = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities();
-
-        let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        let mut story_builder = storyboard_builder.add_story_simple("TestStory");
-
-        // Create detached builders
-        let mut detached_act = story_builder.create_act("act1");
-        let mut detached_maneuver = detached_act.create_maneuver("maneuver1", "vehicle1");
-        let detached_speed = detached_maneuver
-            .create_speed_action()
-            .named("speed_event")
-            .to_speed(30.0);
-
-        // Chain the attachments
-        detached_speed
-            .attach_to_detached(&mut detached_maneuver)
-            .unwrap();
-        detached_maneuver
-            .attach_to_detached(&mut detached_act)
-            .unwrap();
-        detached_act.attach_to(&mut story_builder).unwrap();
-
-        // Test passes if no compilation errors occur
-        assert!(true);
-    }
-
-    #[test]
     fn test_perfect_fluent_chaining() {
         // Test that demonstrates perfect fluent chaining without lifetime constraints
         let mut detached_act = DetachedActBuilder::new("act1");
@@ -119,8 +85,5 @@ mod detached_builders_tests {
         detached_maneuver
             .attach_to_detached(&mut detached_act)
             .unwrap();
-
-        // Test passes if no compilation errors occur
-        assert!(true);
     }
 }

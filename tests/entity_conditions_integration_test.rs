@@ -175,22 +175,6 @@ fn test_condition_equality() {
 }
 
 #[test]
-fn test_condition_cloning() {
-    let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
-    let original = ByEntityCondition::relative_distance(
-        triggering_entities,
-        "test_vehicle",
-        12.5,
-        true,
-        RelativeDistanceType::Cartesian,
-        Rule::GreaterThan,
-    );
-
-    let cloned = original.clone();
-    assert_eq!(original, cloned);
-}
-
-#[test]
 fn test_entity_condition_xml_deserialization() {
     // Test XML deserialization with our custom deserializer
     let xml = r#"

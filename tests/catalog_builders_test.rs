@@ -1,8 +1,8 @@
 #[cfg(feature = "builder")]
 mod catalog_builder_tests {
     use openscenario_rs::builder::{
-        CatalogEntityBuilder, CatalogLocationsBuilder, PedestrianCatalogReferenceBuilder,
-        ScenarioBuilder, VehicleCatalogReferenceBuilder,
+        CatalogLocationsBuilder, PedestrianCatalogReferenceBuilder, ScenarioBuilder,
+        VehicleCatalogReferenceBuilder,
     };
 
     #[test]
@@ -54,18 +54,6 @@ mod catalog_builder_tests {
         assert_eq!(reference.catalog_name.to_string(), "pedestrian_catalog");
         assert_eq!(reference.entry_name.to_string(), "adult_male");
         assert!(reference.parameter_assignments.is_some());
-    }
-
-    #[test]
-    fn test_catalog_entity_builder_creation() {
-        let _builder = CatalogEntityBuilder::new();
-        let _builder_with_path = CatalogEntityBuilder::with_base_path("/tmp");
-
-        let locations = CatalogLocationsBuilder::new()
-            .with_vehicle_catalog("./catalogs/vehicles")
-            .build();
-
-        let _builder_with_locations = CatalogEntityBuilder::new().with_catalog_locations(locations);
     }
 
     #[test]

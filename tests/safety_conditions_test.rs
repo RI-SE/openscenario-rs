@@ -168,9 +168,9 @@ fn test_by_entity_condition_enum_completeness() {
             EntityCondition::RelativeDistance(_) => panic!("Unexpected RelativeDistance variant"),
             EntityCondition::Acceleration(_) => panic!("Unexpected Acceleration variant"),
             EntityCondition::StandStill(_) => panic!("Unexpected StandStill variant"),
-            EntityCondition::Collision(_) => assert!(true),
+            EntityCondition::Collision(_) => {}
             EntityCondition::Offroad(_) => panic!("Unexpected Offroad variant"),
-            EntityCondition::EndOfRoad(_) => assert!(true),
+            EntityCondition::EndOfRoad(_) => {}
             EntityCondition::TimeHeadway(_) => panic!("Unexpected TimeHeadway variant"),
             EntityCondition::TimeToCollision(_) => panic!("Unexpected TimeToCollision variant"),
             EntityCondition::RelativeSpeed(_) => panic!("Unexpected RelativeSpeed variant"),

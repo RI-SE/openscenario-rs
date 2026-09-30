@@ -22,13 +22,6 @@ use std::fs;
 use tempfile::TempDir;
 
 #[test]
-fn test_catalog_manager_basic_functionality() {
-    let manager = CatalogManager::new();
-
-    // Test initial state - manager created successfully
-}
-
-#[test]
 fn test_catalog_file_parsing() {
     // Test parsing a minimal catalog file
     let catalog_xml = r#"<?xml version="1.0"?>
