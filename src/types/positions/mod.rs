@@ -293,68 +293,23 @@ mod tests {
     }
 
     #[test]
-    fn test_position_trajectory_constructor() {
-        let tp = TrajectoryPosition::new(
-            10.0,
-            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
-                "TestTrajectory",
-                false,
-                crate::types::geometry::shapes::Shape::polyline(
-                    crate::types::geometry::shapes::Polyline {
-                        // XSD:1735 declares `Vertex` with `minOccurs="2"`.
-                        vertices: crate::types::basic::MinVec::new(vec![
-                            crate::types::geometry::shapes::Vertex::new(Position::world_origin()),
-                            crate::types::geometry::shapes::Vertex::new(Position::world_origin()),
-                        ])
-                        .unwrap(),
-                    },
-                ),
-            )),
-        );
-        let pos = Position::trajectory(tp.clone());
-        assert!(pos.trajectory_position().is_some());
-        assert!(pos.world_position().is_none());
-    }
-
-    #[test]
-    fn test_position_geographic_constructor() {
-        let gp = GeographicPosition::new(48.0, 11.0);
-        let pos = Position::geographic(gp);
-        assert!(pos.geographic_position().is_some());
-        assert!(pos.world_position().is_none());
-    }
-
-    #[test]
-    fn test_relative_world_position_new() {
-        // `RelativeWorldPosition` no longer has a fabricating `Default`
-        // (it invented entityRef="DefaultEntity"); `::new` requires the real fields.
-        let rwp = RelativeWorldPosition::new("Ego", 1.0, 2.0);
-        assert_eq!(rwp.entity_ref.as_literal().unwrap(), "Ego");
-        assert_eq!(rwp.dx.as_literal().unwrap(), &1.0);
-        assert!(rwp.dz.is_none());
-    }
-
-    #[test]
-    fn test_relative_world_position_parse_without_dz() {
+    fn test_relative_world_position_parse_without_dz_or_orientation() {
+        // `@dz` and `<Orientation>` are both optional (XSD:1910-1922).
         let xml = r#"<RelativeWorldPosition entityRef="Ego" dx="1" dy="2"/>"#;
         let pos: RelativeWorldPosition = quick_xml::de::from_str(xml).unwrap();
         assert!(pos.dz.is_none());
+        assert!(pos.orientation.is_none());
     }
 
     #[test]
-    fn test_relative_world_position_serialize_none_dz_omitted() {
+    fn test_relative_world_position_new_serializes_required_attributes_only() {
         let pos = RelativeWorldPosition::new("Ego", 1.0, 2.0);
         let xml = quick_xml::se::to_string(&pos).unwrap();
+        assert!(xml.contains(r#"entityRef="Ego""#), "serialized: {xml}");
+        assert!(xml.contains(r#"dx="1""#), "serialized: {xml}");
+        assert!(xml.contains(r#"dy="2""#), "serialized: {xml}");
         assert!(!xml.contains("dz="), "serialized: {xml}");
-    }
-
-    #[test]
-    fn test_position_xml_roundtrip() {
-        let pos = Position::world(WorldPosition::new(1.0, 2.0));
-        let xml = quick_xml::se::to_string(&pos).unwrap();
-        assert!(xml.contains("WorldPosition"));
-        let deserialized: Position = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(pos, deserialized);
+        assert!(!xml.contains("<Orientation"), "serialized: {xml}");
     }
 
     /// XSD:1912 — `RelativeWorldPosition` carries an optional `<Orientation>`
@@ -386,14 +341,5 @@ mod tests {
         let deserialized: RelativeWorldPosition = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(pos, deserialized);
         assert!(deserialized.orientation.is_some());
-    }
-
-    /// Regression guard: a `RelativeWorldPosition` without an `<Orientation>`
-    /// child must still parse, leaving the field `None`.
-    #[test]
-    fn test_relative_world_position_parse_without_orientation() {
-        let xml = r#"<RelativeWorldPosition entityRef="Ego" dx="1" dy="2"/>"#;
-        let pos: RelativeWorldPosition = quick_xml::de::from_str(xml).unwrap();
-        assert!(pos.orientation.is_none());
     }
 }

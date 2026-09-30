@@ -159,6 +159,20 @@ mod tests {
         );
         assert_eq!(pos.s.as_literal().unwrap(), &100.0);
         assert_eq!(pos.t.unwrap().as_literal().unwrap(), &-1.5);
+
+        // `at_distance` is the same constructor under another name.
+        let pos = TrajectoryPosition::at_distance(
+            200.0,
+            -2.5,
+            TrajectoryRef::with_trajectory(crate::types::actions::movement::Trajectory::new(
+                "TestTrajectory",
+                false,
+                minimal_shape(),
+            )),
+        );
+        assert_eq!(pos.s.as_literal().unwrap(), &200.0);
+        assert_eq!(pos.t.unwrap().as_literal().unwrap(), &-2.5);
+        assert!(pos.orientation.is_none());
     }
 
     #[test]
@@ -175,81 +189,6 @@ mod tests {
         assert!(xml.contains("s=\"25\""));
         let deserialized: TrajectoryPosition = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(pos, deserialized);
-    }
-
-    // ------------------------------------------------------------------
-    // Vertex deserialization tests — covering the primary bug fix
-    // ------------------------------------------------------------------
-
-    /// A Vertex element with no `time` attribute must deserialize successfully.
-    /// Previously `rename_all = "camelCase"` caused quick-xml to fail with
-    /// "missing field '@time'" even though the XSD marks `time` as optional.
-    #[test]
-    fn test_vertex_xml_roundtrip_without_time() {
-        use crate::types::geometry::shapes::Vertex;
-        let xml = r#"<Vertex><Position><WorldPosition x="1" y="2"/></Position></Vertex>"#;
-        let v: Vertex = quick_xml::de::from_str(xml).unwrap();
-        assert!(v.time.is_none());
-        assert!(v.position.world_position().is_some());
-    }
-
-    /// A Vertex element with a `time` attribute must round-trip correctly.
-    #[test]
-    fn test_vertex_xml_roundtrip_with_time() {
-        use crate::types::geometry::shapes::Vertex;
-        use crate::types::positions::{Position, WorldPosition};
-
-        let vertex = Vertex {
-            time: Some(Double::literal(1.5)),
-            position: Position::world(WorldPosition::new(10.0, 20.0)),
-        };
-        let xml = quick_xml::se::to_string(&vertex).unwrap();
-        assert!(xml.contains(r#"time="1.5""#), "serialized XML: {xml}");
-        assert!(xml.contains("Position"), "serialized XML: {xml}");
-
-        let deserialized: Vertex = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(vertex, deserialized);
-    }
-
-    /// Serializing a Vertex without time must NOT emit a `time` attribute.
-    #[test]
-    fn test_vertex_no_time_not_serialized() {
-        use crate::types::geometry::shapes::Vertex;
-        use crate::types::positions::{Position, WorldPosition};
-
-        let vertex = Vertex {
-            time: None,
-            position: Position::world(WorldPosition::new(0.0, 0.0)),
-        };
-        let xml = quick_xml::se::to_string(&vertex).unwrap();
-        assert!(!xml.contains("time="), "time attr must be absent: {xml}");
-    }
-
-    /// Polyline with one time-bearing and one time-less vertex must round-trip.
-    #[test]
-    fn test_polyline_xml_roundtrip_mixed_time() {
-        use crate::types::geometry::shapes::{Polyline, Vertex};
-        use crate::types::positions::{Position, WorldPosition};
-
-        let polyline = Polyline {
-            vertices: crate::types::basic::MinVec::new(vec![
-                Vertex {
-                    time: Some(Double::literal(0.0)),
-                    position: Position::world(WorldPosition::new(0.0, 0.0)),
-                },
-                Vertex {
-                    time: None,
-                    position: Position::world(WorldPosition::new(5.0, 5.0)),
-                },
-            ])
-            .unwrap(),
-        };
-        let xml = quick_xml::se::to_string(&polyline).unwrap();
-        let deserialized: Polyline = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(polyline, deserialized);
-        assert_eq!(deserialized.vertices.len(), 2);
-        assert!(deserialized.vertices[0].time.is_some());
-        assert!(deserialized.vertices[1].time.is_none());
     }
 
     // ------------------------------------------------------------------
@@ -284,7 +223,7 @@ mod tests {
     /// Clothoid without curvatureDot must not emit a curvatureDot attribute,
     /// and the required Position element must still round-trip.
     #[test]
-    fn test_clothoid_no_position_not_serialized() {
+    fn test_clothoid_without_curvature_dot_omits_it() {
         use crate::types::positions::{Position, WorldPosition};
 
         let clothoid = Clothoid {

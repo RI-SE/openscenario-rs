@@ -126,6 +126,7 @@ mod tests {
         assert_eq!(rwp.entity_ref.as_literal(), Some(&"ego".to_string()));
         assert_eq!(rwp.dx.as_literal(), Some(&10.0));
         assert_eq!(rwp.dy.as_literal(), Some(&5.0));
+        assert_eq!(rwp.dz.as_ref().unwrap().as_literal(), Some(&0.0));
     }
 
     #[test]
@@ -139,6 +140,7 @@ mod tests {
         assert_eq!(rlp.entity_ref.as_literal(), Some(&"lead".to_string()));
         assert_eq!(rlp.ds.as_ref().unwrap().as_literal(), Some(&20.0));
         assert_eq!(rlp.offset.as_ref().unwrap().as_literal(), Some(&0.5));
+        assert_eq!(rlp.d_lane.as_literal(), Some(&0));
     }
 
     #[test]

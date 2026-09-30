@@ -465,20 +465,6 @@ mod tests {
     }
 
     #[test]
-    fn a_route_with_two_waypoints_is_accepted() {
-        let valid_route = Route::new(
-            "Valid",
-            false,
-            vec![
-                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
-                Waypoint::world_position(100.0, 0.0, 0.0, RouteStrategy::Shortest),
-            ],
-        )
-        .expect("two waypoints satisfy the schema minimum");
-        assert_eq!(valid_route.waypoint_count(), 2);
-    }
-
-    #[test]
     fn test_route_ref_variants() {
         let direct_route = Route::new(
             "DirectRoute",

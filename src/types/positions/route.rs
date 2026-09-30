@@ -275,40 +275,6 @@ mod tests {
     }
 
     #[test]
-    fn test_in_route_position_from_road_coordinates_roundtrip() {
-        let xml =
-            r#"<InRoutePosition><FromRoadCoordinates pathS="12.5" t="-1.75"/></InRoutePosition>"#;
-        let parsed: InRoutePosition = quick_xml::de::from_str(xml).unwrap();
-        let road = parsed.from_road_coordinates_ref().unwrap();
-        assert_eq!(road.path_s.as_literal().unwrap(), &12.5);
-        assert_eq!(road.t.as_literal().unwrap(), &-1.75);
-
-        let ser = quick_xml::se::to_string(&parsed).unwrap();
-        let back: InRoutePosition = quick_xml::de::from_str(&ser).unwrap();
-        assert_eq!(parsed, back);
-    }
-
-    #[test]
-    fn test_in_route_position_from_current_entity_roundtrip() {
-        let xml = r#"<InRoutePosition><FromCurrentEntity entityRef="Ego"/></InRoutePosition>"#;
-        let parsed: InRoutePosition = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(
-            parsed
-                .from_current_entity_ref()
-                .as_ref()
-                .unwrap()
-                .entity_ref
-                .as_literal()
-                .unwrap(),
-            "Ego"
-        );
-
-        let ser = quick_xml::se::to_string(&parsed).unwrap();
-        let back: InRoutePosition = quick_xml::de::from_str(&ser).unwrap();
-        assert_eq!(parsed, back);
-    }
-
-    #[test]
     fn test_lane_coordinates_optional_lane_offset_omitted() {
         let xml = r#"<FromLaneCoordinates laneId="1" pathS="3.0"/>"#;
         let parsed: PositionInLaneCoordinates = quick_xml::de::from_str(xml).unwrap();
@@ -376,19 +342,5 @@ mod tests {
 
         let ser = quick_xml::se::to_string(&parsed).unwrap();
         assert_eq!(ser, xml, "byte-exact round trip with ParameterAssignments");
-    }
-
-    #[test]
-    fn test_route_position_inside_position_roundtrip() {
-        use crate::types::positions::Position;
-        let xml = r#"<Position><RoutePosition><RouteRef><CatalogReference catalogName="RouteCatalog" entryName="EgoRoute"/></RouteRef><InRoutePosition><FromRoadCoordinates pathS="$initS" t="0"/></InRoutePosition></RoutePosition></Position>"#;
-        let parsed: Position = quick_xml::de::from_str(xml).unwrap();
-        let rp = parsed.route_position().expect("RoutePosition must parse");
-        assert!(rp.in_route_position.from_road_coordinates_ref().is_some());
-        assert!(parsed.world_position().is_none());
-
-        let ser = quick_xml::se::to_string(&parsed).unwrap();
-        let back: Position = quick_xml::de::from_str(&ser).unwrap();
-        assert_eq!(parsed, back);
     }
 }

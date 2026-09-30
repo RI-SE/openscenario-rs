@@ -104,6 +104,7 @@ mod tests {
         assert_eq!(lp.road_id.as_literal(), Some(&"1".to_string()));
         assert_eq!(lp.lane_id.as_literal(), Some(&"-1".to_string()));
         assert_eq!(lp.s.as_literal(), Some(&50.0));
+        assert_eq!(lp.offset.as_ref().unwrap().as_literal(), Some(&0.0));
     }
 
     #[test]
@@ -135,6 +136,7 @@ mod tests {
             .finish()
             .unwrap();
         let lp = pos.lane_position().unwrap();
+        assert_eq!(lp.road_id.as_literal(), Some(&"road1".to_string()));
         assert_eq!(lp.lane_id.as_literal(), Some(&"-2".to_string()));
         assert_eq!(lp.s.as_literal(), Some(&100.0));
         assert_eq!(lp.offset.as_ref().unwrap().as_literal(), Some(&0.0));

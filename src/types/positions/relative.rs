@@ -123,9 +123,12 @@ mod tests {
 
     #[test]
     fn test_relative_position_xml_roundtrip() {
-        let pos = RelativeObjectPosition::with_z("car1", 1.0, 2.0, 3.0);
+        let pos = RelativeObjectPosition::at_offset("car1", 1.0, 2.0, 3.0);
         let xml = quick_xml::se::to_string(&pos).unwrap();
-        assert!(xml.contains("entityRef=\"car1\""));
+        assert!(xml.contains("entityRef=\"car1\""), "serialized: {xml}");
+        assert!(xml.contains("dx=\"1\""), "serialized: {xml}");
+        assert!(xml.contains("dy=\"2\""), "serialized: {xml}");
+        assert!(xml.contains("dz=\"3\""), "serialized: {xml}");
         let deserialized: RelativeObjectPosition = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(pos, deserialized);
     }

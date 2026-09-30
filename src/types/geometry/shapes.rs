@@ -557,76 +557,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bounding_box_new() {
-        let bbox = BoundingBox::new(Center::new(0.0, 0.0, 0.0), Dimensions::car());
-
-        assert_eq!(bbox.center.x.as_literal().unwrap(), &0.0);
-        assert_eq!(bbox.center.y.as_literal().unwrap(), &0.0);
-        assert_eq!(bbox.center.z.as_literal().unwrap(), &0.0);
-
-        assert_eq!(bbox.dimensions.width.as_literal().unwrap(), &1.8);
-        assert_eq!(bbox.dimensions.length.as_literal().unwrap(), &4.5);
-        assert_eq!(bbox.dimensions.height.as_literal().unwrap(), &1.5);
-    }
-
-    #[test]
-    fn test_trajectory_vertex() {
-        use crate::types::positions::{Position, WorldPosition};
-
-        let vertex = Vertex {
-            time: Some(crate::types::basic::Value::literal(0.04)),
-            position: Position::world(WorldPosition::new(0.0, 0.0)),
-        };
-
-        assert_eq!(vertex.time.as_ref().unwrap().as_literal().unwrap(), &0.04);
-    }
-
-    #[test]
     fn test_trajectory_vertex_without_time() {
         // OpenSCENARIO 1.1+ allows Vertex elements without a time attribute.
         // Previously this would fail with "missing field '@time'".
         let xml = r#"<Vertex><Position><WorldPosition x="1" y="2" z="0" h="0" p="0" r="0"/></Position></Vertex>"#;
         let v: Vertex = quick_xml::de::from_str(xml).unwrap();
         assert!(v.time.is_none());
+        assert!(v.position.world_position().is_some());
     }
 
+    /// Polyline with one time-bearing and one time-less vertex must round-trip.
     #[test]
-    fn test_polyline_structure() {
-        use crate::types::positions::Position;
+    fn test_polyline_xml_roundtrip_mixed_time() {
+        use crate::types::positions::{Position, WorldPosition};
 
         let polyline = Polyline {
             vertices: MinVec::new(vec![
                 Vertex {
-                    time: Some(crate::types::basic::Value::literal(0.0)),
-                    position: Position::world_origin(),
+                    time: Some(Double::literal(0.0)),
+                    position: Position::world(WorldPosition::new(0.0, 0.0)),
                 },
                 Vertex {
-                    time: Some(crate::types::basic::Value::literal(0.04)),
-                    position: Position::world_origin(),
+                    time: None,
+                    position: Position::world(WorldPosition::new(5.0, 5.0)),
                 },
             ])
             .unwrap(),
         };
-
-        assert_eq!(polyline.vertices.len(), 2);
-        assert_eq!(
-            polyline.vertices[0]
-                .time
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &0.0
-        );
-        assert_eq!(
-            polyline.vertices[1]
-                .time
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &0.04
-        );
+        let xml = quick_xml::se::to_string(&polyline).unwrap();
+        let deserialized: Polyline = quick_xml::de::from_str(&xml).unwrap();
+        assert_eq!(polyline, deserialized);
+        assert_eq!(deserialized.vertices.len(), 2);
+        assert!(deserialized.vertices[0].time.is_some());
+        assert!(deserialized.vertices[1].time.is_none());
     }
 
     #[test]
@@ -740,17 +703,21 @@ mod tests {
     #[test]
     fn test_shape_zero_branches_rejected() {
         let xml = r#"<Shape></Shape>"#;
-        let result: std::result::Result<Shape, _> = quick_xml::de::from_str(xml);
-        assert!(result.is_err(), "empty Shape must be rejected: {result:?}");
+        let err = quick_xml::de::from_str::<Shape>(xml).expect_err("empty Shape must be rejected");
+        assert!(
+            err.to_string().contains("$value"),
+            "expected a missing-field error naming $value, got: {err}"
+        );
     }
 
     #[test]
     fn test_shape_two_branches_rejected() {
         let xml = r#"<Shape><Polyline><Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex><Vertex><Position><WorldPosition x="1" y="1"/></Position></Vertex></Polyline><Nurbs order="1"><ControlPoint><Position><WorldPosition x="0" y="0"/></Position></ControlPoint><Knot value="0"/></Nurbs></Shape>"#;
-        let result: std::result::Result<Shape, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<Shape>(xml)
+            .expect_err("two branches on Shape must be rejected");
         assert!(
-            result.is_err(),
-            "two branches on Shape must be rejected: {result:?}"
+            err.to_string().contains("duplicate field"),
+            "expected a duplicate-field error, got: {err}"
         );
     }
 
@@ -954,24 +921,6 @@ mod tests {
     }
 
     #[test]
-    fn test_center_distance_to() {
-        let center1 = Center {
-            x: crate::types::basic::Value::literal(0.0),
-            y: crate::types::basic::Value::literal(0.0),
-            z: crate::types::basic::Value::literal(0.0),
-        };
-
-        let center2 = Center {
-            x: crate::types::basic::Value::literal(3.0),
-            y: crate::types::basic::Value::literal(4.0),
-            z: crate::types::basic::Value::literal(0.0),
-        };
-
-        let distance = center1.distance_to(&center2).unwrap();
-        assert_eq!(distance, 5.0); // 3-4-5 triangle
-    }
-
-    #[test]
     fn test_center_distance_to_3d() {
         let center1 = Center {
             x: crate::types::basic::Value::literal(1.0),
@@ -1009,41 +958,5 @@ mod tests {
         assert_eq!(truck_dims.width.as_literal().unwrap(), &2.5);
         assert_eq!(truck_dims.length.as_literal().unwrap(), &12.0);
         assert_eq!(truck_dims.height.as_literal().unwrap(), &3.5);
-    }
-
-    #[test]
-    fn test_dimensions_new() {
-        let dims = Dimensions::new(1.5, 3.0, 2.0);
-        assert_eq!(dims.width.as_literal().unwrap(), &1.5);
-        assert_eq!(dims.length.as_literal().unwrap(), &3.0);
-        assert_eq!(dims.height.as_literal().unwrap(), &2.0);
-    }
-
-    #[test]
-    fn test_bounding_box_volume_no_params() {
-        let bbox = BoundingBox {
-            center: Center::new(0.0, 0.0, 0.0),
-            dimensions: Dimensions::new(2.0, 4.0, 1.5),
-        };
-
-        let volume = bbox.volume().unwrap();
-        assert_eq!(volume, 12.0); // 2.0 * 4.0 * 1.5
-    }
-
-    #[test]
-    fn test_bounding_box_contains_point_no_params() {
-        let bbox = BoundingBox {
-            center: Center::new(0.0, 0.0, 0.0),
-            dimensions: Dimensions::new(2.0, 4.0, 1.5),
-        };
-
-        // Point inside
-        assert!(bbox.contains_point(0.0, 0.0, 0.0).unwrap());
-        assert!(bbox.contains_point(1.9, 0.9, 0.7).unwrap());
-
-        // Point outside
-        assert!(!bbox.contains_point(2.1, 0.0, 0.0).unwrap());
-        assert!(!bbox.contains_point(0.0, 1.1, 0.0).unwrap());
-        assert!(!bbox.contains_point(0.0, 0.0, 0.8).unwrap());
     }
 }

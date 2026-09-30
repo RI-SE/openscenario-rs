@@ -152,7 +152,15 @@ mod tests {
 
     #[test]
     fn test_build_alias_works_same_as_finish() {
-        let pos = WorldPositionBuilder::new().x(5.0).y(6.0).build().unwrap();
-        assert!(pos.world_position().is_some());
+        let pos = WorldPositionBuilder::new()
+            .x(5.0)
+            .y(6.0)
+            .z(7.0)
+            .build()
+            .unwrap();
+        let wp = pos.world_position().unwrap();
+        assert_eq!(wp.x.as_literal(), Some(&5.0));
+        assert_eq!(wp.y.as_literal(), Some(&6.0));
+        assert_eq!(wp.z.as_ref().unwrap().as_literal(), Some(&7.0));
     }
 }

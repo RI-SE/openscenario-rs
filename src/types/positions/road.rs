@@ -265,17 +265,6 @@ mod tests {
     }
 
     #[test]
-    fn test_lane_position_creation() {
-        let pos = LanePosition::new("0".to_string(), "-4".to_string(), 5.0, 0.0);
-
-        assert_eq!(pos.road_id.as_literal().unwrap(), "0");
-        assert_eq!(pos.lane_id.as_literal().unwrap(), "-4");
-        assert_eq!(pos.s.as_literal().unwrap(), &5.0);
-        assert_eq!(pos.offset.unwrap().as_literal().unwrap(), &0.0);
-        assert!(pos.orientation.is_none());
-    }
-
-    #[test]
     fn test_orientation_creation() {
         let orientation = Orientation::heading(1.57);
 
@@ -312,65 +301,6 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_road_position_creation() {
-        let pos = RelativeRoadPosition::new("EgoVehicle".to_string(), 10.0, -2.0);
-
-        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
-        assert_eq!(pos.ds.as_literal().unwrap(), &10.0);
-        assert_eq!(pos.dt.as_literal().unwrap(), &-2.0);
-        assert!(pos.orientation.is_none());
-    }
-
-    #[test]
-    fn test_relative_road_position_with_orientation() {
-        let orientation = Orientation::heading(0.5);
-        let pos =
-            RelativeRoadPosition::with_orientation("EgoVehicle".to_string(), 5.0, 1.5, orientation);
-
-        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
-        assert_eq!(pos.ds.as_literal().unwrap(), &5.0);
-        assert_eq!(pos.dt.as_literal().unwrap(), &1.5);
-        assert!(pos.orientation.is_some());
-        assert_eq!(
-            pos.orientation.unwrap().h.unwrap().as_literal().unwrap(),
-            &0.5
-        );
-    }
-
-    #[test]
-    fn test_relative_lane_position_creation() {
-        let pos = RelativeLanePosition::new("EgoVehicle".to_string(), -1, 15.0, 0.5);
-
-        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
-        assert_eq!(pos.d_lane, Int::literal(-1));
-        assert_eq!(pos.ds.unwrap().as_literal().unwrap(), &15.0);
-        assert_eq!(pos.offset.unwrap().as_literal().unwrap(), &0.5);
-        assert!(pos.orientation.is_none());
-    }
-
-    #[test]
-    fn test_relative_lane_position_with_orientation() {
-        let orientation = Orientation::new(1.57, 0.0, 0.0);
-        let pos = RelativeLanePosition::with_orientation(
-            "EgoVehicle".to_string(),
-            1,
-            20.0,
-            -1.0,
-            orientation,
-        );
-
-        assert_eq!(pos.entity_ref.as_literal().unwrap(), "EgoVehicle");
-        assert_eq!(pos.d_lane, Int::literal(1));
-        assert_eq!(pos.ds.unwrap().as_literal().unwrap(), &20.0);
-        assert_eq!(pos.offset.unwrap().as_literal().unwrap(), &-1.0);
-        assert!(pos.orientation.is_some());
-        let orient = pos.orientation.unwrap();
-        assert_eq!(orient.h.unwrap().as_literal().unwrap(), &1.57);
-        assert_eq!(orient.p.unwrap().as_literal().unwrap(), &0.0);
-        assert_eq!(orient.r.unwrap().as_literal().unwrap(), &0.0);
-    }
-
-    #[test]
     fn test_relative_road_position_serialization() {
         let pos = RelativeRoadPosition::new("EgoVehicle".to_string(), 10.0, -2.0);
         let xml = quick_xml::se::to_string(&pos).unwrap();
@@ -391,20 +321,6 @@ mod tests {
         assert!(xml.contains("dLane=\"-1\""));
         assert!(xml.contains("ds=\"15\""));
         assert!(xml.contains("offset=\"0.5\""));
-    }
-
-    #[test]
-    fn test_relative_position_construction() {
-        let rel_road = RelativeRoadPosition::new("Ego".to_string(), 0.0, 0.0);
-        assert_eq!(rel_road.entity_ref.as_literal().unwrap(), "Ego");
-        assert_eq!(rel_road.ds.as_literal().unwrap(), &0.0);
-        assert_eq!(rel_road.dt.as_literal().unwrap(), &0.0);
-
-        let rel_lane = RelativeLanePosition::new("Ego".to_string(), 0, 0.0, 0.0);
-        assert_eq!(rel_lane.entity_ref.as_literal().unwrap(), "Ego");
-        assert_eq!(rel_lane.d_lane, Int::literal(0));
-        assert_eq!(rel_lane.ds.unwrap().as_literal().unwrap(), &0.0);
-        assert_eq!(rel_lane.offset.unwrap().as_literal().unwrap(), &0.0);
     }
 
     #[test]
