@@ -654,4 +654,349 @@ mod tests {
         let loader = CatalogLoader::new();
         assert!(loader.parse_catalog_from_string(old_shape_xml).is_err());
     }
+
+    /// `set_base_path` changes relative-path resolution after construction,
+    /// the same way `with_base_path` does at construction time
+    /// (`test_discover_catalog_files`'s "relative directory" case above).
+    #[test]
+    fn test_set_base_path_changes_relative_resolution() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        fs::write(dir_path.join("catalog1.xosc"), "catalog1 content")?;
+
+        let mut loader = CatalogLoader::new();
+        loader.set_base_path(dir_path.parent().unwrap());
+        let relative = Directory::new(dir_path.file_name().unwrap().to_string_lossy().into_owned());
+
+        let files = loader.discover_catalog_files(&relative)?;
+        assert_eq!(files, vec![dir_path.join("catalog1.xosc")]);
+
+        Ok(())
+    }
+
+    /// A parameterized directory path has no enclosing scope to resolve it
+    /// in when discovered on its own (mirrors `CatalogManager::literal`'s
+    /// rationale for the whole-document case).
+    #[test]
+    fn test_discover_catalog_files_rejects_parameterized_path() {
+        let directory = Directory::from_parameter("CatalogDir".to_string());
+        let loader = CatalogLoader::new();
+
+        let err = loader
+            .discover_catalog_files(&directory)
+            .expect_err("a parameterized directory path cannot be discovered on its own");
+        assert!(err.to_string().contains("directory.path"), "{err}");
+    }
+
+    #[test]
+    fn test_discover_catalog_files_directory_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let missing = temp_dir.path().join("does_not_exist");
+        let directory = Directory::new(missing.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+
+        let err = loader
+            .discover_catalog_files(&directory)
+            .expect_err("a missing directory is an error");
+        assert!(err.to_string().contains("does_not_exist"), "{err}");
+    }
+
+    #[test]
+    fn test_discover_catalog_files_rejects_a_file_as_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("not_a_directory.xosc");
+        fs::write(&file_path, "content")?;
+        let directory = Directory::new(file_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+
+        let err = loader
+            .discover_catalog_files(&directory)
+            .expect_err("a file is not a directory");
+        assert!(err.to_string().contains("must be a directory"), "{err}");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_load_catalog_file_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let missing = temp_dir.path().join("missing.xosc");
+        let loader = CatalogLoader::new();
+
+        let err = loader
+            .load_catalog_file(&missing)
+            .expect_err("a missing file is an error");
+        assert!(err.to_string().contains("missing.xosc"), "{err}");
+    }
+
+    #[test]
+    fn test_load_and_parse_catalog_file_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let missing = temp_dir.path().join("missing.xosc");
+        let loader = CatalogLoader::new();
+
+        let err = loader
+            .load_and_parse_catalog_file(&missing)
+            .expect_err("a missing file is an error");
+        assert!(err.to_string().contains("missing.xosc"), "{err}");
+    }
+
+    /// `load_vehicle_catalogs` aggregates `Vehicle` entries across every
+    /// `.xosc` file in the directory, not just the first one found.
+    #[test]
+    fn test_load_vehicle_catalogs_aggregates_across_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        let vehicle_xml = |name: &str| -> String {
+            format!(
+                r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="VehicleCatalog">
+        <Vehicle name="{name}" vehicleCategory="car">
+            <BoundingBox>
+                <Center x="1.0" y="0.0" z="0.8"/>
+                <Dimensions width="1.8" length="4.0" height="1.6"/>
+            </BoundingBox>
+            <Performance maxSpeed="40" maxAcceleration="4" maxDeceleration="6"/>
+            <Axles>
+                <FrontAxle maxSteering="0.4" wheelDiameter="0.55" trackWidth="1.6" positionX="2.5" positionZ="0.25"/>
+                <RearAxle maxSteering="0.0" wheelDiameter="0.55" trackWidth="1.6" positionX="0.0" positionZ="0.25"/>
+            </Axles>
+        </Vehicle>
+    </Catalog>
+</OpenSCENARIO>"#
+            )
+        };
+        fs::write(dir_path.join("a.xosc"), vehicle_xml("CarA")).unwrap();
+        fs::write(dir_path.join("b.xosc"), vehicle_xml("CarB")).unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let vehicles = loader.load_vehicle_catalogs(&directory)?;
+
+        let names: Vec<_> = vehicles
+            .iter()
+            .map(|v| v.name.as_literal().unwrap().clone())
+            .collect();
+        assert_eq!(names, ["CarA", "CarB"]);
+
+        Ok(())
+    }
+
+    /// `load_controller_catalogs` aggregates across the directory the same
+    /// way `load_vehicle_catalogs` does, for `Controller` entries.
+    #[test]
+    fn test_load_controller_catalogs_aggregates_across_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        let controller_xml = |name: &str| -> String {
+            format!(
+                r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="ControllerCatalog">
+        <Controller name="{name}" controllerType="movement"/>
+    </Catalog>
+</OpenSCENARIO>"#
+            )
+        };
+        fs::write(dir_path.join("a.xosc"), controller_xml("Ctrl1")).unwrap();
+        fs::write(dir_path.join("b.xosc"), controller_xml("Ctrl2")).unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let controllers = loader.load_controller_catalogs(&directory)?;
+
+        let names: Vec<_> = controllers
+            .iter()
+            .map(|c| c.name.as_literal().unwrap().clone())
+            .collect();
+        assert_eq!(names, ["Ctrl1", "Ctrl2"]);
+
+        Ok(())
+    }
+
+    /// `load_pedestrian_catalogs` aggregates across the directory the same
+    /// way `load_vehicle_catalogs` does, for `Pedestrian` entries.
+    #[test]
+    fn test_load_pedestrian_catalogs_aggregates_across_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        let pedestrian_xml = |name: &str| -> String {
+            format!(
+                r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="PedestrianCatalog">
+        <Pedestrian name="{name}" pedestrianCategory="pedestrian" mass="75.0">
+            <BoundingBox>
+                <Center x="0" y="0" z="0"/>
+                <Dimensions width="0.5" length="0.5" height="1.8"/>
+            </BoundingBox>
+        </Pedestrian>
+    </Catalog>
+</OpenSCENARIO>"#
+            )
+        };
+        fs::write(dir_path.join("a.xosc"), pedestrian_xml("PedA")).unwrap();
+        fs::write(dir_path.join("b.xosc"), pedestrian_xml("PedB")).unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let pedestrians = loader.load_pedestrian_catalogs(&directory)?;
+
+        let names: Vec<_> = pedestrians
+            .iter()
+            .map(|p| p.name.as_literal().unwrap().clone())
+            .collect();
+        assert_eq!(names, ["PedA", "PedB"]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_entity_in_catalog() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("controllers.xosc");
+        let xml = r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="ControllerCatalog">
+        <Controller name="Ctrl1" controllerType="movement"/>
+    </Catalog>
+</OpenSCENARIO>"#;
+        fs::write(&file_path, xml).unwrap();
+
+        let loader = CatalogLoader::new();
+        assert_eq!(
+            loader.find_entity_in_catalog(&file_path, "Ctrl1")?,
+            Some("Ctrl1".to_string())
+        );
+        assert_eq!(
+            loader.find_entity_in_catalog(&file_path, "NoSuchEntity")?,
+            None
+        );
+
+        Ok(())
+    }
+
+    /// `load_trajectory_catalogs_from_directory` mirrors
+    /// `load_controller_catalogs_from_directory` (tested above) for
+    /// `Trajectory` entries, keying the hashmap by file stem.
+    #[test]
+    fn test_load_trajectory_catalogs_from_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        fs::write(
+            dir_path.join("trajectories.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="TrajectoryCatalog">
+        <Trajectory name="StraightPath" closed="false">
+            <Shape>
+                <Polyline>
+                    <Vertex>
+                        <Position><WorldPosition x="0" y="0" z="0"/></Position>
+                    </Vertex>
+                    <Vertex>
+                        <Position><WorldPosition x="10" y="0" z="0"/></Position>
+                    </Vertex>
+                </Polyline>
+            </Shape>
+        </Trajectory>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let catalogs = loader.load_trajectory_catalogs_from_directory(&directory)?;
+
+        assert_eq!(catalogs.len(), 1);
+        assert_eq!(catalogs["trajectories"].len(), 1);
+        assert_eq!(
+            catalogs["trajectories"][0].name.as_literal().unwrap(),
+            "StraightPath"
+        );
+
+        Ok(())
+    }
+
+    /// `load_route_catalogs_from_directory` mirrors
+    /// `load_controller_catalogs_from_directory` for `Route` entries.
+    #[test]
+    fn test_load_route_catalogs_from_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        fs::write(
+            dir_path.join("routes.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="RouteCatalog">
+        <Route name="MainRoute" closed="false">
+            <Waypoint routeStrategy="shortest">
+                <Position><WorldPosition x="0" y="0" z="0"/></Position>
+            </Waypoint>
+            <Waypoint routeStrategy="shortest">
+                <Position><WorldPosition x="100" y="0" z="0"/></Position>
+            </Waypoint>
+        </Route>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let catalogs = loader.load_route_catalogs_from_directory(&directory)?;
+
+        assert_eq!(catalogs.len(), 1);
+        assert_eq!(catalogs["routes"].len(), 1);
+        assert_eq!(
+            catalogs["routes"][0].name.as_literal().unwrap(),
+            "MainRoute"
+        );
+
+        Ok(())
+    }
+
+    /// `load_environment_catalogs_from_directory` mirrors
+    /// `load_controller_catalogs_from_directory` for `Environment` entries.
+    #[test]
+    fn test_load_environment_catalogs_from_directory() -> Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
+        fs::write(
+            dir_path.join("environments.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="EnvironmentCatalog">
+        <Environment name="Sunny">
+            <Weather fractionalCloudCover="zeroOktas">
+                <Sun azimuth="0" elevation="1.571" illuminance="100000"/>
+            </Weather>
+        </Environment>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        let directory = Directory::new(dir_path.to_string_lossy().to_string());
+        let loader = CatalogLoader::new();
+        let catalogs = loader.load_environment_catalogs_from_directory(&directory)?;
+
+        assert_eq!(catalogs.len(), 1);
+        assert_eq!(catalogs["environments"].len(), 1);
+        assert_eq!(
+            catalogs["environments"][0].name.as_literal().unwrap(),
+            "Sunny"
+        );
+
+        Ok(())
+    }
 }

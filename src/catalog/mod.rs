@@ -258,6 +258,105 @@ mod tests {
             CatalogManager::new().base_path
         );
     }
+
+    /// `discover_and_load_catalogs` walks every declared catalog-location
+    /// kind (vehicle, controller, pedestrian) and validates each file it
+    /// finds parses as a catalog.
+    #[test]
+    fn discover_and_load_catalogs_succeeds_for_every_declared_kind() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let vehicle_dir = temp_dir.path().join("vehicles");
+        let controller_dir = temp_dir.path().join("controllers");
+        let pedestrian_dir = temp_dir.path().join("pedestrians");
+        std::fs::create_dir(&vehicle_dir).unwrap();
+        std::fs::create_dir(&controller_dir).unwrap();
+        std::fs::create_dir(&pedestrian_dir).unwrap();
+
+        std::fs::write(
+            vehicle_dir.join("cars.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="VehicleCatalog">
+        <Vehicle name="Car1" vehicleCategory="car">
+            <BoundingBox>
+                <Center x="1.0" y="0.0" z="0.8"/>
+                <Dimensions width="1.8" length="4.0" height="1.6"/>
+            </BoundingBox>
+            <Performance maxSpeed="40" maxAcceleration="4" maxDeceleration="6"/>
+            <Axles>
+                <FrontAxle maxSteering="0.4" wheelDiameter="0.55" trackWidth="1.6" positionX="2.5" positionZ="0.25"/>
+                <RearAxle maxSteering="0.0" wheelDiameter="0.55" trackWidth="1.6" positionX="0.0" positionZ="0.25"/>
+            </Axles>
+        </Vehicle>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+        std::fs::write(
+            controller_dir.join("ctrl.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="ControllerCatalog">
+        <Controller name="Ctrl1" controllerType="movement"/>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+        std::fs::write(
+            pedestrian_dir.join("ped.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="PedestrianCatalog">
+        <Pedestrian name="Ped1" pedestrianCategory="pedestrian" mass="75.0">
+            <BoundingBox>
+                <Center x="0" y="0" z="0"/>
+                <Dimensions width="0.5" length="0.5" height="1.8"/>
+            </BoundingBox>
+        </Pedestrian>
+    </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        let mut locations = CatalogLocations::new();
+        locations.vehicle_catalog = Some(VehicleCatalogLocation::from_path(
+            vehicle_dir.to_string_lossy().into_owned(),
+        ));
+        locations.controller_catalog = Some(ControllerCatalogLocation::from_path(
+            controller_dir.to_string_lossy().into_owned(),
+        ));
+        locations.pedestrian_catalog = Some(PedestrianCatalogLocation::from_path(
+            pedestrian_dir.to_string_lossy().into_owned(),
+        ));
+
+        let mut manager = CatalogManager::new();
+        assert!(manager.discover_and_load_catalogs(&locations).is_ok());
+    }
+
+    /// A malformed file under a declared catalog location must propagate as
+    /// an error rather than being silently skipped like a directory that
+    /// does not exist.
+    #[test]
+    fn discover_and_load_catalogs_propagates_a_malformed_catalog_file() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let vehicle_dir = temp_dir.path().join("vehicles");
+        std::fs::create_dir(&vehicle_dir).unwrap();
+        std::fs::write(vehicle_dir.join("broken.xosc"), "<not valid xml").unwrap();
+
+        let mut locations = CatalogLocations::new();
+        locations.vehicle_catalog = Some(VehicleCatalogLocation::from_path(
+            vehicle_dir.to_string_lossy().into_owned(),
+        ));
+
+        let mut manager = CatalogManager::new();
+        let err = manager
+            .discover_and_load_catalogs(&locations)
+            .expect_err("a malformed catalog file must propagate as an error");
+        assert!(err.to_string().contains("broken.xosc"), "{err}");
+    }
 }
 
 // Parameter extraction and catalog-reference resolution against a flat map both went through

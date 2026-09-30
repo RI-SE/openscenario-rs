@@ -172,4 +172,33 @@ mod tests {
         assert_eq!(*resolved.entity(), 42u32);
         assert_eq!(resolved.metadata().parameter_substitutions, params);
     }
+
+    /// `clear` drops every in-flight resolution at once, not just the one
+    /// named by `end_resolution` (`test_circular_dependency_detection`
+    /// above covers the single-key path).
+    #[test]
+    fn test_clear_removes_every_in_flight_resolution() {
+        let mut resolver = CatalogResolver::new();
+        resolver.begin_resolution("vehicle1").unwrap();
+        resolver.begin_resolution("vehicle2").unwrap();
+
+        resolver.clear();
+
+        assert!(!resolver.is_resolving("vehicle1"));
+        assert!(!resolver.is_resolving("vehicle2"));
+        // Both keys can be started again now that the stack is empty.
+        assert!(resolver.begin_resolution("vehicle1").is_ok());
+        assert!(resolver.begin_resolution("vehicle2").is_ok());
+    }
+
+    #[test]
+    fn test_into_entity_unwraps_the_resolved_value() {
+        let resolved = ResolvedCatalog::new(
+            "test_vehicle".to_string(),
+            "/path/to/catalog.xosc".to_string(),
+            "TestVehicle".to_string(),
+        );
+
+        assert_eq!(resolved.into_entity(), "test_vehicle".to_string());
+    }
 }
