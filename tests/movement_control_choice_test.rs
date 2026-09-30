@@ -23,20 +23,18 @@ use openscenario_rs::types::actions::control::{
     AssignControllerAction, AssignControllerActionChoice, ControllerAction, ControllerActionChoice,
 };
 use openscenario_rs::types::actions::movement::{
-    AbsoluteSpeed, AbsoluteTargetLaneOffset, AbsoluteTargetSpeed, AssignRouteAction, FinalSpeed,
-    FinalSpeedChoice, LaneOffsetAction, LaneOffsetActionDynamics, LaneOffsetTarget,
-    LongitudinalAction, LongitudinalActionChoice, LongitudinalDistanceAction,
-    RelativeSpeedToMaster, RelativeTargetLaneOffset, RelativeTargetSpeed, SpeedActionTarget,
-    SpeedActionTargetChoice, SpeedProfileAction, SpeedProfileEntry, SteadyState, TimeReference,
-    TimeReferenceChoice, Timing, TrajectoryRef, TrajectoryRefChoice, TransitionDynamics,
+    AbsoluteSpeed, AbsoluteTargetLaneOffset, AssignRouteAction, FinalSpeed, LaneOffsetAction,
+    LaneOffsetActionDynamics, LaneOffsetTarget, LaneOffsetTargetChoice, LongitudinalAction,
+    LongitudinalDistanceAction, RelativeSpeedToMaster, RelativeTargetLaneOffset,
+    RelativeTargetSpeed, SpeedActionTarget, SpeedActionTargetChoice, SpeedProfileAction,
+    SpeedProfileEntry, SteadyState, TimeReference, TimeReferenceChoice, Timing, TrajectoryRef,
+    TrajectoryRefChoice, TransitionDynamics,
 };
-use openscenario_rs::types::basic::{Double, Value};
+use openscenario_rs::types::basic::Double;
 use openscenario_rs::types::enums::{
-    DynamicsDimension, DynamicsShape, FollowingMode, ReferenceContext, RouteStrategy,
-    SpeedTargetValueType,
+    DynamicsDimension, DynamicsShape, FollowingMode, ReferenceContext, SpeedTargetValueType,
 };
-use openscenario_rs::types::positions::Position;
-use openscenario_rs::types::routing::{Route, RouteRef, Waypoint};
+use openscenario_rs::types::routing::{Route, RouteRef};
 
 fn de<T: serde::de::DeserializeOwned>(xml: &str) -> T {
     quick_xml::de::from_str(xml).unwrap_or_else(|e| panic!("deserialize failed for {xml}: {e}"))
@@ -329,51 +327,170 @@ fn assign_controller_action_rejects_two_branches() {
 // `with_*` chain setters). Those constructors are the schema-fabrication
 // guard this crate relies on instead of `Default` (see the removed-`Default`
 // comments throughout movement.rs), so a wrong literal or a swapped field
-// inside one would not be caught by any test above. Each row here builds a
-// value with the constructor and checks it against an independently
-// specified expectation (a parsed document or a field-by-field assertion),
-// not against the constructor's own output.
+// inside one would not be caught by any test above.
+//
+// Every row below checks a constructor-built value against an independently
+// written XSD document — never against an echo of the argument that was just
+// passed in. A field-echo assertion (`assert_eq!(built.field, argument)`)
+// cannot see a bug that swaps which field a same-typed argument lands in;
+// comparing the whole value to a hand-written document can.
 // ---------------------------------------------------------------------------
 
+/// Builds `$built` (of type `$ty`) and checks it against the document
+/// `$xml`, which was written independently of the constructor under test.
+macro_rules! constructor_matches_document {
+    ($label:literal, $ty:ty, $built:expr, $xml:expr) => {{
+        let built: $ty = $built;
+        assert_eq!(
+            de::<$ty>($xml),
+            built,
+            "{}: constructor must match the independently written XSD document",
+            $label
+        );
+    }};
+}
+
 #[test]
-fn speed_action_target_choice_accessors_match_the_selected_branch() {
-    let absolute = SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed::new(30.0));
+fn movement_action_constructors_match_the_xsd_document() {
+    constructor_matches_document!(
+        "SpeedActionTarget::relative + RelativeTargetSpeed::new",
+        SpeedActionTarget,
+        SpeedActionTarget::relative(RelativeTargetSpeed::new(
+            2.0,
+            "Ego",
+            SpeedTargetValueType::Delta,
+            true,
+        )),
+        r#"<SpeedActionTarget><RelativeTargetSpeed value="2" entityRef="Ego" speedTargetValueType="delta" continuous="true"/></SpeedActionTarget>"#
+    );
+
+    constructor_matches_document!(
+        "TransitionDynamics::new + with_following_mode",
+        TransitionDynamics,
+        TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 2.0)
+            .with_following_mode(FollowingMode::Position),
+        r#"<TransitionDynamics dynamicsDimension="time" dynamicsShape="linear" followingMode="position" value="2"/>"#
+    );
+
+    // `AssignRouteAction::{new,direct_route}` both select the `Direct` branch;
+    // the route itself is parsed from an independent document rather than
+    // built with `Route::new`/`Waypoint::new`, so this row exercises only the
+    // `AssignRouteAction` constructors under test.
+    const ROUTE_XML: &str = r#"<Route name="R1" closed="false"><Waypoint routeStrategy="fastest"><Position><WorldPosition x="0" y="0"/></Position></Waypoint><Waypoint routeStrategy="fastest"><Position><WorldPosition x="1" y="1"/></Position></Waypoint></Route>"#;
+    let route: Route = de(ROUTE_XML);
+    let assign_route_direct_xml = format!("<AssignRouteAction>{ROUTE_XML}</AssignRouteAction>");
+    constructor_matches_document!(
+        "AssignRouteAction::new(RouteRef::Direct(route))",
+        AssignRouteAction,
+        AssignRouteAction::new(RouteRef::Direct(route.clone())),
+        &assign_route_direct_xml
+    );
+    constructor_matches_document!(
+        "AssignRouteAction::direct_route",
+        AssignRouteAction,
+        AssignRouteAction::direct_route(route),
+        &assign_route_direct_xml
+    );
+    constructor_matches_document!(
+        "AssignRouteAction::catalog_route",
+        AssignRouteAction,
+        AssignRouteAction::catalog_route("RouteCatalog", "Loop"),
+        r#"<AssignRouteAction><CatalogReference catalogName="RouteCatalog" entryName="Loop"/></AssignRouteAction>"#
+    );
+
+    constructor_matches_document!(
+        "LaneOffsetAction::new + with_continuous",
+        LaneOffsetAction,
+        LaneOffsetAction::new(
+            LaneOffsetActionDynamics::new(DynamicsShape::Linear),
+            LaneOffsetTarget::absolute(1.0),
+            false,
+        )
+        .with_continuous(true),
+        r#"<LaneOffsetAction continuous="true"><LaneOffsetActionDynamics dynamicsShape="linear"/><LaneOffsetTarget><AbsoluteTargetLaneOffset value="1"/></LaneOffsetTarget></LaneOffsetAction>"#
+    );
+
+    constructor_matches_document!(
+        "RelativeTargetLaneOffset::new",
+        LaneOffsetTarget,
+        LaneOffsetTarget {
+            target_choice: LaneOffsetTargetChoice::RelativeTargetLaneOffset(
+                RelativeTargetLaneOffset::new("Ego", 1.5)
+            ),
+        },
+        r#"<LaneOffsetTarget><RelativeTargetLaneOffset entityRef="Ego" value="1.5"/></LaneOffsetTarget>"#
+    );
+    constructor_matches_document!(
+        "AbsoluteTargetLaneOffset::new",
+        LaneOffsetTarget,
+        LaneOffsetTarget {
+            target_choice: LaneOffsetTargetChoice::AbsoluteTargetLaneOffset(
+                AbsoluteTargetLaneOffset::new(2.0)
+            ),
+        },
+        r#"<LaneOffsetTarget><AbsoluteTargetLaneOffset value="2"/></LaneOffsetTarget>"#
+    );
+
+    constructor_matches_document!(
+        "LongitudinalDistanceAction::new + with_distance + with_time_gap",
+        LongitudinalDistanceAction,
+        LongitudinalDistanceAction::new("Ego", true, false)
+            .with_distance(10.0)
+            .with_time_gap(1.5),
+        r#"<LongitudinalDistanceAction entityRef="Ego" distance="10" timeGap="1.5" freespace="true" continuous="false"/>"#
+    );
+
+    constructor_matches_document!(
+        "SpeedProfileEntry::with_time + SpeedProfileAction::{new,with_entity_ref} + LongitudinalAction::speed_profile",
+        LongitudinalAction,
+        LongitudinalAction::speed_profile(
+            SpeedProfileAction::new(
+                FollowingMode::Follow,
+                vec![SpeedProfileEntry::new(10.0).with_time(2.0)],
+            )
+            .expect("one entry satisfies the XSD SpeedProfileEntry minOccurs=1 bound")
+            .with_entity_ref("Ego"),
+        ),
+        r#"<LongitudinalAction><SpeedProfileAction entityRef="Ego" followingMode="follow"><SpeedProfileEntry time="2" speed="10"/></SpeedProfileAction></LongitudinalAction>"#
+    );
+
+    constructor_matches_document!(
+        "FinalSpeed::absolute + AbsoluteSpeed::new",
+        FinalSpeed,
+        FinalSpeed::absolute(AbsoluteSpeed::new(30.0)),
+        r#"<FinalSpeed><AbsoluteSpeed value="30"/></FinalSpeed>"#
+    );
+    constructor_matches_document!(
+        "FinalSpeed::relative + RelativeSpeedToMaster::new",
+        FinalSpeed,
+        FinalSpeed::relative(RelativeSpeedToMaster::new(
+            SpeedTargetValueType::Delta,
+            -5.0
+        )),
+        r#"<FinalSpeed><RelativeSpeedToMaster speedTargetValueType="delta" value="-5"/></FinalSpeed>"#
+    );
+}
+
+#[test]
+fn speed_action_target_choice_accessors_read_the_parsed_branch() {
+    let absolute_xml = SPEED_TARGET_ABSOLUTE;
+    let absolute: SpeedActionTargetChoice = de::<SpeedActionTarget>(absolute_xml).target;
     assert!(absolute.as_absolute().is_some(), "absolute branch");
     assert!(
         absolute.as_relative().is_none(),
         "absolute branch has no relative view"
     );
 
-    let relative = SpeedActionTargetChoice::RelativeTargetSpeed(RelativeTargetSpeed::new(
-        2.0,
-        "Ego",
-        SpeedTargetValueType::Delta,
-        true,
-    ));
+    let relative_xml = r#"<SpeedActionTarget><RelativeTargetSpeed value="2" entityRef="Ego" speedTargetValueType="delta" continuous="true"/></SpeedActionTarget>"#;
+    let relative: SpeedActionTargetChoice = de::<SpeedActionTarget>(relative_xml).target;
     assert_eq!(
         relative.as_relative().unwrap().entity_ref,
         "Ego",
-        "as_relative must return the branch that was constructed"
+        "as_relative must read the entityRef out of the parsed document"
     );
     assert!(
         relative.as_absolute().is_none(),
         "relative branch has no absolute view"
-    );
-}
-
-#[test]
-fn speed_action_target_relative_constructor_matches_the_parsed_document() {
-    let built = SpeedActionTarget::relative(RelativeTargetSpeed::new(
-        2.0,
-        "Ego",
-        SpeedTargetValueType::Delta,
-        true,
-    ));
-    let xml = r#"<SpeedActionTarget><RelativeTargetSpeed value="2" entityRef="Ego" speedTargetValueType="delta" continuous="true"/></SpeedActionTarget>"#;
-    assert_eq!(
-        de::<SpeedActionTarget>(xml),
-        built,
-        "SpeedActionTarget::relative + RelativeTargetSpeed::new must match the XSD document"
     );
 }
 
@@ -393,128 +510,6 @@ fn trajectory_ref_choice_as_catalog_reference_matches_the_selected_branch() {
         reference.trajectory_ref.as_trajectory().is_none(),
         "the catalog branch has no inline-trajectory view"
     );
-}
-
-#[test]
-fn transition_dynamics_with_following_mode_builder_matches_the_parsed_document() {
-    let built = TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 2.0)
-        .with_following_mode(FollowingMode::Position);
-    let xml = r#"<TransitionDynamics dynamicsDimension="time" dynamicsShape="linear" followingMode="position" value="2"/>"#;
-    assert_eq!(de::<TransitionDynamics>(xml), built);
-}
-
-#[test]
-fn assign_route_action_constructors_match_the_expected_branch() {
-    let route = Route::new(
-        "R1",
-        false,
-        vec![
-            Waypoint::new(Position::world_origin(), RouteStrategy::Fastest),
-            Waypoint::new(Position::world_origin(), RouteStrategy::Fastest),
-        ],
-    )
-    .expect("two waypoints satisfy the XSD Route minOccurs=2 bound");
-
-    let direct = AssignRouteAction::direct_route(route.clone());
-    assert!(
-        matches!(direct.route, RouteRef::Direct(_)),
-        "direct_route must select the Direct branch"
-    );
-
-    let catalog = AssignRouteAction::catalog_route("RouteCatalog", "Loop");
-    assert!(
-        matches!(catalog.route, RouteRef::Catalog(_)),
-        "catalog_route must select the Catalog branch"
-    );
-
-    let via_new = AssignRouteAction::new(RouteRef::Direct(route));
-    assert_eq!(
-        via_new.route, direct.route,
-        "new(RouteRef::Direct(route)) must equal direct_route(route)"
-    );
-}
-
-#[test]
-fn lane_offset_action_with_continuous_builder_overrides_the_constructor_value() {
-    let action = LaneOffsetAction::new(
-        LaneOffsetActionDynamics::new(DynamicsShape::Linear),
-        LaneOffsetTarget::absolute(1.0),
-        false,
-    )
-    .with_continuous(true);
-    assert_eq!(
-        action.continuous.as_literal(),
-        Some(&true),
-        "with_continuous must overwrite the constructor's `continuous` argument"
-    );
-}
-
-#[test]
-fn relative_and_absolute_target_lane_offset_constructors_set_the_given_fields() {
-    let relative = RelativeTargetLaneOffset::new("Ego", 1.5);
-    assert_eq!(relative.entity_ref.as_literal(), Some(&"Ego".to_string()));
-    assert_eq!(relative.value.as_literal(), Some(&1.5));
-
-    let absolute = AbsoluteTargetLaneOffset::new(2.0);
-    assert_eq!(absolute.value.as_literal(), Some(&2.0));
-}
-
-#[test]
-fn longitudinal_distance_action_builder_chain_sets_both_optional_fields() {
-    let action = LongitudinalDistanceAction::new("Ego", true, false)
-        .with_distance(10.0)
-        .with_time_gap(1.5);
-    assert_eq!(action.distance.unwrap().as_literal(), Some(&10.0));
-    assert_eq!(action.time_gap.unwrap().as_literal(), Some(&1.5));
-    assert_eq!(action.freespace.as_literal(), Some(&true));
-    assert_eq!(action.continuous.as_literal(), Some(&false));
-}
-
-#[test]
-fn speed_profile_action_builder_chain_and_longitudinal_wrapper() {
-    let entry = SpeedProfileEntry::new(10.0).with_time(2.0);
-    assert_eq!(entry.time.as_ref().unwrap().as_literal(), Some(&2.0));
-    assert_eq!(entry.speed.as_literal(), Some(&10.0));
-
-    let profile = SpeedProfileAction::new(FollowingMode::Follow, vec![entry])
-        .expect("one entry satisfies the XSD SpeedProfileEntry minOccurs=1 bound")
-        .with_entity_ref("Ego");
-    assert_eq!(
-        profile.entity_ref.as_ref().unwrap().as_literal(),
-        Some(&"Ego".to_string())
-    );
-
-    let wrapped = LongitudinalAction::speed_profile(profile);
-    assert!(matches!(
-        wrapped.longitudinal_action_choice,
-        LongitudinalActionChoice::SpeedProfileAction(_)
-    ));
-}
-
-#[test]
-fn final_speed_constructors_match_the_selected_branch() {
-    let absolute = FinalSpeed::absolute(AbsoluteSpeed::new(30.0));
-    match absolute.speed_choice {
-        FinalSpeedChoice::AbsoluteSpeed(speed) => {
-            assert_eq!(speed.value.as_literal(), Some(&30.0));
-        }
-        other => panic!("expected AbsoluteSpeed, got {other:?}"),
-    }
-
-    let relative = FinalSpeed::relative(RelativeSpeedToMaster::new(
-        SpeedTargetValueType::Delta,
-        -5.0,
-    ));
-    match relative.speed_choice {
-        FinalSpeedChoice::RelativeSpeedToMaster(speed) => {
-            assert_eq!(speed.value.as_literal(), Some(&-5.0));
-            assert_eq!(
-                speed.speed_target_value_type,
-                Value::Literal(SpeedTargetValueType::Delta)
-            );
-        }
-        other => panic!("expected RelativeSpeedToMaster, got {other:?}"),
-    }
 }
 
 #[test]
