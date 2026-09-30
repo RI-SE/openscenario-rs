@@ -741,19 +741,26 @@ mod tests {
         assert!(err.to_string().contains("missing.xosc"), "{err}");
     }
 
-    /// `load_vehicle_catalogs` aggregates `Vehicle` entries across every
-    /// `.xosc` file in the directory, not just the first one found.
+    /// `load_vehicle_catalogs`, `load_controller_catalogs` and
+    /// `load_pedestrian_catalogs` each aggregate their own entity kind
+    /// across every `.xosc` file in a directory, not just the first one
+    /// found. One row per kind, so a regression confined to one loader's
+    /// aggregation doesn't silently leave the other two untested.
     #[test]
-    fn test_load_vehicle_catalogs_aggregates_across_directory() -> Result<()> {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_path = temp_dir.path();
-        let vehicle_xml = |name: &str| -> String {
-            format!(
-                r#"<?xml version="1.0"?>
-<OpenSCENARIO>
-    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
-    <Catalog name="VehicleCatalog">
-        <Vehicle name="{name}" vehicleCategory="car">
+    fn test_load_catalogs_aggregate_across_directory_by_kind() -> Result<()> {
+        enum Kind {
+            Vehicle,
+            Controller,
+            Pedestrian,
+        }
+
+        // Writes the fixture pair for `kind` into `dir_path`; each kind's
+        // catalog element differs, so this is the "helper" side of the table.
+        fn write_fixtures(dir_path: &Path, kind: &Kind, name_a: &str, name_b: &str) {
+            let entry_xml = |name: &str| -> String {
+                match kind {
+                    Kind::Vehicle => format!(
+                        r#"<Vehicle name="{name}" vehicleCategory="car">
             <BoundingBox>
                 <Center x="1.0" y="0.0" z="0.8"/>
                 <Dimensions width="1.8" length="4.0" height="1.6"/>
@@ -763,94 +770,76 @@ mod tests {
                 <FrontAxle maxSteering="0.4" wheelDiameter="0.55" trackWidth="1.6" positionX="2.5" positionZ="0.25"/>
                 <RearAxle maxSteering="0.0" wheelDiameter="0.55" trackWidth="1.6" positionX="0.0" positionZ="0.25"/>
             </Axles>
-        </Vehicle>
-    </Catalog>
-</OpenSCENARIO>"#
-            )
-        };
-        fs::write(dir_path.join("a.xosc"), vehicle_xml("CarA")).unwrap();
-        fs::write(dir_path.join("b.xosc"), vehicle_xml("CarB")).unwrap();
-
-        let directory = Directory::new(dir_path.to_string_lossy().to_string());
-        let loader = CatalogLoader::new();
-        let vehicles = loader.load_vehicle_catalogs(&directory)?;
-
-        let names: Vec<_> = vehicles
-            .iter()
-            .map(|v| v.name.as_literal().unwrap().clone())
-            .collect();
-        assert_eq!(names, ["CarA", "CarB"]);
-
-        Ok(())
-    }
-
-    /// `load_controller_catalogs` aggregates across the directory the same
-    /// way `load_vehicle_catalogs` does, for `Controller` entries.
-    #[test]
-    fn test_load_controller_catalogs_aggregates_across_directory() -> Result<()> {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_path = temp_dir.path();
-        let controller_xml = |name: &str| -> String {
-            format!(
-                r#"<?xml version="1.0"?>
-<OpenSCENARIO>
-    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
-    <Catalog name="ControllerCatalog">
-        <Controller name="{name}" controllerType="movement"/>
-    </Catalog>
-</OpenSCENARIO>"#
-            )
-        };
-        fs::write(dir_path.join("a.xosc"), controller_xml("Ctrl1")).unwrap();
-        fs::write(dir_path.join("b.xosc"), controller_xml("Ctrl2")).unwrap();
-
-        let directory = Directory::new(dir_path.to_string_lossy().to_string());
-        let loader = CatalogLoader::new();
-        let controllers = loader.load_controller_catalogs(&directory)?;
-
-        let names: Vec<_> = controllers
-            .iter()
-            .map(|c| c.name.as_literal().unwrap().clone())
-            .collect();
-        assert_eq!(names, ["Ctrl1", "Ctrl2"]);
-
-        Ok(())
-    }
-
-    /// `load_pedestrian_catalogs` aggregates across the directory the same
-    /// way `load_vehicle_catalogs` does, for `Pedestrian` entries.
-    #[test]
-    fn test_load_pedestrian_catalogs_aggregates_across_directory() -> Result<()> {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_path = temp_dir.path();
-        let pedestrian_xml = |name: &str| -> String {
-            format!(
-                r#"<?xml version="1.0"?>
-<OpenSCENARIO>
-    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
-    <Catalog name="PedestrianCatalog">
-        <Pedestrian name="{name}" pedestrianCategory="pedestrian" mass="75.0">
+        </Vehicle>"#
+                    ),
+                    Kind::Controller => {
+                        format!(r#"<Controller name="{name}" controllerType="movement"/>"#)
+                    }
+                    Kind::Pedestrian => format!(
+                        r#"<Pedestrian name="{name}" pedestrianCategory="pedestrian" mass="75.0">
             <BoundingBox>
                 <Center x="0" y="0" z="0"/>
                 <Dimensions width="0.5" length="0.5" height="1.8"/>
             </BoundingBox>
-        </Pedestrian>
+        </Pedestrian>"#
+                    ),
+                }
+            };
+            let catalog_name = match kind {
+                Kind::Vehicle => "VehicleCatalog",
+                Kind::Controller => "ControllerCatalog",
+                Kind::Pedestrian => "PedestrianCatalog",
+            };
+            for (file_name, name) in [("a.xosc", name_a), ("b.xosc", name_b)] {
+                fs::write(
+                    dir_path.join(file_name),
+                    format!(
+                        r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+    <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+    <Catalog name="{catalog_name}">
+        {}
     </Catalog>
-</OpenSCENARIO>"#
-            )
-        };
-        fs::write(dir_path.join("a.xosc"), pedestrian_xml("PedA")).unwrap();
-        fs::write(dir_path.join("b.xosc"), pedestrian_xml("PedB")).unwrap();
+</OpenSCENARIO>"#,
+                        entry_xml(name)
+                    ),
+                )
+                .unwrap();
+            }
+        }
 
-        let directory = Directory::new(dir_path.to_string_lossy().to_string());
-        let loader = CatalogLoader::new();
-        let pedestrians = loader.load_pedestrian_catalogs(&directory)?;
+        for (label, kind, name_a, name_b) in [
+            ("vehicle", Kind::Vehicle, "CarA", "CarB"),
+            ("controller", Kind::Controller, "Ctrl1", "Ctrl2"),
+            ("pedestrian", Kind::Pedestrian, "PedA", "PedB"),
+        ] {
+            let temp_dir = TempDir::new().unwrap();
+            let dir_path = temp_dir.path();
+            write_fixtures(dir_path, &kind, name_a, name_b);
 
-        let names: Vec<_> = pedestrians
-            .iter()
-            .map(|p| p.name.as_literal().unwrap().clone())
-            .collect();
-        assert_eq!(names, ["PedA", "PedB"]);
+            let directory = Directory::new(dir_path.to_string_lossy().to_string());
+            let loader = CatalogLoader::new();
+
+            let names: Vec<String> = match kind {
+                Kind::Vehicle => loader
+                    .load_vehicle_catalogs(&directory)?
+                    .iter()
+                    .map(|v| v.name.as_literal().unwrap().clone())
+                    .collect(),
+                Kind::Controller => loader
+                    .load_controller_catalogs(&directory)?
+                    .iter()
+                    .map(|c| c.name.as_literal().unwrap().clone())
+                    .collect(),
+                Kind::Pedestrian => loader
+                    .load_pedestrian_catalogs(&directory)?
+                    .iter()
+                    .map(|p| p.name.as_literal().unwrap().clone())
+                    .collect(),
+            };
+
+            assert_eq!(names, [name_a, name_b], "kind: {label}");
+        }
 
         Ok(())
     }
@@ -881,16 +870,40 @@ mod tests {
         Ok(())
     }
 
-    /// `load_trajectory_catalogs_from_directory` mirrors
-    /// `load_controller_catalogs_from_directory` (tested above) for
-    /// `Trajectory` entries, keying the hashmap by file stem.
+    /// `load_trajectory_catalogs_from_directory`, `load_route_catalogs_from_directory`
+    /// and `load_environment_catalogs_from_directory` all key their hashmap by file
+    /// stem the same way `load_controller_catalogs_from_directory` (tested above)
+    /// does. One row per kind, so a regression confined to one of the three
+    /// doesn't silently leave the other two untested.
     #[test]
-    fn test_load_trajectory_catalogs_from_directory() -> Result<()> {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_path = temp_dir.path();
-        fs::write(
-            dir_path.join("trajectories.xosc"),
-            r#"<?xml version="1.0"?>
+    fn test_load_catalogs_from_directory_by_kind() -> Result<()> {
+        struct Row {
+            kind: &'static str,
+            file_name: &'static str,
+            xml: &'static str,
+            entry_name: &'static str,
+        }
+
+        fn assert_single_entry<T>(
+            catalogs: &std::collections::HashMap<String, Vec<T>>,
+            key: &str,
+            kind: &str,
+            name_of: impl Fn(&T) -> String,
+            expected_name: &str,
+        ) {
+            assert_eq!(catalogs.len(), 1, "kind: {kind}");
+            let entries = catalogs
+                .get(key)
+                .unwrap_or_else(|| panic!("kind: {kind}: missing hashmap key {key:?}"));
+            assert_eq!(entries.len(), 1, "kind: {kind}");
+            assert_eq!(name_of(&entries[0]), expected_name, "kind: {kind}");
+        }
+
+        let rows = [
+            Row {
+                kind: "trajectory",
+                file_name: "trajectories.xosc",
+                xml: r#"<?xml version="1.0"?>
 <OpenSCENARIO>
     <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
     <Catalog name="TrajectoryCatalog">
@@ -908,32 +921,12 @@ mod tests {
         </Trajectory>
     </Catalog>
 </OpenSCENARIO>"#,
-        )
-        .unwrap();
-
-        let directory = Directory::new(dir_path.to_string_lossy().to_string());
-        let loader = CatalogLoader::new();
-        let catalogs = loader.load_trajectory_catalogs_from_directory(&directory)?;
-
-        assert_eq!(catalogs.len(), 1);
-        assert_eq!(catalogs["trajectories"].len(), 1);
-        assert_eq!(
-            catalogs["trajectories"][0].name.as_literal().unwrap(),
-            "StraightPath"
-        );
-
-        Ok(())
-    }
-
-    /// `load_route_catalogs_from_directory` mirrors
-    /// `load_controller_catalogs_from_directory` for `Route` entries.
-    #[test]
-    fn test_load_route_catalogs_from_directory() -> Result<()> {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_path = temp_dir.path();
-        fs::write(
-            dir_path.join("routes.xosc"),
-            r#"<?xml version="1.0"?>
+                entry_name: "StraightPath",
+            },
+            Row {
+                kind: "route",
+                file_name: "routes.xosc",
+                xml: r#"<?xml version="1.0"?>
 <OpenSCENARIO>
     <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
     <Catalog name="RouteCatalog">
@@ -947,32 +940,12 @@ mod tests {
         </Route>
     </Catalog>
 </OpenSCENARIO>"#,
-        )
-        .unwrap();
-
-        let directory = Directory::new(dir_path.to_string_lossy().to_string());
-        let loader = CatalogLoader::new();
-        let catalogs = loader.load_route_catalogs_from_directory(&directory)?;
-
-        assert_eq!(catalogs.len(), 1);
-        assert_eq!(catalogs["routes"].len(), 1);
-        assert_eq!(
-            catalogs["routes"][0].name.as_literal().unwrap(),
-            "MainRoute"
-        );
-
-        Ok(())
-    }
-
-    /// `load_environment_catalogs_from_directory` mirrors
-    /// `load_controller_catalogs_from_directory` for `Environment` entries.
-    #[test]
-    fn test_load_environment_catalogs_from_directory() -> Result<()> {
-        let temp_dir = TempDir::new().unwrap();
-        let dir_path = temp_dir.path();
-        fs::write(
-            dir_path.join("environments.xosc"),
-            r#"<?xml version="1.0"?>
+                entry_name: "MainRoute",
+            },
+            Row {
+                kind: "environment",
+                file_name: "environments.xosc",
+                xml: r#"<?xml version="1.0"?>
 <OpenSCENARIO>
     <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
     <Catalog name="EnvironmentCatalog">
@@ -983,19 +956,57 @@ mod tests {
         </Environment>
     </Catalog>
 </OpenSCENARIO>"#,
-        )
-        .unwrap();
+                entry_name: "Sunny",
+            },
+        ];
 
-        let directory = Directory::new(dir_path.to_string_lossy().to_string());
-        let loader = CatalogLoader::new();
-        let catalogs = loader.load_environment_catalogs_from_directory(&directory)?;
+        for row in rows {
+            let temp_dir = TempDir::new().unwrap();
+            let dir_path = temp_dir.path();
+            fs::write(dir_path.join(row.file_name), row.xml).unwrap();
 
-        assert_eq!(catalogs.len(), 1);
-        assert_eq!(catalogs["environments"].len(), 1);
-        assert_eq!(
-            catalogs["environments"][0].name.as_literal().unwrap(),
-            "Sunny"
-        );
+            let directory = Directory::new(dir_path.to_string_lossy().to_string());
+            let loader = CatalogLoader::new();
+            let expected_key = Path::new(row.file_name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap()
+                .to_string();
+
+            match row.kind {
+                "trajectory" => {
+                    let catalogs = loader.load_trajectory_catalogs_from_directory(&directory)?;
+                    assert_single_entry(
+                        &catalogs,
+                        &expected_key,
+                        row.kind,
+                        |t| t.name.as_literal().unwrap().clone(),
+                        row.entry_name,
+                    );
+                }
+                "route" => {
+                    let catalogs = loader.load_route_catalogs_from_directory(&directory)?;
+                    assert_single_entry(
+                        &catalogs,
+                        &expected_key,
+                        row.kind,
+                        |r| r.name.as_literal().unwrap().clone(),
+                        row.entry_name,
+                    );
+                }
+                "environment" => {
+                    let catalogs = loader.load_environment_catalogs_from_directory(&directory)?;
+                    assert_single_entry(
+                        &catalogs,
+                        &expected_key,
+                        row.kind,
+                        |e| e.name.as_literal().unwrap().clone(),
+                        row.entry_name,
+                    );
+                }
+                other => unreachable!("unhandled row kind: {other}"),
+            }
+        }
 
         Ok(())
     }

@@ -259,22 +259,11 @@ mod tests {
         );
     }
 
-    /// `discover_and_load_catalogs` walks every declared catalog-location
-    /// kind (vehicle, controller, pedestrian) and validates each file it
-    /// finds parses as a catalog.
-    #[test]
-    fn discover_and_load_catalogs_succeeds_for_every_declared_kind() {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let vehicle_dir = temp_dir.path().join("vehicles");
-        let controller_dir = temp_dir.path().join("controllers");
-        let pedestrian_dir = temp_dir.path().join("pedestrians");
-        std::fs::create_dir(&vehicle_dir).unwrap();
-        std::fs::create_dir(&controller_dir).unwrap();
-        std::fs::create_dir(&pedestrian_dir).unwrap();
-
-        std::fs::write(
-            vehicle_dir.join("cars.xosc"),
-            r#"<?xml version="1.0"?>
+    // Shared fixtures for the two `discover_and_load_catalogs` tests below:
+    // a minimal but XSD-valid catalog document for each of the three
+    // location kinds the function walks.
+    fn valid_vehicle_xml() -> &'static str {
+        r#"<?xml version="1.0"?>
 <OpenSCENARIO>
     <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
     <Catalog name="VehicleCatalog">
@@ -290,23 +279,21 @@ mod tests {
             </Axles>
         </Vehicle>
     </Catalog>
-</OpenSCENARIO>"#,
-        )
-        .unwrap();
-        std::fs::write(
-            controller_dir.join("ctrl.xosc"),
-            r#"<?xml version="1.0"?>
+</OpenSCENARIO>"#
+    }
+
+    fn valid_controller_xml() -> &'static str {
+        r#"<?xml version="1.0"?>
 <OpenSCENARIO>
     <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
     <Catalog name="ControllerCatalog">
         <Controller name="Ctrl1" controllerType="movement"/>
     </Catalog>
-</OpenSCENARIO>"#,
-        )
-        .unwrap();
-        std::fs::write(
-            pedestrian_dir.join("ped.xosc"),
-            r#"<?xml version="1.0"?>
+</OpenSCENARIO>"#
+    }
+
+    fn valid_pedestrian_xml() -> &'static str {
+        r#"<?xml version="1.0"?>
 <OpenSCENARIO>
     <FileHeader author="Test" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
     <Catalog name="PedestrianCatalog">
@@ -317,9 +304,27 @@ mod tests {
             </BoundingBox>
         </Pedestrian>
     </Catalog>
-</OpenSCENARIO>"#,
-        )
-        .unwrap();
+</OpenSCENARIO>"#
+    }
+
+    /// `discover_and_load_catalogs` returns `Ok(())` once every declared
+    /// kind has been walked without error. The malformed-file table below
+    /// can never reach this line — every one of its rows errors by
+    /// construction — so this is the terminal return's only coverage; it
+    /// stays a narrow, single-assertion test on purpose (see that test's
+    /// doc comment for why `is_ok()` alone can't prove a kind's branch ran).
+    #[test]
+    fn discover_and_load_catalogs_succeeds_when_every_kind_loads_cleanly() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let vehicle_dir = temp_dir.path().join("vehicles");
+        let controller_dir = temp_dir.path().join("controllers");
+        let pedestrian_dir = temp_dir.path().join("pedestrians");
+        std::fs::create_dir(&vehicle_dir).unwrap();
+        std::fs::create_dir(&controller_dir).unwrap();
+        std::fs::create_dir(&pedestrian_dir).unwrap();
+        std::fs::write(vehicle_dir.join("ok.xosc"), valid_vehicle_xml()).unwrap();
+        std::fs::write(controller_dir.join("ok.xosc"), valid_controller_xml()).unwrap();
+        std::fs::write(pedestrian_dir.join("ok.xosc"), valid_pedestrian_xml()).unwrap();
 
         let mut locations = CatalogLocations::new();
         locations.vehicle_catalog = Some(VehicleCatalogLocation::from_path(
@@ -336,26 +341,63 @@ mod tests {
         assert!(manager.discover_and_load_catalogs(&locations).is_ok());
     }
 
-    /// A malformed file under a declared catalog location must propagate as
-    /// an error rather than being silently skipped like a directory that
-    /// does not exist.
+    /// `discover_and_load_catalogs` walks every declared catalog-location
+    /// kind's own branch (vehicle, controller, pedestrian) and validates
+    /// each file it finds parses as a catalog. One row per kind: two
+    /// locations always hold a file that loads cleanly and the third holds
+    /// a malformed one, so the error can only name `broken.xosc` — and the
+    /// row can only pass — if that kind's own branch actually ran. A branch
+    /// dropped from the implementation leaves its row's malformed file
+    /// unvisited, so `discover_and_load_catalogs` wrongly returns `Ok(())`
+    /// and the row's `expect_err` fails.
     #[test]
-    fn discover_and_load_catalogs_propagates_a_malformed_catalog_file() {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let vehicle_dir = temp_dir.path().join("vehicles");
-        std::fs::create_dir(&vehicle_dir).unwrap();
-        std::fs::write(vehicle_dir.join("broken.xosc"), "<not valid xml").unwrap();
+    fn discover_and_load_catalogs_propagates_a_malformed_catalog_file_by_kind() {
+        let valid_vehicle_xml = valid_vehicle_xml();
+        let valid_controller_xml = valid_controller_xml();
+        let valid_pedestrian_xml = valid_pedestrian_xml();
 
-        let mut locations = CatalogLocations::new();
-        locations.vehicle_catalog = Some(VehicleCatalogLocation::from_path(
-            vehicle_dir.to_string_lossy().into_owned(),
-        ));
+        for broken_kind in ["vehicle", "controller", "pedestrian"] {
+            let temp_dir = tempfile::TempDir::new().unwrap();
+            let vehicle_dir = temp_dir.path().join("vehicles");
+            let controller_dir = temp_dir.path().join("controllers");
+            let pedestrian_dir = temp_dir.path().join("pedestrians");
+            std::fs::create_dir(&vehicle_dir).unwrap();
+            std::fs::create_dir(&controller_dir).unwrap();
+            std::fs::create_dir(&pedestrian_dir).unwrap();
 
-        let mut manager = CatalogManager::new();
-        let err = manager
-            .discover_and_load_catalogs(&locations)
-            .expect_err("a malformed catalog file must propagate as an error");
-        assert!(err.to_string().contains("broken.xosc"), "{err}");
+            let write_kind = |dir: &std::path::Path, kind: &str, valid_xml: &str| {
+                if kind == broken_kind {
+                    std::fs::write(dir.join("broken.xosc"), "<not valid xml").unwrap();
+                } else {
+                    std::fs::write(dir.join("ok.xosc"), valid_xml).unwrap();
+                }
+            };
+            write_kind(&vehicle_dir, "vehicle", valid_vehicle_xml);
+            write_kind(&controller_dir, "controller", valid_controller_xml);
+            write_kind(&pedestrian_dir, "pedestrian", valid_pedestrian_xml);
+
+            let mut locations = CatalogLocations::new();
+            locations.vehicle_catalog = Some(VehicleCatalogLocation::from_path(
+                vehicle_dir.to_string_lossy().into_owned(),
+            ));
+            locations.controller_catalog = Some(ControllerCatalogLocation::from_path(
+                controller_dir.to_string_lossy().into_owned(),
+            ));
+            locations.pedestrian_catalog = Some(PedestrianCatalogLocation::from_path(
+                pedestrian_dir.to_string_lossy().into_owned(),
+            ));
+
+            let mut manager = CatalogManager::new();
+            let err = manager
+                .discover_and_load_catalogs(&locations)
+                .expect_err(&format!(
+                    "kind: {broken_kind}: a malformed catalog file must propagate as an error"
+                ));
+            assert!(
+                err.to_string().contains("broken.xosc"),
+                "kind: {broken_kind}: {err}"
+            );
+        }
     }
 }
 
