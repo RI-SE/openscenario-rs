@@ -14,7 +14,7 @@
 //!
 //! The cases in sections 1 to 5 fail with `invalid type: map, expected a sequence`
 //! when using `#[serde(flatten)]`, except where marked as a control. The wrappers
-//! in sections 6 to 8 never hit that failure, because nothing in their schema
+//! in sections 6 and 7 never hit that failure, because nothing in their schema
 //! subtree is repeatable; however, they did accept a document carrying two branches
 //! and keep whichever came first under `flatten`. Their rejection cases verify
 //! that, and fail under `flatten` by parsing successfully.
@@ -69,8 +69,11 @@ const TRAFFIC_AREA_ACTION: &str = concat!(
 
 // ═══ 1. TrafficAction — the reported defect ══════════════════════════════════════════════
 //
-// The six hand-built variants of that bisect, reproduced as assertions. Before
-// conversion to `$value`, A / C / D / F failed and B / E passed.
+// Variants of the bisect that found the defect, reproduced as assertions. Before
+// conversion to `$value`, A / C / D / F failed and B / E passed. C (a one-element
+// sequence, `RoadRange` here) is asserted by A; B (`TrafficStopAction`) and F
+// (`@trafficName`) by `choice_wrappers_roundtrip_test.rs::traffic_action_stop_round_trip`
+// and `traffic_action_with_name_round_trips_byte_for_byte` below.
 
 #[test]
 fn traffic_action_variant_a_original_payload_parses() {
@@ -89,42 +92,6 @@ fn traffic_action_variant_a_original_payload_parses() {
         area.traffic_distribution.traffic_distribution_entry.len(),
         1
     );
-}
-
-#[test]
-fn traffic_action_variant_b_no_repeated_child_parses() {
-    // Control: passed both before and after conversion to `$value`.
-    let action: TrafficAction = de(r#"<TrafficAction><TrafficStopAction/></TrafficAction>"#);
-    assert!(matches!(
-        action.action,
-        TrafficActionChoice::TrafficStopAction(_)
-    ));
-}
-
-#[test]
-fn traffic_action_variant_c_single_element_sequence_parses() {
-    // A one-element sequence failed just as hard as a two-element one: the buffered
-    // `Content` is a map either way. That claim is what this test exists for.
-    //
-    // It used to make its one-element sequence by deleting a `<RoadCursor>`, leaving a
-    // `RoadRange` with one cursor. XSD `RoadRange` (`Schema/OpenSCENARIO.xsd:1951`)
-    // declares `RoadCursor` with `minOccurs="2"`, so that document was never
-    // schema-valid — the plain `Vec` simply could not tell. The single-element sequence
-    // is now taken at the `RoadRange` level, where the branch genuinely repeats and one
-    // element is legal.
-    let action: TrafficAction = de(TRAFFIC_AREA_ACTION);
-    let TrafficActionChoice::TrafficAreaAction(area) = &action.action else {
-        panic!("expected TrafficAreaAction");
-    };
-    let TrafficAreaChoice::RoadRange(road_ranges) = &area.traffic_area.choice else {
-        panic!("expected RoadRange, got {:?}", area.traffic_area.choice);
-    };
-    assert_eq!(
-        road_ranges.len(),
-        1,
-        "a one-element sequence must deserialize"
-    );
-    assert_eq!(road_ranges[0].road_cursor.len(), 2);
 }
 
 #[test]
@@ -166,13 +133,6 @@ fn traffic_action_variant_e_no_sequence_field_parses() {
 }
 
 #[test]
-fn traffic_action_variant_f_optional_traffic_name_parses() {
-    let xml = TRAFFIC_AREA_ACTION.replace("<TrafficAction>", r#"<TrafficAction trafficName="t">"#);
-    let action: TrafficAction = de(&xml);
-    assert_eq!(action.traffic_name.unwrap().to_string(), "t");
-}
-
-#[test]
 fn traffic_action_round_trips_byte_for_byte() {
     let action: TrafficAction = de(TRAFFIC_AREA_ACTION);
     let out = quick_xml::se::to_string_with_root("TrafficAction", &action)
@@ -184,6 +144,7 @@ fn traffic_action_round_trips_byte_for_byte() {
 fn traffic_action_with_name_round_trips_byte_for_byte() {
     let xml = TRAFFIC_AREA_ACTION.replace("<TrafficAction>", r#"<TrafficAction trafficName="t">"#);
     let action: TrafficAction = de(&xml);
+    assert_eq!(action.traffic_name.as_ref().unwrap().to_string(), "t");
     let out = quick_xml::se::to_string_with_root("TrafficAction", &action)
         .expect("TrafficAction failed to serialize");
     assert_eq!(out, xml);
@@ -321,65 +282,15 @@ fn private_action_element_rejects_zero_and_two_branches() {
     assert!(two.contains("duplicate field `$value`"), "got: {two}");
 }
 
-// ═══ 6. The four wrappers that were immune, now converted too ════════════
+// ═══ 6. Four wrappers that were immune, converted too ═════════════════════
 //
 // `VariableAction`, `VariableModifyRule`, `ParameterAction` and `ModifyRule`
 // carried `#[serde(flatten)]` and parsed correctly because their entire XSD
-// subtree has no element with `maxOccurs > 1`: `VariableSetAction` /
-// `ParameterSetAction` are a single `@value`; `VariableModifyAction` /
-// `ParameterModifyAction` hold one `<Rule>`, whose `AddValue` /
-// `MultiplyByValue` branches are a single `@value` each. That immunity was a
-// property of the schema as it stands, not of the construct: adding one
-// repeated element under any of them would have reintroduced the
-// `invalid type: map, expected a sequence` failure silently. All four now use
-// `$value`, which parses the same content and additionally rejects a missing
-// or duplicated choice structurally.
-
-#[test]
-fn variable_action_still_parses() {
-    let _: VariableAction =
-        de(r#"<VariableAction variableRef="v"><SetAction value="1"/></VariableAction>"#);
-    let _: VariableAction = de(
-        r#"<VariableAction variableRef="v"><ModifyAction><Rule><AddValue value="1"/></Rule></ModifyAction></VariableAction>"#,
-    );
-}
-
-#[test]
-fn variable_modify_rule_still_parses() {
-    let _: VariableModifyRule = de(r#"<Rule><AddValue value="1"/></Rule>"#);
-    let _: VariableModifyRule = de(r#"<Rule><MultiplyByValue value="2"/></Rule>"#);
-}
-
-#[test]
-fn parameter_action_still_parses() {
-    let _: ParameterAction =
-        de(r#"<ParameterAction parameterRef="p"><SetAction value="1"/></ParameterAction>"#);
-    let _: ParameterAction = de(
-        r#"<ParameterAction parameterRef="p"><ModifyAction><Rule><AddValue value="1"/></Rule></ModifyAction></ParameterAction>"#,
-    );
-}
-
-#[test]
-fn modify_rule_still_parses() {
-    let _: ModifyRule = de(r#"<Rule><AddValue value="1"/></Rule>"#);
-    let _: ModifyRule = de(r#"<Rule><MultiplyByValue value="2"/></Rule>"#);
-}
-
-// ═══ 7. The four wrappers above, given a byte-exact round trip and the two
-// rejection cases they gained by moving to `$value`. Their sequence-free
-// subtree meant `flatten` never failed on them for a sequence, so there is no
-// "before" to reproduce for that case. The rejection cases are a regression
-// guard rather than new coverage: under `flatten` a two-branch document was
-// accepted and the second branch discarded without a word.
-
-#[test]
-fn variable_action_set_round_trips_byte_for_byte() {
-    let xml = r#"<VariableAction variableRef="v"><SetAction value="1"/></VariableAction>"#;
-    let action: VariableAction = de(xml);
-    let out = quick_xml::se::to_string_with_root("VariableAction", &action)
-        .expect("VariableAction failed to serialize");
-    assert_eq!(out, xml);
-}
+// subtree has no element with `maxOccurs > 1`. That immunity was a property of
+// the schema as it stands, not of the construct. All four now use `$value`,
+// which rejects a missing or duplicated choice structurally; under `flatten` a
+// two-branch document was accepted and the second branch discarded without a
+// word. Their byte-exact round trips live in `choice_wrappers_roundtrip_test.rs`.
 
 #[test]
 fn variable_action_rejects_zero_and_two_branches() {
@@ -389,15 +300,6 @@ fn variable_action_rejects_zero_and_two_branches() {
         r#"<VariableAction variableRef="v"><SetAction value="1"/><ModifyAction><Rule><AddValue value="1"/></Rule></ModifyAction></VariableAction>"#,
     );
     assert!(two.contains("duplicate field `$value`"), "got: {two}");
-}
-
-#[test]
-fn variable_modify_rule_add_value_round_trips_byte_for_byte() {
-    let xml = r#"<Rule><AddValue value="1"/></Rule>"#;
-    let rule: VariableModifyRule = de(xml);
-    let out = quick_xml::se::to_string_with_root("Rule", &rule)
-        .expect("VariableModifyRule failed to serialize");
-    assert_eq!(out, xml);
 }
 
 #[test]
@@ -411,15 +313,6 @@ fn variable_modify_rule_rejects_zero_and_two_branches() {
 }
 
 #[test]
-fn parameter_action_set_round_trips_byte_for_byte() {
-    let xml = r#"<ParameterAction parameterRef="p"><SetAction value="1"/></ParameterAction>"#;
-    let action: ParameterAction = de(xml);
-    let out = quick_xml::se::to_string_with_root("ParameterAction", &action)
-        .expect("ParameterAction failed to serialize");
-    assert_eq!(out, xml);
-}
-
-#[test]
 fn parameter_action_rejects_zero_and_two_branches() {
     let none = de_err::<ParameterAction>(r#"<ParameterAction parameterRef="p"/>"#);
     assert!(none.contains("missing field `$value`"), "got: {none}");
@@ -427,15 +320,6 @@ fn parameter_action_rejects_zero_and_two_branches() {
         r#"<ParameterAction parameterRef="p"><SetAction value="1"/><ModifyAction><Rule><AddValue value="1"/></Rule></ModifyAction></ParameterAction>"#,
     );
     assert!(two.contains("duplicate field `$value`"), "got: {two}");
-}
-
-#[test]
-fn modify_rule_add_value_round_trips_byte_for_byte() {
-    let xml = r#"<Rule><AddValue value="1"/></Rule>"#;
-    let rule: ModifyRule = de(xml);
-    let out =
-        quick_xml::se::to_string_with_root("Rule", &rule).expect("ModifyRule failed to serialize");
-    assert_eq!(out, xml);
 }
 
 #[test]
@@ -447,7 +331,7 @@ fn modify_rule_rejects_zero_and_two_branches() {
     assert!(two.contains("duplicate field `$value`"), "got: {two}");
 }
 
-// ═══ 8. Five more sites, immune until now, converted from `flatten` to
+// ═══ 7. Five more sites, immune until now, converted from `flatten` to
 // `$value` ═════
 //
 // `TrafficSignalAction`, `LaneChangeTarget`, `LaneOffsetTarget`,
@@ -455,7 +339,9 @@ fn modify_rule_rejects_zero_and_two_branches() {
 // nothing in their schema subtree carries `maxOccurs > 1`. That immunity was
 // a property of the schema as it stands, not of the construct, so they are
 // converted along with the rest rather than left as a list of places the
-// construct happens to be survivable.
+// construct happens to be survivable. `TrafficSignalStateAction` round-trips
+// here; the other four branches' round trips live in
+// `choice_wrappers_roundtrip_test.rs`.
 
 #[test]
 fn traffic_signal_action_state_round_trips_byte_for_byte() {
@@ -477,15 +363,6 @@ fn traffic_signal_action_rejects_zero_and_two_branches() {
 }
 
 #[test]
-fn lane_change_target_absolute_round_trips_byte_for_byte() {
-    let xml = r#"<LaneChangeTarget><AbsoluteTargetLane value="2"/></LaneChangeTarget>"#;
-    let target: LaneChangeTarget = de(xml);
-    let out = quick_xml::se::to_string_with_root("LaneChangeTarget", &target)
-        .expect("LaneChangeTarget failed to serialize");
-    assert_eq!(out, xml);
-}
-
-#[test]
 fn lane_change_target_rejects_zero_and_two_branches() {
     let none = de_err::<LaneChangeTarget>("<LaneChangeTarget/>");
     assert!(none.contains("missing field `$value`"), "got: {none}");
@@ -493,15 +370,6 @@ fn lane_change_target_rejects_zero_and_two_branches() {
         r#"<LaneChangeTarget><AbsoluteTargetLane value="2"/><RelativeTargetLane entityRef="e" value="1"/></LaneChangeTarget>"#,
     );
     assert!(two.contains("duplicate field `$value`"), "got: {two}");
-}
-
-#[test]
-fn lane_offset_target_absolute_round_trips_byte_for_byte() {
-    let xml = r#"<LaneOffsetTarget><AbsoluteTargetLaneOffset value="1.5"/></LaneOffsetTarget>"#;
-    let target: LaneOffsetTarget = de(xml);
-    let out = quick_xml::se::to_string_with_root("LaneOffsetTarget", &target)
-        .expect("LaneOffsetTarget failed to serialize");
-    assert_eq!(out, xml);
 }
 
 #[test]
@@ -515,15 +383,6 @@ fn lane_offset_target_rejects_zero_and_two_branches() {
 }
 
 #[test]
-fn lateral_action_lateral_distance_round_trips_byte_for_byte() {
-    let xml = r#"<LateralAction><LateralDistanceAction entityRef="ego" freespace="true" continuous="false"/></LateralAction>"#;
-    let action: LateralAction = de(xml);
-    let out = quick_xml::se::to_string_with_root("LateralAction", &action)
-        .expect("LateralAction failed to serialize");
-    assert_eq!(out, xml);
-}
-
-#[test]
 fn lateral_action_rejects_zero_and_two_branches() {
     let none = de_err::<LateralAction>("<LateralAction/>");
     assert!(none.contains("missing field `$value`"), "got: {none}");
@@ -531,15 +390,6 @@ fn lateral_action_rejects_zero_and_two_branches() {
         r#"<LateralAction><LateralDistanceAction entityRef="ego" freespace="true" continuous="false"/><LateralDistanceAction entityRef="ego" freespace="true" continuous="false"/></LateralAction>"#,
     );
     assert!(two.contains("duplicate field `$value`"), "got: {two}");
-}
-
-#[test]
-fn final_speed_absolute_round_trips_byte_for_byte() {
-    let xml = r#"<FinalSpeed><AbsoluteSpeed value="27.5"/></FinalSpeed>"#;
-    let fs: FinalSpeed = de(xml);
-    let out = quick_xml::se::to_string_with_root("FinalSpeed", &fs)
-        .expect("FinalSpeed failed to serialize");
-    assert_eq!(out, xml);
 }
 
 #[test]

@@ -7,7 +7,7 @@
 //! the later claims.
 
 use openscenario_rs::types::actions::control::{
-    BrakeInput, Gear, OverrideBrakeAction, OverrideGearAction, OverrideParkingBrakeAction,
+    OverrideBrakeAction, OverrideGearAction, OverrideParkingBrakeAction,
 };
 use openscenario_rs::types::catalogs::entities::CatalogManeuver;
 use openscenario_rs::types::distributions::UserDefinedDistribution;
@@ -21,111 +21,39 @@ use openscenario_rs::types::distributions::UserDefinedDistribution;
 // `#[serde(flatten)]` the children were buffered into a map before being
 // interpreted, and a map cannot report that a key occurred twice, so the
 // two-branch document parsed and the second branch was dropped in silence.
+// The one-branch round trips live in `choice_wrappers_roundtrip_test.rs`.
 // ---------------------------------------------------------------------------
-
-const BRAKE_ONE: &str =
-    r#"<OverrideBrakeAction active="true"><BrakePercent value="0.5"/></OverrideBrakeAction>"#;
-const GEAR_ONE: &str =
-    r#"<OverrideGearAction active="true"><ManualGear number="3"/></OverrideGearAction>"#;
-const PARKING_ONE: &str = r#"<OverrideParkingBrakeAction active="true"><BrakeForce value="100"/></OverrideParkingBrakeAction>"#;
 
 #[test]
 fn override_brake_action_rejects_two_branches() {
     let xml = r#"<OverrideBrakeAction active="true"><BrakePercent value="0.5"/><BrakeForce value="9"/></OverrideBrakeAction>"#;
-    let parsed: Result<OverrideBrakeAction, _> = quick_xml::de::from_str(xml);
-    assert!(
-        parsed.is_err(),
-        "a document carrying both branches of the BrakeInput group was accepted: {:?}",
-        parsed
-    );
+    let err = quick_xml::de::from_str::<OverrideBrakeAction>(xml)
+        .expect_err("a document carrying both branches of the BrakeInput group was accepted");
+    assert_eq!(err.to_string(), "duplicate field `$value`");
 }
 
 #[test]
 fn override_gear_action_rejects_two_branches() {
     let xml = r#"<OverrideGearAction active="true"><ManualGear number="3"/><AutomaticGear gear="n"/></OverrideGearAction>"#;
-    let parsed: Result<OverrideGearAction, _> = quick_xml::de::from_str(xml);
-    assert!(
-        parsed.is_err(),
-        "a document carrying both branches of the Gear group was accepted: {:?}",
-        parsed
-    );
+    let err = quick_xml::de::from_str::<OverrideGearAction>(xml)
+        .expect_err("a document carrying both branches of the Gear group was accepted");
+    assert_eq!(err.to_string(), "duplicate field `$value`");
 }
 
 #[test]
 fn override_parking_brake_action_rejects_two_branches() {
     let xml = r#"<OverrideParkingBrakeAction active="true"><BrakePercent value="0.5"/><BrakeForce value="9"/></OverrideParkingBrakeAction>"#;
-    let parsed: Result<OverrideParkingBrakeAction, _> = quick_xml::de::from_str(xml);
-    assert!(
-        parsed.is_err(),
-        "a document carrying both branches of the BrakeInput group was accepted: {:?}",
-        parsed
-    );
+    let err = quick_xml::de::from_str::<OverrideParkingBrakeAction>(xml)
+        .expect_err("a document carrying both branches of the BrakeInput group was accepted");
+    assert_eq!(err.to_string(), "duplicate field `$value`");
 }
 
 #[test]
 fn override_brake_action_accepts_zero_branches() {
     let xml = r#"<OverrideBrakeAction active="true"/>"#;
-    let parsed: Result<OverrideBrakeAction, _> = quick_xml::de::from_str(xml);
-    assert!(parsed.is_ok(), "minOccurs=\"0\" group: {:?}", parsed);
-}
-
-#[test]
-fn override_brake_action_keeps_its_branch() {
-    let parsed: OverrideBrakeAction = quick_xml::de::from_str(BRAKE_ONE).expect("parse");
-    assert!(
-        matches!(parsed.brake_input, Some(BrakeInput::BrakePercent(_))),
-        "branch lost: {:?}",
-        parsed.brake_input
-    );
-}
-
-#[test]
-fn override_gear_action_keeps_its_branch() {
-    let parsed: OverrideGearAction = quick_xml::de::from_str(GEAR_ONE).expect("parse");
-    assert!(
-        matches!(parsed.gear, Some(Gear::ManualGear(_))),
-        "branch lost: {:?}",
-        parsed.gear
-    );
-}
-
-#[test]
-fn override_parking_brake_action_keeps_its_branch() {
-    let parsed: OverrideParkingBrakeAction = quick_xml::de::from_str(PARKING_ONE).expect("parse");
-    assert!(
-        matches!(parsed.brake_input, Some(BrakeInput::BrakeForce(_))),
-        "branch lost: {:?}",
-        parsed.brake_input
-    );
-}
-
-#[test]
-fn override_brake_action_serializes_back_to_its_source() {
-    let parsed: OverrideBrakeAction = quick_xml::de::from_str(BRAKE_ONE).expect("parse");
-    let out =
-        quick_xml::se::to_string_with_root("OverrideBrakeAction", &parsed).expect("serialize");
-    assert_eq!(out, BRAKE_ONE);
-}
-
-#[test]
-fn override_gear_action_serializes_back_to_its_source() {
-    let parsed: OverrideGearAction = quick_xml::de::from_str(GEAR_ONE).expect("parse");
-    let out = quick_xml::se::to_string_with_root("OverrideGearAction", &parsed).expect("serialize");
-    assert_eq!(out, GEAR_ONE);
-}
-
-#[test]
-fn override_parking_brake_action_serializes_back_to_its_source() {
-    let parsed: OverrideParkingBrakeAction = quick_xml::de::from_str(PARKING_ONE).expect("parse");
-    let out = quick_xml::se::to_string_with_root("OverrideParkingBrakeAction", &parsed)
-        .expect("serialize");
-    assert_eq!(out, PARKING_ONE);
-}
-
-#[test]
-fn override_brake_action_keeps_its_sibling_attribute() {
-    let parsed: OverrideBrakeAction = quick_xml::de::from_str(BRAKE_ONE).expect("parse");
-    assert_eq!(parsed.active.as_literal(), Some(&true));
+    let parsed: OverrideBrakeAction =
+        quick_xml::de::from_str(xml).expect("minOccurs=\"0\" group: zero branches is valid");
+    assert_eq!(parsed.brake_input, None);
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +66,9 @@ fn override_brake_action_keeps_its_sibling_attribute() {
 #[test]
 fn user_defined_distribution_accepts_an_absent_text_body() {
     let xml = r#"<UserDefinedDistribution type="t"/>"#;
-    let parsed: Result<UserDefinedDistribution, _> = quick_xml::de::from_str(xml);
-    assert!(parsed.is_ok(), "empty text body rejected: {:?}", parsed);
+    let parsed: UserDefinedDistribution =
+        quick_xml::de::from_str(xml).expect("an empty text body is valid xsd:string");
+    assert_eq!(parsed.content, "");
 }
 
 #[test]
@@ -161,10 +90,7 @@ fn user_defined_distribution_keeps_a_present_text_body() {
 #[test]
 fn catalog_maneuver_rejects_a_document_with_no_event() {
     let xml = r#"<Maneuver name="m"/>"#;
-    let parsed: Result<CatalogManeuver, _> = quick_xml::de::from_str(xml);
-    assert!(
-        parsed.is_err(),
-        "a Maneuver carrying no Event was accepted: {:?}",
-        parsed
-    );
+    let err = quick_xml::de::from_str::<CatalogManeuver>(xml)
+        .expect_err("a Maneuver carrying no Event was accepted");
+    assert_eq!(err.to_string(), "missing field `Event`");
 }

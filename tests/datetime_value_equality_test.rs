@@ -4,39 +4,11 @@
 //! `source` text kept for lexical fidelity (see `datetime_lexical_fidelity_test.rs`). Two
 //! spellings of the same instant, or a constructed value and the parsed value it came from,
 //! then compared unequal even though they named the same value. These tests assert the value
-//! comparison directly and, since the fix must not regress lexical fidelity, that each
-//! spelling still serializes exactly as written.
+//! comparison directly; that each spelling still serializes exactly as written is
+//! `datetime_lexical_fidelity_test.rs`'s table.
 
 use openscenario_rs::types::basic::XsdDateTime;
-use openscenario_rs::types::conditions::value::TimeOfDayCondition;
 use std::collections::HashSet;
-
-#[test]
-fn z_and_plus_zero_offset_compare_equal() {
-    let z: XsdDateTime = "2020-06-16T10:00:00Z".parse().unwrap();
-    let offset: XsdDateTime = "2020-06-16T10:00:00+00:00".parse().unwrap();
-    assert_eq!(
-        z, offset,
-        "same instant, different spelling, must compare equal"
-    );
-}
-
-#[test]
-fn equal_spellings_still_serialize_as_written() {
-    // Each spelling still round-trips through the real XML path byte-identical, even though
-    // the two values now compare equal. Lexical fidelity is preserved.
-    for date_time in ["2020-06-16T10:00:00Z", "2020-06-16T10:00:00+00:00"] {
-        let xml = format!(r#"<TimeOfDayCondition dateTime="{date_time}" rule="greaterThan"/>"#);
-        let condition: TimeOfDayCondition =
-            quick_xml::de::from_str(&xml).unwrap_or_else(|e| panic!("failed to parse {xml}: {e}"));
-        let serialized =
-            quick_xml::se::to_string_with_root("TimeOfDayCondition", &condition).unwrap();
-        assert_eq!(
-            serialized, xml,
-            "dateTime={date_time} did not round-trip byte-identical"
-        );
-    }
-}
 
 #[test]
 fn constructed_value_equals_the_parsed_value_it_came_from() {
@@ -49,9 +21,13 @@ fn constructed_value_equals_the_parsed_value_it_came_from() {
 }
 
 #[test]
-fn hash_agrees_with_partial_eq_for_two_spellings() {
+fn two_spellings_of_one_instant_are_equal_and_hash_alike() {
     let z: XsdDateTime = "2020-06-16T10:00:00Z".parse().unwrap();
     let offset: XsdDateTime = "2020-06-16T10:00:00+00:00".parse().unwrap();
+    assert_eq!(
+        z, offset,
+        "same instant, different spelling, must compare equal"
+    );
     let mut set = HashSet::new();
     set.insert(z);
     set.insert(offset);

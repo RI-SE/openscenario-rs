@@ -4,7 +4,8 @@
 //! behind a `$value` field. Externally-tagged enums serialize using the *variant* name,
 //! so the variant name must match the **XSD element name**, not the XSD type name.
 //! Each test below feeds a minimal schema-valid XML snippet in, checks the deserialized
-//! variant and its field values, re-serializes, and asserts the XSD element name is emitted.
+//! variant and its field values, re-serializes, and asserts the XSD element name is emitted
+//! (most by a byte-exact comparison, written in the attribute order the crate emits).
 
 use openscenario_rs::types::actions::control::{
     BrakeInput, Gear, OverrideBrakeAction, OverrideGearAction, OverrideParkingBrakeAction,
@@ -60,8 +61,7 @@ fn lane_change_target_absolute_round_trip() {
         LaneChangeTargetChoice::AbsoluteTargetLane(a) => assert_eq!(a.value.to_string(), "2"),
         other => panic!("expected AbsoluteTargetLane, got {other:?}"),
     }
-    let out = ser("LaneChangeTarget", &target);
-    assert!(out.contains("AbsoluteTargetLane"), "got: {out}");
+    assert_eq!(ser("LaneChangeTarget", &target), xml);
 }
 
 // ─── movement.rs: LaneOffsetTarget ──────────────────────────────────────────
@@ -77,8 +77,7 @@ fn lane_offset_target_absolute_round_trip() {
         }
         other => panic!("expected AbsoluteTargetLaneOffset, got {other:?}"),
     }
-    let out = ser("LaneOffsetTarget", &target);
-    assert!(out.contains("AbsoluteTargetLaneOffset"), "got: {out}");
+    assert_eq!(ser("LaneOffsetTarget", &target), xml);
 }
 
 // ─── movement.rs: LateralAction ─────────────────────────────────────────────
@@ -86,7 +85,7 @@ fn lane_offset_target_absolute_round_trip() {
 
 #[test]
 fn lateral_action_lateral_distance_round_trip() {
-    let xml = r#"<LateralAction><LateralDistanceAction entityRef="ego" distance="5.0" freespace="true" continuous="false"/></LateralAction>"#;
+    let xml = r#"<LateralAction><LateralDistanceAction entityRef="ego" distance="5" freespace="true" continuous="false"/></LateralAction>"#;
     let action: LateralAction = de(xml);
     match &action.lateral_choice {
         LateralActionChoice::LateralDistanceAction(a) => {
@@ -98,8 +97,7 @@ fn lateral_action_lateral_distance_round_trip() {
         }
         other => panic!("expected LateralDistanceAction, got {other:?}"),
     }
-    let out = ser("LateralAction", &action);
-    assert!(out.contains("LateralDistanceAction"), "got: {out}");
+    assert_eq!(ser("LateralAction", &action), xml);
 }
 
 // ─── movement.rs: LongitudinalAction ────────────────────────────────────────
@@ -136,8 +134,7 @@ fn final_speed_absolute_round_trip() {
         }
         other => panic!("expected AbsoluteSpeed, got {other:?}"),
     }
-    let out = ser("FinalSpeed", &fs);
-    assert!(out.contains("AbsoluteSpeed"), "got: {out}");
+    assert_eq!(ser("FinalSpeed", &fs), xml);
 }
 
 // ─── wrappers.rs: EntityAction ──────────────────────────────────────────────
@@ -172,8 +169,7 @@ fn traffic_action_stop_round_trip() {
         action.action,
         TrafficActionChoice::TrafficStopAction(_)
     ));
-    let out = ser("TrafficAction", &action);
-    assert!(out.contains("TrafficStopAction"), "got: {out}");
+    assert_eq!(ser("TrafficAction", &action), xml);
 }
 
 // ─── wrappers.rs: VariableAction ────────────────────────────────────────────
@@ -188,10 +184,8 @@ fn variable_action_set_action_round_trip() {
         VariableActionChoice::VariableSetAction(s) => assert_eq!(s.value.to_string(), "42"),
         other => panic!("expected SetAction, got {other:?}"),
     }
-    let out = ser("VariableAction", &action);
-    assert!(out.contains("<SetAction"), "got: {out}");
-    assert!(out.contains("variableRef=\"v1\""), "got: {out}");
-    assert!(!out.contains("VariableSetAction"), "got: {out}");
+    // The element is `SetAction`, not the variant name `VariableSetAction`.
+    assert_eq!(ser("VariableAction", &action), xml);
 }
 
 // XSD:2481-2485 VariableModifyAction := all(Rule: VariableModifyRule)
@@ -211,10 +205,7 @@ fn variable_action_modify_action_round_trip() {
         },
         other => panic!("expected ModifyAction, got {other:?}"),
     }
-    let out = ser("VariableAction", &action);
-    assert!(out.contains("<ModifyAction"), "got: {out}");
-    assert!(out.contains("<Rule"), "got: {out}");
-    assert!(out.contains("<AddValue"), "got: {out}");
+    assert_eq!(ser("VariableAction", &action), xml);
 }
 
 #[test]
@@ -243,10 +234,8 @@ fn parameter_action_set_action_round_trip() {
         ParameterActionChoice::ParameterSetAction(s) => assert_eq!(s.value.to_string(), "100"),
         other => panic!("expected SetAction, got {other:?}"),
     }
-    let out = ser("ParameterAction", &action);
-    assert!(out.contains("<SetAction"), "got: {out}");
-    assert!(out.contains("parameterRef=\"p1\""), "got: {out}");
-    assert!(!out.contains("ParameterSetAction"), "got: {out}");
+    // The element is `SetAction`, not the variant name `ParameterSetAction`.
+    assert_eq!(ser("ParameterAction", &action), xml);
 }
 
 // XSD:1647-1651 ParameterModifyAction := all(Rule: ModifyRule)
@@ -265,10 +254,7 @@ fn parameter_action_modify_action_round_trip() {
         },
         other => panic!("expected ModifyAction, got {other:?}"),
     }
-    let out = ser("ParameterAction", &action);
-    assert!(out.contains("<ModifyAction"), "got: {out}");
-    assert!(out.contains("<Rule"), "got: {out}");
-    assert!(out.contains("<AddValue"), "got: {out}");
+    assert_eq!(ser("ParameterAction", &action), xml);
 }
 
 #[test]
@@ -328,14 +314,14 @@ fn override_brake_action_brake_percent_round_trip() {
     let xml =
         r#"<OverrideBrakeAction active="true"><BrakePercent value="0.5"/></OverrideBrakeAction>"#;
     let action: OverrideBrakeAction = de(xml);
+    assert_eq!(action.active.as_literal(), Some(&true));
     match &action.brake_input {
         Some(BrakeInput::BrakePercent(b)) => {
             assert_eq!(b.value.as_literal().copied(), Some(0.5))
         }
         other => panic!("expected BrakePercent, got {other:?}"),
     }
-    let out = ser("OverrideBrakeAction", &action);
-    assert!(out.contains("BrakePercent"), "got: {out}");
+    assert_eq!(ser("OverrideBrakeAction", &action), xml);
 }
 
 // XSD:1584-1590 OverrideParkingBrakeAction := sequence(group BrakeInput minOccurs=0)
@@ -348,8 +334,7 @@ fn override_parking_brake_action_brake_force_round_trip() {
         action.brake_input,
         Some(BrakeInput::BrakeForce(_))
     ));
-    let out = ser("OverrideParkingBrakeAction", &action);
-    assert!(out.contains("BrakeForce"), "got: {out}");
+    assert_eq!(ser("OverrideParkingBrakeAction", &action), xml);
 }
 
 // ─── control.rs: OverrideGearAction (Gear group) ────────────────────────────
@@ -363,8 +348,7 @@ fn override_gear_action_manual_gear_round_trip() {
         Some(Gear::ManualGear(g)) => assert_eq!(g.number.to_string(), "3"),
         other => panic!("expected ManualGear, got {other:?}"),
     }
-    let out = ser("OverrideGearAction", &action);
-    assert!(out.contains("ManualGear"), "got: {out}");
+    assert_eq!(ser("OverrideGearAction", &action), xml);
 }
 
 // ─── NamedAction must round-trip ALL THREE branches ────────────────────────

@@ -3,46 +3,53 @@
 //! `XsdDateTime`'s `Display` used to re-derive a lexical form from the parsed value rather
 //! than reproducing the text that was read, so `+00:00` became `Z`, `.5Z` became `.500Z`, and
 //! `.25` became `.250` -- each a different, still schema-valid, written form of the same
-//! instant. These tests parse each row through the actual XML path (`TimeOfDayCondition`) and
-//! assert the serialized bytes equal the source, since a fixed point alone does not prove a
-//! round trip.
+//! instant. A timezone-less form used to be refused outright. These tests parse each row
+//! through the actual XML path (`TimeOfDayCondition`) and assert the serialized bytes equal
+//! the source, since a fixed point alone does not prove a round trip.
 
 use openscenario_rs::types::conditions::value::TimeOfDayCondition;
 use openscenario_rs::types::environment::TimeOfDay;
 
-fn round_trips_byte_identical(date_time: &str) {
-    let xml = format!(r#"<TimeOfDayCondition dateTime="{date_time}" rule="greaterThan"/>"#);
-    let condition: TimeOfDayCondition =
-        quick_xml::de::from_str(&xml).unwrap_or_else(|e| panic!("failed to parse {xml}: {e}"));
-    let serialized = quick_xml::se::to_string_with_root("TimeOfDayCondition", &condition).unwrap();
-    assert_eq!(
-        serialized, xml,
-        "dateTime={date_time} did not round-trip byte-identical"
-    );
-}
-
+/// Each row is one written form of an `xsd:dateTime`; each must parse through the XML path
+/// and serialize back byte-identical. Every row is measured before the test fails.
 #[test]
-fn offset_plus_zero_survives_as_written() {
-    round_trips_byte_identical("2020-06-16T10:00:00+00:00");
-}
-
-#[test]
-fn fractional_second_with_z_offset_survives_as_written() {
-    round_trips_byte_identical("2020-06-16T10:00:00.5Z");
-}
-
-#[test]
-fn fractional_second_without_offset_survives_as_written() {
-    round_trips_byte_identical("2020-06-16T10:00:00.25");
+fn date_time_spellings_round_trip_byte_identical() {
+    let rows = [
+        // `+00:00` and `Z` name the same offset; each stays as written.
+        "2020-06-16T10:00:00+00:00",
+        "2020-06-16T10:00:00Z",
+        // `.5` and `.25` are not padded to `.500` / `.250`.
+        "2020-06-16T10:00:00.5Z",
+        "2020-06-16T10:00:00.25",
+        // No timezone: schema-valid `xsd:dateTime`, which RFC 3339 (and `chrono`'s
+        // `DateTime<Utc>::from_str`) refuses; it must parse, and stay offset-less.
+        "2020-06-16T10:00:00",
+    ];
+    let failures: Vec<String> = rows
+        .iter()
+        .filter_map(|date_time| {
+            let xml = format!(r#"<TimeOfDayCondition dateTime="{date_time}" rule="greaterThan"/>"#);
+            let condition: TimeOfDayCondition = match quick_xml::de::from_str(&xml) {
+                Ok(condition) => condition,
+                Err(e) => return Some(format!("{date_time}: failed to parse: {e}")),
+            };
+            let serialized =
+                quick_xml::se::to_string_with_root("TimeOfDayCondition", &condition).unwrap();
+            (serialized != xml).then(|| format!("{date_time}: serialized as {serialized}"))
+        })
+        .collect();
+    assert!(failures.is_empty(), "{failures:#?}");
 }
 
 #[test]
 fn time_of_day_date_time_rejects_a_non_date() {
-    let result: Result<TimeOfDay, _> =
-        quick_xml::de::from_str(r#"<TimeOfDay animation="true" dateTime="not-a-date"/>"#);
+    let err = quick_xml::de::from_str::<TimeOfDay>(
+        r#"<TimeOfDay animation="true" dateTime="not-a-date"/>"#,
+    )
+    .expect_err("`not-a-date` is not in xsd:dateTime's lexical space and must be refused");
     assert!(
-        result.is_err(),
-        "`not-a-date` is not in xsd:dateTime's lexical space and must be refused"
+        err.to_string().starts_with("Failed to parse 'not-a-date':"),
+        "the error must name the refused text, got: {err}"
     );
 }
 

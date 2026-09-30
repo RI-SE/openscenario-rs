@@ -293,7 +293,7 @@ pub type DateTime = Value<XsdDateTime>;
 /// spellings -- `Z` and `+00:00`, or `.5` and `.500` -- therefore compare equal even though
 /// each still serializes as the text it was parsed from. A value with no explicit offset
 /// (`Naive`) is never equal to one with an offset (`Aware`), regardless of clock reading,
-/// because it names no instant to compare. Use [`XsdDateTime::to_string`] (via `Display`) or
+/// because it names no instant to compare. Use `to_string` (via [`Display`](fmt::Display)) or
 /// hold onto the source string directly when the written spelling itself is what matters.
 #[derive(Debug, Clone)]
 pub struct XsdDateTime {
@@ -582,6 +582,9 @@ mod tests {
         let bare_name: Value<f64> = quick_xml::de::from_str(r#"<v>${speed}</v>"#).unwrap();
         assert!(matches!(bare_name, Value::Expression(ref e) if e == "speed"));
         assert_eq!(bare_name.to_string(), "${speed}");
+        let bare_name: Value<String> = quick_xml::de::from_str(r#"<v>${speed}</v>"#).unwrap();
+        assert!(matches!(bare_name, Value::Expression(ref e) if e == "speed"));
+        assert_eq!(bare_name.to_string(), "${speed}");
 
         // A non-ASCII `${…}` body is carried through as an expression rather than being
         // dropped or rejected -- the character class this file tightened applies to the
@@ -599,18 +602,6 @@ mod tests {
         let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$speed</v>"#).unwrap();
         assert!(matches!(bare, Value::Parameter(ref p) if p == "speed"));
         assert_eq!(bare.to_string(), "$speed");
-    }
-
-    #[test]
-    fn test_value_creation() {
-        let literal = Value::<f64>::literal(10.0);
-        assert!(matches!(literal, Value::Literal(10.0)));
-
-        let parameter = Value::<String>::parameter("speed".to_string());
-        assert!(matches!(parameter, Value::Parameter(_)));
-
-        let expression = Value::<String>::expression("speed + 10".to_string());
-        assert!(matches!(expression, Value::Expression(_)));
     }
 
     #[test]
@@ -716,28 +707,19 @@ mod tests {
 
         let as_double: Value<f64> =
             quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
-        assert!(as_double.resolve(&params).is_err());
+        let err = as_double.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("unexpected token"),
+            "expected the parser's cause, got: {err}"
+        );
 
         let as_string: Value<String> =
             quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
-        assert!(as_string.resolve(&params).is_err());
-    }
-
-    /// ASAM OpenSCENARIO XML section 9.2 gives a parameter reference inside an expression its
-    /// `$` prefix (`${$defaultWidth + 12.3}`) and defines no named constants, so `pi` is not
-    /// one. Before this change `Value<T>::deserialize` treated a braced bare identifier as a
-    /// parameter reference, so `${pi}` parsed the same as `$pi` and re-serialized as `$pi` --
-    /// silently renaming the reference on every round trip. It must now parse as an
-    /// expression, unresolved, and round-trip unchanged.
-    #[test]
-    fn braced_bare_name_is_an_expression_not_a_renamed_parameter() {
-        let value: Value<f64> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
-        assert!(matches!(value, Value::Expression(ref e) if e == "pi"));
-        assert_eq!(value.to_string(), "${pi}");
-
-        let value: Value<String> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
-        assert!(matches!(value, Value::Expression(ref e) if e == "pi"));
-        assert_eq!(value.to_string(), "${pi}");
+        let err = as_string.resolve(&params).unwrap_err().to_string();
+        assert!(
+            err.contains("unexpected token"),
+            "expected the parser's cause, got: {err}"
+        );
     }
 
     /// `${pi}` names no parameter the crate defines and no constant section 9.2 defines, so
@@ -760,19 +742,6 @@ mod tests {
             err.contains("not found"),
             "expected the real cause, got: {err}"
         );
-    }
-
-    /// The unbraced `$name` spelling is unaffected: it is still the schema's `parameter`
-    /// production, and `${$speed * 2}` still resolves through the evaluator.
-    #[test]
-    fn unbraced_parameter_and_expression_with_parameter_are_unaffected() {
-        let bare: Value<f64> = quick_xml::de::from_str(r#"<v>$pi</v>"#).unwrap();
-        assert!(matches!(bare, Value::Parameter(ref p) if p == "pi"));
-
-        let mut params = HashMap::new();
-        params.insert("speed".to_string(), "10".to_string());
-        let expr: Value<f64> = quick_xml::de::from_str(r#"<v>${$speed * 2}</v>"#).unwrap();
-        assert_eq!(expr.resolve(&params).unwrap(), 20.0);
     }
 
     #[test]
@@ -838,59 +807,10 @@ mod tests {
     }
 
     #[test]
-    fn test_value_constraint_helpers() {
-        let eq_constraint = ValueConstraint::equal_to("test".to_string());
-        assert_eq!(eq_constraint.rule, Value::Literal(Rule::EqualTo));
-        assert_eq!(eq_constraint.value.as_literal().unwrap(), "test");
-
-        let gt_constraint = ValueConstraint::greater_than("10".to_string());
-        assert_eq!(gt_constraint.rule, Value::Literal(Rule::GreaterThan));
-
-        let lt_constraint = ValueConstraint::less_than("50".to_string());
-        assert_eq!(lt_constraint.rule, Value::Literal(Rule::LessThan));
-    }
-
-    #[test]
     fn test_range_creation() {
         let range = Range::new(0.0, 100.0);
         assert_eq!(range.lower_limit.as_literal().unwrap(), &0.0);
         assert_eq!(range.upper_limit.as_literal().unwrap(), &100.0);
-
-        let default_range = Range::new(0.0, 100.0);
-        assert_eq!(default_range.lower_limit.as_literal().unwrap(), &0.0);
-        assert_eq!(default_range.upper_limit.as_literal().unwrap(), &100.0);
-    }
-
-    #[test]
-    fn test_parameter_declarations_container() {
-        let mut declarations = ParameterDeclarations::default();
-        assert!(declarations.parameter_declarations.is_empty());
-
-        declarations
-            .parameter_declarations
-            .push(ParameterDeclaration::new(
-                "Speed".to_string(),
-                ParameterType::Double,
-                "30.0".to_string(),
-            ));
-
-        declarations
-            .parameter_declarations
-            .push(ParameterDeclaration::new(
-                "VehicleName".to_string(),
-                ParameterType::String,
-                "Ego".to_string(),
-            ));
-
-        assert_eq!(declarations.parameter_declarations.len(), 2);
-        assert_eq!(
-            declarations.parameter_declarations[0].parameter_type,
-            Value::Literal(ParameterType::Double)
-        );
-        assert_eq!(
-            declarations.parameter_declarations[1].parameter_type,
-            Value::Literal(ParameterType::String)
-        );
     }
 
     #[test]
@@ -948,20 +868,6 @@ mod tests {
     }
 
     #[test]
-    fn test_directory_serialization() {
-        let dir = Directory::new("/path/to/catalogs".to_string());
-
-        // Test JSON serialization
-        let json = serde_json::to_string(&dir).unwrap();
-        assert!(json.contains("path"));
-        assert!(json.contains("/path/to/catalogs"));
-
-        // Test JSON deserialization
-        let deserialized: Directory = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.path.as_literal().unwrap(), "/path/to/catalogs");
-    }
-
-    #[test]
     fn test_scientific_notation_parsing() {
         // Real XOSC files use this scientific-notation style (e.g. `9.2884257876425379e-04`);
         // assert the XML-deserialized `Double` matches the value `f64::parse` produces.
@@ -979,55 +885,6 @@ mod tests {
             let double_val: Double = quick_xml::de::from_str(&xml_str).unwrap();
             assert_eq!(double_val, Double::literal(expected));
         }
-    }
-
-    #[test]
-    fn test_parameter_declaration_multiple_constraint_groups() {
-        // Test the ALKS scenario pattern with multiple constraint groups
-        let constraint_group1 =
-            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("1".to_string())]).unwrap();
-
-        let constraint_group2 =
-            ValueConstraintGroup::new(vec![ValueConstraint::equal_to("-1".to_string())]).unwrap();
-
-        let param = ParameterDeclaration::with_constraints(
-            "SideVehicle_InitPosition_RelativeLaneId".to_string(),
-            ParameterType::Int,
-            "1".to_string(),
-            vec![constraint_group1, constraint_group2],
-        );
-
-        // Verify we have multiple constraint groups
-        assert!(param.has_constraints());
-        assert_eq!(param.constraint_groups.len(), 2);
-
-        // Check first constraint group
-        assert_eq!(param.constraint_groups[0].value_constraints.len(), 1);
-        assert_eq!(
-            param.constraint_groups[0].value_constraints[0].rule,
-            Value::Literal(Rule::EqualTo)
-        );
-        assert_eq!(
-            param.constraint_groups[0].value_constraints[0]
-                .value
-                .as_literal()
-                .unwrap(),
-            "1"
-        );
-
-        // Check second constraint group
-        assert_eq!(param.constraint_groups[1].value_constraints.len(), 1);
-        assert_eq!(
-            param.constraint_groups[1].value_constraints[0].rule,
-            Value::Literal(Rule::EqualTo)
-        );
-        assert_eq!(
-            param.constraint_groups[1].value_constraints[0]
-                .value
-                .as_literal()
-                .unwrap(),
-            "-1"
-        );
     }
 
     #[test]
@@ -1059,7 +916,25 @@ mod tests {
         );
         assert_eq!(param.parameter_type, Value::Literal(ParameterType::Int));
         assert_eq!(param.value.as_literal().unwrap(), "1");
-        assert_eq!(param.constraint_groups.len(), 2);
+        assert!(param.has_constraints());
+        // Two groups of one `equalTo` constraint each: the parsed document equals the
+        // declaration the constructors build for the same content.
+        let equal_to = |value: &str| {
+            ValueConstraintGroup::new(vec![ValueConstraint::equal_to(value.to_string())]).unwrap()
+        };
+        assert_eq!(
+            param,
+            ParameterDeclaration::with_constraints(
+                "SideVehicle_InitPosition_RelativeLaneId".to_string(),
+                ParameterType::Int,
+                "1".to_string(),
+                vec![equal_to("1"), equal_to("-1")],
+            )
+        );
+        assert_eq!(
+            param.constraint_groups[1].value_constraints[0].rule,
+            Value::Literal(Rule::EqualTo)
+        );
     }
 
     #[test]

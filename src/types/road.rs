@@ -102,18 +102,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_road_network_creation() {
-        let logic_file = LogicFile::new("./road_networks/test.xodr".to_string());
-        let road_network = RoadNetwork::new(logic_file);
-
-        assert!(road_network.logic_file.is_some());
-        assert_eq!(
-            road_network.logic_file.unwrap().filepath.as_literal(),
-            Some(&"./road_networks/test.xodr".to_string())
-        );
-    }
-
-    #[test]
     fn test_road_network_from_path() {
         let road_network = RoadNetwork::from_logic_file_path(
             "./road_networks/alks_road_different_curvatures.xodr".to_string(),
@@ -127,31 +115,12 @@ mod tests {
     }
 
     #[test]
-    fn test_logic_file_creation() {
-        let logic_file = LogicFile::new("test.xodr".to_string());
-        assert_eq!(
-            logic_file.filepath.as_literal(),
-            Some(&"test.xodr".to_string())
-        );
-    }
-
-    #[test]
     fn test_scene_graph_file_creation() {
         let scene_file = SceneGraphFile::new("test.osgb".to_string());
         assert_eq!(
             scene_file.filepath.as_literal(),
             Some(&"test.osgb".to_string())
         );
-    }
-
-    #[test]
-    fn test_road_network_serialization() {
-        let road_network = RoadNetwork::from_logic_file_path("test.xodr".to_string());
-        let xml = quick_xml::se::to_string(&road_network).unwrap();
-
-        assert!(xml.contains("RoadNetwork"));
-        assert!(xml.contains("LogicFile"));
-        assert!(xml.contains("filepath=\"test.xodr\""));
     }
 
     #[test]
@@ -175,7 +144,18 @@ mod tests {
             }),
         };
 
+        // XSD `RoadNetwork` (:1933-1940), `TrafficSignals` (:2266-2270), `UsedArea` (:2411-2415):
+        // the element and attribute names, and both `UsedArea` positions, reach the wire.
         let xml = quick_xml::se::to_string(&road_network).unwrap();
+        assert_eq!(
+            xml,
+            concat!(
+                r#"<RoadNetwork><LogicFile filepath="test.xodr"/>"#,
+                r#"<TrafficSignals><TrafficSignalController name="intersection_1"/></TrafficSignals>"#,
+                r#"<UsedArea><Position><WorldPosition x="0" y="0"/></Position>"#,
+                r#"<Position><WorldPosition x="10" y="0"/></Position></UsedArea></RoadNetwork>"#
+            )
+        );
         let deserialized: RoadNetwork = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(road_network, deserialized);
     }

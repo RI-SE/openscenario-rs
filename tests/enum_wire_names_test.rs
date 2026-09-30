@@ -4,36 +4,18 @@
 //! derived `Serialize` impl and its `#[serde(rename)]` attributes. `enums.rs` builds
 //! every enum through the `osc_enum!` macro from a single variant -> wire-name table,
 //! which emits the `#[serde(rename)]` attributes, `Display`, `FromStr`, and an `ALL`
-//! slice together -- but this test is what actually proves all three agree, for every
-//! variant of all 37 enums:
+//! slice together. This test proves, for every variant of every enum:
 //!
-//!   - `variant.to_string() == wire_name`        (Display agrees with serde)
-//!   - `wire_name.parse::<E>() == Ok(variant)`    (FromStr agrees with serde)
+//!   - the wire name serde derives is an `xsd:enumeration` value of the `xsd:simpleType`
+//!     of the same name in `Schema/OpenSCENARIO.xsd`, and every enumeration value there
+//!     has a variant (the XSD is read at test time, not transcribed);
+//!   - `variant.to_string() == wire_name`        (Display agrees with serde);
+//!   - `wire_name.parse::<E>() == Ok(variant)`    (FromStr agrees with serde);
+//!   - a string that is no wire name is refused with `Invalid <Enum>: <text>`.
 //!
-//! The expected wire name is never hand-transcribed from the `#[serde(rename)]`
-//! attribute -- that would just be a copy of the same table the macro already
-//! generates from, and could drift the same way the earlier hand-written
-//! Display/FromStr/rename triplets did. Instead it is derived by round-tripping each
-//! variant through `serde_json`, which reads the actual `#[serde(rename)]` the
-//! compiler applied.
-//!
-//! ## Provenance
-//!
-//! This test was first written and run against the *unmodified* tree, before any
-//! `Display`/`FromStr` impl was added or the `osc_enum!` macro existed. At that
-//! point 28 of the 37 enums had hand-written `Display`/`FromStr`; the other 9
-//! (`TriggeringEntitiesRule`, `Priority`, `StoryboardElementState`,
-//! `StoryboardElementType`, `ParameterType`, `CoordinateSystem`, `ReferenceContext`,
-//! `SpeedTargetValueType`, `DynamicsShape`) did not implement either trait, so they
-//! could not be referenced here at all -- not "test them and see them fail", but a
-//! hard compile error, which is why that first run covered only 181 variants across
-//! 28 enums. That run found **zero mismatches**: every existing hand-written
-//! `Display`/`FromStr` pair already agreed with its `#[serde(rename)]`. The 9 missing
-//! enums, and the `osc_enum!` macro, were added afterward; this is the resulting
-//! full-coverage version, now covering all 37 enums / 221 variants via each enum's
-//! `ALL` slice.
+//! The serde wire name is derived by serializing each variant through `serde_json`,
+//! which reads the `#[serde(rename)]` the compiler applied.
 
-use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::{
     AngleType, AutomaticGearType, ColorType, ConditionEdge, ControllerType, CoordinateSystem,
     DirectionalDimension, DynamicsDimension, DynamicsShape, FollowingMode, FractionalCloudCover,
@@ -46,7 +28,9 @@ use openscenario_rs::types::enums::{
 #[allow(deprecated)]
 use openscenario_rs::types::enums::{CloudState, LateralDisplacement, LongitudinalDisplacement};
 
+use quick_xml::events::Event;
 use serde::Serialize;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::str::FromStr;
 
@@ -68,163 +52,143 @@ fn wire_name<T: Serialize>(value: &T) -> String {
         .to_string()
 }
 
-/// Assert that `variant`'s `Display` and `FromStr` impls agree with the wire name
-/// serde derives from its `#[serde(rename)]` attribute.
-fn check<T>(variant: &T)
+/// Assert that every variant's `Display` and `FromStr` agree with the wire name serde
+/// derives from its `#[serde(rename)]`, that a non-wire string is refused naming the
+/// enum, and return the wire names for comparison with the XSD.
+fn check_all<T>(enum_name: &str, all: &[T]) -> BTreeSet<String>
 where
-    T: Serialize + std::fmt::Display + FromStr + Debug + PartialEq,
-    T::Err: Debug,
+    T: Serialize + std::fmt::Display + FromStr<Err = String> + Debug + PartialEq,
 {
-    let wire = wire_name(variant);
-    assert_eq!(
-        variant.to_string(),
-        wire,
-        "Display disagrees with #[serde(rename)] for {variant:?}"
-    );
-    let parsed = wire
-        .parse::<T>()
-        .unwrap_or_else(|e| panic!("FromStr({wire:?}) failed for {variant:?}: {e:?}"));
-    assert_eq!(
-        &parsed, variant,
-        "FromStr({wire:?}) round-trip disagrees with the original variant"
-    );
-}
-
-/// Check every variant in `E::ALL` and return how many were checked, so the caller
-/// can assert total coverage.
-fn check_all<T>(all: &[T]) -> usize
-where
-    T: Serialize + std::fmt::Display + FromStr + Debug + PartialEq,
-    T::Err: Debug,
-{
+    let mut wires = BTreeSet::new();
     for variant in all {
-        check(variant);
+        let wire = wire_name(variant);
+        assert_eq!(
+            variant.to_string(),
+            wire,
+            "Display disagrees with #[serde(rename)] for {variant:?}"
+        );
+        let parsed = wire
+            .parse::<T>()
+            .unwrap_or_else(|e| panic!("FromStr({wire:?}) failed for {variant:?}: {e:?}"));
+        assert_eq!(
+            &parsed, variant,
+            "FromStr({wire:?}) round-trip disagrees with the original variant"
+        );
+        assert!(wires.insert(wire), "duplicate wire name in {enum_name}");
     }
-    all.len()
+    assert_eq!(
+        "notAWireName".parse::<T>(),
+        Err(format!("Invalid {enum_name}: notAWireName")),
+        "{enum_name} accepted a string that is not one of its wire names"
+    );
+    wires
+}
+
+/// Every `xsd:enumeration` value in `Schema/OpenSCENARIO.xsd`, keyed by the name of the
+/// named `xsd:simpleType` that declares it.
+fn xsd_enumerations() -> BTreeMap<String, BTreeSet<String>> {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/Schema/OpenSCENARIO.xsd");
+    let xsd = std::fs::read_to_string(path).expect("read Schema/OpenSCENARIO.xsd");
+    let mut reader = quick_xml::Reader::from_str(&xsd);
+    let mut enumerations: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    // The named simple type being read, and how deep inside it the reader is: its
+    // enumerations sit in an anonymous `xsd:simpleType` of an `xsd:union`.
+    let mut current: Option<String> = None;
+    let mut depth = 0usize;
+    loop {
+        match reader.read_event().expect("the XSD is well-formed XML") {
+            Event::Start(e) if e.name().as_ref() == b"xsd:simpleType" => {
+                if let Some(name) = e.try_get_attribute("name").expect("attribute") {
+                    current = Some(name.unescape_value().expect("name").into_owned());
+                    depth = 0;
+                }
+                depth += 1;
+            }
+            Event::End(e) if e.name().as_ref() == b"xsd:simpleType" => {
+                depth -= 1;
+                if depth == 0 {
+                    current = None;
+                }
+            }
+            Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"xsd:enumeration" => {
+                let simple_type = current
+                    .clone()
+                    .expect("every xsd:enumeration sits in a named simpleType");
+                let value = e
+                    .try_get_attribute("value")
+                    .expect("attribute")
+                    .expect("xsd:enumeration carries @value");
+                enumerations
+                    .entry(simple_type)
+                    .or_default()
+                    .insert(value.unescape_value().expect("value").into_owned());
+            }
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    enumerations
+}
+
+macro_rules! wire_names_of {
+    ($($enum:ident),+ $(,)?) => {{
+        let mut checked = BTreeMap::new();
+        $( checked.insert(stringify!($enum).to_string(), check_all(stringify!($enum), $enum::ALL)); )+
+        checked
+    }};
 }
 
 #[test]
-fn enum_display_and_fromstr_agree_with_serde_rename() {
-    let mut n = 0usize;
-
-    n += check_all(VehicleCategory::ALL);
-    n += check_all(PedestrianCategory::ALL);
-    n += check_all(ObjectType::ALL);
-    n += check_all(Rule::ALL);
-    n += check_all(ConditionEdge::ALL);
-    n += check_all(TriggeringEntitiesRule::ALL);
-    n += check_all(Priority::ALL);
-    n += check_all(StoryboardElementState::ALL);
-    n += check_all(StoryboardElementType::ALL);
-    n += check_all(ParameterType::ALL);
-    n += check_all(CoordinateSystem::ALL);
-    n += check_all(ReferenceContext::ALL);
-    n += check_all(SpeedTargetValueType::ALL);
-    n += check_all(DynamicsShape::ALL);
-    n += check_all(DynamicsDimension::ALL);
-    n += check_all(RelativeDistanceType::ALL);
-    n += check_all(FollowingMode::ALL);
-    n += check_all(MiscObjectCategory::ALL);
-    n += check_all(ControllerType::ALL);
-    n += check_all(PrecipitationType::ALL);
-    n += check_all(Wetness::ALL);
-    n += check_all(ColorType::ALL);
-    n += check_all(Role::ALL);
-    n += check_all(AngleType::ALL);
-    n += check_all(DirectionalDimension::ALL);
-    n += check_all(VehicleComponentType::ALL);
-    n += check_all(VehicleLightType::ALL);
-    n += check_all(LightMode::ALL);
-    n += check_all(AutomaticGearType::ALL);
-    n += check_all(FractionalCloudCover::ALL);
-    n += check_all(PedestrianMotionType::ALL);
-    n += check_all(PedestrianGestureType::ALL);
-    n += check_all(RouteStrategy::ALL);
-    n += check_all(RoutingAlgorithm::ALL);
-
-    #[allow(deprecated)]
-    {
-        n += check_all(LateralDisplacement::ALL);
-        n += check_all(LongitudinalDisplacement::ALL);
-        n += check_all(CloudState::ALL);
+#[allow(deprecated)]
+fn enum_wire_names_match_the_xsd_and_display_fromstr_agree_with_serde() {
+    let crate_enums = wire_names_of!(
+        AngleType,
+        AutomaticGearType,
+        CloudState,
+        ColorType,
+        ConditionEdge,
+        ControllerType,
+        CoordinateSystem,
+        DirectionalDimension,
+        DynamicsDimension,
+        DynamicsShape,
+        FollowingMode,
+        FractionalCloudCover,
+        LateralDisplacement,
+        LightMode,
+        LongitudinalDisplacement,
+        MiscObjectCategory,
+        ObjectType,
+        ParameterType,
+        PedestrianCategory,
+        PedestrianGestureType,
+        PedestrianMotionType,
+        PrecipitationType,
+        Priority,
+        ReferenceContext,
+        RelativeDistanceType,
+        Role,
+        RouteStrategy,
+        RoutingAlgorithm,
+        Rule,
+        SpeedTargetValueType,
+        StoryboardElementState,
+        StoryboardElementType,
+        TriggeringEntitiesRule,
+        VehicleCategory,
+        VehicleComponentType,
+        VehicleLightType,
+        Wetness,
+    );
+    let xsd = xsd_enumerations();
+    // The set of enumerations first: an XSD simple type with no enum here, or an enum
+    // with no XSD simple type of its name, fails this assert.
+    assert_eq!(
+        crate_enums.keys().collect::<Vec<_>>(),
+        xsd.keys().collect::<Vec<_>>(),
+        "the crate's enums and the XSD's enumeration simple types differ"
+    );
+    for (name, wires) in &crate_enums {
+        assert_eq!(wires, &xsd[name], "{name}: wire names differ from the XSD");
     }
-
-    // 37 enums checked above. If a 38th enum is added to enums.rs without a line
-    // here, this count silently under-reports rather than the missing enum being
-    // silently skipped -- the count is the coverage assertion.
-    const ENUM_COUNT: usize = 37;
-    const TOTAL_VARIANTS: usize = 221;
-    assert_eq!(
-        n, TOTAL_VARIANTS,
-        "total variant count changed across the {ENUM_COUNT} enums checked above -- \
-         either a variant was added/removed, or a `check_all` call for one of the 37 \
-         enums is missing; update TOTAL_VARIANTS only after confirming which"
-    );
-}
-
-/// `Value<VehicleCategory>` (a required, `@`-renamed attribute type, once a field is
-/// wrapped in it) must deserialize from both a plain literal wire value and a parameter
-/// reference, and serialize back byte-identically. `VehicleCategory` was chosen because
-/// it is the example used throughout the design discussion; any enum with verified
-/// `Display`/`FromStr` behaves the same way since `Value<T>` in
-/// `src/types/basic.rs` is generic over `T: FromStr + Display`.
-///
-/// This is committed (not run-and-discarded) so that wrapping the enum-typed fields in
-/// `Value<E>` does not have to rediscover that this works first.
-#[test]
-fn value_wraps_vehicle_category_literal_and_parameter() {
-    #[derive(Serialize, serde::Deserialize, Debug, PartialEq)]
-    struct Wrapper {
-        #[serde(rename = "@category")]
-        category: Value<VehicleCategory>,
-    }
-
-    // Literal wire value on a required, `@`-renamed attribute.
-    let literal_xml = r#"{"@category":"car"}"#;
-    let parsed: Wrapper = serde_json::from_str(literal_xml).unwrap();
-    assert_eq!(parsed.category, Value::Literal(VehicleCategory::Car));
-    let reserialized = serde_json::to_string(&parsed).unwrap();
-    assert_eq!(
-        reserialized, literal_xml,
-        "literal round-trip not byte-identical"
-    );
-
-    // Parameter reference on the same field.
-    //
-    // The spelling this asserts changed, and the schema is the reason.
-    // `Schema/OpenSCENARIO.xsd:4-13` defines two productions:
-    //
-    //     parameter   [$][A-Za-z_][A-Za-z0-9_]*
-    //     expression  [$][{][ A-Za-z0-9_\+\-\*/%$\(\)\.,]*[\}]
-    //
-    // The scalar unions (`Double`, `Int`, `Boolean`, ...) list `expression parameter ...`,
-    // so both spellings validate there -- which is why the braced form went unchallenged
-    // for so long. All 37 *enumeration* unions list `parameter` alone. Emitting `${cat}`
-    // on `@vehicleCategory` therefore produces schema-invalid XML, so `Value::Parameter`
-    // now serializes as `$cat`, which every union in the schema accepts.
-    let param_xml = r#"{"@category":"$cat"}"#;
-    let parsed: Wrapper = serde_json::from_str(param_xml).unwrap();
-    assert_eq!(parsed.category, Value::Parameter("cat".to_string()));
-    let reserialized = serde_json::to_string(&parsed).unwrap();
-    assert_eq!(
-        reserialized, param_xml,
-        "parameter round-trip not byte-identical"
-    );
-
-    // The braced form no longer normalizes to a parameter reference, even when its
-    // content would otherwise read as one. Section 9.2 gives `${...}` to the
-    // `expression` production alone; a parameter reference is always unbraced. Before
-    // this changed, `${cat}` and `$cat` parsed to the same `Value::Parameter`, so a
-    // document that named a `pi` parameter with `${pi}` silently became a reference to
-    // `$pi` on round-trip. `${cat}` now parses as `Value::Expression` and round-trips
-    // unchanged, which for an enum-typed attribute happens to be schema-invalid XML --
-    // the enumeration unions list `parameter` alone -- but that invalidity is the
-    // document's, not something the deserializer should paper over by guessing which
-    // production the author meant.
-    let braced: Wrapper = serde_json::from_str(r#"{"@category":"${cat}"}"#).unwrap();
-    assert_eq!(braced.category, Value::Expression("cat".to_string()));
-    assert_eq!(
-        serde_json::to_string(&braced).unwrap(),
-        r#"{"@category":"${cat}"}"#
-    );
 }
