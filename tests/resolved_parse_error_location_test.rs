@@ -9,7 +9,12 @@
 //! caller can actually find -- the source document's own line normally, or the catalog file's
 //! line when the failure sits inside an inlined entry.
 //!
-//! Each claim is its own test, so that one failing claim cannot hide the next.
+//! The last test covers the failures of the resolution pass itself (ill-formed XML, a
+//! catalog reference it cannot place or locate, an undeclared parameter), which must name the
+//! element and source line as well.
+//!
+//! Each claim is its own test, or its own row in a table that reports every failing row, so that
+//! one failing claim cannot hide the next.
 
 use openscenario_rs::{parse_file_resolved, parse_str_resolved};
 use std::path::{Path, PathBuf};
@@ -139,4 +144,80 @@ fn wrapping_a_parameter_error_with_file_context_does_not_split_its_message() {
     );
     // The two are joined by ` (`, so `with_context` never wrote `context: message`.
     assert!(!msg.contains("error: Failed to parse file"), "{msg}");
+}
+
+// --- Resolution itself fails: the message names the element and its source line ------------
+
+/// One row per way the resolution pass itself refuses a document, before any typed parse:
+/// the text the message must hold, which names the failing element and the line the caller
+/// can find it on. Every row is checked, so one failing row cannot hide the next.
+#[test]
+fn a_resolution_failure_names_the_element_and_its_line() {
+    const HEAD: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/>"#;
+    let rows: Vec<(&str, String, Vec<&str>)> = vec![
+        (
+            "an end tag with no start tag",
+            format!("{HEAD}\n</OpenSCENARIO>\n</Extra>"),
+            vec![
+                "Invalid XML structure: line 5: ill-formed document: close tag `</Extra>` does not match any open tag",
+            ],
+        ),
+        (
+            "an attribute value without quotes",
+            format!("{HEAD}\n  <RoadNetwork attr=unquoted/>\n</OpenSCENARIO>"),
+            vec!["Invalid XML structure: line 4: <RoadNetwork>: "],
+        ),
+        (
+            "an element that is never closed",
+            format!("{HEAD}\n  <Entities>\n"),
+            vec!["Invalid XML structure: line 4: <Entities>: element is not closed"],
+        ),
+        (
+            "a CatalogReference where the schema allows none",
+            format!(
+                "{HEAD}\n  <Storyboard>\n    <CatalogReference catalogName=\"c\" entryName=\"e\"/>\n  </Storyboard>\n</OpenSCENARIO>"
+            ),
+            vec![
+                "Invalid XML structure: line 5: <CatalogReference>: a CatalogReference inside <Storyboard> names no known kind of catalog entry",
+            ],
+        ),
+        (
+            "a catalog directory that does not exist",
+            format!(
+                "{HEAD}\n  <CatalogLocations><VehicleCatalog><Directory path=\"no_such_catalog_dir\"/></VehicleCatalog></CatalogLocations>\n  <RoadNetwork/>\n  <Entities>\n    <ScenarioObject name=\"Ego\"><CatalogReference catalogName=\"c\" entryName=\"e\"/></ScenarioObject>\n  </Entities>\n</OpenSCENARIO>"
+            ),
+            vec![
+                "Catalog error: /OpenSCENARIO/Entities/ScenarioObject[@name='Ego']/CatalogReference (line 7): cannot read catalog directory no_such_catalog_dir",
+            ],
+        ),
+        (
+            "an undeclared parameter in a declaration's constraint group",
+            format!(
+                "{HEAD}\n  <ParameterDeclarations>\n    <ParameterDeclaration name=\"speed\" parameterType=\"double\" value=\"10\">\n      <ConstraintGroup><ValueConstraint rule=\"lessThan\" value=\"$limit\"/></ConstraintGroup>\n    </ParameterDeclaration>\n  </ParameterDeclarations>\n</OpenSCENARIO>"
+            ),
+            vec![
+                "Parameter 'limit' error: not declared",
+                "ValueConstraint (line 6)",
+            ],
+        ),
+    ];
+
+    let mut failures = Vec::new();
+    for (label, xml, expected) in rows {
+        let msg = match parse_str_resolved(&xml) {
+            Ok(_) => {
+                failures.push(format!("{label}: parsed without error"));
+                continue;
+            }
+            Err(e) => e.to_string(),
+        };
+        for want in expected {
+            if !msg.contains(want) {
+                failures.push(format!("{label}: expected `{want}` in: {msg}"));
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

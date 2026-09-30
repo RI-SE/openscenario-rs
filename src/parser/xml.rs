@@ -450,44 +450,132 @@ pub fn serialize_catalog_to_file<P: AsRef<Path>>(catalog: &CatalogFile, path: P)
 mod tests {
     use super::*;
 
+    /// Each structural check rejects its input with its own message, the one a caller sees
+    /// before any typed parse runs.
     #[test]
-    fn test_validate_xml_structure() {
-        // Valid XML
-        assert!(
-            validate_xml_structure(r#"<?xml version="1.0"?><OpenSCENARIO></OpenSCENARIO>"#).is_ok()
-        );
-
-        // Missing XML declaration is OK
-        assert!(validate_xml_structure(r#"<OpenSCENARIO></OpenSCENARIO>"#).is_ok());
-
-        // Empty XML should fail
-        assert!(validate_xml_structure("").is_err());
-        assert!(validate_xml_structure("   ").is_err());
-
-        // Non-XML content should fail
-        assert!(validate_xml_structure("This is not XML").is_err());
-
-        // Missing OpenSCENARIO root should fail
-        assert!(validate_xml_structure(r#"<SomeOtherRoot></SomeOtherRoot>"#).is_err());
+    fn validate_xml_structure_names_the_check_that_failed() {
+        let accepted = [
+            r#"<?xml version="1.0"?><OpenSCENARIO></OpenSCENARIO>"#,
+            r#"<OpenSCENARIO></OpenSCENARIO>"#,
+        ];
+        for xml in accepted {
+            assert!(validate_xml_structure(xml).is_ok(), "{xml}");
+        }
+        let rejected = [
+            ("", "XML document is empty"),
+            ("   ", "XML document is empty"),
+            (
+                "This is not XML",
+                "XML document must start with XML declaration or root element",
+            ),
+            (
+                "<SomeOtherRoot></SomeOtherRoot>",
+                "Document does not appear to contain OpenSCENARIO root element",
+            ),
+        ];
+        for (xml, message) in rejected {
+            let err = validate_xml_structure(xml).unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                format!("Invalid XML structure: {message}"),
+                "{xml:?}"
+            );
+        }
     }
 
+    /// As above for a catalog document, which must also hold a `Catalog` element.
     #[test]
-    fn test_validate_catalog_xml_structure() {
-        // Valid catalog XML structure
+    fn validate_catalog_xml_structure_names_the_check_that_failed() {
         let valid_xml = r#"<?xml version="1.0"?>
         <OpenSCENARIO>
             <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="Test" description="Test"/>
             <Catalog name="test">
             </Catalog>
         </OpenSCENARIO>"#;
-
         assert!(validate_catalog_xml_structure(valid_xml).is_ok());
 
-        // Invalid - no Catalog element
-        let invalid_xml = r#"<?xml version="1.0"?><OpenSCENARIO><FileHeader/></OpenSCENARIO>"#;
-        assert!(validate_catalog_xml_structure(invalid_xml).is_err());
+        let rejected = [
+            ("", "Catalog XML document is empty"),
+            (
+                "This is not XML",
+                "Catalog XML document must start with XML declaration or root element",
+            ),
+            (
+                "<Root><Catalog/></Root>",
+                "Document does not appear to contain OpenSCENARIO root element",
+            ),
+            (
+                r#"<?xml version="1.0"?><OpenSCENARIO><FileHeader/></OpenSCENARIO>"#,
+                "Document does not appear to contain Catalog element",
+            ),
+        ];
+        for (xml, message) in rejected {
+            let err = validate_catalog_xml_structure(xml).unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                format!("Invalid XML structure: {message}"),
+                "{xml:?}"
+            );
+        }
+    }
 
-        // Invalid - empty
-        assert!(validate_catalog_xml_structure("").is_err());
+    /// The `_validated` string entry points run the structural pass first: a document it
+    /// rejects fails with the structural message, not the typed parser's error, and a document
+    /// it accepts is parsed.
+    #[test]
+    fn str_validated_entry_points_run_the_structural_pass_before_parsing() {
+        let err = parse_from_str_validated("<Root/>").unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Invalid XML structure: Document does not appear to contain OpenSCENARIO root element"
+        );
+        let err = parse_catalog_from_str_validated(
+            r#"<OpenSCENARIO><FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/></OpenSCENARIO>"#,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Invalid XML structure: Document does not appear to contain Catalog element"
+        );
+
+        let scenario =
+            serialize_to_string(&crate::types::scenario::storyboard::test_scenario_document())
+                .unwrap();
+        let parsed = parse_from_str_validated(&scenario).unwrap();
+        assert_eq!(
+            parsed.file_header.author.as_literal().unwrap(),
+            "Test Author"
+        );
+        let catalog = parse_catalog_from_str_validated(
+            r#"<OpenSCENARIO><FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/><Catalog name="Vehicles"/></OpenSCENARIO>"#,
+        )
+        .unwrap();
+        assert_eq!(catalog.catalog.name.as_literal().unwrap(), "Vehicles");
+    }
+
+    /// `serialize_to_file` and `serialize_catalog_to_file` write exactly what their `_to_string`
+    /// counterparts return.
+    #[test]
+    fn serialize_to_file_writes_the_serialized_string() {
+        let dir = tempfile::TempDir::new().unwrap();
+
+        let scenario = crate::types::scenario::storyboard::test_scenario_document();
+        let path = dir.path().join("scenario.xosc");
+        serialize_to_file(&scenario, &path).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            serialize_to_string(&scenario).unwrap()
+        );
+
+        let catalog = parse_catalog_from_str(
+            r#"<OpenSCENARIO><FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/><Catalog name="Vehicles"/></OpenSCENARIO>"#,
+        )
+        .unwrap();
+        let path = dir.path().join("catalog.xosc");
+        serialize_catalog_to_file(&catalog, &path).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            serialize_catalog_to_string(&catalog).unwrap()
+        );
     }
 }

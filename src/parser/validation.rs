@@ -473,16 +473,7 @@ impl ScenarioValidator {
             });
         }
 
-        // Validate acts
-        if story.acts.is_empty() {
-            result.warnings.push(ValidationWarning {
-                category: ValidationWarningCategory::Suspicious,
-                location: format!("{}.acts", location),
-                message: "Story has no acts - may not execute any actions".to_string(),
-                suggestion: Some("Add at least one act with maneuver groups".to_string()),
-            });
-        }
-
+        // `acts` is a `MinVec<Act, 1>`: a story always has an act, so there is no empty case.
         for (index, act) in story.acts.iter().enumerate() {
             self.validate_act(
                 act,
@@ -687,14 +678,6 @@ impl Default for ValidationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{
-        basic::Value,
-        entities::{Entities, ScenarioObject, Vehicle},
-        enums::VehicleCategory,
-        geometry::shapes::BoundingBox,
-        scenario::storyboard::Storyboard,
-    };
-    use crate::{FileHeader, OpenScenario};
 
     #[test]
     fn test_validator_creation() {
@@ -703,280 +686,198 @@ mod tests {
         assert!(validator.config.validate_references);
     }
 
-    #[test]
-    fn test_file_header_validation() {
-        let mut validator = ScenarioValidator::new();
+    /// A document the validator has nothing to say about: every name it checks is filled in,
+    /// the actor exists, and the header is OpenSCENARIO 1.3.
+    const CLEAN: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="Tester" description="Validator fixture"/>
+  <CatalogLocations/>
+  <RoadNetwork/>
+  <Entities>
+    <ScenarioObject name="Ego">VEHICLE</ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init><Actions/></Init>
+    <Story name="Story1">
+      <Act name="Act1">
+        <ManeuverGroup name="Group1" maximumExecutionCount="1">
+          <Actors selectTriggeringEntities="false"><EntityRef entityRef="Ego"/></Actors>
+          <Maneuver name="Maneuver1">
+            <Event name="Event1" priority="override">
+              <Action name="Action1"><PrivateAction><VisibilityAction graphics="true" traffic="true" sensors="true"/></PrivateAction></Action>
+              <StartTrigger><ConditionGroup><Condition name="EventStart" conditionEdge="rising" delay="0"><ByValueCondition><SimulationTimeCondition value="1" rule="greaterThan"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>
+            </Event>
+          </Maneuver>
+        </ManeuverGroup>
+        <StartTrigger><ConditionGroup><Condition name="ActStart" conditionEdge="rising" delay="0"><ByValueCondition><SimulationTimeCondition value="0" rule="greaterThan"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>
+      </Act>
+    </Story>
+    <StopTrigger/>
+  </Storyboard>
+</OpenSCENARIO>"#;
 
-        // Valid header
-        let valid_header = FileHeader {
-            rev_major: Value::literal(1),
-            rev_minor: Value::literal(2),
-            date: Value::literal("2024-01-01T00:00:00".to_string()),
-            description: Value::literal("Test scenario".to_string()),
-            author: Value::literal("Test Author".to_string()),
-            license: None,
-            properties: None,
-        };
+    const VEHICLE: &str = r#"<Vehicle name="car" vehicleCategory="car"><BoundingBox><Center x="0" y="0" z="0"/><Dimensions width="2" length="4" height="1.5"/></BoundingBox><Performance maxSpeed="50" maxAcceleration="5" maxDeceleration="10"/><Axles><FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="1.3" positionZ="0.3"/><RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="-1.3" positionZ="0.3"/></Axles></Vehicle>"#;
 
-        let vehicle = Vehicle {
-            name: Value::literal("TestVehicle".to_string()),
-            vehicle_category: Value::Literal(VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            performance: crate::types::entities::vehicle::Performance {
-                max_speed: Value::literal(200.0),
-                max_acceleration: Value::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Value::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: crate::types::entities::axles::Axles::car(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
+    const HEADER: &str = r#"<FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="Tester" description="Validator fixture"/>"#;
 
-        let entities = Entities {
-            scenario_objects: vec![ScenarioObject {
-                name: Value::literal("TestVehicle".to_string()),
-                entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
-                object_controller: Default::default(),
-            }],
-            entity_selections: Vec::new(),
-        };
-
-        let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
-            road_network: crate::types::road::RoadNetwork::default(),
-            entities: entities,
-            storyboard: Storyboard::default(),
-        };
-
-        let scenario = OpenScenario {
-            file_header: valid_header,
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
-            road_network: Some(crate::types::road::RoadNetwork::default()),
-            entities: Some(scenario_def.entities),
-            storyboard: Some(scenario_def.storyboard),
-            parameter_value_distribution: None,
-            catalog: None,
-        };
-
-        let result = validator.validate_scenario(&scenario);
-        // Debug the actual errors
-        if !result.is_valid() {
-            for error in &result.errors {
-                println!("Validation error: {:?}", error);
-            }
-        }
-        assert!(result.is_valid(), "Valid scenario should pass validation");
+    fn clean() -> String {
+        CLEAN.replace("VEHICLE", VEHICLE)
     }
 
-    #[test]
-    fn test_empty_author_validation() {
-        let mut validator = ScenarioValidator::new();
-
-        let invalid_header = FileHeader {
-            rev_major: Value::literal(1),
-            rev_minor: Value::literal(2),
-            date: Value::literal("2024-01-01T00:00:00".to_string()),
-            description: Value::literal("Test scenario".to_string()),
-            author: Value::literal("".to_string()), // Empty author
-            license: None,
-            properties: None,
-        };
-
-        let vehicle = Vehicle {
-            name: Value::literal("TestVehicle".to_string()),
-            vehicle_category: Value::Literal(VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            performance: crate::types::entities::vehicle::Performance {
-                max_speed: Value::literal(200.0),
-                max_acceleration: Value::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Value::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: crate::types::entities::axles::Axles::car(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
-
-        let entities = Entities {
-            scenario_objects: vec![ScenarioObject {
-                name: Value::literal("TestVehicle".to_string()),
-                entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
-                object_controller: Default::default(),
-            }],
-            entity_selections: Vec::new(),
-        };
-
-        let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
-            road_network: crate::types::road::RoadNetwork::default(),
-            entities: entities,
-            storyboard: Storyboard::default(),
-        };
-
-        let scenario = OpenScenario {
-            file_header: invalid_header,
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
-            road_network: Some(crate::types::road::RoadNetwork::default()),
-            entities: Some(scenario_def.entities),
-            storyboard: Some(scenario_def.storyboard),
-            parameter_value_distribution: None,
-            catalog: None,
-        };
-
-        let result = validator.validate_scenario(&scenario);
-        assert!(!result.is_valid(), "Empty author should fail validation");
-        assert_eq!(result.errors.len(), 1);
-        assert!(matches!(
-            result.errors[0].category,
-            ValidationErrorCategory::MissingRequired
-        ));
+    /// `doc` with the first `from` replaced by `to`. Panics when `from` is absent, so a row
+    /// whose edit no longer matches the fixture cannot pass by validating the clean document.
+    fn swap(doc: &str, from: &str, to: &str) -> String {
+        assert!(doc.contains(from), "fixture has no `{from}`");
+        doc.replacen(from, to, 1)
     }
 
-    #[test]
-    fn test_duplicate_entity_names_validation() {
-        let mut validator = ScenarioValidator::new();
+    fn with_second_object(doc: &str, name: &str) -> String {
+        swap(
+            doc,
+            "</Entities>",
+            &format!(r#"<ScenarioObject name="{name}">{VEHICLE}</ScenarioObject></Entities>"#),
+        )
+    }
 
-        let vehicle1 = Vehicle {
-            name: Value::literal("Car1".to_string()),
-            vehicle_category: Value::Literal(VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            performance: crate::types::entities::vehicle::Performance {
-                max_speed: Value::literal(200.0),
-                max_acceleration: Value::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Value::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: crate::types::entities::axles::Axles::car(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
-
-        let vehicle2 = Vehicle {
-            name: Value::literal("Car1".to_string()), // Duplicate name
-            vehicle_category: Value::Literal(VehicleCategory::Truck),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            performance: crate::types::entities::vehicle::Performance {
-                max_speed: Value::literal(200.0),
-                max_acceleration: Value::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Value::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: crate::types::entities::axles::Axles::car(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
-
-        let entities = Entities {
-            scenario_objects: vec![
-                ScenarioObject {
-                    name: Value::literal("Car1".to_string()),
-                    entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle1),
-                    object_controller: Default::default(),
-                },
-                ScenarioObject {
-                    name: Value::literal("Car1".to_string()),
-                    entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle2),
-                    object_controller: Default::default(),
-                },
-            ],
-            entity_selections: Vec::new(),
-        };
-
-        let scenario_def = crate::types::scenario::storyboard::ScenarioDefinition {
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: crate::types::catalogs::locations::CatalogLocations::default(),
-            road_network: crate::types::road::RoadNetwork::default(),
-            entities: entities,
-            storyboard: Storyboard::default(),
-        };
-
-        let scenario = OpenScenario {
-            file_header: FileHeader {
-                author: Value::literal("Test Author".to_string()),
-                date: Value::literal("2024-01-01T00:00:00".to_string()),
-                description: Value::literal("Test scenario".to_string()),
-                rev_major: Value::literal(1),
-                rev_minor: Value::literal(2),
-                license: None,
-                properties: None,
-            },
-            parameter_declarations: None,
-            variable_declarations: None,
-            monitor_declarations: None,
-            catalog_locations: Some(crate::types::catalogs::locations::CatalogLocations::default()),
-            road_network: Some(crate::types::road::RoadNetwork::default()),
-            entities: Some(scenario_def.entities),
-            storyboard: Some(scenario_def.storyboard),
-            parameter_value_distribution: None,
-            catalog: None,
-        };
-
-        let result = validator.validate_scenario(&scenario);
-        assert!(
-            !result.is_valid(),
-            "Duplicate entity names should fail validation"
-        );
-
-        // Should have error for duplicate names
-        assert!(result
+    /// Every finding of `result`, as `"<error|warning> <category> @ <location>"`.
+    fn findings(result: &ValidationResult) -> Vec<String> {
+        let errors = result
             .errors
             .iter()
-            .any(|e| matches!(e.category, ValidationErrorCategory::ConstraintViolation)));
+            .map(|e| format!("error {:?} @ {}", e.category, e.location));
+        let warnings = result
+            .warnings
+            .iter()
+            .map(|w| format!("warning {:?} @ {}", w.category, w.location));
+        errors.chain(warnings).collect()
+    }
+
+    /// One row per check `validate_scenario` makes: a document with exactly one defect, and the
+    /// one finding (category and location) that defect must produce. The clean document and a
+    /// catalog document produce none. `is_valid` and `is_clean` must agree with the findings.
+    #[test]
+    fn each_validator_check_reports_its_defect_at_its_location() {
+        const EVENT_CONDITION: &str = "Storyboard.Story[0].Act[0].ManeuverGroup[0].Maneuver[0].Event[0].StartTrigger.ConditionGroup[0].Condition[0].name";
+        let base = clean();
+        let rows: Vec<(&str, String, Vec<String>)> = vec![
+            ("clean scenario", base.clone(), vec![]),
+            (
+                "catalog document",
+                format!(r#"<OpenSCENARIO>{HEADER}<Catalog name="C"/></OpenSCENARIO>"#),
+                vec![],
+            ),
+            (
+                "no scenario, catalog or distribution",
+                format!("<OpenSCENARIO>{HEADER}</OpenSCENARIO>"),
+                vec!["error SemanticError @ root".into()],
+            ),
+            (
+                "empty author",
+                swap(&base, r#"author="Tester""#, r#"author="""#),
+                vec!["error MissingRequired @ FileHeader.author".into()],
+            ),
+            (
+                "empty description",
+                swap(&base, r#"description="Validator fixture""#, r#"description="""#),
+                vec!["warning BestPractice @ FileHeader.description".into()],
+            ),
+            (
+                "revMajor 0",
+                swap(&base, r#"revMajor="1""#, r#"revMajor="0""#),
+                vec!["error ConstraintViolation @ FileHeader.revMajor".into()],
+            ),
+            (
+                "revision 1.4, newer than the crate's 1.3",
+                swap(&base, r#"revMinor="3""#, r#"revMinor="4""#),
+                vec!["warning Suspicious @ FileHeader.rev1.4".into()],
+            ),
+            (
+                "empty scenario object name",
+                with_second_object(&base, ""),
+                vec!["error MissingRequired @ Entities.ScenarioObject[1].name".into()],
+            ),
+            (
+                "duplicate scenario object name",
+                with_second_object(&base, "Ego"),
+                vec!["error ConstraintViolation @ Entities.ScenarioObject[name='Ego']".into()],
+            ),
+            (
+                "storyboard without stories",
+                {
+                    let from = base.find("<Story ").unwrap();
+                    let to = base.find("</Story>").unwrap() + "</Story>".len();
+                    format!("{}{}", &base[..from], &base[to..])
+                },
+                vec!["warning Suspicious @ Storyboard.stories".into()],
+            ),
+            (
+                "empty story name",
+                swap(&base, r#"<Story name="Story1">"#, r#"<Story name="">"#),
+                vec!["error MissingRequired @ Storyboard.Story[0].name".into()],
+            ),
+            (
+                "empty act name",
+                swap(&base, r#"<Act name="Act1">"#, r#"<Act name="">"#),
+                vec!["error MissingRequired @ Storyboard.Story[0].Act[0].name".into()],
+            ),
+            (
+                "actor that names no entity",
+                swap(&base, r#"<EntityRef entityRef="Ego"/>"#, r#"<EntityRef entityRef="Ghost"/>"#),
+                vec![
+                    "error InvalidReference @ Storyboard.Story[0].Act[0].ManeuverGroup[0].Actors.EntityRef"
+                        .into(),
+                ],
+            ),
+            (
+                "unnamed event start condition",
+                swap(&base, r#"name="EventStart""#, r#"name="""#),
+                vec![format!("warning BestPractice @ {EVENT_CONDITION}")],
+            ),
+        ];
+
+        let mut failures = Vec::new();
+        for (label, xml, expected) in rows {
+            let scenario = match crate::parse_from_str(&xml) {
+                Ok(scenario) => scenario,
+                Err(e) => {
+                    failures.push(format!("{label}: fixture does not parse: {e}"));
+                    continue;
+                }
+            };
+            let result = ScenarioValidator::new().validate_scenario(&scenario);
+            let got = findings(&result);
+            if got != expected {
+                failures.push(format!("{label}: expected {expected:?}, got {got:?}"));
+            }
+            // A warning alone leaves the document valid; only no finding at all is clean.
+            let valid = expected.iter().all(|f| f.starts_with("warning"));
+            if result.is_valid() != valid || result.is_clean() != expected.is_empty() {
+                failures.push(format!(
+                    "{label}: is_valid {} (expected {valid}), is_clean {} (expected {})",
+                    result.is_valid(),
+                    result.is_clean(),
+                    expected.is_empty()
+                ));
+            }
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
+    }
+
+    /// The message of an unresolved actor names the entity, which is how a reader finds it.
+    #[test]
+    fn an_unresolved_actor_is_named_in_the_message() {
+        let xml = swap(
+            &clean(),
+            r#"<EntityRef entityRef="Ego"/>"#,
+            r#"<EntityRef entityRef="Ghost"/>"#,
+        );
+        let result =
+            ScenarioValidator::new().validate_scenario(&crate::parse_from_str(&xml).unwrap());
+        assert_eq!(result.errors.len(), 1, "{:?}", result.errors);
+        assert_eq!(
+            result.errors[0].message,
+            "Referenced entity 'Ghost' not found"
+        );
     }
 
     #[test]
