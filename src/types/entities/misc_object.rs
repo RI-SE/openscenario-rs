@@ -69,20 +69,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_misc_object_new() {
-        let obj = MiscObject::new("Barrier1".to_string(), 100.0, MiscObjectCategory::Barrier);
-
-        assert_eq!(obj.name.as_literal().unwrap(), "Barrier1");
-        assert_eq!(obj.mass.as_literal().unwrap(), &100.0);
-        assert_eq!(
-            obj.misc_object_category,
-            Value::Literal(MiscObjectCategory::Barrier)
-        );
-        assert!(obj.model3d.is_none());
-        assert!(obj.properties.is_none());
-    }
-
-    #[test]
     fn test_misc_object_roundtrip() {
         let obj = MiscObject::new("Obstacle1".to_string(), 50.0, MiscObjectCategory::Obstacle);
 

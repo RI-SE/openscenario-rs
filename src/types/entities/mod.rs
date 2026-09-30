@@ -408,20 +408,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_entities_serialization() {
-        let mut entities = Entities::new();
-
-        let vehicle = Vehicle::new_car("TestVehicle".to_string());
-        let obj = ScenarioObject::new_vehicle("TestVehicle".to_string(), vehicle);
-        entities.add_object(obj);
-
-        // Test that serialization works
-        let xml = quick_xml::se::to_string(&entities).unwrap();
-        assert!(xml.contains("ScenarioObject"));
-        assert!(xml.contains("name=\"TestVehicle\""));
-    }
-
     // `ScenarioObject`'s `EntityObject` group (XSD:1168-1176, referenced with
     // no `minOccurs` from XSD:2000-2005) is a required bare choice: neither
     // zero nor two branches is constructible.
@@ -429,20 +415,20 @@ mod tests {
     #[test]
     fn test_scenario_object_zero_branches_rejected() {
         let xml = r#"<ScenarioObject name="Ego"/>"#;
-        let result: Result<ScenarioObject, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<ScenarioObject>(xml).unwrap_err();
         assert!(
-            result.is_err(),
-            "ScenarioObject with no EntityObject branch must be rejected"
+            err.to_string().contains("missing field `$value`"),
+            "ScenarioObject with no EntityObject branch must be rejected, got: {err}"
         );
     }
 
     #[test]
     fn test_scenario_object_two_branches_rejected() {
         let xml = r#"<ScenarioObject name="Ego"><Vehicle name="car" vehicleCategory="car"><BoundingBox><Center x="0" y="0" z="0"/><Dimensions width="2.0" length="4.5" height="1.8"/></BoundingBox><Performance maxSpeed="10" maxAcceleration="1" maxDeceleration="1"/><Axles><FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.8" positionX="3.1" positionZ="0.3"/><RearAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.8" positionX="0.0" positionZ="0.3"/></Axles></Vehicle><CatalogReference catalogName="Cat" entryName="Entry"/></ScenarioObject>"#;
-        let result: Result<ScenarioObject, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<ScenarioObject>(xml).unwrap_err();
         assert!(
-            result.is_err(),
-            "Vehicle beside CatalogReference is two branches and must be rejected"
+            err.to_string().contains("duplicate field `$value`"),
+            "Vehicle beside CatalogReference is two branches and must be rejected, got: {err}"
         );
     }
 }

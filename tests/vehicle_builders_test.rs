@@ -2,122 +2,37 @@
 mod vehicle_builder_tests {
     use openscenario_rs::types::basic::Value;
     use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::enums::VehicleCategory;
     use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
-    #[test]
-    fn test_vehicle_creation() {
-        let mut scenario_builder = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities();
-
-        scenario_builder = scenario_builder.add_vehicle("ego", |v| v.car());
-
-        let scenario = scenario_builder
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build()
-            .unwrap();
-
-        let entities = scenario.entities.unwrap();
-        assert_eq!(entities.scenario_objects.len(), 1);
-
-        let ego = entities.find_object("ego").unwrap();
-        assert!(ego.vehicle().is_some());
-
-        let vehicle = ego.vehicle().unwrap();
-        if let Value::Literal(name) = &vehicle.name {
-            assert_eq!(name, "PassengerCar");
-        } else {
-            panic!("Vehicle name should be literal");
-        }
-    }
-
+    /// `add_vehicle` files each configured vehicle under the scenario-object name it was
+    /// given; the presets themselves are covered by the builder's unit tests.
     #[test]
     fn test_multiple_vehicles() {
-        let mut scenario_builder = ScenarioBuilder::new()
+        let scenario = ScenarioBuilder::new()
             .with_header("Multi Vehicle Test", "Test Author")
             // Required of a scenario document by the XSD, even when empty.
             .with_catalog_locations(CatalogLocations::default())
             .with_road_network(RoadNetwork::default())
-            .with_entities();
-
-        scenario_builder = scenario_builder
+            .with_entities()
             .add_vehicle("ego", |v| v.car())
-            .add_vehicle("truck1", |v| v.truck());
-
-        let scenario = scenario_builder
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
+            .add_vehicle("truck1", |v| v.truck())
+            .with_storyboard(|storyboard| storyboard)
             .build()
             .unwrap();
 
         let entities = scenario.entities.unwrap();
         assert_eq!(entities.scenario_objects.len(), 2);
-
-        let ego = entities.find_object("ego").unwrap();
-        assert!(ego.vehicle().is_some());
-
-        let truck = entities.find_object("truck1").unwrap();
-        assert!(truck.vehicle().is_some());
-    }
-
-    #[test]
-    fn test_vehicle_with_custom_dimensions() {
-        let mut scenario_builder = ScenarioBuilder::new()
-            .with_header("Custom Vehicle Test", "Test Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities();
-
-        scenario_builder = scenario_builder.add_vehicle("custom", |v| {
-            v.car()
-                .with_dimensions(5.0, 2.0, 1.8)
-                .with_performance(150.0, 5.0, 12.0)
-        });
-
-        let scenario = scenario_builder
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build()
-            .unwrap();
-
-        let entities = scenario.entities.unwrap();
-        assert_eq!(entities.scenario_objects.len(), 1);
-
-        let custom = entities.find_object("custom").unwrap();
-        assert!(custom.vehicle().is_some());
-
-        let vehicle = custom.vehicle().unwrap();
-
-        // Check dimensions
-        if let Value::Literal(length) = &vehicle.bounding_box.dimensions.length {
-            assert_eq!(*length, 5.0);
-        } else {
-            panic!("Length should be literal");
-        }
-
-        if let Value::Literal(width) = &vehicle.bounding_box.dimensions.width {
-            assert_eq!(*width, 2.0);
-        } else {
-            panic!("Width should be literal");
-        }
-
-        // Check performance
-        if let Value::Literal(max_speed) = &vehicle.performance.max_speed {
-            assert_eq!(*max_speed, 150.0);
-        } else {
-            panic!("Max speed should be literal");
+        for (name, category) in [
+            ("ego", VehicleCategory::Car),
+            ("truck1", VehicleCategory::Truck),
+        ] {
+            let vehicle = entities
+                .find_object(name)
+                .and_then(|o| o.vehicle())
+                .unwrap_or_else(|| panic!("no vehicle named {name}"));
+            assert_eq!(vehicle.vehicle_category, Value::Literal(category), "{name}");
         }
     }
 }

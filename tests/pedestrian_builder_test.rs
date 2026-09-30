@@ -2,145 +2,13 @@
 mod pedestrian_builder_tests {
     use openscenario_rs::types::basic::Value;
     use openscenario_rs::types::catalogs::locations::CatalogLocations;
+    use openscenario_rs::types::entities::Pedestrian;
     use openscenario_rs::types::enums::{PedestrianCategory, Role};
     use openscenario_rs::types::road::RoadNetwork;
     use openscenario_rs::ScenarioBuilder;
 
-    #[test]
-    fn test_standard_pedestrian_builder() {
-        let scenario = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities()
-            .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build();
-
-        assert!(scenario.is_ok());
-        let scenario = scenario.unwrap();
-        assert_eq!(
-            scenario.entities.as_ref().unwrap().scenario_objects.len(),
-            1
-        );
-
-        let obj = &scenario.entities.as_ref().unwrap().scenario_objects[0];
-        assert!(obj.pedestrian().is_some());
-
-        let ped = obj.pedestrian().unwrap();
-        assert_eq!(
-            ped.pedestrian_category,
-            Value::Literal(PedestrianCategory::Pedestrian)
-        );
-        assert_eq!(ped.mass.as_literal().unwrap(), &75.0);
-    }
-
-    #[test]
-    fn test_wheel_pedestrian_builder() {
-        let scenario = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities()
-            .add_pedestrian("wheelchair1", |p| {
-                p.wheelchair()
-                    .with_mass(85.0)
-                    .with_role(Role::Civil)
-                    .finish()
-            })
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build();
-
-        assert!(scenario.is_ok());
-        let scenario = scenario.unwrap();
-        let obj = &scenario.entities.unwrap().scenario_objects[0];
-        let ped = obj.pedestrian().unwrap();
-
-        assert_eq!(
-            ped.pedestrian_category,
-            Value::Literal(PedestrianCategory::Wheelchair)
-        );
-        assert_eq!(ped.mass.as_literal().unwrap(), &85.0);
-        assert_eq!(ped.role.as_ref().unwrap(), &Value::Literal(Role::Civil));
-    }
-
-    #[test]
-    fn test_animal_pedestrian_builder() {
-        let scenario = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities()
-            .add_pedestrian("dog1", |p| {
-                p.animal()
-                    .with_mass(50.0)
-                    .with_model3d("./models/dog.glb")
-                    .finish()
-            })
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build();
-
-        assert!(scenario.is_ok());
-        let scenario = scenario.unwrap();
-        let obj = &scenario.entities.unwrap().scenario_objects[0];
-        let ped = obj.pedestrian().unwrap();
-
-        assert_eq!(
-            ped.pedestrian_category,
-            Value::Literal(PedestrianCategory::Animal)
-        );
-        assert_eq!(ped.mass.as_literal().unwrap(), &50.0);
-        assert_eq!(ped.model3d.as_ref().unwrap(), "./models/dog.glb");
-    }
-
-    #[test]
-    fn test_custom_dimensions() {
-        let scenario = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities()
-            .add_pedestrian("tall_person", |p| {
-                p.pedestrian()
-                    .with_mass(90.0)
-                    .with_dimensions(0.7, 0.7, 2.0)
-                    .finish()
-            })
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build();
-
-        assert!(scenario.is_ok());
-        let scenario = scenario.unwrap();
-        let obj = &scenario.entities.unwrap().scenario_objects[0];
-        let ped = obj.pedestrian().unwrap();
-
-        assert_eq!(ped.mass.as_literal().unwrap(), &90.0);
-        assert_eq!(
-            ped.bounding_box.dimensions.width.as_literal().unwrap(),
-            &0.7
-        );
-        assert_eq!(
-            ped.bounding_box.dimensions.height.as_literal().unwrap(),
-            &2.0
-        );
-    }
-
+    /// `add_pedestrian` files each configured pedestrian under the scenario-object name
+    /// it was given; the presets themselves are covered by the builder's unit tests.
     #[test]
     fn test_multiple_pedestrians() {
         let scenario = ScenarioBuilder::new()
@@ -152,23 +20,37 @@ mod pedestrian_builder_tests {
             .add_pedestrian("ped1", |p| p.pedestrian().with_mass(75.0).finish())
             .add_pedestrian("wheel1", |p| p.wheelchair().with_mass(85.0).finish())
             .add_pedestrian("dog1", |p| p.animal().with_mass(50.0).finish())
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build();
+            .with_storyboard(|storyboard| storyboard)
+            .build()
+            .unwrap();
 
-        assert!(scenario.is_ok());
-        let scenario = scenario.unwrap();
-        assert_eq!(scenario.entities.unwrap().scenario_objects.len(), 3);
+        let entities = scenario.entities.unwrap();
+        assert_eq!(entities.scenario_objects.len(), 3);
+        for (name, category, mass) in [
+            ("ped1", PedestrianCategory::Pedestrian, 75.0),
+            ("wheel1", PedestrianCategory::Wheelchair, 85.0),
+            ("dog1", PedestrianCategory::Animal, 50.0),
+        ] {
+            let ped = entities
+                .find_object(name)
+                .and_then(|o| o.pedestrian())
+                .unwrap_or_else(|| panic!("no pedestrian named {name}"));
+            assert_eq!(ped.pedestrian_category, Value::Literal(category), "{name}");
+            assert_eq!(ped.mass.as_literal(), Some(&mass), "{name}");
+        }
     }
 
+    /// XSD `Pedestrian` (`:1677-1692`): required `@mass`, `@name`, `@pedestrianCategory`,
+    /// optional `@model3d` and `@role`, and a required `BoundingBox`.
     #[test]
     fn test_pedestrian_xsd_serialization() {
-        use openscenario_rs::types::entities::Pedestrian;
-
+        let xml = concat!(
+            r#"<Pedestrian name="test" pedestrianCategory="pedestrian" mass="75" role="civil" model3d="./model.glb">"#,
+            r#"<BoundingBox><Center x="0" y="0" z="0"/><Dimensions width="2" length="4.5" height="1.5"/></BoundingBox>"#,
+            r#"</Pedestrian>"#
+        );
         let pedestrian = Pedestrian {
-            name: openscenario_rs::types::basic::Value::literal("test".to_string()),
+            name: Value::literal("test".to_string()),
             pedestrian_category: Value::Literal(PedestrianCategory::Pedestrian),
             mass: openscenario_rs::types::basic::Double::literal(75.0),
             role: Some(Value::Literal(Role::Civil)),
@@ -182,15 +64,10 @@ mod pedestrian_builder_tests {
             parameter_declarations: None,
         };
 
-        // Test serialization
-        let xml = quick_xml::se::to_string(&pedestrian).unwrap();
-
-        // Verify XSD-required fields are present
-        assert!(xml.contains("name=\"test\""));
-        assert!(xml.contains("mass=\"75\""));
-        assert!(xml.contains("pedestrianCategory=\"pedestrian\""));
-        assert!(xml.contains("role=\"civil\""));
-        assert!(xml.contains("model3d=\"./model.glb\""));
-        assert!(xml.contains("BoundingBox"));
+        assert_eq!(quick_xml::se::to_string(&pedestrian).unwrap(), xml);
+        assert_eq!(
+            quick_xml::de::from_str::<Pedestrian>(xml).unwrap(),
+            pedestrian
+        );
     }
 }

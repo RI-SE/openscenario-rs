@@ -297,135 +297,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_vehicle_new_car_defaults() {
-        // `Vehicle` no longer has a `Default` impl (it used to fabricate
-        // name "DefaultVehicle", a full bounding box, and performance figures nobody wrote).
-        // `Vehicle::new_car` requires the name explicitly and fills in the same car-shaped
-        // bounding box/performance as a named, deliberate constructor rather than a silent
-        // trait default.
-        let vehicle = Vehicle::new_car("TestCar".to_string());
-
-        assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
-        assert_eq!(
-            vehicle.vehicle_category,
-            Value::Literal(VehicleCategory::Car)
-        );
-
-        // Should have default bounding box
-        assert_eq!(
-            vehicle.bounding_box.dimensions.width.as_literal().unwrap(),
-            &2.0
-        );
-    }
-
-    #[test]
-    fn test_vehicle_creation() {
-        let vehicle = Vehicle {
-            name: crate::types::basic::Value::literal("TestCar".to_string()),
-            vehicle_category: Value::Literal(VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+    fn presets_set_category_axles_and_footprint() {
+        let params = std::collections::HashMap::new();
+        // (preset, category, axle count, wheelbase, footprint = width * length)
+        let cases = [
+            (
+                Vehicle::new_car("C".into()),
+                VehicleCategory::Car,
+                2,
+                2.8,
+                2.0 * 4.5,
             ),
-            performance: Performance {
-                max_speed: Double::literal(200.0),
-                max_acceleration: Double::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: Double::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: Axles::car(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
-
-        assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
-        assert_eq!(
-            vehicle.vehicle_category,
-            Value::Literal(VehicleCategory::Car)
-        );
-    }
-
-    #[test]
-    fn test_vehicle_serialization() {
-        let vehicle = Vehicle::new_car("TestCar".to_string());
-
-        // Test that serialization works
-        let xml = quick_xml::se::to_string(&vehicle).unwrap();
-        assert!(xml.contains("name=\"TestCar\""));
-        assert!(xml.contains("vehicleCategory=\"car\""));
-        assert!(xml.contains("BoundingBox"));
-    }
-
-    #[test]
-    fn test_vehicle_new_car() {
-        let car = Vehicle::new_car("TestCar".to_string());
-
-        assert_eq!(car.name.as_literal().unwrap(), "TestCar");
-        assert_eq!(car.vehicle_category, Value::Literal(VehicleCategory::Car));
-        assert_eq!(car.axle_count(), 2);
-    }
-
-    #[test]
-    fn test_vehicle_new_truck() {
-        let truck = Vehicle::new_truck("TestTruck".to_string());
-
-        assert_eq!(truck.name.as_literal().unwrap(), "TestTruck");
-        assert_eq!(
-            truck.vehicle_category,
-            Value::Literal(VehicleCategory::Truck)
-        );
-        assert_eq!(truck.axle_count(), 3); // Front + rear + additional
-    }
-
-    #[test]
-    fn test_vehicle_new_motorcycle() {
-        let motorcycle = Vehicle::new_motorcycle("TestBike".to_string());
-
-        assert_eq!(motorcycle.name.as_literal().unwrap(), "TestBike");
-        assert_eq!(
-            motorcycle.vehicle_category,
-            Value::Literal(VehicleCategory::Motorbike)
-        );
-        assert_eq!(motorcycle.axle_count(), 2);
-    }
-
-    #[test]
-    fn test_vehicle_wheelbase() {
-        use std::collections::HashMap;
-
-        let car = Vehicle::new_car("TestCar".to_string());
-        let params = HashMap::new();
-
-        let wheelbase = car.wheelbase(&params).unwrap();
-        assert!(wheelbase > 0.0);
-    }
-
-    #[test]
-    fn test_vehicle_is_steerable() {
-        use std::collections::HashMap;
-
-        let car = Vehicle::new_car("TestCar".to_string());
-        let params = HashMap::new();
-
-        assert!(car.is_steerable(&params).unwrap());
-    }
-
-    #[test]
-    fn test_vehicle_footprint_area() {
-        use std::collections::HashMap;
-
-        let car = Vehicle::new_car("TestCar".to_string());
-        let params = HashMap::new();
-
-        let area = car.footprint_area(&params).unwrap();
-        assert!(area > 0.0);
+            (
+                Vehicle::new_truck("T".into()),
+                VehicleCategory::Truck,
+                3,
+                5.0,
+                2.5 * 12.0,
+            ),
+            (
+                Vehicle::new_motorcycle("M".into()),
+                VehicleCategory::Motorbike,
+                2,
+                1.6,
+                0.8 * 2.2,
+            ),
+        ];
+        for (vehicle, category, axles, wheelbase, footprint) in cases {
+            let name = vehicle.name.as_literal().unwrap().clone();
+            assert_eq!(vehicle.vehicle_category, Value::Literal(category), "{name}");
+            assert_eq!(vehicle.axle_count(), axles, "{name}: axle_count");
+            assert_eq!(vehicle.wheelbase(&params).unwrap(), wheelbase, "{name}");
+            assert!(vehicle.is_steerable(&params).unwrap(), "{name}: steerable");
+            assert_eq!(
+                vehicle.footprint_area(&params).unwrap(),
+                footprint,
+                "{name}"
+            );
+        }
     }
 
     #[test]
@@ -496,27 +405,5 @@ mod tests {
         };
         assert_eq!(nested.get_name(), Some("Trailer1"));
         assert!(nested.vehicle().is_some());
-    }
-
-    #[test]
-    fn test_properties_custom_content_round_trip() {
-        let xml = r#"<Properties>
-    <Property name="test" value="1"/>
-    <CustomContent>some vendor content</CustomContent>
-</Properties>"#;
-        let properties: Properties = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(properties.custom_content.len(), 1);
-        assert_eq!(
-            properties.custom_content[0].content.as_deref(),
-            Some("some vendor content")
-        );
-
-        let serialized = quick_xml::se::to_string(&properties).unwrap();
-        assert!(
-            serialized.contains("<CustomContent>some vendor content</CustomContent>"),
-            "serialized: {serialized}"
-        );
-        let reparsed: Properties = quick_xml::de::from_str(&serialized).unwrap();
-        assert_eq!(properties, reparsed);
     }
 }

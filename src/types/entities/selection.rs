@@ -354,86 +354,144 @@ mod tests {
     use super::*;
     use crate::types::enums::ObjectType;
 
-    #[test]
-    fn test_entity_selection_creation() {
-        let members = SelectedEntities::from_names(vec!["Ego"]);
-        let selection = EntitySelection::new("Selection1", members);
-        assert_eq!(selection.name.as_literal().unwrap(), "Selection1");
-        assert_eq!(selection.members.entity_refs().len(), 1);
+    fn car_template() -> ScenarioObjectTemplate {
+        ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()))
     }
 
+    /// XSD `EntitySelection` (`:1180-1185`) holds a required `Members` of type
+    /// `SelectedEntities` (`:2013-2018`), whose `EntityRef` / `ByType` branches carry
+    /// `@entityRef` / `@objectType`. The constructors must emit exactly that.
     #[test]
-    fn test_selected_entities() {
-        let entities = SelectedEntities::from_names(vec!["Ego", "Target1"]);
-        assert_eq!(entities.count(), 2);
+    fn constructors_emit_schema_shaped_selections() {
+        let by_name = SelectedEntities::from_names(vec!["Ego", "Target"]);
+        assert_eq!(by_name.count(), 2);
+        assert!(by_name.by_type().is_empty());
+        let selection = EntitySelection::new("Selection1", by_name);
+        assert_eq!(
+            quick_xml::se::to_string(&selection).unwrap(),
+            concat!(
+                r#"<EntitySelection name="Selection1"><Members>"#,
+                r#"<EntityRef entityRef="Ego"/><EntityRef entityRef="Target"/>"#,
+                r#"</Members></EntitySelection>"#
+            )
+        );
 
-        let entities_from_names = SelectedEntities::from_names(vec!["Car1", "Car2", "Car3"]);
-        assert_eq!(entities_from_names.count(), 3);
-
-        let by_type_entities = SelectedEntities::from_by_type(ObjectType::Pedestrian);
-        assert_eq!(by_type_entities.by_type().len(), 1);
+        let by_type = SelectedEntities::from_by_type(ObjectType::Pedestrian);
+        assert_eq!(
+            by_type.count(),
+            0,
+            "count() counts only the EntityRef branch"
+        );
+        assert_eq!(
+            quick_xml::se::to_string(&by_type).unwrap(),
+            r#"<SelectedEntities><ByType objectType="pedestrian"/></SelectedEntities>"#
+        );
     }
 
     #[test]
     fn test_entity_distribution() {
         let entries = vec![
-            EntityDistributionEntry::new(
-                ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-                0.6,
-            ),
-            EntityDistributionEntry::new(
-                ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-                0.4,
-            ),
+            EntityDistributionEntry::new(car_template(), 0.6),
+            EntityDistributionEntry::new(car_template(), 0.4),
         ];
         let distribution = EntityDistribution::new(entries).unwrap();
 
         assert_eq!(distribution.entries.len(), 2);
         assert_eq!(distribution.total_weight(), 1.0);
 
-        let templates = vec![
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-        ];
-        let uniform_dist = EntityDistribution::uniform(templates).unwrap();
+        let uniform_dist = EntityDistribution::uniform(vec![car_template(); 4]).unwrap();
         assert_eq!(uniform_dist.entries.len(), 4);
+        for entry in uniform_dist.entries.iter() {
+            assert_eq!(entry.weight.as_literal(), Some(&0.25));
+            assert!(entry.scenario_object_template.vehicle().is_some());
+        }
         assert!((uniform_dist.total_weight() - 1.0).abs() < f64::EPSILON);
     }
 
+    /// XSD `EntityDistribution` (`:1157-1161`): `EntityDistributionEntry` has no
+    /// `minOccurs`, so at least one entry is required.
     #[test]
     fn test_entity_distribution_rejects_empty() {
-        assert!(EntityDistribution::new(vec![]).is_err());
-        assert!(EntityDistribution::uniform(vec![]).is_err());
+        for err in [
+            EntityDistribution::new(vec![]).unwrap_err(),
+            EntityDistribution::uniform(vec![]).unwrap_err(),
+        ] {
+            assert!(
+                err.to_string().contains("expected at least 1 items, got 0"),
+                "got: {err}"
+            );
+        }
     }
 
+    /// XSD `EntityDistribution` (`:1157-1161`) / `EntityDistributionEntry`
+    /// (`:1162-1167`): repeated entries, each a required `@weight` and a
+    /// `ScenarioObjectTemplate`.
     #[test]
-    fn test_entity_distribution_entry() {
-        let template =
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
-        let entry = EntityDistributionEntry::new(template, 0.75);
-        assert!(entry.scenario_object_template.vehicle().is_some());
-        assert_eq!(entry.weight.as_literal().unwrap(), &0.75);
+    fn entity_distribution_round_trips_byte_exact() {
+        let xml = concat!(
+            r#"<EntityDistribution>"#,
+            r#"<EntityDistributionEntry weight="0.6"><ScenarioObjectTemplate>"#,
+            r#"<CatalogReference catalogName="VehicleCatalog" entryName="Car1"/>"#,
+            r#"</ScenarioObjectTemplate></EntityDistributionEntry>"#,
+            r#"<EntityDistributionEntry weight="0.4"><ScenarioObjectTemplate>"#,
+            r#"<CatalogReference catalogName="VehicleCatalog" entryName="Car2"/>"#,
+            r#"</ScenarioObjectTemplate></EntityDistributionEntry>"#,
+            r#"</EntityDistribution>"#
+        );
+        let distribution: EntityDistribution = quick_xml::de::from_str(xml).unwrap();
+        let parsed: Vec<(f64, &str)> = distribution
+            .entries
+            .iter()
+            .map(|e| {
+                let reference = e
+                    .scenario_object_template
+                    .entity_catalog_reference()
+                    .unwrap();
+                (
+                    *e.weight.as_literal().unwrap(),
+                    reference.entry_name.as_literal().unwrap().as_str(),
+                )
+            })
+            .collect();
+        assert_eq!(parsed, vec![(0.6, "Car1"), (0.4, "Car2")]);
+        assert_eq!(distribution.total_weight(), 1.0);
+        assert_eq!(quick_xml::se::to_string(&distribution).unwrap(), xml);
     }
 
+    /// Each constructor selects one `EntityObject` branch, and only that branch's
+    /// accessor answers.
     #[test]
-    fn test_scenario_object_template() {
-        let template =
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string()));
-        assert!(template.vehicle().is_some());
-        assert!(template.pedestrian().is_none());
+    fn template_constructors_select_one_branch() {
+        use crate::types::enums::MiscObjectCategory;
 
-        let external_template = ScenarioObjectTemplate::with_external_reference("SportsCar");
-        assert!(external_template.external_object_reference().is_some());
-        let ext_ref = external_template.external_object_reference().unwrap();
-        assert_eq!(ext_ref.name.as_literal().unwrap(), "SportsCar");
-    }
+        let vehicle = car_template();
+        let pedestrian =
+            ScenarioObjectTemplate::new_pedestrian(Pedestrian::new_pedestrian("W".into()));
+        let misc = ScenarioObjectTemplate::new_misc_object(MiscObject::new(
+            "B".into(),
+            100.0,
+            MiscObjectCategory::Barrier,
+        ));
+        let external = ScenarioObjectTemplate::with_external_reference("SportsCar");
 
-    #[test]
-    fn test_external_object_reference() {
-        let ext_ref = ExternalObjectReference::new("Sedan");
-        assert_eq!(ext_ref.name.as_literal().unwrap(), "Sedan");
+        // (template, vehicle, pedestrian, misc object, external reference)
+        let cases = [
+            ("vehicle", &vehicle, true, false, false, false),
+            ("pedestrian", &pedestrian, false, true, false, false),
+            ("misc", &misc, false, false, true, false),
+            ("external", &external, false, false, false, true),
+        ];
+        for (name, t, v, p, m, e) in cases {
+            assert_eq!(t.vehicle().is_some(), v, "{name}: vehicle()");
+            assert_eq!(t.pedestrian().is_some(), p, "{name}: pedestrian()");
+            assert_eq!(t.misc_object().is_some(), m, "{name}: misc_object()");
+            assert_eq!(t.external_object_reference().is_some(), e, "{name}");
+            assert!(t.entity_catalog_reference().is_none(), "{name}");
+        }
+        assert_eq!(
+            external.external_object_reference(),
+            Some(&ExternalObjectReference::new("SportsCar"))
+        );
     }
 
     #[test]
@@ -455,37 +513,6 @@ mod tests {
             misc_selector.object_type,
             Value::Literal(ObjectType::MiscellaneousObject)
         );
-    }
-
-    #[test]
-    fn test_by_type() {
-        let type_selector = ByType::new(ObjectType::Vehicle);
-        assert_eq!(type_selector.type_spec, Value::Literal(ObjectType::Vehicle));
-    }
-
-    #[test]
-    fn test_serialization() {
-        let members = SelectedEntities::from_names(vec!["Ego"]);
-        let selection = EntitySelection::new("Selection1", members);
-        let xml = quick_xml::se::to_string(&selection).unwrap();
-        assert!(xml.contains("Members"));
-        assert!(xml.contains("name=\"Selection1\""));
-
-        let entities = SelectedEntities::from_names(vec!["Ego", "Target"]);
-        let xml = quick_xml::se::to_string(&entities).unwrap();
-        assert!(xml.contains("EntityRef"));
-        assert!(xml.contains("entityRef=\"Ego\""));
-        assert!(xml.contains("entityRef=\"Target\""));
-
-        let templates = vec![
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-            ScenarioObjectTemplate::new_vehicle(Vehicle::new_car("TestVehicle".to_string())),
-        ];
-        let distribution = EntityDistribution::uniform(templates).unwrap();
-        let xml = quick_xml::se::to_string(&distribution).unwrap();
-        assert!(xml.contains("EntityDistributionEntry"));
-        assert!(xml.contains("ScenarioObjectTemplate"));
-        assert!(xml.contains("weight=\"0.5\""));
     }
 
     #[test]
@@ -517,37 +544,6 @@ mod tests {
         let serialized = quick_xml::se::to_string(&selection).unwrap();
         let roundtripped: EntitySelection = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(roundtripped, selection);
-    }
-
-    #[test]
-    fn test_scenario_object_template_catalog_reference_roundtrip() {
-        let catalog_ref = EntityCatalogReference::new("VehicleCatalog", "Sedan");
-        let template = ScenarioObjectTemplate {
-            entity: EntityObjectChoice::CatalogReference(catalog_ref),
-            object_controller: Vec::new(),
-        };
-
-        let xml = quick_xml::se::to_string(&template).unwrap();
-        assert!(xml.contains("CatalogReference"));
-
-        let roundtripped: ScenarioObjectTemplate = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(roundtripped, template);
-    }
-
-    #[test]
-    fn test_scenario_object_template_catalog_reference_absent_parameter_assignments_roundtrip() {
-        let xml = r#"<ScenarioObjectTemplate><CatalogReference catalogName="VehicleCatalog" entryName="Sedan"/></ScenarioObjectTemplate>"#;
-        let template: ScenarioObjectTemplate = quick_xml::de::from_str(xml).unwrap();
-        let catalog_reference = template
-            .entity_catalog_reference()
-            .expect("CatalogReference must parse");
-        assert!(
-            catalog_reference.parameter_assignments.is_none(),
-            "absent <ParameterAssignments> must yield None"
-        );
-
-        let ser = quick_xml::se::to_string(&template).unwrap();
-        assert_eq!(ser, xml, "byte-exact round trip, no ParameterAssignments");
     }
 
     #[test]
@@ -644,17 +640,20 @@ mod tests {
     #[test]
     fn test_selected_entities_zero_branches_rejected() {
         let xml = r#"<SelectedEntities/>"#;
-        let result: Result<SelectedEntities, _> = quick_xml::de::from_str(xml);
-        assert!(result.is_err(), "empty SelectedEntities must be rejected");
+        let err = quick_xml::de::from_str::<SelectedEntities>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("missing field `$value`"),
+            "empty SelectedEntities must be rejected, got: {err}"
+        );
     }
 
     #[test]
     fn test_selected_entities_entity_ref_and_by_type_together_rejected() {
         let xml = r#"<SelectedEntities><EntityRef entityRef="Ego"/><ByType objectType="vehicle"/></SelectedEntities>"#;
-        let result: Result<SelectedEntities, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<SelectedEntities>(xml).unwrap_err();
         assert!(
-            result.is_err(),
-            "EntityRef beside ByType is two branches and must be rejected"
+            err.to_string().contains("duplicate field `$value`"),
+            "EntityRef beside ByType is two branches and must be rejected, got: {err}"
         );
     }
 
@@ -665,20 +664,20 @@ mod tests {
     #[test]
     fn test_scenario_object_template_zero_branches_rejected() {
         let xml = r#"<ScenarioObjectTemplate/>"#;
-        let result: Result<ScenarioObjectTemplate, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<ScenarioObjectTemplate>(xml).unwrap_err();
         assert!(
-            result.is_err(),
-            "ScenarioObjectTemplate with no entity branch must be rejected"
+            err.to_string().contains("missing field `$value`"),
+            "ScenarioObjectTemplate with no entity branch must be rejected, got: {err}"
         );
     }
 
     #[test]
     fn test_scenario_object_template_two_branches_rejected() {
         let xml = r#"<ScenarioObjectTemplate><CatalogReference catalogName="Cat" entryName="Entry"/><ExternalObjectReference name="Sedan"/></ScenarioObjectTemplate>"#;
-        let result: Result<ScenarioObjectTemplate, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<ScenarioObjectTemplate>(xml).unwrap_err();
         assert!(
-            result.is_err(),
-            "CatalogReference beside ExternalObjectReference must be rejected"
+            err.to_string().contains("duplicate field `$value`"),
+            "CatalogReference beside ExternalObjectReference must be rejected, got: {err}"
         );
     }
 }

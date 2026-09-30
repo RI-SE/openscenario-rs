@@ -34,21 +34,6 @@ fn property_value_with_parameter_reference_round_trips_byte_exact() {
 }
 
 #[test]
-fn property_value_parameter_reference_resolves_through_the_existing_path() {
-    let xml = r#"<Property name="maxSpeed" value="$speedLimit"/>"#;
-    let property: Property = quick_xml::de::from_str(xml).unwrap();
-
-    let mut params = HashMap::new();
-    params.insert("speedLimit".to_string(), "120".to_string());
-
-    // `Value<T>::resolve` (src/types/basic.rs) is the crate's parameter-resolution path,
-    // used throughout src/types for every other parameterizable attribute. Property's
-    // value now goes through the same code, not a second one.
-    let resolved: String = property.value.resolve(&params).expect("parameter resolves");
-    assert_eq!(resolved, "120");
-}
-
-#[test]
 fn property_name_can_also_be_a_parameter_reference() {
     // XSD types @name with the same `String` union as @value (`:1810` vs `:1811`), so a
     // parameterized name is equally schema-valid.

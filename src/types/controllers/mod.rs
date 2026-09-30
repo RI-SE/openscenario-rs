@@ -181,88 +181,21 @@ impl ObjectController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::basic::OSString;
-    use crate::types::entities::vehicle::Property;
     use crate::types::enums::ControllerType;
 
-    #[test]
-    fn test_controller_creation() {
-        let controller = Controller::new("TestController".to_string(), ControllerType::Movement);
-
-        assert_eq!(controller.name.as_literal().unwrap(), "TestController");
-        assert_eq!(
-            controller.controller_type,
-            Some(Value::Literal(ControllerType::Movement))
-        );
-    }
-
-    #[test]
-    fn test_object_controller_with_direct_controller() {
-        let controller = Controller::new("DirectController".to_string(), ControllerType::Lateral);
-        let object_controller = ObjectController::with_controller(controller);
-
-        assert!(object_controller.controller().is_some());
-        assert!(object_controller.catalog_reference().is_none());
-    }
-
-    #[test]
-    fn test_controller_serialization() {
-        let controller = Controller::new("SerializationTest".to_string(), ControllerType::Movement);
-
-        // Test XML serialization
-        let xml = quick_xml::se::to_string(&controller).unwrap();
-        assert!(xml.contains("SerializationTest"));
-        assert!(xml.contains("movement"));
-
-        // Test deserialization
-        let deserialized: Controller = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(controller, deserialized);
-    }
-
-    #[test]
-    fn test_controller_properties() {
-        let mut properties = Properties::default();
-        let property = Property {
-            name: OSString::literal("testProp".to_string()),
-            value: OSString::literal("testValue".to_string()),
-        };
-        properties.properties.push(property);
-
-        assert_eq!(properties.properties.len(), 1);
-    }
-
-    #[test]
-    fn test_controller_defaults() {
-        // A controller built via a branch constructor leaves the *other* branch
-        // unreachable: `ObjectControllerChoice` can hold exactly one of the two,
-        // never both and never neither.
-        let object_controller =
-            ObjectController::with_catalog_reference(ControllerCatalogReference::new(
-                "ControllerCatalog".to_string(),
-                "TestController".to_string(),
-            ));
-        let properties = Properties::default();
-
-        assert!(object_controller.controller().is_none());
-        assert!(object_controller.catalog_reference().is_some());
-        assert!(properties.properties.is_empty());
-    }
-
+    /// XSD `ObjectController` (`:1522-1528`) carries an optional `@name` beside its
+    /// choice.
     #[test]
     fn test_object_controller_named_controller() {
-        let named_controller = ObjectController::with_named_controller(
-            "TestController".to_string(),
-            Controller::new("TestController".to_string(), ControllerType::Movement),
+        let xml = r#"<ObjectController name="N"><Controller name="C" controllerType="movement"/></ObjectController>"#;
+        let named = ObjectController::with_named_controller(
+            "N".to_string(),
+            Controller::new("C".to_string(), ControllerType::Movement),
         );
-        assert!(named_controller.controller().is_some());
+        assert_eq!(quick_xml::se::to_string(&named).unwrap(), xml);
         assert_eq!(
-            named_controller
-                .name
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            "TestController"
+            quick_xml::de::from_str::<ObjectController>(xml).unwrap(),
+            named
         );
     }
 
@@ -273,17 +206,20 @@ mod tests {
     #[test]
     fn test_object_controller_zero_branches_rejected() {
         let xml = r#"<ObjectController/>"#;
-        let result: Result<ObjectController, _> = quick_xml::de::from_str(xml);
-        assert!(result.is_err(), "empty ObjectController must be rejected");
+        let err = quick_xml::de::from_str::<ObjectController>(xml).unwrap_err();
+        assert!(
+            err.to_string().contains("missing field `$value`"),
+            "empty ObjectController must be rejected, got: {err}"
+        );
     }
 
     #[test]
     fn test_object_controller_two_branches_rejected() {
         let xml = r#"<ObjectController><Controller name="C1" controllerType="movement"/><CatalogReference catalogName="Cat" entryName="Entry"/></ObjectController>"#;
-        let result: Result<ObjectController, _> = quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<ObjectController>(xml).unwrap_err();
         assert!(
-            result.is_err(),
-            "Controller and CatalogReference together must be rejected"
+            err.to_string().contains("duplicate field `$value`"),
+            "Controller and CatalogReference together must be rejected, got: {err}"
         );
     }
 

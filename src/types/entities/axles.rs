@@ -265,50 +265,32 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn test_axles_car_configuration() {
-        let axles = Axles::car();
-
-        assert!(axles.front_axle.is_some());
-        assert_eq!(axles.additional_axles.len(), 0);
-        assert_eq!(axles.axle_count(), 2);
-    }
-
-    #[test]
-    fn test_axles_truck_configuration() {
-        let axles = Axles::truck();
-
-        assert!(axles.front_axle.is_some());
-        assert_eq!(axles.additional_axles.len(), 1);
-        assert_eq!(axles.axle_count(), 3);
-    }
-
-    #[test]
-    fn test_axles_trailer_configuration() {
-        let axles = Axles::trailer();
-
-        assert!(axles.front_axle.is_none());
-        assert_eq!(axles.additional_axles.len(), 0);
-        assert_eq!(axles.axle_count(), 1);
-    }
-
-    #[test]
-    fn test_axles_wheelbase() {
-        let axles = Axles::car();
+    fn presets_have_the_documented_axle_layout() {
         let params = HashMap::new();
-
-        let wheelbase = axles.wheelbase(&params).unwrap();
-        assert_eq!(wheelbase, 2.8); // 1.4 - (-1.4)
-    }
-
-    #[test]
-    fn test_axles_is_steerable() {
-        let axles = Axles::car();
-        let params = HashMap::new();
-
-        assert!(axles.is_steerable(&params).unwrap());
-
-        let trailer = Axles::trailer();
-        assert!(!trailer.is_steerable(&params).unwrap());
+        // (preset, has front axle, additional axles, wheelbase, steerable)
+        let cases = [
+            ("car", Axles::car(), true, 0, 2.8, true),
+            ("truck", Axles::truck(), true, 1, 5.0, true),
+            ("trailer", Axles::trailer(), false, 0, 0.0, false),
+            ("motorcycle", Axles::motorcycle(), true, 0, 1.6, true),
+        ];
+        for (name, axles, has_front, additional, wheelbase, steerable) in cases {
+            assert_eq!(axles.front_axle.is_some(), has_front, "{name}: front axle");
+            assert_eq!(
+                axles.additional_axles.len(),
+                additional,
+                "{name}: additional"
+            );
+            let count = 1 + usize::from(has_front) + additional;
+            assert_eq!(axles.axle_count(), count, "{name}: axle_count");
+            assert_eq!(axles.all_axles().len(), count, "{name}: all_axles");
+            assert_eq!(
+                axles.wheelbase(&params).unwrap(),
+                wheelbase,
+                "{name}: wheelbase"
+            );
+            assert_eq!(axles.is_steerable(&params).unwrap(), steerable, "{name}");
+        }
     }
 
     #[test]
@@ -371,32 +353,20 @@ mod tests {
         assert_eq!(motorcycle_positions[0], (0.8, 0.0));
     }
 
+    /// XSD `Axles` (`:802-808`) is a sequence of optional `FrontAxle`, required `RearAxle`
+    /// and repeated `AdditionalAxle`, each of type `Axle` (`:795-801`, five required
+    /// attributes). The truck preset populates all three elements.
     #[test]
-    fn test_axles_all_axles() {
-        let truck = Axles::truck();
-        let all_axles = truck.all_axles();
-
-        assert_eq!(all_axles.len(), 3); // Front + rear + additional
-    }
-
-    #[test]
-    fn test_axle_serialization() {
-        let axle = Axle::front_car();
-
-        let xml = quick_xml::se::to_string(&axle).unwrap();
-        assert!(xml.contains("maxSteering"));
-        assert!(xml.contains("wheelDiameter"));
-        assert!(xml.contains("trackWidth"));
-        assert!(xml.contains("positionX"));
-        assert!(xml.contains("positionZ"));
-    }
-
-    #[test]
-    fn test_axles_serialization() {
-        let axles = Axles::car();
-
-        let xml = quick_xml::se::to_string(&axles).unwrap();
-        assert!(xml.contains("FrontAxle"));
-        assert!(xml.contains("RearAxle"));
+    fn axles_round_trip_byte_exact_with_every_element_and_attribute() {
+        let xml = concat!(
+            r#"<Axles>"#,
+            r#"<FrontAxle maxSteering="0.4363" wheelDiameter="1" trackWidth="2" positionX="3.5" positionZ="0.5"/>"#,
+            r#"<RearAxle maxSteering="0" wheelDiameter="1" trackWidth="2" positionX="-1.5" positionZ="0.5"/>"#,
+            r#"<AdditionalAxle maxSteering="0" wheelDiameter="1" trackWidth="2" positionX="-3" positionZ="0.5"/>"#,
+            r#"</Axles>"#
+        );
+        let parsed: Axles = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(parsed, Axles::truck());
+        assert_eq!(quick_xml::se::to_string(&parsed).unwrap(), xml);
     }
 }
