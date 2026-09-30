@@ -715,11 +715,6 @@ mod tests {
     }
 
     #[test]
-    fn test_random_route_action_default() {
-        let _rra = RandomRouteAction::default();
-    }
-
-    #[test]
     fn test_custom_command_action_round_trip() {
         // XSD: simpleContent extension of xsd:string with required @type attribute.
         let xml = r#"<CustomCommandAction type="myCommand">do something</CustomCommandAction>"#;

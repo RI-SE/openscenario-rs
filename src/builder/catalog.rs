@@ -410,10 +410,4 @@ mod tests {
         assert_eq!(reference.entry_name.to_string(), "sedan");
         assert!(reference.parameter_assignments.is_some());
     }
-
-    #[test]
-    fn test_catalog_entity_builder_creation() {
-        let _builder = CatalogEntityBuilder::new();
-        let _builder_with_path = CatalogEntityBuilder::with_base_path("/tmp");
-    }
 }

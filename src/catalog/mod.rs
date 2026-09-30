@@ -252,21 +252,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_catalog_manager_creation() {
-        let _manager = CatalogManager::new();
-        // Manager created successfully
+    fn with_base_path_sets_the_resolution_root() {
+        let manager = CatalogManager::with_base_path("/tmp/catalogs");
+        assert_eq!(manager.base_path, Some(PathBuf::from("/tmp/catalogs")));
     }
 
     #[test]
-    fn test_catalog_manager_with_base_path() {
-        let _manager = CatalogManager::with_base_path("/tmp");
-        // Manager with base path created successfully
-    }
-
-    #[test]
-    fn test_catalog_manager_default() {
-        let _manager = CatalogManager::default();
-        // Default manager created successfully
+    fn default_matches_an_unrooted_manager() {
+        assert_eq!(
+            CatalogManager::default().base_path,
+            CatalogManager::new().base_path
+        );
     }
 }
 

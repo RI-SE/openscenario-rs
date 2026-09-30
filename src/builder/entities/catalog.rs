@@ -208,21 +208,3 @@ impl<'parent> CatalogPedestrianReferenceBuilder<'parent> {
         Ok(self.parent.parent)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::builder::catalog::CatalogLocationsBuilder;
-
-    #[test]
-    fn test_catalog_vehicle_builder_creation() {
-        // This test would require a mock scenario builder
-        // For now, just test that the types compile
-    }
-
-    #[test]
-    fn test_catalog_pedestrian_builder_creation() {
-        // This test would require a mock scenario builder
-        // For now, just test that the types compile
-    }
-}

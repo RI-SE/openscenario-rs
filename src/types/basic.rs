@@ -963,7 +963,8 @@ mod tests {
 
     #[test]
     fn test_scientific_notation_parsing() {
-        // Test values from real XOSC files that are causing parsing issues
+        // Real XOSC files use this scientific-notation style (e.g. `9.2884257876425379e-04`);
+        // assert the XML-deserialized `Double` matches the value `f64::parse` produces.
         let test_values = [
             "0.0000000000000000e+00",
             "1.5000000000000000e+00",
@@ -973,38 +974,10 @@ mod tests {
         ];
 
         for val in test_values {
-            println!("Testing: '{}'", val);
-
-            // Test direct f64 parsing
-            match val.parse::<f64>() {
-                Ok(f) => println!("  Direct f64::parse: {}", f),
-                Err(e) => println!("  Direct f64::parse ERROR: {}", e),
-            }
-
-            // Test Value<f64> deserialization via JSON
-            let json_str = format!("\"{}\"", val);
-            match serde_json::from_str::<Double>(&json_str) {
-                Ok(double_val) => {
-                    println!("  Value<f64> JSON: {:?}", double_val);
-                    if let Some(literal_val) = double_val.as_literal() {
-                        println!("  Literal value: {}", literal_val);
-                    }
-                }
-                Err(e) => println!("  Value<f64> JSON ERROR: {}", e),
-            }
-
-            // Test Value<f64> deserialization via XML
+            let expected = val.parse::<f64>().unwrap();
             let xml_str = format!("<test>{}</test>", val);
-            match quick_xml::de::from_str::<Double>(&xml_str) {
-                Ok(double_val) => {
-                    println!("  Value<f64> XML: {:?}", double_val);
-                    if let Some(literal_val) = double_val.as_literal() {
-                        println!("  XML Literal value: {}", literal_val);
-                    }
-                }
-                Err(e) => println!("  Value<f64> XML ERROR: {}", e),
-            }
-            println!();
+            let double_val: Double = quick_xml::de::from_str(&xml_str).unwrap();
+            assert_eq!(double_val, Double::literal(expected));
         }
     }
 

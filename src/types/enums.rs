@@ -949,12 +949,4 @@ mod tests {
         assert_eq!("skyOff".parse::<CloudState>().unwrap(), CloudState::SkyOff);
         assert!("invalid".parse::<CloudState>().is_err());
     }
-
-    #[test]
-    fn test_cloud_state_deprecation_warning() {
-        // This test documents that CloudState is deprecated
-        // The deprecation warning should be shown when using these types
-        let _state = CloudState::Free;
-        // If CloudState is used in real code, developers should migrate to FractionalCloudCover
-    }
 }
