@@ -75,12 +75,8 @@ fn appearance_action_rejects_two_branches() {
 }
 
 // ── LightType (XSD `LightType`, :1418-1423) ──────────────────────────────────
-
-#[test]
-fn light_type_parses_vehicle_light_branch() {
-    let xml = r#"<LightType><VehicleLight vehicleLightType="lowBeam"/></LightType>"#;
-    round_trip::<LightType>(xml);
-}
+// The one-branch document is round-tripped byte for byte inside
+// `appearance_action_parses_light_state_branch`.
 
 #[test]
 fn light_type_rejects_zero_branches() {
@@ -164,12 +160,8 @@ fn animation_type_rejects_two_branches() {
 }
 
 // ── ComponentAnimation (XSD `ComponentAnimation`, :947-952) ──────────────────
-
-#[test]
-fn component_animation_parses_vehicle_component_branch() {
-    let xml = r#"<ComponentAnimation><VehicleComponent vehicleComponentType="doorFrontLeft"/></ComponentAnimation>"#;
-    round_trip::<ComponentAnimation>(xml);
-}
+// The one-branch document is round-tripped byte for byte inside
+// `animation_type_parses_component_animation_branch`.
 
 #[test]
 fn component_animation_rejects_zero_branches() {

@@ -528,16 +528,6 @@ mod tests {
     }
 
     #[test]
-    fn test_activate_controller_action_creation() {
-        let action = ActivateControllerAction::all_domains(true, true, false, false);
-
-        assert_eq!(action.longitudinal.unwrap().as_literal(), Some(&true));
-        assert_eq!(action.lateral.unwrap().as_literal(), Some(&true));
-        assert_eq!(action.lighting.unwrap().as_literal(), Some(&false));
-        assert_eq!(action.animation.unwrap().as_literal(), Some(&false));
-    }
-
-    #[test]
     fn test_activate_controller_all_domains_serialization() {
         let action = ActivateControllerAction::all_domains(true, true, false, false);
         let xml = quick_xml::se::to_string(&action).expect("Serialization should succeed");
@@ -584,34 +574,6 @@ mod tests {
 
         let neutral = AutomaticGear::neutral();
         assert_eq!(neutral.gear, Value::Literal(AutomaticGearType::Neutral));
-    }
-
-    #[test]
-    fn test_controller_action_defaults() {
-        // Every branch of the XSD choice at :772-780 carries `minOccurs="0"`,
-        // so an `AssignControllerAction` with no branch is schema-valid and the
-        // derived `Default` is not a fabrication.
-        let assign = AssignControllerAction::default();
-        assert!(assign.controller.is_none());
-
-        // `ActivateControllerAction::default()` is all-`None` (benign, derived) —
-        // the previously-fabricated `true`/`true` values now require
-        // `all_domains`/`movement_only`.
-        let activate = ActivateControllerAction::default();
-        assert!(activate.longitudinal.is_none());
-        assert!(activate.lateral.is_none());
-
-        // `ControllerAction` no longer has a branchless constructor: XSD :978-984
-        // is a bare choice, so the type now requires a branch to be named.
-        let controller_action = ControllerAction {
-            controller_action: ControllerActionChoice::ActivateControllerAction(
-                ActivateControllerAction::default(),
-            ),
-        };
-        assert!(matches!(
-            controller_action.controller_action,
-            ControllerActionChoice::ActivateControllerAction(_)
-        ));
     }
 
     // Tests for new group types
@@ -689,16 +651,6 @@ mod tests {
 
         let auto_drive = Gear::automatic_drive();
         if let Gear::AutomaticGear(gear) = auto_drive {
-            assert_eq!(gear.gear, Value::Literal(AutomaticGearType::Drive));
-        } else {
-            panic!("Expected AutomaticGear variant");
-        }
-    }
-
-    #[test]
-    fn test_gear_group_automatic_drive_constructor() {
-        let gear = Gear::automatic_drive();
-        if let Gear::AutomaticGear(gear) = gear {
             assert_eq!(gear.gear, Value::Literal(AutomaticGearType::Drive));
         } else {
             panic!("Expected AutomaticGear variant");

@@ -43,8 +43,12 @@ mod action_builder_tests {
             openscenario_rs::types::actions::wrappers::PrivateAction::TeleportAction(
                 teleport_action,
             ) => {
-                // Verify position was set correctly
-                assert!(teleport_action.position.world_position().is_some());
+                let world = teleport_action
+                    .position
+                    .world_position()
+                    .expect("expected the WorldPosition branch");
+                assert_eq!(world.x.as_literal(), Some(&100.0));
+                assert_eq!(world.y.as_literal(), Some(&200.0));
             }
             _ => panic!("Expected TeleportAction"),
         }

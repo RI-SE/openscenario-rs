@@ -162,33 +162,6 @@ mod tests {
     }
 
     #[test]
-    fn test_init_action_builder_with_teleport() {
-        let position = WorldPositionBuilder::new()
-            .at_coordinates(10.0, 20.0, 0.0)
-            .build()
-            .unwrap();
-
-        let init = InitActionBuilder::new()
-            .add_teleport_action("ego", position)
-            .build()
-            .unwrap();
-
-        assert_eq!(init.actions.private_actions.len(), 1);
-        assert_eq!(
-            init.actions.private_actions[0]
-                .entity_ref
-                .as_literal()
-                .unwrap(),
-            "ego"
-        );
-        assert_eq!(init.actions.private_actions[0].private_actions.len(), 1);
-        assert_eq!(
-            init.actions.private_actions[0].private_actions[0].action_type(),
-            "TeleportAction"
-        );
-    }
-
-    #[test]
     fn test_init_action_builder_with_speed() {
         let init = InitActionBuilder::new()
             .add_speed_action("ego", 30.0)

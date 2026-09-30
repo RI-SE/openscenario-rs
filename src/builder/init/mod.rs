@@ -50,14 +50,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_init_builder_basic() {
-        let init = InitActionBuilder::new().build().unwrap();
-
-        assert!(init.actions.global_actions.is_empty());
-        assert!(init.actions.private_actions.is_empty());
-    }
-
-    #[test]
     fn test_init_builder_with_environment() {
         let init = InitActionBuilder::with_default_environment("TestEnvironment")
             .build()

@@ -150,8 +150,20 @@ mod tests {
             .for_entity("ego")
             .with_master("lead")
             .build_action();
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Master target position is required"));
 
-        assert!(result.is_err());
+        let result = SynchronizeActionBuilder::new()
+            .for_entity("ego")
+            .with_master("lead")
+            .master_position(Position::world_origin())
+            .build_action();
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Entity target position is required"));
     }
 
     #[test]

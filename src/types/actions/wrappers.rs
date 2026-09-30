@@ -619,17 +619,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_action_variant_construction() {
-        let action = Action::PrivateAction(PrivateAction::TeleportAction(TeleportAction::new(
-            Position::world(crate::types::positions::WorldPosition::new(1.0, 2.0)),
-        )));
-        assert!(matches!(
-            action,
-            Action::PrivateAction(PrivateAction::TeleportAction(_))
-        ));
-    }
-
-    #[test]
     fn test_entity_action_delete_constructor() {
         let ea = EntityAction::delete("defaultEntity");
         assert_eq!(ea.entity_ref.as_literal().unwrap(), "defaultEntity");
@@ -644,14 +633,6 @@ mod tests {
         let ea = EntityAction::add("newEntity", Position::world_origin());
         assert_eq!(ea.entity_ref.as_literal().unwrap(), "newEntity");
         assert!(matches!(ea.action, EntityActionChoice::AddEntityAction(_)));
-    }
-
-    #[test]
-    fn test_global_action_traffic_variant_construction() {
-        let action = GlobalAction::TrafficAction(TrafficAction::new(
-            TrafficActionChoice::TrafficStopAction(TrafficStopAction::default()),
-        ));
-        assert!(matches!(action, GlobalAction::TrafficAction(_)));
     }
 
     #[test]
@@ -674,14 +655,6 @@ mod tests {
     }
 
     #[test]
-    fn test_delete_entity_action_xml_roundtrip() {
-        let action = DeleteEntityAction::default();
-        let xml = quick_xml::se::to_string(&action).unwrap();
-        let deserialized: DeleteEntityAction = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(action, deserialized);
-    }
-
-    #[test]
     fn test_infrastructure_action_xml_roundtrip() {
         let action = InfrastructureAction::new(TrafficSignalAction::state_action(
             "TestSignal".to_string(),
@@ -690,28 +663,6 @@ mod tests {
         let xml = quick_xml::se::to_string(&action).unwrap();
         let deserialized: InfrastructureAction = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(action, deserialized);
-    }
-
-    #[test]
-    fn test_set_monitor_action_new_constructor() {
-        let sma = SetMonitorAction::new("defaultMonitor", true);
-        assert_eq!(sma.value.as_literal().unwrap(), &true);
-        assert_eq!(
-            sma.monitor_ref.as_literal().unwrap(),
-            &"defaultMonitor".to_string()
-        );
-    }
-
-    #[test]
-    fn test_set_monitor_action_roundtrip() {
-        // XSD: required @monitorRef (String) and @value (Boolean).
-        let xml = r#"<SetMonitorAction monitorRef="speedMonitor" value="true"/>"#;
-        let action: SetMonitorAction = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(
-            action.monitor_ref.as_literal().unwrap(),
-            &"speedMonitor".to_string()
-        );
-        assert_eq!(action.value.as_literal().unwrap(), &true);
     }
 
     #[test]

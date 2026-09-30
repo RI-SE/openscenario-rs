@@ -190,45 +190,4 @@ mod tests {
         let deserialized: Weather = quick_xml::de::from_str(&xml).unwrap();
         assert_eq!(w, deserialized);
     }
-
-    #[test]
-    #[allow(clippy::approx_constant)] // 3.14 is a sun azimuth scenario value, not an approximation of PI
-    fn test_custom_rain_weather() {
-        let w = Weather {
-            sun: Some(Sun {
-                intensity: Some(Double::literal(0.3)),
-                azimuth: Double::literal(3.14),
-                elevation: Double::literal(0.5),
-                illuminance: None,
-            }),
-            fog: Some(Fog {
-                visual_range: Double::literal(500.0),
-                bounding_box: None,
-            }),
-            precipitation: Some(Precipitation {
-                precipitation_type: Value::Literal(PrecipitationType::Rain),
-                intensity: None,
-                precipitation_intensity: Some(Double::literal(0.8)),
-            }),
-            ..Default::default()
-        };
-        assert_eq!(
-            w.precipitation.as_ref().unwrap().precipitation_type,
-            Value::Literal(PrecipitationType::Rain)
-        );
-        assert_eq!(
-            w.precipitation
-                .as_ref()
-                .unwrap()
-                .precipitation_intensity
-                .as_ref()
-                .unwrap()
-                .as_literal(),
-            Some(&0.8)
-        );
-        assert_eq!(
-            w.fog.as_ref().unwrap().visual_range.as_literal(),
-            Some(&500.0)
-        );
-    }
 }

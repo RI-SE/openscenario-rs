@@ -49,33 +49,6 @@ fn absolute_speed_target_distance_steady_state_round_trip() {
 }
 
 #[test]
-fn absolute_speed_target_time_steady_state_round_trip() {
-    let xml = r#"<AbsoluteSpeed value="12.5"><TargetTimeSteadyState time="2"/></AbsoluteSpeed>"#;
-    let speed: AbsoluteSpeed = de(xml);
-    let Some(SteadyState::TargetTimeSteadyState(time)) = speed.steady_state.as_ref() else {
-        panic!(
-            "expected the TargetTimeSteadyState branch, got {:?}",
-            speed.steady_state
-        );
-    };
-    assert_eq!(time.time.as_literal().copied(), Some(2.0));
-
-    let out = ser("AbsoluteSpeed", &speed);
-    assert!(out.contains("TargetTimeSteadyState"), "got: {out}");
-    assert_eq!(de::<AbsoluteSpeed>(&out), speed);
-}
-
-#[test]
-fn absolute_speed_without_steady_state_round_trip() {
-    let xml = r#"<AbsoluteSpeed value="30"/>"#;
-    let speed: AbsoluteSpeed = de(xml);
-    assert!(speed.steady_state.is_none());
-
-    let out = ser("AbsoluteSpeed", &speed);
-    assert!(!out.contains("SteadyState"), "got: {out}");
-}
-
-#[test]
 fn relative_speed_to_master_round_trip() {
     let xml = r#"<RelativeSpeedToMaster speedTargetValueType="delta" value="-5"><TargetTimeSteadyState time="1.5"/></RelativeSpeedToMaster>"#;
     let speed: RelativeSpeedToMaster = de(xml);

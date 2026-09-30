@@ -24,8 +24,10 @@ use openscenario_rs::types::actions::control::{
 };
 use openscenario_rs::types::actions::movement::{
     AbsoluteSpeed, RelativeSpeedToMaster, SpeedActionTarget, SpeedActionTargetChoice, SteadyState,
-    TimeReference, TimeReferenceChoice, TrajectoryRef, TrajectoryRefChoice,
+    TimeReference, TimeReferenceChoice, Timing, TrajectoryRef, TrajectoryRefChoice,
 };
+use openscenario_rs::types::basic::{Double, Value};
+use openscenario_rs::types::enums::ReferenceContext;
 
 fn de<T: serde::de::DeserializeOwned>(xml: &str) -> T {
     quick_xml::de::from_str(xml).unwrap_or_else(|e| panic!("deserialize failed for {xml}: {e}"))
@@ -144,6 +146,12 @@ fn time_reference_none_branch_round_trips_byte_exact() {
 fn time_reference_timing_branch_round_trips_byte_exact() {
     let xml = r#"<TimeReference><Timing domainAbsoluteRelative="absolute" scale="1" offset="0"/></TimeReference>"#;
     round_trips::<TimeReference>(xml);
+    let built = TimeReference::timing(Timing {
+        domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
+        scale: Double::literal(1.0),
+        offset: Double::literal(0.0),
+    });
+    assert_eq!(de::<TimeReference>(xml), built);
 }
 
 #[test]

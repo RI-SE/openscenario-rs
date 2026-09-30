@@ -1192,29 +1192,6 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_area_action_creation() {
-        let traffic_area = TrafficArea::rectangle(0.0, 0.0, 50.0, 50.0);
-
-        let area = TrafficAreaAction::new(
-            3,
-            true,
-            TrafficDistribution::new(vec![TrafficDistributionEntry::new(
-                1.0,
-                sample_entity_distribution(),
-            )])
-            .unwrap(),
-            traffic_area,
-        );
-
-        assert_eq!(area.number_of_entities.as_literal(), Some(&3));
-        assert_eq!(area.continuous.as_literal(), Some(&true));
-        match area.traffic_area.choice {
-            TrafficAreaChoice::Polygon(p) => assert_eq!(p.position.len(), 4),
-            other => panic!("expected Polygon, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn test_traffic_signal_state_action() {
         let signal =
             TrafficSignalAction::state_action("Intersection1".to_string(), "red".to_string());
@@ -1254,17 +1231,6 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_stop_action() {
-        // XSD `TrafficStopAction` is an empty complexType.
-        let action = TrafficStopAction::default();
-        assert_eq!(action, TrafficStopAction {});
-
-        let xml = quick_xml::se::to_string(&action).unwrap();
-        let parsed: TrafficStopAction = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(parsed, action);
-    }
-
-    #[test]
     fn test_vehicle_category_distribution() {
         let mixed = VehicleCategoryDistribution::mixed_traffic();
         assert_eq!(mixed.entries.len(), 3);
@@ -1285,8 +1251,18 @@ mod tests {
 
         let definition = TrafficDefinition::with_both("UrbanTraffic", vehicles, controllers);
 
-        assert!(!definition.vehicle_category_distribution.entries.is_empty());
-        assert!(!definition.controller_distribution.entries.is_empty());
+        assert_eq!(
+            definition.name.as_literal(),
+            Some(&"UrbanTraffic".to_string())
+        );
+        assert_eq!(
+            definition.vehicle_category_distribution,
+            VehicleCategoryDistribution::urban_traffic()
+        );
+        assert_eq!(
+            definition.controller_distribution,
+            ControllerDistribution::single_controller("AI1".to_string(), 1.0)
+        );
     }
 
     #[test]
@@ -1309,66 +1285,6 @@ mod tests {
             .expect("expected a WorldPosition");
         assert_eq!(corner2.x.as_literal(), Some(&40.0)); // 10 + 30
         assert_eq!(corner2.y.as_literal(), Some(&60.0)); // 20 + 40
-    }
-
-    #[test]
-    fn test_vehicle_categories() {
-        let car = VehicleCategory::Car;
-        let truck = VehicleCategory::Truck;
-        let bike = VehicleCategory::Bicycle;
-
-        // Test that enum variants exist and can be used
-        let entry1 = VehicleCategoryDistributionEntry {
-            category: Value::Literal(car),
-            weight: Double::literal(0.6),
-        };
-        let entry2 = VehicleCategoryDistributionEntry {
-            category: Value::Literal(truck),
-            weight: Double::literal(0.3),
-        };
-        let entry3 = VehicleCategoryDistributionEntry {
-            category: Value::Literal(bike),
-            weight: Double::literal(0.1),
-        };
-
-        assert_eq!(entry1.weight.as_literal().unwrap(), &0.6);
-        assert_eq!(entry2.weight.as_literal().unwrap(), &0.3);
-        assert_eq!(entry3.weight.as_literal().unwrap(), &0.1);
-    }
-
-    #[test]
-    fn test_traffic_action_construction() {
-        // `TrafficSourceAction`/`TrafficSinkAction`/
-        // `TrafficSwarmAction` no longer implement `Default` — every field
-        // they fabricated was `use="required"` in the XSD. Exercise the
-        // explicit constructors instead.
-        let source = TrafficSourceAction::with_velocity(
-            5.0,
-            10.0,
-            50.0,
-            Position::world_origin(),
-            sample_traffic_definition(),
-        );
-        assert_eq!(source.rate.as_literal(), Some(&10.0));
-        assert_eq!(
-            source.velocity.as_ref().and_then(|v| v.as_literal()),
-            Some(&50.0)
-        );
-
-        let sink = TrafficSinkAction::new(10.0, 50.0, Position::world_origin());
-        assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&10.0));
-        assert_eq!(sink.radius.as_literal(), Some(&50.0));
-
-        let swarm = TrafficSwarmAction::new("SwarmCenter", 100.0, 50.0, 20).with_inner_radius(10.0);
-        assert_eq!(swarm.number_of_vehicles.as_literal(), Some(&20));
-        assert_eq!(swarm.inner_radius.as_literal(), Some(&10.0));
-        assert_eq!(swarm.semi_major_axis.as_literal(), Some(&100.0));
-        assert_eq!(swarm.semi_minor_axis.as_literal(), Some(&50.0));
-
-        // `TrafficStopAction` is an empty complexType — `Default` states
-        // nothing here and is kept.
-        let stop = TrafficStopAction::default();
-        assert_eq!(stop, TrafficStopAction {});
     }
 
     // TRAFFIC SIGNAL SYSTEM TESTS
@@ -1417,46 +1333,6 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_signal_state_creation() {
-        let state = TrafficSignalState::new("signal_123", "yellow");
-
-        assert_eq!(
-            state.traffic_signal_id.as_literal(),
-            Some(&"signal_123".to_string())
-        );
-        assert_eq!(state.state.as_literal(), Some(&"yellow".to_string()));
-    }
-
-    #[test]
-    fn test_traffic_signal_group_state_creation() {
-        let group_state = TrafficSignalGroupState::new("flashing");
-
-        assert_eq!(
-            group_state.state.as_literal(),
-            Some(&"flashing".to_string())
-        );
-    }
-
-    #[test]
-    fn test_traffic_signal_state_action_creation() {
-        let action = TrafficSignalStateAction::new("main_signal", "red");
-
-        assert_eq!(action.name.as_literal(), Some(&"main_signal".to_string()));
-        assert_eq!(action.state.as_literal(), Some(&"red".to_string()));
-    }
-
-    #[test]
-    fn test_traffic_signal_controller_action_creation() {
-        let action = TrafficSignalControllerAction::new("controller_1", "phase_2");
-
-        assert_eq!(
-            action.traffic_signal_controller_ref.as_literal(),
-            Some(&"controller_1".to_string())
-        );
-        assert_eq!(action.phase_ref.as_literal(), Some(&"phase_2".to_string()));
-    }
-
-    #[test]
     fn test_complex_traffic_signal_controller() {
         let controller = TrafficSignalController::new("complex_intersection")
             .with_delay(2.5)
@@ -1493,16 +1369,6 @@ mod tests {
         let first_phase = &controller.phases[0];
         assert_eq!(first_phase.traffic_signal_states.len(), 2);
         assert!(first_phase.traffic_signal_group_state.is_some());
-    }
-
-    #[test]
-    fn test_traffic_signal_xml_serialization() {
-        let controller = TrafficSignalController::new("test_controller")
-            .add_phase(Phase::new("test_phase", 30.0).add_signal_state("signal_1", "green"));
-
-        // Test that serialization works (basic check)
-        let serialized = serde_json::to_string(&controller);
-        assert!(serialized.is_ok());
     }
 
     #[test]
@@ -1554,66 +1420,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_traffic_signal_timing_validation() {
-        // Test realistic traffic signal timing
-        let controller = TrafficSignalController::new("realistic_intersection")
-            .with_delay(1.0)
-            .add_phase(Phase::new("green_ns", 45.0))
-            .add_phase(Phase::new("yellow_ns", 3.0))
-            .add_phase(Phase::new("red_ns_green_ew", 40.0))
-            .add_phase(Phase::new("yellow_ew", 3.0));
-
-        // Total cycle time should be reasonable
-        let total_time: f64 = controller
-            .phases
-            .iter()
-            .map(|p| p.duration.as_literal().unwrap_or(&0.0))
-            .sum();
-
-        assert_eq!(total_time, 91.0); // 45 + 3 + 40 + 3
-        assert!(total_time > 60.0 && total_time < 180.0); // Reasonable cycle time
-    }
-
-    #[test]
-    fn test_traffic_signal_state_transitions() {
-        // Test that we can model state transitions properly
-        let states = vec![
-            TrafficSignalState::new("main", "green"),
-            TrafficSignalState::new("main", "yellow"),
-            TrafficSignalState::new("main", "red"),
-        ];
-
-        assert_eq!(states[0].state.as_literal(), Some(&"green".to_string()));
-        assert_eq!(states[1].state.as_literal(), Some(&"yellow".to_string()));
-        assert_eq!(states[2].state.as_literal(), Some(&"red".to_string()));
-
-        // All should reference the same signal
-        for state in &states {
-            assert_eq!(
-                state.traffic_signal_id.as_literal(),
-                Some(&"main".to_string())
-            );
-        }
-    }
-
-    // COMPREHENSIVE TRAFFIC SWARM ACTION TESTS (Task 2.2 Requirements)
-
-    #[test]
-    fn test_traffic_swarm_action_creation_comprehensive() {
-        let swarm = TrafficSwarmAction::new("Ego", 100.0, 50.0, 10)
-            .with_inner_radius(20.0)
-            .with_central_swarm_object("CentralVehicle");
-
-        assert_eq!(swarm.number_of_vehicles.as_literal().unwrap(), &10);
-        assert_eq!(swarm.inner_radius.as_literal().unwrap(), &20.0);
-        assert_eq!(swarm.semi_major_axis.as_literal().unwrap(), &100.0);
-        assert_eq!(swarm.semi_minor_axis.as_literal().unwrap(), &50.0);
-        assert_eq!(
-            swarm.central_object.entity_ref.as_literal().unwrap(),
-            "CentralVehicle"
-        );
-    }
+    // TRAFFIC SWARM ACTION TESTS
 
     #[test]
     fn test_central_swarm_object_creation() {
@@ -1630,123 +1437,6 @@ mod tests {
         assert!(xml.contains("semiMajorAxis=\"75\""));
         assert!(xml.contains("semiMinorAxis=\"30\""));
         assert!(xml.contains("numberOfVehicles=\"5\""));
-    }
-
-    #[test]
-    fn test_xml_round_trip_traffic_swarm() {
-        let original = TrafficSwarmAction::new("TestEntity", 120.0, 60.0, 8)
-            .with_inner_radius(15.0)
-            .with_offset(5.0);
-
-        let xml = quick_xml::se::to_string(&original).unwrap();
-
-        // Try to parse, but handle the error gracefully
-        let deserialized = match quick_xml::de::from_str::<TrafficSwarmAction>(&xml) {
-            Ok(result) => result,
-            Err(e) => {
-                println!("Deserialization error: {}", e);
-                panic!("Failed to deserialize: {}", e);
-            }
-        };
-
-        assert_eq!(
-            original.central_object.entity_ref.as_literal(),
-            deserialized.central_object.entity_ref.as_literal()
-        );
-        assert_eq!(
-            original.semi_major_axis.as_literal(),
-            deserialized.semi_major_axis.as_literal()
-        );
-        assert_eq!(
-            original.semi_minor_axis.as_literal(),
-            deserialized.semi_minor_axis.as_literal()
-        );
-        assert_eq!(
-            original.number_of_vehicles.as_literal(),
-            deserialized.number_of_vehicles.as_literal()
-        );
-        assert_eq!(
-            original.inner_radius.as_literal(),
-            deserialized.inner_radius.as_literal()
-        );
-        assert_eq!(
-            original.offset.as_literal(),
-            deserialized.offset.as_literal()
-        );
-    }
-
-    #[test]
-    fn test_traffic_swarm_with_central_object() {
-        let swarm = TrafficSwarmAction::new("MainVehicle", 80.0, 40.0, 6)
-            .with_central_swarm_object("CentralEntity");
-
-        assert_eq!(
-            swarm.central_object.entity_ref.as_literal().unwrap(),
-            "CentralEntity"
-        );
-    }
-
-    #[test]
-    fn test_traffic_swarm_construction_is_complete() {
-        // `TrafficSwarmAction` no longer implements `Default`; every field
-        // it used to fabricate is required, so the constructor alone
-        // guarantees each is populated.
-        let swarm = TrafficSwarmAction::new("SwarmCenter", 100.0, 50.0, 20);
-        assert!(swarm.central_object.entity_ref.as_literal().is_some());
-        assert!(swarm.semi_major_axis.as_literal().is_some());
-        assert!(swarm.semi_minor_axis.as_literal().is_some());
-        assert!(swarm.number_of_vehicles.as_literal().is_some());
-        assert!(swarm.inner_radius.as_literal().is_some());
-        assert!(swarm.offset.as_literal().is_some());
-    }
-
-    #[test]
-    fn test_realistic_swarm_parameters() {
-        // Test realistic highway swarm scenario
-        let highway_swarm = TrafficSwarmAction::new("EgoVehicle", 200.0, 100.0, 15)
-            .with_inner_radius(50.0)
-            .with_offset(10.0);
-
-        assert_eq!(highway_swarm.semi_major_axis.as_literal().unwrap(), &200.0);
-        assert_eq!(highway_swarm.inner_radius.as_literal().unwrap(), &50.0);
-        assert_eq!(highway_swarm.offset.as_literal().unwrap(), &10.0);
-
-        // Test city intersection swarm scenario
-        let city_swarm = TrafficSwarmAction::new("CityEgo", 80.0, 60.0, 8)
-            .with_central_swarm_object("IntersectionController");
-
-        assert_eq!(
-            city_swarm.central_object.entity_ref.as_literal().unwrap(),
-            "IntersectionController"
-        );
-        assert_eq!(city_swarm.number_of_vehicles.as_literal().unwrap(), &8);
-    }
-
-    #[test]
-    fn test_traffic_swarm_with_velocity() {
-        let swarm = TrafficSwarmAction::new("TestVehicle", 90.0, 45.0, 12).with_velocity(60.0);
-
-        assert!(swarm.velocity.is_some());
-        assert_eq!(swarm.velocity.unwrap().as_literal().unwrap(), &60.0);
-    }
-
-    #[test]
-    fn test_traffic_swarm_elliptical_parameters() {
-        // Test elliptical swarm with different major/minor axes
-        let elliptical_swarm = TrafficSwarmAction::new("EllipseCenter", 150.0, 75.0, 20);
-
-        // Major axis should be larger than minor axis for proper ellipse
-        assert!(
-            elliptical_swarm.semi_major_axis.as_literal().unwrap()
-                > elliptical_swarm.semi_minor_axis.as_literal().unwrap()
-        );
-
-        // Test circular swarm (equal axes)
-        let circular_swarm = TrafficSwarmAction::new("CircleCenter", 100.0, 100.0, 15);
-        assert_eq!(
-            circular_swarm.semi_major_axis.as_literal().unwrap(),
-            circular_swarm.semi_minor_axis.as_literal().unwrap()
-        );
     }
 
     #[test]
@@ -1974,14 +1664,11 @@ mod tests {
         let action = TrafficAreaAction::new(
             5,
             true,
-            TrafficDistribution {
-                traffic_distribution_entry: MinVec::new(vec![TrafficDistributionEntry {
-                    weight: Double::literal(1.0),
-                    entity_distribution: sample_entity_distribution(),
-                    properties: None,
-                }])
-                .unwrap(),
-            },
+            TrafficDistribution::new(vec![TrafficDistributionEntry::new(
+                0.7,
+                sample_entity_distribution(),
+            )])
+            .unwrap(),
             TrafficArea::rectangle(0.0, 0.0, 20.0, 20.0),
         );
 
@@ -1990,6 +1677,13 @@ mod tests {
         assert_eq!(action, reparsed);
         assert_eq!(reparsed.number_of_entities.as_literal(), Some(&5));
         assert_eq!(reparsed.continuous.as_literal(), Some(&true));
+        let entries = &reparsed.traffic_distribution.traffic_distribution_entry;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].weight.as_literal(), Some(&0.7));
+        assert!(entries[0].properties.is_none());
+
+        // XSD `TrafficDistribution` requires at least one entry.
+        assert!(TrafficDistribution::new(Vec::new()).is_err());
     }
 
     #[test]

@@ -67,42 +67,6 @@ mod tests {
     }
 
     #[test]
-    fn test_environment_creation() {
-        let environment = Environment {
-            name: Value::literal("TestEnvironment".to_string()),
-            parameter_declarations: None,
-            time_of_day: Some(TimeOfDay {
-                animation: Value::literal(false),
-                date_time: literal_date_time("2021-12-10T11:00:00"),
-            }),
-            weather: Some(Weather::default()),
-            road_condition: Some(RoadCondition {
-                friction_scale_factor: crate::types::basic::Double::literal(1.0),
-                wetness: None,
-                properties: None,
-            }),
-        };
-
-        assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
-        assert_eq!(
-            environment
-                .time_of_day
-                .as_ref()
-                .unwrap()
-                .date_time
-                .to_string(),
-            "2021-12-10T11:00:00"
-        );
-        assert!(!environment
-            .time_of_day
-            .as_ref()
-            .unwrap()
-            .animation
-            .as_literal()
-            .unwrap());
-    }
-
-    #[test]
     fn test_environment_minimal() {
         let xml = r#"<Environment name="e"/>"#;
         let environment: Environment = quick_xml::de::from_str(xml).unwrap();

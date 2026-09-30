@@ -363,6 +363,19 @@ mod tests {
                 "ActivateControllerAction",
             ),
             (
+                PrivateActionWrapper::AppearanceAction(
+                    crate::types::actions::appearance::AppearanceAction::new(
+                        crate::types::actions::appearance::AppearanceActionChoice::LightStateAction(
+                            quick_xml::de::from_str(
+                                r#"<LightStateAction><LightType><VehicleLight vehicleLightType="brakeLights"/></LightType><LightState mode="on"/></LightStateAction>"#,
+                            )
+                            .expect("the LightStateAction fixture must parse"),
+                        ),
+                    ),
+                ),
+                "AppearanceAction",
+            ),
+            (
                 PrivateActionWrapper::TrailerAction(
                     crate::types::actions::trailer::TrailerAction {
                         choice: crate::types::actions::trailer::TrailerActionChoice::DisconnectTrailerAction(
@@ -396,31 +409,15 @@ mod tests {
         );
     }
 
+    /// `finish()` has no error channel, so a global builder on which no branch was selected
+    /// must contribute nothing rather than an empty, schema-invalid `<GlobalAction/>`.
     #[test]
-    fn test_private_action_builder_fluent() {
-        let position = WorldPositionBuilder::new()
-            .at_coordinates(0.0, 0.0, 0.0)
-            .build()
-            .unwrap();
-
-        let init = InitActionBuilder::new()
-            .create_private_action("ego")
-            .add_teleport_action(position)
-            .add_speed_action(25.0)
+    fn global_action_builder_finish_contributes_nothing_when_no_branch_was_selected() {
+        let init = GlobalActionBuilder::new(InitActionBuilder::new())
             .finish()
-            .unwrap()
             .build()
             .unwrap();
-
-        assert_eq!(init.actions.private_actions.len(), 1);
-        assert_eq!(
-            init.actions.private_actions[0]
-                .entity_ref
-                .as_literal()
-                .unwrap(),
-            "ego"
-        );
-        assert_eq!(init.actions.private_actions[0].private_actions.len(), 2);
+        assert!(init.actions.global_actions.is_empty());
     }
 
     #[test]
@@ -431,22 +428,6 @@ mod tests {
             .unwrap();
 
         assert_eq!(global.action_type(), "EnvironmentAction");
-    }
-
-    #[test]
-    fn test_global_action_builder_fluent() {
-        let init = InitActionBuilder::new()
-            .create_global_action()
-            .add_named_environment_action("TestEnvironment")
-            .finish()
-            .build()
-            .unwrap();
-
-        assert_eq!(init.actions.global_actions.len(), 1);
-        assert_eq!(
-            init.actions.global_actions[0].action_type(),
-            "EnvironmentAction"
-        );
     }
 
     #[test]
@@ -473,6 +454,10 @@ mod tests {
             .unwrap();
 
         assert_eq!(init.actions.global_actions.len(), 1);
+        assert_eq!(
+            init.actions.global_actions[0].action_type(),
+            "EnvironmentAction"
+        );
         assert_eq!(init.actions.private_actions.len(), 2);
 
         // Check ego entity

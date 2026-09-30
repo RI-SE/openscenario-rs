@@ -1588,45 +1588,6 @@ mod tests {
     }
 
     #[test]
-    fn test_lane_change_target_relative() {
-        let relative_target = RelativeTargetLane {
-            entity_ref: OSString::literal("TestEntity".to_string()),
-            value: Int::literal(2),
-        };
-        let target = LaneChangeTarget {
-            target_choice: LaneChangeTargetChoice::RelativeTargetLane(relative_target),
-        };
-
-        if let LaneChangeTargetChoice::RelativeTargetLane(rel) = target.target_choice {
-            assert_eq!(rel.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
-            assert_eq!(rel.value.as_literal(), Some(&2));
-        } else {
-            panic!("Expected RelativeTargetLane");
-        }
-    }
-
-    #[test]
-    fn test_lane_change_action_with_helper_methods() {
-        let dynamics = TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0);
-        let target = LaneChangeTarget::relative("Ego", -1);
-        let action = LaneChangeAction::new(dynamics, target);
-
-        assert!(action.target_lane_offset.is_none());
-    }
-
-    #[test]
-    fn test_lane_change_with_offset() {
-        let dynamics = TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0);
-        let target = LaneChangeTarget::absolute("1");
-        let action = LaneChangeAction::new(dynamics, target).with_offset(Double::literal(0.5));
-
-        assert_eq!(
-            action.target_lane_offset.unwrap().as_literal().unwrap(),
-            &0.5
-        );
-    }
-
-    #[test]
     fn test_lane_change_target_absolute() {
         let target = LaneChangeTarget::absolute("lane_1");
 
@@ -1724,15 +1685,7 @@ mod tests {
 
         let xml = quick_xml::se::to_string(&original).unwrap();
         let deserialized: LaneChangeAction = quick_xml::de::from_str(&xml).unwrap();
-
-        assert_eq!(
-            original.target_lane_offset.unwrap().as_literal(),
-            deserialized.target_lane_offset.unwrap().as_literal()
-        );
-        assert_eq!(
-            original.lane_change_action_dynamics.value.as_literal(),
-            deserialized.lane_change_action_dynamics.value.as_literal()
-        );
+        assert_eq!(original, deserialized);
     }
 
     #[test]
@@ -1761,18 +1714,6 @@ mod tests {
             action.dynamics.max_lateral_acc.unwrap().as_literal(),
             Some(&2.0)
         );
-    }
-
-    #[test]
-    fn test_lane_offset_target_relative() {
-        let target = LaneOffsetTarget::relative("TestEntity", -0.5);
-
-        if let LaneOffsetTargetChoice::RelativeTargetLaneOffset(rel) = target.target_choice {
-            assert_eq!(rel.entity_ref.as_literal(), Some(&"TestEntity".to_string()));
-            assert_eq!(rel.value.as_literal(), Some(&-0.5));
-        } else {
-            panic!("Expected RelativeTargetLaneOffset");
-        }
     }
 
     #[test]
@@ -1839,48 +1780,9 @@ mod tests {
         );
 
         let xml = quick_xml::se::to_string(&original).unwrap();
+        assert!(xml.contains(r#"maxLateralAcc="1.5""#), "serialized: {xml}");
         let deserialized: LaneOffsetAction = quick_xml::de::from_str(&xml).unwrap();
-
-        assert_eq!(
-            original.continuous.as_literal(),
-            deserialized.continuous.as_literal()
-        );
-        assert_eq!(
-            original.dynamics.max_lateral_acc.unwrap().as_literal(),
-            deserialized.dynamics.max_lateral_acc.unwrap().as_literal()
-        );
-    }
-
-    #[test]
-    fn test_lateral_distance_action_creation() {
-        let action = LateralDistanceAction {
-            entity_ref: OSString::literal("TargetEntity".to_string()),
-            distance: Some(Double::literal(3.5)),
-            freespace: Boolean::literal(true),
-            continuous: Boolean::literal(false),
-            displacement: None,
-            coordinate_system: None,
-            dynamic_constraints: Some(DynamicConstraints {
-                max_acceleration: Some(Double::literal(2.0)),
-                max_speed: Some(Double::literal(50.0)),
-                ..Default::default()
-            }),
-        };
-
-        assert_eq!(
-            action.entity_ref.as_literal(),
-            Some(&"TargetEntity".to_string())
-        );
-        assert_eq!(action.distance.unwrap().as_literal(), Some(&3.5));
-        assert_eq!(action.freespace.as_literal(), Some(&true));
-        assert_eq!(action.continuous.as_literal(), Some(&false));
-
-        let constraints = action.dynamic_constraints.unwrap();
-        assert_eq!(
-            constraints.max_acceleration.unwrap().as_literal(),
-            Some(&2.0)
-        );
-        assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&50.0));
+        assert_eq!(original, deserialized);
     }
 
     #[test]
@@ -1912,115 +1814,6 @@ mod tests {
     }
 
     #[test]
-    fn test_speed_profile_action_creation() {
-        let entry1 = SpeedProfileEntry {
-            time: Some(Double::literal(0.0)),
-            speed: Double::literal(10.0),
-        };
-        let entry2 = SpeedProfileEntry {
-            time: Some(Double::literal(5.0)),
-            speed: Double::literal(20.0),
-        };
-
-        let action = SpeedProfileAction {
-            entity_ref: Some(OSString::literal("RefEntity".to_string())),
-            following_mode: Value::Literal(FollowingMode::Follow),
-            dynamic_constraints: Some(DynamicConstraints {
-                max_acceleration: Some(Double::literal(1.5)),
-                max_speed: Some(Double::literal(30.0)),
-                ..Default::default()
-            }),
-            entries: MinVec::new(vec![entry1, entry2]).unwrap(),
-        };
-
-        assert_eq!(
-            action.entity_ref.unwrap().as_literal(),
-            Some(&"RefEntity".to_string())
-        );
-        assert_eq!(action.entries.len(), 2);
-        assert_eq!(
-            action.entries[0].time.as_ref().unwrap().as_literal(),
-            Some(&0.0)
-        );
-        assert_eq!(action.entries[0].speed.as_literal(), Some(&10.0));
-        assert_eq!(
-            action.entries[1].time.as_ref().unwrap().as_literal(),
-            Some(&5.0)
-        );
-        assert_eq!(action.entries[1].speed.as_literal(), Some(&20.0));
-    }
-
-    #[test]
-    fn test_synchronize_action_creation() {
-        let action = SynchronizeAction {
-            master_entity_ref: OSString::literal("SyncTarget".to_string()),
-            target_position_master: Position::world_origin(),
-            target_position: Position::world_origin(),
-            final_speed: Some(FinalSpeed {
-                speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
-                    value: Double::literal(15.0),
-                    steady_state: None,
-                }),
-            }),
-            target_tolerance_master: Some(Double::literal(1.0)),
-            target_tolerance: Some(Double::literal(2.0)),
-        };
-
-        assert_eq!(
-            action.master_entity_ref.as_literal(),
-            Some(&"SyncTarget".to_string())
-        );
-
-        if let Some(final_speed) = action.final_speed {
-            if let FinalSpeedChoice::AbsoluteSpeed(abs_speed) = final_speed.speed_choice {
-                assert_eq!(abs_speed.value.as_literal(), Some(&15.0));
-            } else {
-                panic!("Expected AbsoluteSpeed");
-            }
-        }
-    }
-
-    #[test]
-    fn test_acquire_position_action_creation() {
-        let action = AcquirePositionAction {
-            position: Position::world_origin(),
-        };
-
-        // Just ensure it compiles and has the expected structure
-        assert_eq!(
-            std::mem::size_of_val(&action.position),
-            std::mem::size_of::<Position>()
-        );
-    }
-
-    #[test]
-    fn test_dynamic_constraints_creation() {
-        let constraints = DynamicConstraints {
-            max_acceleration: Some(Double::literal(3.0)),
-            max_deceleration: Some(Double::literal(4.0)),
-            max_speed: Some(Double::literal(80.0)),
-            ..Default::default()
-        };
-
-        assert_eq!(
-            constraints.max_acceleration.unwrap().as_literal(),
-            Some(&3.0)
-        );
-        assert_eq!(
-            constraints.max_deceleration.unwrap().as_literal(),
-            Some(&4.0)
-        );
-        assert_eq!(constraints.max_speed.unwrap().as_literal(), Some(&80.0));
-
-        let empty_constraints = DynamicConstraints::default();
-        assert!(empty_constraints.max_acceleration.is_none());
-        assert!(empty_constraints.max_acceleration_rate.is_none());
-        assert!(empty_constraints.max_deceleration.is_none());
-        assert!(empty_constraints.max_deceleration_rate.is_none());
-        assert!(empty_constraints.max_speed.is_none());
-    }
-
-    #[test]
     fn test_dynamic_constraints_parse_absent_serialize_none() {
         // Parsing an element with no attributes should produce all-None constraints.
         let xml = r#"<DynamicConstraints/>"#;
@@ -2036,65 +1829,30 @@ mod tests {
     }
 
     #[test]
-    fn test_final_speed_choices() {
-        // Test absolute speed
-        let abs_final = FinalSpeed {
-            speed_choice: FinalSpeedChoice::AbsoluteSpeed(AbsoluteSpeed {
-                value: Double::literal(25.0),
-                steady_state: None,
-            }),
-        };
-
-        if let FinalSpeedChoice::AbsoluteSpeed(abs) = abs_final.speed_choice {
-            assert_eq!(abs.value.as_literal(), Some(&25.0));
-        }
-
-        // Test relative speed to master
-        let rel_final = FinalSpeed {
-            speed_choice: FinalSpeedChoice::RelativeSpeedToMaster(RelativeSpeedToMaster {
-                speed_target_value_type: Value::Literal(SpeedTargetValueType::Delta),
-                value: Double::literal(-5.0),
-                steady_state: None,
-            }),
-        };
-
-        if let FinalSpeedChoice::RelativeSpeedToMaster(rel) = rel_final.speed_choice {
-            assert_eq!(rel.value.as_literal(), Some(&-5.0));
-        }
-    }
-
-    #[test]
-    fn test_action_constructors() {
-        // No type in this file implements `Default` any more. Each action is
-        // built through its explicit constructor.
-        let lane_change = LaneChangeAction::new(
-            TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
-            LaneChangeTarget::relative("Ego", -1),
-        );
-        assert!(lane_change.target_lane_offset.is_none());
-
-        let lane_offset = LaneOffsetAction::new(
-            LaneOffsetActionDynamics::new(DynamicsShape::Linear),
-            LaneOffsetTarget::absolute(0.0),
-            false,
-        );
-        assert_eq!(lane_offset.continuous.as_literal(), Some(&false));
-
+    fn test_synchronize_and_acquire_position_constructors() {
         let sync_action = SynchronizeAction::new(
             "SyncTarget",
             Position::world_origin(),
-            Position::world_origin(),
+            Position::world(crate::types::positions::WorldPosition::new(1.0, 2.0)),
         );
         assert_eq!(
             sync_action.master_entity_ref.as_literal(),
             Some(&"SyncTarget".to_string())
         );
+        assert_eq!(sync_action.target_position_master, Position::world_origin());
+        assert_eq!(
+            sync_action.target_position,
+            Position::world(crate::types::positions::WorldPosition::new(1.0, 2.0))
+        );
+        assert!(sync_action.final_speed.is_none());
 
         let acquire_action = AcquirePositionAction::new(Position::world(
             crate::types::positions::WorldPosition::new(3.0, 4.0),
         ));
-        // Just verify it compiles and creates successfully
-        let _ = acquire_action.position;
+        assert_eq!(
+            acquire_action.position,
+            Position::world(crate::types::positions::WorldPosition::new(3.0, 4.0))
+        );
     }
 
     #[test]

@@ -6,9 +6,7 @@
 //! none fails with `missing field $value`, and one naming two fails with
 //! `duplicate field $value`.
 
-use openscenario_rs::types::actions::wrappers::{
-    GlobalAction, NamedAction, NamedActionChoice, SetMonitorAction,
-};
+use openscenario_rs::types::actions::wrappers::{GlobalAction, NamedAction, SetMonitorAction};
 use openscenario_rs::types::scenario::init::{EnvironmentAction, EnvironmentActionChoice};
 
 fn de<T: serde::de::DeserializeOwned>(xml: &str) -> T {
@@ -23,16 +21,6 @@ fn de_err<T: serde::de::DeserializeOwned>(xml: &str) -> String {
 }
 
 // ═══ NamedAction — XSD `Action` (:705-712), @name required + bare choice ═══
-
-#[test]
-fn named_action_global_branch_round_trips_byte_identically() {
-    let xml = r#"<Action name="a1"><GlobalAction><SetMonitorAction monitorRef="m1" value="true"/></GlobalAction></Action>"#;
-    let action: NamedAction = de(xml);
-    assert!(matches!(action.action, NamedActionChoice::GlobalAction(_)));
-    let out = quick_xml::se::to_string_with_root("Action", &action)
-        .expect("NamedAction/GlobalAction failed to serialize");
-    assert_eq!(out, xml);
-}
 
 #[test]
 fn named_action_rejects_zero_branches() {

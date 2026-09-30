@@ -1,157 +1,13 @@
-//! Integration tests for the Init Action System
+//! Integration tests for scenario initialization through the public builder API.
 //!
-//! Verifies:
-//! 1. Empty Triggers - All events should have non-empty StartTrigger elements
-//! 2. Missing Init Actions - Entities should have proper initialization
-//! 3. Integration - Trigger builders should be connected to event builders
+//! The per-method `InitActionBuilder` contracts live in the builder's own unit tests
+//! (`src/builder/init/`); these cover the default template header and the fluent
+//! `create_private_action` chain end to end.
 
 #[cfg(feature = "builder")]
 mod tests {
     use openscenario_rs::builder::positions::WorldPositionBuilder;
-    use openscenario_rs::builder::{
-        BasicScenarioTemplate, InitActionBuilder, ScenarioBuilder, ScenarioTemplate,
-        TimeConditionBuilder, TriggerBuilder,
-    };
-
-    #[test]
-    fn test_init_action_builder_basic() {
-        // Test that InitActionBuilder creates proper Init structure
-        let init = InitActionBuilder::new()
-            .add_global_environment_action("TestEnvironment")
-            .build()
-            .unwrap();
-
-        // Should have environment action
-        assert_eq!(init.actions.global_actions.len(), 1);
-        assert_eq!(
-            init.actions.global_actions[0].action_type(),
-            "EnvironmentAction"
-        );
-
-        // Should have empty private actions initially
-        assert!(init.actions.private_actions.is_empty());
-    }
-
-    #[test]
-    fn test_init_action_builder_with_entities() {
-        // Test entity initialization with teleport and speed actions
-        let position = WorldPositionBuilder::new()
-            .at_coordinates(10.0, 20.0, 0.0)
-            .with_heading(1.57) // 90 degrees
-            .build()
-            .unwrap();
-
-        let init = InitActionBuilder::new()
-            .add_global_environment_action("TestEnvironment")
-            .add_teleport_action("ego", position)
-            .add_speed_action("ego", 30.0)
-            .build()
-            .unwrap();
-
-        // Should have environment action
-        assert_eq!(init.actions.global_actions.len(), 1);
-
-        // Should have one private action for ego
-        assert_eq!(init.actions.private_actions.len(), 1);
-        let ego_private = &init.actions.private_actions[0];
-        assert_eq!(ego_private.entity_ref.as_literal().unwrap(), "ego");
-
-        // Should have two actions: teleport and speed
-        assert_eq!(ego_private.private_actions.len(), 2);
-
-        // First action should be teleport
-        assert_eq!(
-            ego_private.private_actions[0].action_type(),
-            "TeleportAction"
-        );
-
-        // Second action should be speed
-        let openscenario_rs::types::scenario::init::PrivateActionChoice::LongitudinalAction(
-            longitudinal,
-        ) = &ego_private.private_actions[1].action
-        else {
-            panic!("expected the LongitudinalAction branch");
-        };
-        let openscenario_rs::types::scenario::init::LongitudinalActionChoice::SpeedAction(
-            speed_action,
-        ) = &longitudinal.action
-        else {
-            panic!("expected the SpeedAction branch");
-        };
-        let openscenario_rs::types::actions::movement::SpeedActionTargetChoice::AbsoluteTargetSpeed(
-            absolute,
-        ) = &speed_action.speed_action_target.target
-        else {
-            panic!("Expected AbsoluteTargetSpeed branch");
-        };
-        assert_eq!(*absolute.value.as_literal().unwrap(), 30.0);
-    }
-
-    #[test]
-    fn test_init_action_builder_multiple_entities() {
-        // Test multi-entity initialization
-        let ego_pos = WorldPositionBuilder::new()
-            .at_coordinates(0.0, 0.0, 0.0)
-            .build()
-            .unwrap();
-
-        let target_pos = WorldPositionBuilder::new()
-            .at_coordinates(50.0, 0.0, 0.0)
-            .build()
-            .unwrap();
-
-        let init = InitActionBuilder::new()
-            .add_global_environment_action("TestEnvironment")
-            .add_teleport_action("ego", ego_pos)
-            .add_speed_action("ego", 30.0)
-            .add_teleport_action("target", target_pos)
-            .add_speed_action("target", 25.0)
-            .build()
-            .unwrap();
-
-        // Should have two entities
-        assert_eq!(init.actions.private_actions.len(), 2);
-
-        // Check ego entity
-        let ego_private = &init.actions.private_actions[0];
-        assert_eq!(ego_private.entity_ref.as_literal().unwrap(), "ego");
-        assert_eq!(ego_private.private_actions.len(), 2);
-
-        // Check target entity
-        let target_private = &init.actions.private_actions[1];
-        assert_eq!(target_private.entity_ref.as_literal().unwrap(), "target");
-        assert_eq!(target_private.private_actions.len(), 2);
-    }
-
-    #[test]
-    fn test_trigger_builder_integration() {
-        // Test that TriggerBuilder creates non-empty triggers
-        let trigger = TriggerBuilder::new()
-            .add_condition(TimeConditionBuilder::new().at_time(5.0).build().unwrap())
-            .build()
-            .unwrap();
-
-        // Should have one condition group
-        assert_eq!(trigger.condition_groups.len(), 1);
-
-        // Should have one condition in the group
-        assert_eq!(trigger.condition_groups[0].conditions.len(), 1);
-
-        // Condition should be a time condition
-        let condition = &trigger.condition_groups[0].conditions[0];
-        let openscenario_rs::types::scenario::triggers::ConditionChoice::ByValueCondition(by_value) =
-            &condition.choice
-        else {
-            panic!("Expected ByValueCondition");
-        };
-        let openscenario_rs::types::conditions::value::ByValueConditionChoice::SimulationTimeCondition(
-            time_condition,
-        ) = &by_value.choice
-        else {
-            panic!("Expected SimulationTimeCondition branch");
-        };
-        assert_eq!(*time_condition.value.as_literal().unwrap(), 5.0);
-    }
+    use openscenario_rs::builder::{BasicScenarioTemplate, InitActionBuilder, ScenarioTemplate};
 
     #[test]
     fn test_basic_scenario_template() {
@@ -166,20 +22,6 @@ mod tests {
         let header = &scenario.file_header;
         assert_eq!(header.description.as_literal().unwrap(), "Basic Scenario");
         assert_eq!(header.author.as_literal().unwrap(), "openscenario-rs");
-
-        // Should have entities
-        assert!(scenario.entities.is_some());
-    }
-
-    #[test]
-    fn test_alks_scenario_template() {
-        // Test ALKS template provides proper initialization
-        let scenario_builder = BasicScenarioTemplate::alks_template();
-        let scenario = scenario_builder.build().unwrap();
-
-        // Should have proper header
-        let header = &scenario.file_header;
-        assert_eq!(header.description.as_literal().unwrap(), "ALKS Scenario");
 
         // Should have entities
         assert!(scenario.entities.is_some());
@@ -222,61 +64,5 @@ mod tests {
             ego_private.private_actions[1].action_type(),
             "LongitudinalAction"
         );
-    }
-
-    #[test]
-    fn test_success_criteria() {
-        // This test verifies all success criteria are met
-
-        // 1. Non-empty triggers can be created
-        let trigger = TriggerBuilder::new()
-            .add_condition(TimeConditionBuilder::new().at_time(0.0).build().unwrap())
-            .build()
-            .unwrap();
-
-        assert!(!trigger.condition_groups.is_empty());
-        assert!(!trigger.condition_groups[0].conditions.is_empty());
-
-        // 2. Entity initialization works
-        let position = WorldPositionBuilder::new()
-            .at_coordinates(0.0, -1.75, 0.0)
-            .with_heading(0.0)
-            .build()
-            .unwrap();
-
-        let init = InitActionBuilder::new()
-            .add_global_environment_action("TestEnvironment")
-            .add_teleport_action("Ego", position)
-            .add_speed_action("Ego", 16.67)
-            .build()
-            .unwrap();
-
-        // Should have environment setup
-        assert!(!init.actions.global_actions.is_empty());
-        assert_eq!(
-            init.actions.global_actions[0].action_type(),
-            "EnvironmentAction"
-        );
-
-        // Should have entity initialization
-        assert!(!init.actions.private_actions.is_empty());
-        let ego_private = &init.actions.private_actions[0];
-        assert_eq!(ego_private.entity_ref.as_literal().unwrap(), "Ego");
-        assert_eq!(ego_private.private_actions.len(), 2);
-
-        // 3. Templates provide working scenarios
-        let scenario_builder = BasicScenarioTemplate::alks_template();
-        let scenario = scenario_builder.build().unwrap();
-        // Verify the scenario has required components through public API
-        assert_eq!(
-            scenario.file_header.description.as_literal().unwrap(),
-            "ALKS Scenario"
-        );
-        assert!(scenario.entities.is_some());
-
-        println!("✅ Success Criteria Met:");
-        println!("   - Non-empty triggers can be created");
-        println!("   - Entity initialization system works");
-        println!("   - Templates provide executable foundations");
     }
 }

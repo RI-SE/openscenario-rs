@@ -8,32 +8,6 @@ use openscenario_rs::types::scenario::story::{
 };
 
 #[test]
-fn test_event_multiple_actions_struct() {
-    // Test that Event can now hold multiple actions
-    let event = Event {
-        name: Value::literal("MultiActionEvent".to_string()),
-        maximum_execution_count: Some(Value::literal(1)),
-        priority: Value::Literal(Priority::Override),
-        actions: MinVec::new(vec![
-            StoryAction::private(
-                "Action1",
-                StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
-            ),
-            StoryAction::private(
-                "Action2",
-                StoryPrivateAction::visibility(VisibilityAction::new(true, true, true)),
-            ),
-        ])
-        .unwrap(),
-        start_trigger: None,
-    };
-
-    assert_eq!(event.actions.len(), 2);
-    assert_eq!(event.actions[0].name.as_literal().unwrap(), "Action1");
-    assert_eq!(event.actions[1].name.as_literal().unwrap(), "Action2");
-}
-
-#[test]
 fn test_event_multiple_actions_xml_parsing() {
     let xml_content = include_str!("data/multiple_actions_scenario.xosc");
 
@@ -98,7 +72,13 @@ fn test_event_new_requires_the_actions_it_will_perform() {
 
 #[test]
 fn test_event_new_refuses_an_event_with_no_action() {
-    assert!(Event::new("MyEvent", Priority::Override, Vec::new()).is_err());
+    let error = Event::new("MyEvent", Priority::Override, Vec::new()).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("expected at least 1 items, got 0"),
+        "got: {error}"
+    );
 }
 
 #[test]

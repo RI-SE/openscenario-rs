@@ -53,31 +53,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_connect_trailer_action() {
-        let action = ConnectTrailerAction {
-            trailer_ref: OSString::literal("TestTrailer".to_string()),
-        };
-
-        assert_eq!(
-            action.trailer_ref.as_literal(),
-            Some(&"TestTrailer".to_string())
-        );
-    }
-
-    #[test]
-    fn test_trailer_action_serialization() {
-        let action = TrailerAction {
-            choice: TrailerActionChoice::ConnectTrailerAction(ConnectTrailerAction::new(
-                "DefaultTrailer",
-            )),
-        };
-
-        let serialized = quick_xml::se::to_string(&action).expect("Serialization should succeed");
-        assert!(serialized.contains("ConnectTrailerAction"));
-        assert!(serialized.contains("DefaultTrailer"));
-    }
-
-    #[test]
     fn test_trailer_action_zero_branches_rejected() {
         let xml = "<TrailerAction></TrailerAction>";
         let err = quick_xml::de::from_str::<TrailerAction>(xml).unwrap_err();

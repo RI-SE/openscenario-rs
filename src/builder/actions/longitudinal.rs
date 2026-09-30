@@ -413,6 +413,11 @@ mod tests {
                 match &action.longitudinal_action_choice {
                     LongitudinalActionChoice::SpeedProfileAction(ref profile) => {
                         assert_eq!(profile.entries.len(), 2);
+                        assert_eq!(
+                            profile.entries[1].time.as_ref().unwrap().as_literal(),
+                            Some(&5.0)
+                        );
+                        assert_eq!(profile.entries[1].speed.as_literal(), Some(&25.0));
                     }
                     _ => panic!("Expected SpeedProfileAction"),
                 }

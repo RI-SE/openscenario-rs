@@ -5,9 +5,8 @@
 //! single `$value` field holding an externally-tagged enum. These tests pin every branch
 //! the file covers: parse a minimal schema-valid snippet, assert the right variant was
 //! selected, re-serialize and assert the branch element survives. Cardinality is enforced
-//! by the type rather than by a `validate()` call, so the tests that used to construct an
-//! all-`None` or two-branch value now assert that the corresponding documents are rejected
-//! at parse time.
+//! by the type rather than by a `validate()` call; the zero- and two-branch documents are
+//! rejected in `init_action_choice_cardinality_test.rs`.
 
 use openscenario_rs::types::actions::appearance::AppearanceActionChoice;
 use openscenario_rs::types::actions::trailer::TrailerActionChoice;
@@ -173,29 +172,6 @@ fn global_action_variable_action_round_trip() {
     assert!(out.contains("<SetAction"), "got: {out}");
 }
 
-/// A `<GlobalAction/>` naming no branch used to deserialize to an all-`None` struct and
-/// re-serialize unchanged, which violates the XSD choice. The `$value` shape rejects it.
-#[test]
-fn global_action_with_no_branch_is_rejected() {
-    let err = quick_xml::de::from_str::<GlobalAction>("<GlobalAction/>").unwrap_err();
-    assert!(
-        err.to_string().contains("$value"),
-        "expected a missing-$value error, got {err}"
-    );
-}
-
-/// Asserted separately from the zero-branch case: a single test covering both would stop at
-/// the first failure, and this is the case that used to keep both branches.
-#[test]
-fn global_action_with_two_branches_is_rejected() {
-    let xml = r#"<GlobalAction><SetMonitorAction monitorRef="monitor1" value="true"/><TrafficAction><TrafficStopAction/></TrafficAction></GlobalAction>"#;
-    let err = quick_xml::de::from_str::<GlobalAction>(xml).unwrap_err();
-    assert!(
-        err.to_string().contains("$value"),
-        "expected a duplicate-$value error, got {err}"
-    );
-}
-
 // ─── init::PrivateAction branches ───────────────────────────────────────────
 
 #[test]
@@ -245,43 +221,6 @@ fn private_action_trailer_action_connect_round_trip() {
     );
     let reparsed: PrivateAction = de(&out);
     assert_eq!(action, reparsed);
-}
-
-#[test]
-fn private_action_trailer_action_disconnect_round_trip() {
-    let xml = r#"<PrivateAction><TrailerAction><DisconnectTrailerAction/></TrailerAction></PrivateAction>"#;
-    let action: PrivateAction = de(xml);
-    let PrivateActionChoice::TrailerAction(trailer) = &action.action else {
-        panic!("expected the TrailerAction branch, got {:?}", action.action);
-    };
-    assert!(matches!(
-        trailer.choice,
-        TrailerActionChoice::DisconnectTrailerAction(_)
-    ));
-
-    let out = ser("PrivateAction", &action);
-    assert!(out.contains("DisconnectTrailerAction"), "got: {out}");
-}
-
-/// The appearance and trailer branches were the two this file was written to pin, so the
-/// cardinality cases use that pair.
-#[test]
-fn private_action_with_no_branch_is_rejected() {
-    let err = quick_xml::de::from_str::<PrivateAction>("<PrivateAction/>").unwrap_err();
-    assert!(
-        err.to_string().contains("$value"),
-        "expected a missing-$value error, got {err}"
-    );
-}
-
-#[test]
-fn private_action_with_two_branches_is_rejected() {
-    let xml = r#"<PrivateAction><AppearanceAction><LightStateAction><LightType><VehicleLight vehicleLightType="lowBeam"/></LightType><LightState mode="on"/></LightStateAction></AppearanceAction><TrailerAction><DisconnectTrailerAction/></TrailerAction></PrivateAction>"#;
-    let err = quick_xml::de::from_str::<PrivateAction>(xml).unwrap_err();
-    assert!(
-        err.to_string().contains("$value"),
-        "expected a duplicate-$value error, got {err}"
-    );
 }
 
 // ─── whole-Init integration ─────────────────────────────────────────────────

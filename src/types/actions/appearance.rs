@@ -552,13 +552,24 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_sensor_reference_set_cannot_be_built() {
+    fn an_empty_sensor_reference_set_is_rejected() {
         // XSD `SensorReferenceSet` (`Schema/OpenSCENARIO.xsd:2024`) declares
-        // `SensorReference` with the default `minOccurs="1"`, so the empty set is not a
-        // document this crate can emit. This test used to assert the opposite — that an
-        // empty `Vec` was the expected default — which the plain `Vec` allowed and
-        // re-serialized as `<SensorReferenceSet/>`.
-        assert!(MinVec::<SensorReference, 1>::new(Vec::new()).is_err());
+        // `SensorReference` with the default `minOccurs="1"`, so `<SensorReferenceSet/>`
+        // is not a document this crate may accept or emit. A plain `Vec` with a serde
+        // default used to accept it and re-serialize it unchanged.
+        let xml = r#"<VisibilityAction graphics="true" sensors="true" traffic="true"><SensorReferenceSet/></VisibilityAction>"#;
+        let error = quick_xml::de::from_str::<VisibilityAction>(xml).unwrap_err();
+        assert!(
+            error.to_string().contains("SensorReference"),
+            "got: {error}"
+        );
+
+        let one = r#"<VisibilityAction graphics="true" sensors="true" traffic="true"><SensorReferenceSet><SensorReference name="lidar"/></SensorReferenceSet></VisibilityAction>"#;
+        let parsed: VisibilityAction = quick_xml::de::from_str(one).unwrap();
+        assert_eq!(
+            parsed.sensor_reference_set.unwrap().sensor_references.len(),
+            1
+        );
     }
 
     #[test]
@@ -698,13 +709,5 @@ mod tests {
         let serialized = quick_xml::se::to_string(&action).unwrap();
         let reparsed: AnimationAction = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(action, reparsed);
-    }
-
-    #[test]
-    fn test_visibility_action_xml_roundtrip() {
-        let va = VisibilityAction::new(true, true, true);
-        let xml = quick_xml::se::to_string(&va).unwrap();
-        let deserialized: VisibilityAction = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(va, deserialized);
     }
 }
