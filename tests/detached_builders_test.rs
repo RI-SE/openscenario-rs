@@ -47,43 +47,68 @@ mod detached_builders_tests {
             .is_err());
     }
 
-    #[test]
-    fn test_detached_speed_action_builder_creation() {
-        // Test that DetachedSpeedActionBuilder can be created and used
-        let mut detached_maneuver = DetachedManeuverBuilder::new("maneuver1", "vehicle1");
-
-        // Create detached speed action builder
-        let detached_speed = detached_maneuver.create_speed_action();
-
-        // Test fluent chaining
-        let detached_speed = detached_speed.named("speed_event").to_speed(30.0);
-
-        // Attach to detached maneuver
-        let result = detached_speed.attach_to_detached(&mut detached_maneuver);
-        assert!(result.is_ok());
-    }
-
+    /// A speed event built on a detached maneuver, attached to a detached act, comes out of
+    /// `DetachedActBuilder::build` with the name, trigger, target and actor it was given.
     #[test]
     fn test_perfect_fluent_chaining() {
-        // Test that demonstrates perfect fluent chaining without lifetime constraints
+        use openscenario_rs::types::actions::movement::SpeedActionTargetChoice;
+        use openscenario_rs::types::basic::Value;
+        use openscenario_rs::types::scenario::init::LongitudinalActionChoice;
+        use openscenario_rs::types::scenario::story::{
+            StoryActionChoice, StoryPrivateActionChoice,
+        };
+        use openscenario_rs::types::scenario::triggers::Trigger;
+
         let mut detached_act = DetachedActBuilder::new("act1");
         let mut detached_maneuver = DetachedManeuverBuilder::new("maneuver1", "vehicle1");
 
-        // This should compile without any lifetime issues
-        let detached_speed = detached_maneuver
+        detached_maneuver
             .create_speed_action()
             .named("speed_event")
             .to_speed(30.0)
-            .with_trigger(openscenario_rs::types::scenario::triggers::Trigger {
+            .with_trigger(Trigger {
                 condition_groups: vec![],
-            });
-
-        // Attach and verify no compilation errors
-        let result = detached_speed.attach_to_detached(&mut detached_maneuver);
-        assert!(result.is_ok());
-
+            })
+            .attach_to_detached(&mut detached_maneuver)
+            .unwrap();
         detached_maneuver
             .attach_to_detached(&mut detached_act)
             .unwrap();
+
+        let act = detached_act
+            .build()
+            .expect("one maneuver group satisfies Act");
+        let group = &act.maneuver_groups[0];
+        assert_eq!(
+            group.actors.entity_refs[0].entity_ref,
+            Value::literal("vehicle1".to_string())
+        );
+        let maneuver = &group.maneuvers[0];
+        assert_eq!(maneuver.name.as_literal().unwrap(), "maneuver1");
+
+        let event = &maneuver.events[0];
+        assert_eq!(event.name.as_literal().unwrap(), "speed_event");
+        assert_eq!(
+            event.start_trigger,
+            Some(Trigger {
+                condition_groups: vec![]
+            })
+        );
+
+        let StoryActionChoice::PrivateAction(private) = &event.actions[0].action else {
+            panic!("expected a private action");
+        };
+        let StoryPrivateActionChoice::LongitudinalAction(longitudinal) = &private.action else {
+            panic!("expected a LongitudinalAction");
+        };
+        let LongitudinalActionChoice::SpeedAction(speed) = &longitudinal.action else {
+            panic!("expected a SpeedAction");
+        };
+        let SpeedActionTargetChoice::AbsoluteTargetSpeed(target) =
+            &speed.speed_action_target.target
+        else {
+            panic!("expected an absolute target speed");
+        };
+        assert_eq!(target.value, Value::Literal(30.0));
     }
 }

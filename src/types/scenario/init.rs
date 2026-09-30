@@ -421,45 +421,10 @@ mod tests {
     use crate::types::actions::movement::{
         SpeedActionTarget, SpeedProfileEntry, TransitionDynamics,
     };
-    use crate::types::basic::Value;
     use crate::types::enums::{DynamicsDimension, DynamicsShape, FollowingMode};
-    use crate::types::environment::{RoadCondition, TimeOfDay, Weather};
 
-    #[test]
-    fn test_init_creation() {
-        let init = Init {
-            actions: Actions {
-                global_actions: vec![GlobalAction::environment(EnvironmentAction::environment(
-                    Environment {
-                        name: Value::literal("TestEnvironment".to_string()),
-                        parameter_declarations: None,
-                        time_of_day: None,
-                        weather: None,
-                        road_condition: None,
-                    },
-                ))],
-                user_defined_actions: Vec::new(),
-                private_actions: vec![Private::new(
-                    "Ego",
-                    vec![PrivateAction::teleport(TeleportAction::new(
-                        crate::types::positions::Position::world(
-                            crate::types::positions::WorldPosition::new(0.0, 0.0),
-                        ),
-                    ))],
-                )
-                .unwrap()],
-            },
-        };
-
-        assert_eq!(init.actions.global_actions.len(), 1);
-        assert_eq!(init.actions.private_actions.len(), 1);
-        assert_eq!(
-            init.actions.private_actions[0]
-                .entity_ref
-                .as_literal()
-                .unwrap(),
-            "Ego"
-        );
+    fn xml<T: serde::Serialize>(root: &str, value: &T) -> String {
+        quick_xml::se::to_string_with_root(root, value).expect("serialize")
     }
 
     #[test]
@@ -521,97 +486,45 @@ mod tests {
     }
 
     #[test]
-    fn test_environment_action_creation() {
-        let env_action = EnvironmentAction::environment(Environment {
-            name: Value::literal("TestEnvironment".to_string()),
-            parameter_declarations: None,
-            time_of_day: Some(TimeOfDay {
-                animation: Value::literal(false),
-                date_time: crate::types::basic::DateTime::literal(
-                    "2021-12-10T11:00:00"
-                        .parse::<crate::types::basic::XsdDateTime>()
-                        .unwrap(),
-                ),
-            }),
-            weather: Some(Weather::default()),
-            road_condition: Some(RoadCondition {
-                friction_scale_factor: crate::types::basic::Double::literal(1.0),
-                wetness: None,
-                properties: None,
-            }),
-        });
-
-        let EnvironmentActionChoice::Environment(environment) = &env_action.action else {
-            panic!("expected Environment branch, got {:?}", env_action.action);
-        };
-        assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
-        assert_eq!(
-            environment
-                .time_of_day
-                .as_ref()
-                .unwrap()
-                .date_time
-                .to_string(),
-            "2021-12-10T11:00:00"
-        );
-    }
-
-    #[test]
-    fn test_init_serialization() {
-        let init = Init {
-            actions: Actions {
-                global_actions: vec![GlobalAction::environment(EnvironmentAction::environment(
-                    Environment {
-                        name: Value::literal("TestEnvironment".to_string()),
-                        parameter_declarations: None,
-                        time_of_day: None,
-                        weather: None,
-                        road_condition: None,
-                    },
-                ))],
-                user_defined_actions: Vec::new(),
-                private_actions: vec![Private::new(
-                    "Ego",
-                    vec![PrivateAction::teleport(TeleportAction::new(
-                        crate::types::positions::Position::world(
-                            crate::types::positions::WorldPosition::new(0.0, 0.0),
-                        ),
-                    ))],
-                )
-                .unwrap()],
-            },
-        };
-
-        let serialized = quick_xml::se::to_string(&init).unwrap();
-        assert!(serialized.contains("<Actions"));
-        assert!(serialized.contains("<GlobalAction"));
-        assert!(serialized.contains("<Private"));
-        assert!(serialized.contains("entityRef=\"Ego\""));
-    }
-
-    #[test]
     fn test_longitudinal_action_branch_selection() {
         // XSD `LongitudinalAction` (:1431-1437) is a bare `xsd:choice`, so the type names one
         // branch and cannot name none or two. The hand-written `validate()` this replaces
         // reported the same three cases at run time, after a value had already been built.
+        // Each constructor must emit exactly its own branch element with the fields it was
+        // given (XSD `TransitionDynamics` :2386, `LongitudinalDistanceAction` :1438,
+        // `SpeedProfileAction` :2060).
         let speed = LongitudinalAction::speed(SpeedAction::new(
             TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 1.0),
             SpeedActionTarget::absolute(10.0),
         ));
         assert_eq!(speed.action_type(), "SpeedAction");
+        assert_eq!(
+            xml("LongitudinalAction", &speed),
+            r#"<LongitudinalAction><SpeedAction><SpeedActionDynamics dynamicsDimension="time" dynamicsShape="linear" value="1"/><SpeedActionTarget><AbsoluteTargetSpeed value="10"/></SpeedActionTarget></SpeedAction></LongitudinalAction>"#
+        );
 
         let distance = LongitudinalAction::longitudinal_distance(
             LongitudinalDistanceAction::new("DefaultEntity", true, false).with_distance(10.0),
         );
         assert_eq!(distance.action_type(), "LongitudinalDistanceAction");
+        assert_eq!(
+            xml("LongitudinalAction", &distance),
+            r#"<LongitudinalAction><LongitudinalDistanceAction entityRef="DefaultEntity" distance="10" freespace="true" continuous="false"/></LongitudinalAction>"#
+        );
 
         let profile = LongitudinalAction::speed_profile(
             SpeedProfileAction::new(FollowingMode::Follow, vec![SpeedProfileEntry::new(10.0)])
                 .unwrap(),
         );
         assert_eq!(profile.action_type(), "SpeedProfileAction");
+        assert_eq!(
+            xml("LongitudinalAction", &profile),
+            r#"<LongitudinalAction><SpeedProfileAction followingMode="follow"><SpeedProfileEntry speed="10"/></SpeedProfileAction></LongitudinalAction>"#
+        );
     }
 
+    /// XSD `PrivateAction` (:1777-1791) is a bare `xsd:choice`; each constructor must emit
+    /// its own branch element wrapping the action it was given (`RelativeTargetLane` :1896).
     #[test]
     fn test_private_action_branch_selection() {
         let longitudinal =
@@ -620,6 +533,10 @@ mod tests {
                 SpeedActionTarget::absolute(10.0),
             )));
         assert_eq!(longitudinal.action_type(), "LongitudinalAction");
+        assert_eq!(
+            xml("PrivateAction", &longitudinal),
+            r#"<PrivateAction><LongitudinalAction><SpeedAction><SpeedActionDynamics dynamicsDimension="time" dynamicsShape="linear" value="1"/><SpeedActionTarget><AbsoluteTargetSpeed value="10"/></SpeedActionTarget></SpeedAction></LongitudinalAction></PrivateAction>"#
+        );
 
         let lateral =
             PrivateAction::lateral(crate::types::actions::movement::LateralAction::lane_change(
@@ -629,12 +546,9 @@ mod tests {
                 ),
             ));
         assert_eq!(lateral.action_type(), "LateralAction");
-    }
-
-    #[test]
-    fn a_private_container_with_no_action_is_refused() {
-        // XSD Private declares PrivateAction with the default minOccurs="1", so
-        // <Private entityRef="Ego"/> is not a document the schema admits.
-        assert!(Private::new("Ego", Vec::new()).is_err());
+        assert_eq!(
+            xml("PrivateAction", &lateral),
+            r#"<PrivateAction><LateralAction><LaneChangeAction><LaneChangeActionDynamics dynamicsDimension="time" dynamicsShape="linear" value="1"/><LaneChangeTarget><RelativeTargetLane entityRef="Ego" value="-1"/></LaneChangeTarget></LaneChangeAction></LateralAction></PrivateAction>"#
+        );
     }
 }

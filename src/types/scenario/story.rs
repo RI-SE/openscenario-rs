@@ -451,184 +451,45 @@ mod tests {
     use super::*;
     use crate::types::basic::Value;
 
-    /// One minimal action, for the tests that need an `Event` to be well formed.
-    fn one_action() -> Vec<StoryAction> {
-        vec![StoryAction::private(
-            "TestAction",
-            StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
-                true, true, true,
-            )),
-        )]
-    }
-
-    fn one_event(name: &str) -> Event {
-        Event::new(name, Priority::Override, one_action()).unwrap()
-    }
-
-    fn one_maneuver(name: &str) -> Maneuver {
-        Maneuver::new(name, vec![one_event("Event1")]).unwrap()
-    }
-
-    fn one_group(name: &str) -> ManeuverGroup {
-        let mut group = ManeuverGroup::new(name, 1, Actors::named(Vec::new()));
-        group.maneuvers.push(one_maneuver("Maneuver1"));
-        group
-    }
-
-    fn one_act(name: &str) -> Act {
-        Act::new(name, vec![one_group("Group1")]).unwrap()
-    }
-
+    /// The spine constructors emit the XSD shape with nothing invented: `Act::new` states no
+    /// trigger, `ManeuverGroup::new` no catalog reference, and `Actors::named`/`triggering`
+    /// state `@selectTriggeringEntities` (required, no schema default) as false/true.
     #[test]
-    fn test_story_creation() {
-        let story = ScenarioStory {
-            name: Value::literal("TestStory".to_string()),
-            parameter_declarations: None,
-            acts: MinVec::new(vec![one_act("Act1")]).unwrap(),
-        };
-
-        assert_eq!(story.name.as_literal().unwrap(), "TestStory");
-        assert_eq!(story.acts.len(), 1);
-        assert_eq!(story.acts[0].name.as_literal().unwrap(), "Act1");
-    }
-
-    #[test]
-    fn test_act_with_triggers() {
-        let act = Act {
-            name: Value::literal("TestAct".to_string()),
-            maneuver_groups: MinVec::new(vec![one_group("Group1")]).unwrap(),
-            start_trigger: None, // Will add proper trigger tests when Trigger is implemented
-            stop_trigger: None,
-        };
-
-        assert_eq!(act.name.as_literal().unwrap(), "TestAct");
-        assert_eq!(act.maneuver_groups.len(), 1);
-    }
-
-    #[test]
-    fn test_maneuver_group_with_actors() {
-        let actors = Actors {
-            select_triggering_entities: true,
-            entity_refs: vec![
-                EntityRef {
-                    entity_ref: Value::literal("Ego".to_string()),
-                },
-                EntityRef {
-                    entity_ref: Value::literal("Target".to_string()),
-                },
-            ],
-        };
-
-        let maneuver_group = ManeuverGroup {
-            name: Value::literal("TestGroup".to_string()),
-            maximum_execution_count: Value::literal(3),
-            actors,
-            catalog_reference: Vec::new(),
-            maneuvers: vec![one_maneuver("Maneuver1")],
-        };
-
-        assert_eq!(maneuver_group.name.as_literal().unwrap(), "TestGroup");
-        assert_eq!(
-            maneuver_group.maximum_execution_count.as_literal().unwrap(),
-            &3
-        );
-        assert_eq!(maneuver_group.actors.entity_refs.len(), 2);
-        assert_eq!(maneuver_group.actors.select_triggering_entities, true);
-    }
-
-    #[test]
-    fn test_maneuver_with_events() {
-        let maneuver = Maneuver {
-            name: Value::literal("TestManeuver".to_string()),
-            parameter_declarations: None,
-            events: MinVec::new(vec![
-                Event {
-                    name: Value::literal("Event1".to_string()),
-                    maximum_execution_count: Some(Value::literal(1)),
-                    priority: Value::Literal(Priority::Override),
-                    actions: MinVec::new(vec![StoryAction::private(
-                        "TestAction",
-                        StoryPrivateAction::visibility(
-                            crate::types::actions::VisibilityAction::new(true, true, true),
-                        ),
-                    )])
-                    .unwrap(),
-                    start_trigger: None,
-                },
-                Event {
-                    name: Value::literal("Event2".to_string()),
-                    maximum_execution_count: None,
-                    priority: Value::Literal(Priority::Overwrite),
-                    actions: MinVec::new(vec![StoryAction::private(
-                        "TestAction",
-                        StoryPrivateAction::visibility(
-                            crate::types::actions::VisibilityAction::new(true, true, true),
-                        ),
-                    )])
-                    .unwrap(),
-                    start_trigger: None,
-                },
-            ])
-            .unwrap(),
-        };
-
-        assert_eq!(maneuver.name.as_literal().unwrap(), "TestManeuver");
-        assert_eq!(maneuver.events.len(), 2);
-        assert_eq!(maneuver.events[0].name.as_literal().unwrap(), "Event1");
-        assert_eq!(maneuver.events[1].name.as_literal().unwrap(), "Event2");
-    }
-
-    #[test]
-    fn test_event_with_action() {
-        let event = Event {
-            name: Value::literal("TestEvent".to_string()),
-            maximum_execution_count: Some(Value::literal(5)),
-            priority: Value::Literal(Priority::Parallel),
-            actions: MinVec::new(vec![StoryAction::private(
-                "TestAction",
+    fn story_constructors_emit_the_xsd_spine() {
+        let event = Event::new(
+            "E",
+            Priority::Override,
+            vec![StoryAction::private(
+                "A1",
                 StoryPrivateAction::visibility(crate::types::actions::VisibilityAction::new(
                     true, true, true,
                 )),
-            )])
-            .unwrap(),
-            start_trigger: None,
-        };
-
-        assert_eq!(event.name.as_literal().unwrap(), "TestEvent");
-        assert_eq!(
-            event
-                .maximum_execution_count
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &5
+            )],
+        )
+        .unwrap();
+        let mut group = ManeuverGroup::new(
+            "G",
+            1,
+            Actors::named(vec![EntityRef {
+                entity_ref: Value::literal("Ego".to_string()),
+            }]),
         );
-        assert_eq!(event.priority, Value::Literal(Priority::Parallel));
-    }
+        group
+            .maneuvers
+            .push(Maneuver::new("M", vec![event]).unwrap());
+        let story = ScenarioStory::new("S", vec![Act::new("A", vec![group]).unwrap()]).unwrap();
 
-    #[test]
-    fn test_actors_entity_selection() {
-        let actors = Actors {
-            select_triggering_entities: false,
-            entity_refs: vec![EntityRef {
-                entity_ref: Value::literal("Vehicle1".to_string()),
-            }],
-        };
-
-        assert_eq!(actors.select_triggering_entities, false);
-        assert_eq!(actors.entity_refs.len(), 1);
+        let xml = quick_xml::se::to_string_with_root("Story", &story).unwrap();
         assert_eq!(
-            actors.entity_refs[0].entity_ref.as_literal().unwrap(),
-            "Vehicle1"
+            xml,
+            r#"<Story name="S"><Act name="A"><ManeuverGroup name="G" maximumExecutionCount="1"><Actors selectTriggeringEntities="false"><EntityRef entityRef="Ego"/></Actors><Maneuver name="M"><Event name="E" priority="override"><Action name="A1"><PrivateAction><VisibilityAction graphics="true" sensors="true" traffic="true"/></PrivateAction></Action></Event></Maneuver></ManeuverGroup></Act></Story>"#
         );
-    }
 
-    #[test]
-    fn test_story_serialization() {
-        let story = ScenarioStory::new("TestStory", vec![one_act("Act1")]).unwrap();
-        let serialized = quick_xml::se::to_string(&story).expect("Serialization should succeed");
-        assert!(serialized.contains("TestStory"));
+        let triggering = quick_xml::se::to_string_with_root("Actors", &Actors::triggering());
+        assert_eq!(
+            triggering.unwrap(),
+            r#"<Actors selectTriggeringEntities="true"/>"#
+        );
     }
 
     #[test]

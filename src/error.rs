@@ -465,213 +465,153 @@ pub type Result<T> = std::result::Result<T, Error>;
 mod tests {
     use super::*;
 
+    /// Each constructor fills the variant its name promises, and `Display` renders the
+    /// message a user reads from those fields (the `#[error(...)]` strings above).
     #[test]
-    fn test_error_creation() {
-        let err = Error::file_not_found("/path/to/file.xosc");
-        assert!(matches!(err, Error::FileNotFound { path } if path == "/path/to/file.xosc"));
-    }
-
-    #[test]
-    fn test_entity_not_found() {
-        let err = Error::entity_not_found("ego", &["target".to_string()]);
-        match err {
-            Error::EntityNotFound { entity, available } => {
-                assert_eq!(entity, "ego");
-                assert_eq!(available, vec!["target"]);
-            }
-            _ => panic!("Wrong error type"),
+    fn constructors_render_their_user_facing_message() {
+        let cases: Vec<(Error, &str)> = vec![
+            (
+                Error::file_not_found("/path/to/file.xosc"),
+                "File not found: /path/to/file.xosc",
+            ),
+            (
+                Error::entity_not_found("ego", &["target".to_string()]),
+                "Entity 'ego' not found",
+            ),
+            (
+                Error::catalog_entry_not_found("vehicles", "car1"),
+                "Catalog entry 'car1' not found in catalog 'vehicles'",
+            ),
+            (
+                Error::catalog_not_found("vehicles", &["controllers".to_string()]),
+                "Catalog 'vehicles' not found",
+            ),
+            (
+                Error::validation_error("speed", "must be positive"),
+                "Validation error in field 'speed': must be positive",
+            ),
+            (Error::missing_field("name"), "Missing required field: name"),
+            (
+                Error::invalid_value("speed", "-5", "must be positive"),
+                "Invalid value for field 'speed': -5. must be positive",
+            ),
+            (
+                Error::out_of_range("speed", "150", "0", "120"),
+                "Value out of range for field 'speed': 150. Expected 0 to 120",
+            ),
+            (
+                Error::type_mismatch("speed", "number", "string"),
+                "Type mismatch for field 'speed': expected number, got string",
+            ),
+            (
+                Error::parameter_error("speed", "division by zero"),
+                "Parameter 'speed' error: division by zero",
+            ),
+            (
+                Error::parameter_not_found("speed", &["distance".to_string()]),
+                "Parameter 'speed' not found",
+            ),
+            (
+                Error::circular_dependency("A -> B -> C -> A"),
+                "Circular dependency detected: A -> B -> C -> A",
+            ),
+            (
+                Error::invalid_xml("Document is empty"),
+                "Invalid XML structure: Document is empty",
+            ),
+            (
+                Error::malformed_xml(">", "<", "line 1"),
+                "Malformed XML: expected >, found < at line 1",
+            ),
+            (
+                Error::parse_error("abc", "not a number"),
+                "Failed to parse 'abc': not a number",
+            ),
+            (
+                Error::expression_error("1/0", "division by zero"),
+                "Expression evaluation failed: 1/0 - division by zero",
+            ),
+            (
+                Error::constraint_violation("speed cannot be negative"),
+                "Constraint violation: speed cannot be negative",
+            ),
+        ];
+        for (err, expected) in cases {
+            assert_eq!(err.to_string(), expected, "{err:?}");
         }
     }
 
+    /// The not-found constructors keep the candidate names for a caller to offer, even though
+    /// `Display` does not print them.
     #[test]
-    fn test_catalog_not_found() {
-        let err = Error::catalog_not_found("vehicles", &["controllers".to_string()]);
-        match err {
-            Error::CatalogNotFound { catalog, available } => {
-                assert_eq!(catalog, "vehicles");
-                assert_eq!(available, vec!["controllers"]);
-            }
-            _ => panic!("Wrong error type"),
-        }
+    fn not_found_errors_keep_the_available_names() {
+        let available = vec!["a".to_string(), "b".to_string()];
+        assert!(matches!(
+            Error::entity_not_found("x", &available),
+            Error::EntityNotFound { available: ref got, .. } if *got == available
+        ));
+        assert!(matches!(
+            Error::catalog_not_found("x", &available),
+            Error::CatalogNotFound { available: ref got, .. } if *got == available
+        ));
+        assert!(matches!(
+            Error::parameter_not_found("x", &available),
+            Error::ParameterNotFound { available: ref got, .. } if *got == available
+        ));
     }
 
-    #[test]
-    fn test_parameter_not_found() {
-        let err = Error::parameter_not_found("speed", &["distance".to_string()]);
-        match err {
-            Error::ParameterNotFound { param, available } => {
-                assert_eq!(param, "speed");
-                assert_eq!(available, vec!["distance"]);
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_validation_error() {
-        let err = Error::validation_error("speed", "must be positive");
-        match err {
-            Error::ValidationError { field, message } => {
-                assert_eq!(field, "speed");
-                assert_eq!(message, "must be positive");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_missing_field() {
-        let err = Error::missing_field("name");
-        assert!(matches!(err, Error::MissingRequiredField { field } if field == "name"));
-    }
-
-    #[test]
-    fn test_invalid_value() {
-        let err = Error::invalid_value("speed", "-5", "must be positive");
-        match err {
-            Error::InvalidValue { field, value, hint } => {
-                assert_eq!(field, "speed");
-                assert_eq!(value, "-5");
-                assert_eq!(hint, "must be positive");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_out_of_range() {
-        let err = Error::out_of_range("speed", "150", "0", "120");
-        match err {
-            Error::OutOfRange {
-                field,
-                value,
-                min,
-                max,
-            } => {
-                assert_eq!(field, "speed");
-                assert_eq!(value, "150");
-                assert_eq!(min, "0");
-                assert_eq!(max, "120");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_type_mismatch() {
-        let err = Error::type_mismatch("speed", "number", "string");
-        match err {
-            Error::TypeMismatch {
-                field,
-                expected,
-                actual,
-            } => {
-                assert_eq!(field, "speed");
-                assert_eq!(expected, "number");
-                assert_eq!(actual, "string");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_parameter_error() {
-        let err = Error::parameter_error("speed", "division by zero");
-        match err {
-            Error::ParameterError { param, message } => {
-                assert_eq!(param, "speed");
-                assert_eq!(message, "division by zero");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_circular_dependency() {
-        let err = Error::circular_dependency("A -> B -> C -> A");
-        assert!(matches!(err, Error::CircularDependency { .. }));
-    }
-
-    #[test]
-    fn test_invalid_xml() {
-        let err = Error::invalid_xml("Document is empty");
-        assert!(matches!(err, Error::InvalidXmlStructure { .. }));
-    }
-
-    #[test]
-    fn test_malformed_xml() {
-        let err = Error::malformed_xml(">", "<", "line 1");
-        match err {
-            Error::MalformedXml {
-                expected,
-                found,
-                location,
-            } => {
-                assert_eq!(expected, ">");
-                assert_eq!(found, "<");
-                assert_eq!(location, "line 1");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_parse_error() {
-        let err = Error::parse_error("abc", "not a number");
-        match err {
-            Error::ParseError { input, reason } => {
-                assert_eq!(input, "abc");
-                assert_eq!(reason, "not a number");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_expression_error() {
-        let err = Error::expression_error("1/0", "division by zero");
-        match err {
-            Error::ExpressionError { expression, reason } => {
-                assert_eq!(expression, "1/0");
-                assert_eq!(reason, "division by zero");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_constraint_violation() {
-        let err = Error::constraint_violation("speed cannot be negative");
-        assert!(matches!(err, Error::ConstraintViolation { .. }));
-    }
-
+    /// `with_context` per variant: prepended to the free-text field for most, appended in
+    /// parentheses for `ParameterError`, accumulated for `XmlParseError`, and a no-op for a
+    /// variant with nowhere to put it.
     #[test]
     fn test_with_context() {
-        let err = Error::validation_error("speed", "invalid").with_context("while parsing vehicle");
-        match err {
-            Error::ValidationError { message, .. } => {
-                assert!(message.contains("while parsing vehicle"));
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
-
-    #[test]
-    fn test_error_display() {
-        let err = Error::entity_not_found("ego", &["target".to_string()]);
-        let msg = format!("{}", err);
-        assert!(msg.contains("ego"));
-    }
-
-    #[test]
-    fn test_catalog_entry_not_found() {
-        let err = Error::catalog_entry_not_found("vehicles", "car1");
-        match err {
-            Error::CatalogEntryNotFound { catalog, entry } => {
-                assert_eq!(catalog, "vehicles");
-                assert_eq!(entry, "car1");
-            }
-            _ => panic!("Wrong error type"),
+        let de = || quick_xml::DeError::Custom("boom".to_string());
+        let cases: Vec<(Error, &str)> = vec![
+            (
+                Error::validation_error("speed", "invalid").with_context("while parsing vehicle"),
+                "Validation error in field 'speed': while parsing vehicle: invalid",
+            ),
+            (
+                Error::catalog_error("no entry").with_context("ctx"),
+                "Catalog error: ctx: no entry",
+            ),
+            (
+                Error::file_read_error("a.xosc", "denied").with_context("ctx"),
+                "Cannot read file a.xosc: ctx: denied",
+            ),
+            (
+                Error::parse_error("abc", "not a number").with_context("ctx"),
+                "Failed to parse 'abc': ctx: not a number",
+            ),
+            (
+                Error::invalid_value("speed", "-5", "must be positive").with_context("ctx"),
+                "Invalid value for field 'speed': -5. ctx: must be positive",
+            ),
+            (
+                Error::out_of_range("speed", "150", "0", "120").with_context("ctx"),
+                "Value out of range for field 'speed': ctx: 150. Expected 0 to 120",
+            ),
+            (
+                Error::parameter_error("p", "not declared").with_context("ctx"),
+                "Parameter 'p' error: not declared (ctx)",
+            ),
+            (
+                Error::xml_parse_error(de())
+                    .with_context("first")
+                    .with_context("second"),
+                "XML parsing error: boom (first, second)",
+            ),
+            (
+                Error::resolved_parse_error(de(), "line 3").with_context("ctx"),
+                "XML parsing error: boom (line 3, ctx)",
+            ),
+            (
+                Error::file_not_found("a.xosc").with_context("ignored"),
+                "File not found: a.xosc",
+            ),
+        ];
+        for (err, expected) in cases {
+            assert_eq!(err.to_string(), expected, "{err:?}");
         }
     }
 }

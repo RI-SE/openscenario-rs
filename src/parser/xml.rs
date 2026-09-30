@@ -490,18 +490,4 @@ mod tests {
         // Invalid - empty
         assert!(validate_catalog_xml_structure("").is_err());
     }
-
-    #[test]
-    fn test_catalog_serialization_roundtrip() {
-        let catalog = CatalogFile::new(
-            "TestCatalog".to_string(),
-            "TestAuthor".to_string(),
-            "Test catalog file".to_string(),
-        );
-
-        let xml = serialize_catalog_to_string(&catalog).unwrap();
-        assert!(xml.contains("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
-        assert!(xml.contains("OpenSCENARIO"));
-        assert!(xml.contains("Catalog"));
-    }
 }

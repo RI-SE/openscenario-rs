@@ -15,15 +15,3 @@ pub trait ScenarioTemplate {
     /// Create with custom header information
     fn create_with_header(name: &str, author: &str) -> ScenarioBuilder<HasEntities>;
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_basic_template_creation() {
-        let scenario = BasicScenarioTemplate::create();
-        // Template should provide a working foundation
-        assert!(scenario.data.file_header.is_some());
-    }
-}

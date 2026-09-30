@@ -297,42 +297,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_open_scenario_default_is_scenario_type() {
-        let doc = test_scenario_document();
-        assert_eq!(doc.document_type(), OpenScenarioDocumentType::Scenario);
-        assert!(doc.is_scenario());
-        assert!(!doc.is_catalog());
-        assert!(!doc.is_parameter_variation());
-    }
-
-    #[test]
-    fn test_document_type_unknown_when_no_content() {
-        let mut doc = test_scenario_document();
-        doc.entities = None;
-        doc.storyboard = None;
-        doc.catalog = None;
-        doc.parameter_value_distribution = None;
-        assert_eq!(doc.document_type(), OpenScenarioDocumentType::Unknown);
-    }
-
-    /// A catalog document names the catalog branch and nothing else. This test used to
-    /// leave the scenario group's `ParameterDeclarations`, `CatalogLocations` and
-    /// `RoadNetwork` in place while asserting the result was a catalog, which is the
-    /// two-branch document the schema forbids.
-    #[test]
-    fn test_document_type_catalog() {
-        let mut doc = test_scenario_document();
-        doc.parameter_declarations = None;
-        doc.catalog_locations = None;
-        doc.road_network = None;
-        doc.entities = None;
-        doc.storyboard = None;
-        doc.catalog = Some(CatalogContent::new("TestCatalog".to_string()));
-        assert_eq!(doc.document_type(), OpenScenarioDocumentType::Catalog);
-        assert!(doc.is_catalog());
-    }
-
-    #[test]
     fn test_storyboard_default() {
         let sb = Storyboard::default();
         assert!(sb.stories.is_empty());
@@ -366,20 +330,6 @@ mod tests {
         assert_eq!(
             catalog_file.file_header.rev_minor.as_literal().copied(),
             Some(DEFAULT_REV_MINOR)
-        );
-    }
-
-    #[test]
-    fn test_open_scenario_xml_roundtrip() {
-        let doc = test_scenario_document();
-        let xml = quick_xml::se::to_string(&doc).unwrap();
-        assert!(xml.contains("OpenSCENARIO"));
-        assert!(xml.contains("FileHeader"));
-        // Verify it can be deserialized back
-        let deserialized: OpenScenario = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(
-            deserialized.document_type(),
-            OpenScenarioDocumentType::Scenario
         );
     }
 }

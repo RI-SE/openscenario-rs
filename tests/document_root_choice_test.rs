@@ -53,6 +53,9 @@ fn parse(xml: &str) -> OpenScenario {
 fn scenario_branch_parses() {
     let doc = parse(&document(SCENARIO_BODY));
     assert_eq!(doc.document_type(), OpenScenarioDocumentType::Scenario);
+    assert!(doc.is_scenario());
+    assert!(!doc.is_catalog());
+    assert!(!doc.is_parameter_variation());
     assert!(doc.entities.is_some());
     assert!(doc.storyboard.is_some());
     assert!(doc.catalog.is_none());
@@ -71,12 +74,15 @@ fn scenario_branch_round_trips_byte_exact() {
 // The group contributes the single element `<Catalog>` of type `Catalog`. The root used
 // to hold a wrapper struct around `CatalogContent` here, so it looked for a `<Catalog>`
 // child inside the `<Catalog>` element: every real catalog document failed to parse with
-// ``missing field `Catalog` ``, and serialization emitted two nested `<Catalog>` elements.
+// ``missing field `Catalog` ``, and serialization emitted two nested `<Catalog>` elements,
+// which the byte-exact round trip below rejects.
 
 #[test]
 fn catalog_branch_parses() {
     let doc = parse(&document(CATALOG_BODY));
     assert_eq!(doc.document_type(), OpenScenarioDocumentType::Catalog);
+    assert!(doc.is_catalog());
+    assert!(!doc.is_scenario());
     let catalog = doc.catalog.expect("the Catalog branch must be populated");
     assert_eq!(catalog.name.to_string(), "c");
 }
@@ -86,13 +92,6 @@ fn catalog_branch_round_trips_byte_exact() {
     let source = document(CATALOG_BODY);
     let serialized = quick_xml::se::to_string(&parse(&source)).expect("serialize must succeed");
     assert_eq!(serialized.as_bytes(), source.as_bytes());
-}
-
-#[test]
-fn catalog_branch_emits_exactly_one_catalog_element() {
-    let serialized =
-        quick_xml::se::to_string(&parse(&document(CATALOG_BODY))).expect("serialize must succeed");
-    assert_eq!(serialized.matches("<Catalog").count(), 1);
 }
 
 #[test]
@@ -115,6 +114,8 @@ fn distribution_branch_parses() {
         doc.document_type(),
         OpenScenarioDocumentType::ParameterVariation
     );
+    assert!(doc.is_parameter_variation());
+    assert!(!doc.is_scenario());
     assert!(doc.parameter_value_distribution.is_some());
 }
 
@@ -125,27 +126,16 @@ fn distribution_branch_round_trips_byte_exact() {
     assert_eq!(serialized.as_bytes(), source.as_bytes());
 }
 
-// --- Cardinality, asserted one claim per test ---
+// --- Cardinality ---
 //
 // `$value` would make both of these parse errors. Here they parse, so the check that is
-// available is that neither is reported as a document of any kind.
+// available is that neither is reported as a document of any kind: `Unknown` is neither
+// `Scenario` nor `Catalog`, so one equality covers both.
 
 #[test]
 fn a_root_naming_no_branch_is_not_any_document_type() {
     let doc = parse(&document(""));
     assert_eq!(doc.document_type(), OpenScenarioDocumentType::Unknown);
-}
-
-#[test]
-fn a_root_naming_two_branches_is_not_a_scenario() {
-    let doc = parse(&document(&format!("{SCENARIO_BODY}{CATALOG_BODY}")));
-    assert_ne!(doc.document_type(), OpenScenarioDocumentType::Scenario);
-}
-
-#[test]
-fn a_root_naming_two_branches_is_not_a_catalog() {
-    let doc = parse(&document(&format!("{SCENARIO_BODY}{CATALOG_BODY}")));
-    assert_ne!(doc.document_type(), OpenScenarioDocumentType::Catalog);
 }
 
 #[test]

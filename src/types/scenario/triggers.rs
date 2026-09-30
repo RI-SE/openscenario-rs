@@ -225,71 +225,45 @@ mod tests {
         ))
     }
 
+    /// `Trigger` is an OR of `ConditionGroup`s, each an AND of `Condition`s (XSD `Trigger`
+    /// `:2395`, `ConditionGroup` `:962`, `Condition` `:953`). The constructors keep groups and
+    /// conditions in the order given; `Condition::new` states `conditionEdge="rising"` and
+    /// `delay="0"`, both required attributes, and `with_edge`/`with_delay` replace them.
     #[test]
-    fn test_trigger_creation() {
-        let condition = Condition::new("TestCondition", test_condition_type());
-        let group = ConditionGroup::new(vec![condition]).unwrap();
-        let trigger = Trigger::new(group);
-
-        assert_eq!(trigger.condition_groups.len(), 1);
-        assert_eq!(trigger.condition_groups[0].conditions.len(), 1);
-        assert_eq!(
-            trigger.condition_groups[0].conditions[0]
-                .name
-                .as_literal()
-                .unwrap(),
-            "TestCondition"
+    fn trigger_constructors_emit_an_or_of_ands_in_order() {
+        let mut trigger = Trigger::new(
+            ConditionGroup::new(vec![
+                Condition::new("First", test_condition_type()),
+                Condition::new("Second", test_condition_type())
+                    .with_edge(ConditionEdge::Falling)
+                    .with_delay(Value::literal(2.5)),
+            ])
+            .unwrap(),
         );
+        trigger.add_condition_group(
+            ConditionGroup::new(vec![Condition::new("Third", test_condition_type())]).unwrap(),
+        );
+
         assert!(trigger.has_conditions());
-    }
+        assert!(!Trigger::default().has_conditions());
 
-    #[test]
-    fn test_condition_group_and_logic() {
-        let group = ConditionGroup::new(vec![
-            Condition::new("Condition1", test_condition_type()),
-            Condition::new("Condition2", test_condition_type()),
-        ])
-        .unwrap();
-
-        assert_eq!(group.conditions.len(), 2);
-        assert_eq!(group.conditions[0].name.as_literal().unwrap(), "Condition1");
-        assert_eq!(group.conditions[1].name.as_literal().unwrap(), "Condition2");
-    }
-
-    #[test]
-    fn test_trigger_or_logic() {
-        // `Trigger::default()` is now the benign empty-groups container; build the first
-        // group explicitly rather than relying on it to fabricate one.
-        let first_condition = Condition::new("FirstCondition", test_condition_type());
-        let mut trigger = Trigger::new(ConditionGroup::new(vec![first_condition]).unwrap());
-
-        // Add second condition group (OR logic)
-        let condition = Condition::new("SecondCondition", test_condition_type());
-        let group = ConditionGroup::new(vec![condition]).unwrap();
-        trigger.add_condition_group(group);
-
-        assert_eq!(trigger.condition_groups.len(), 2);
-        assert_eq!(
-            trigger.condition_groups[1].conditions[0]
-                .name
-                .as_literal()
-                .unwrap(),
-            "SecondCondition"
+        let time = r#"<ByValueCondition><SimulationTimeCondition value="10" rule="greaterThan"/></ByValueCondition>"#;
+        let expected = format!(
+            concat!(
+                r#"<StartTrigger>"#,
+                r#"<ConditionGroup>"#,
+                r#"<Condition name="First" conditionEdge="rising" delay="0">{t}</Condition>"#,
+                r#"<Condition name="Second" conditionEdge="falling" delay="2.5">{t}</Condition>"#,
+                r#"</ConditionGroup>"#,
+                r#"<ConditionGroup>"#,
+                r#"<Condition name="Third" conditionEdge="rising" delay="0">{t}</Condition>"#,
+                r#"</ConditionGroup>"#,
+                r#"</StartTrigger>"#,
+            ),
+            t = time
         );
-    }
-
-    #[test]
-    fn test_condition_with_edge_and_delay() {
-        let condition = Condition::new("TimedCondition", test_condition_type())
-            .with_edge(ConditionEdge::Falling)
-            .with_delay(Value::literal(2.5));
-
-        assert_eq!(condition.name.as_literal().unwrap(), "TimedCondition");
-        assert_eq!(
-            condition.condition_edge,
-            Value::Literal(ConditionEdge::Falling)
-        );
-        assert_eq!(condition.delay.as_literal().unwrap(), &2.5);
+        let xml = quick_xml::se::to_string_with_root("StartTrigger", &trigger).unwrap();
+        assert_eq!(xml, expected);
     }
 
     #[test]
@@ -316,58 +290,5 @@ mod tests {
             any_entities.entity_refs[1].entity_ref.as_literal().unwrap(),
             "Target"
         );
-    }
-
-    #[test]
-    fn test_entity_ref() {
-        let entity_ref = EntityRef::new("TestEntity");
-        assert_eq!(entity_ref.entity_ref.as_literal().unwrap(), "TestEntity");
-    }
-
-    #[test]
-    fn test_trigger_serialization() {
-        let condition = Condition::new("NamedCondition", test_condition_type());
-        let trigger = Trigger::new(ConditionGroup::new(vec![condition]).unwrap());
-        let serialized = quick_xml::se::to_string(&trigger).expect("Serialization should succeed");
-        assert!(serialized.contains("NamedCondition"));
-    }
-
-    #[test]
-    fn test_complex_trigger_scenario() {
-        // Create a complex trigger: (Condition1 AND Condition2) OR (Condition3)
-        let group1 = ConditionGroup::new(vec![
-            Condition::new("SpeedCondition", test_condition_type())
-                .with_edge(ConditionEdge::Rising),
-            Condition::new("TimeCondition", test_condition_type()).with_delay(Value::literal(1.0)),
-        ])
-        .unwrap();
-
-        let group2 = ConditionGroup::new(vec![Condition::new(
-            "CollisionCondition",
-            test_condition_type(),
-        )
-        .with_edge(ConditionEdge::RisingOrFalling)])
-        .unwrap();
-
-        let mut trigger = Trigger::new(group1);
-        trigger.add_condition_group(group2);
-
-        assert_eq!(trigger.condition_groups.len(), 2);
-        assert_eq!(trigger.condition_groups[0].conditions.len(), 2); // AND group
-        assert_eq!(trigger.condition_groups[1].conditions.len(), 1); // OR group
-        assert!(trigger.has_conditions());
-    }
-
-    #[test]
-    fn a_condition_group_with_no_condition_is_refused() {
-        // XSD ConditionGroup declares Condition with the default minOccurs="1", so
-        // <ConditionGroup/> is not a document the schema admits.
-        assert!(ConditionGroup::new(Vec::new()).is_err());
-    }
-
-    #[test]
-    fn triggering_entities_with_no_entity_ref_is_refused() {
-        // XSD TriggeringEntities declares EntityRef with the default minOccurs="1".
-        assert!(TriggeringEntities::any(Vec::new()).is_err());
     }
 }

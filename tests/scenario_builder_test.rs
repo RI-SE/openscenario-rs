@@ -7,25 +7,6 @@ mod builder_tests {
     use openscenario_rs::ScenarioBuilder;
 
     #[test]
-    fn test_minimal_scenario_creation() {
-        let scenario = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            // Required of a scenario document by the XSD, even when empty.
-            .with_catalog_locations(CatalogLocations::default())
-            .with_road_network(RoadNetwork::default())
-            .with_entities()
-            .with_storyboard(|storyboard| {
-                // Minimal storyboard with default init
-                storyboard
-            })
-            .build()
-            .unwrap();
-
-        assert!(scenario.entities.is_some());
-        assert!(scenario.storyboard.is_some());
-    }
-
-    #[test]
     fn test_parameter_support() {
         let scenario = ScenarioBuilder::new()
             .with_header("Test", "Author")

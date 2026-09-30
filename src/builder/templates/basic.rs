@@ -116,37 +116,65 @@ impl BasicScenarioTemplate {
 mod tests {
     use super::*;
 
+    /// Each template builds (the builder's entity-reference rule passes), declares exactly the
+    /// entities its init actions name, and gives each of them a teleport and a speed action.
+    /// The shipped templates once referenced entities they never declared.
     #[test]
-    fn test_basic_template() {
-        let scenario = BasicScenarioTemplate::create();
-        assert!(scenario.data.file_header.is_some());
-    }
+    fn every_template_builds_and_declares_the_entities_its_init_names() {
+        let cases: [(ScenarioBuilder<Complete>, &str, &[&str]); 3] = [
+            (
+                BasicScenarioTemplate::single_vehicle("ego"),
+                "Basic Scenario",
+                &["ego"],
+            ),
+            (
+                BasicScenarioTemplate::two_vehicle_scenario(),
+                "Basic Scenario",
+                &["ego", "target"],
+            ),
+            (
+                BasicScenarioTemplate::alks_template(),
+                "ALKS Scenario",
+                &["Ego", "TargetVehicle"],
+            ),
+        ];
 
-    #[test]
-    fn test_single_vehicle_template() {
-        let scenario = BasicScenarioTemplate::single_vehicle("ego");
-        assert!(scenario.data.file_header.is_some());
-        assert!(scenario.data.entities.is_some());
-        assert!(scenario.data.storyboard.is_some());
-    }
+        for (builder, description, names) in cases {
+            let scenario = builder
+                .build()
+                .unwrap_or_else(|e| panic!("{description} {names:?} must build: {e}"));
+            assert_eq!(
+                scenario.file_header.description.as_literal().unwrap(),
+                description
+            );
 
-    #[test]
-    fn test_two_vehicle_template() {
-        let scenario = BasicScenarioTemplate::two_vehicle_scenario();
-        assert!(scenario.data.file_header.is_some());
-        assert!(scenario.data.entities.is_some());
-        assert!(scenario.data.storyboard.is_some());
-    }
+            let declared: Vec<&str> = scenario
+                .entities
+                .as_ref()
+                .unwrap()
+                .scenario_objects
+                .iter()
+                .filter_map(|o| o.get_name())
+                .collect();
+            assert_eq!(declared, names);
 
-    #[test]
-    fn test_alks_template() {
-        let scenario = BasicScenarioTemplate::alks_template();
-        assert!(scenario.data.file_header.is_some());
-        assert!(scenario.data.entities.is_some());
-        assert!(scenario.data.storyboard.is_some());
-
-        // Check header description
-        let header = scenario.data.file_header.as_ref().unwrap();
-        assert_eq!(header.description.as_literal().unwrap(), "ALKS Scenario");
+            let init = &scenario.storyboard.as_ref().unwrap().init.actions;
+            assert_eq!(init.global_actions.len(), 1, "{names:?}");
+            let privates: Vec<(&str, Vec<&str>)> = init
+                .private_actions
+                .iter()
+                .map(|p| {
+                    (
+                        p.entity_ref.as_literal().unwrap().as_str(),
+                        p.private_actions.iter().map(|a| a.action_type()).collect(),
+                    )
+                })
+                .collect();
+            let expected: Vec<(&str, Vec<&str>)> = names
+                .iter()
+                .map(|n| (*n, vec!["TeleportAction", "LongitudinalAction"]))
+                .collect();
+            assert_eq!(privates, expected);
+        }
     }
 }

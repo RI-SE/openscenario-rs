@@ -1408,25 +1408,6 @@ fn convert_private_action_to_story(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::builder::scenario::ScenarioBuilder;
-    use crate::builder::storyboard::StoryboardBuilder;
-
-    #[test]
-    fn test_maneuver_builder_creation() {
-        let scenario_builder = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            .with_entities();
-
-        let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        let mut story_builder = storyboard_builder.add_story_simple("TestStory");
-        let mut act_builder = story_builder.add_act("TestAct");
-
-        let maneuver_builder = ManeuverBuilder::new(&mut act_builder, "TestManeuver", "ego");
-
-        assert_eq!(maneuver_builder.maneuver_name, "TestManeuver");
-        assert_eq!(maneuver_builder.entity_ref, "ego");
-        assert_eq!(maneuver_builder.events.len(), 0);
-    }
 
     #[test]
     fn event_trigger_builder_time_and_speed_condition_never_error() {

@@ -652,7 +652,6 @@ impl PrivateActionBuilderForStoryboard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::builder::scenario::ScenarioBuilder;
 
     /// A maneuver carrying one event, since XSD `Maneuver` requires at least one and
     /// `DetachedManeuverBuilder::build` now refuses a maneuver with none.
@@ -675,49 +674,6 @@ mod tests {
             .unwrap(),
         );
         builder.build().unwrap()
-    }
-
-    #[test]
-    fn test_storyboard_builder_creation() {
-        let scenario_builder = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            .with_entities();
-
-        let storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        assert_eq!(storyboard_builder.stories.len(), 0);
-        assert!(storyboard_builder.init.is_none());
-    }
-
-    #[test]
-    fn test_story_builder_creation() {
-        let scenario_builder = ScenarioBuilder::new()
-            .with_header("Test", "Author")
-            .with_entities();
-
-        let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
-        let story_builder = StoryBuilder::new(&mut storyboard_builder, "TestStory");
-
-        assert_eq!(story_builder.name, "TestStory");
-        assert_eq!(story_builder.acts.len(), 0);
-    }
-
-    #[test]
-    fn test_maneuver_group_has_actors() {
-        let mut act = DetachedActBuilder::new("test_act");
-
-        // Create a simple maneuver
-        let maneuver = built_maneuver("test_maneuver", "ego");
-
-        act.add_completed_maneuver(maneuver, "ego");
-
-        // Verify ManeuverGroup has the entity_ref
-        assert_eq!(act.maneuver_groups.len(), 1);
-        let actors = &act.maneuver_groups[0].actors;
-        assert_eq!(actors.entity_refs.len(), 1);
-        assert_eq!(
-            actors.entity_refs[0].entity_ref.as_literal().unwrap(),
-            "ego"
-        );
     }
 
     #[test]

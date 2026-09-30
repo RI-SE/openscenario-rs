@@ -14,7 +14,6 @@
 //! constructed, so no serializer can emit `<ConditionGroup/>` or
 //! `<Private entityRef="Ego"/>`. Those cases are asserted through the constructors.
 
-use openscenario_rs::types::basic::Value;
 use openscenario_rs::types::enums::{Priority, RouteStrategy, TriggeringEntitiesRule};
 use openscenario_rs::types::routing::{Route, Waypoint};
 use openscenario_rs::types::scenario::init::Private;
@@ -75,12 +74,6 @@ fn a_route_with_one_waypoint_is_rejected_at_parse_time() {
 fn a_route_with_two_waypoints_round_trips_byte_for_byte() {
     let parsed: Route = parse(TWO_WAYPOINTS).expect("two waypoints satisfy minOccurs=2");
     assert_eq!(to_xml(&parsed), TWO_WAYPOINTS);
-}
-
-#[test]
-fn a_route_with_two_waypoints_keeps_both() {
-    let parsed: Route = parse(TWO_WAYPOINTS).expect("two waypoints satisfy minOccurs=2");
-    assert_eq!(parsed.waypoints.len(), 2);
 }
 
 #[test]
@@ -302,13 +295,4 @@ fn a_private_action_builder_with_no_action_reports_rather_than_emitting_an_empty
     assert!(PrivateActionBuilder::new(InitActionBuilder::new(), "ego")
         .build()
         .is_err());
-}
-
-#[test]
-fn an_entity_ref_carries_its_name_through_a_round_trip() {
-    let parsed: TriggeringEntities = parse(ONE_ENTITY_REF).expect("one entity ref is enough");
-    assert_eq!(
-        parsed.entity_refs[0].entity_ref,
-        Value::literal("Ego".to_string())
-    );
 }
