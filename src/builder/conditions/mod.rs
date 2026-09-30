@@ -192,17 +192,17 @@ impl SpeedConditionGroupBuilder {
 mod tests {
     use super::*;
 
+    use crate::types::scenario::triggers::ConditionChoice;
+
     #[test]
-    fn test_trigger_builder_basic() {
-        let time_condition = TimeConditionBuilder::new().at_time(3.0).build().unwrap();
-
-        let trigger = TriggerBuilder::new()
-            .add_condition(time_condition)
-            .build()
-            .unwrap();
-
-        assert_eq!(trigger.condition_groups.len(), 1);
-        assert_eq!(trigger.condition_groups[0].conditions.len(), 1);
+    fn test_trigger_builder_rejects_no_conditions() {
+        let error = TriggerBuilder::new().build().unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("At least one condition is required"),
+            "unexpected error: {error}"
+        );
     }
 
     /// `add_condition` builds each `ConditionGroup` from `ConditionGroup::from_min` with the one
@@ -248,5 +248,35 @@ mod tests {
 
         assert_eq!(trigger.condition_groups.len(), 1);
         assert_eq!(trigger.condition_groups[0].conditions.len(), 2);
+    }
+
+    #[test]
+    fn test_condition_group_builder_inline_condition_builders() {
+        let trigger = TriggerBuilder::new()
+            .add_condition_group()
+            .time_condition()
+            .at_time(5.0)
+            .finish()
+            .unwrap()
+            .speed_condition()
+            .for_entity("ego")
+            .speed_above(25.0)
+            .finish()
+            .unwrap()
+            .finish_group()
+            .build()
+            .unwrap();
+
+        assert_eq!(trigger.condition_groups.len(), 1);
+        let conditions = &trigger.condition_groups[0].conditions;
+        assert_eq!(conditions.len(), 2);
+        assert!(matches!(
+            conditions[0].choice,
+            ConditionChoice::ByValueCondition(_)
+        ));
+        assert!(matches!(
+            conditions[1].choice,
+            ConditionChoice::ByEntityCondition(_)
+        ));
     }
 }

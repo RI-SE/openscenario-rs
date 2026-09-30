@@ -1,123 +1,81 @@
-//! Simple tests for ByValueCondition implementation
+//! Wire form of every `ByValueCondition` branch (XSD:837-847).
 //!
-//! This test file validates that all the new ByValueCondition types
-//! compile and construct correctly via their required-field constructors.
+//! Each row builds the condition with its public constructor and the `ByValueCondition`
+//! branch wrapper, then asserts that the schema-valid XML parses to exactly that value and
+//! that the value serializes back to exactly that XML. A wrong element or attribute name, a
+//! constructor that stores the wrong field, or a wrapper that picks the wrong branch fails
+//! the row.
 
-use openscenario_rs::types::basic::OSString;
-use openscenario_rs::types::basic::Value;
-use openscenario_rs::types::conditions::*;
+use chrono::{TimeZone, Utc};
+use openscenario_rs::types::conditions::{
+    ByValueCondition, ParameterCondition, SimulationTimeCondition, StoryboardElementStateCondition,
+    TimeOfDayCondition, TrafficSignalCondition, TrafficSignalControllerCondition,
+    UserDefinedValueCondition, VariableCondition,
+};
 use openscenario_rs::types::enums::{Rule, StoryboardElementState, StoryboardElementType};
 
-#[test]
-fn test_simulation_time_condition() {
-    let condition = SimulationTimeCondition::new(10.0, Rule::GreaterThan);
-    assert_eq!(condition.rule, Value::Literal(Rule::GreaterThan));
+fn assert_wire(xml: &str, expected: &ByValueCondition) {
+    let parsed: ByValueCondition =
+        quick_xml::de::from_str(xml).unwrap_or_else(|e| panic!("failed to parse {xml}: {e}"));
+    assert_eq!(&parsed, expected, "parsed value differs for {xml}");
+    let emitted = quick_xml::se::to_string(expected).expect("serialize ByValueCondition");
+    assert_eq!(emitted, xml);
 }
 
 #[test]
-fn test_parameter_condition() {
-    let condition = ParameterCondition::new("defaultParam", Rule::EqualTo, "defaultValue");
-    assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
-}
-
-#[test]
-fn test_storyboard_element_state_condition() {
-    let condition = StoryboardElementStateCondition::new(
-        "defaultElement",
-        StoryboardElementState::RunningState,
-        StoryboardElementType::Story,
+fn by_value_condition_branches_match_xsd_wire_form() {
+    // XSD:1629-1633
+    assert_wire(
+        r#"<ByValueCondition><ParameterCondition parameterRef="speedLimit" rule="equalTo" value="30"/></ByValueCondition>"#,
+        &ByValueCondition::parameter(ParameterCondition::new("speedLimit", Rule::EqualTo, "30")),
     );
-    assert_eq!(
-        condition.state,
-        Value::Literal(StoryboardElementState::RunningState)
+    // XSD:2169-2172
+    assert_wire(
+        r#"<ByValueCondition><TimeOfDayCondition dateTime="2024-06-01T12:30:00Z" rule="greaterThan"/></ByValueCondition>"#,
+        &ByValueCondition::time_of_day(TimeOfDayCondition::new(
+            Utc.with_ymd_and_hms(2024, 6, 1, 12, 30, 0).unwrap(),
+            Rule::GreaterThan,
+        )),
     );
-    assert_eq!(
-        condition.storyboard_element_type,
-        Value::Literal(StoryboardElementType::Story)
+    // XSD:2039-2042
+    assert_wire(
+        r#"<ByValueCondition><SimulationTimeCondition value="5.5" rule="lessThan"/></ByValueCondition>"#,
+        &ByValueCondition::simulation_time(SimulationTimeCondition::new(5.5, Rule::LessThan)),
     );
-}
-
-#[test]
-fn test_user_defined_value_condition() {
-    let condition =
-        UserDefinedValueCondition::new("defaultCondition", Rule::EqualTo, "defaultValue");
-    assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
-}
-
-#[test]
-fn test_traffic_signal_condition() {
-    let condition = TrafficSignalCondition::new("defaultSignal", "green");
-    if let OSString::Literal(state) = &condition.state {
-        assert_eq!(state, "green");
-    } else {
-        panic!("Expected literal state");
-    }
-}
-
-#[test]
-fn test_traffic_signal_controller_condition() {
-    let condition = TrafficSignalControllerCondition::new("defaultController", "phase1");
-    if let OSString::Literal(phase) = &condition.phase {
-        assert_eq!(phase, "phase1");
-    } else {
-        panic!("Expected literal phase");
-    }
-}
-
-#[test]
-fn test_variable_condition() {
-    let condition = VariableCondition::new("defaultVariable", Rule::EqualTo, "defaultValue");
-    assert_eq!(condition.rule, Value::Literal(Rule::EqualTo));
-}
-
-#[test]
-fn test_byvalue_condition_simulation_time_branch() {
-    let condition =
-        ByValueCondition::simulation_time(SimulationTimeCondition::new(10.0, Rule::GreaterThan));
-
-    // `ByValueCondition` is now a single `$value` field over `ByValueConditionChoice`, so the
-    // choice between the eight branches is structural: exactly one variant can be present.
-    assert!(matches!(
-        condition.choice,
-        ByValueConditionChoice::SimulationTimeCondition(_)
-    ));
-}
-
-#[test]
-fn test_byvalue_condition_with_specific_conditions() {
-    let parameter_condition = ByValueCondition::parameter(ParameterCondition {
-        parameter_ref: OSString::literal("testParam".to_string()),
-        rule: Value::Literal(Rule::GreaterThan),
-        value: OSString::literal("10".to_string()),
-    });
-    let variable_condition = ByValueCondition::variable(VariableCondition {
-        variable_ref: OSString::literal("testVar".to_string()),
-        rule: Value::Literal(Rule::LessThan),
-        value: OSString::literal("5".to_string()),
-    });
-
-    // Each construction selects exactly one branch of the `xsd:choice`.
-    let ByValueConditionChoice::ParameterCondition(param_cond) = &parameter_condition.choice else {
-        panic!("Expected ParameterCondition branch");
-    };
-    assert_eq!(param_cond.rule, Value::Literal(Rule::GreaterThan));
-
-    let ByValueConditionChoice::VariableCondition(var_cond) = &variable_condition.choice else {
-        panic!("Expected VariableCondition branch");
-    };
-    assert_eq!(var_cond.rule, Value::Literal(Rule::LessThan));
-}
-
-#[cfg(feature = "chrono")]
-#[test]
-fn test_time_of_day_condition_with_chrono() {
-    let condition = TimeOfDayCondition::new(chrono::Utc::now(), Rule::GreaterThan);
-    assert_eq!(condition.rule, Rule::GreaterThan);
-    // Should have a valid DateTime
-    use openscenario_rs::types::basic::DateTime;
-    if let DateTime::Literal(_) = condition.date_time {
-        // Should be a valid datetime
-    } else {
-        panic!("Expected literal datetime");
-    }
+    // XSD:2119-2123
+    assert_wire(
+        r#"<ByValueCondition><StoryboardElementStateCondition storyboardElementRef="CutInAct" state="runningState" storyboardElementType="act"/></ByValueCondition>"#,
+        &ByValueCondition::storyboard_element_state(StoryboardElementStateCondition::new(
+            "CutInAct",
+            StoryboardElementState::RunningState,
+            StoryboardElementType::Act,
+        )),
+    );
+    // XSD:2437-2441
+    assert_wire(
+        r#"<ByValueCondition><UserDefinedValueCondition name="rainIntensity" rule="greaterOrEqual" value="0.8"/></ByValueCondition>"#,
+        &ByValueCondition::user_defined_value(UserDefinedValueCondition::new(
+            "rainIntensity",
+            Rule::GreaterOrEqual,
+            "0.8",
+        )),
+    );
+    // XSD:2254-2257
+    assert_wire(
+        r#"<ByValueCondition><TrafficSignalCondition name="Signal1" state="red"/></ByValueCondition>"#,
+        &ByValueCondition::traffic_signal(TrafficSignalCondition::new("Signal1", "red")),
+    );
+    // XSD:2275-2278
+    assert_wire(
+        r#"<ByValueCondition><TrafficSignalControllerCondition trafficSignalControllerRef="Controller1" phase="stop"/></ByValueCondition>"#,
+        &ByValueCondition::traffic_signal_controller(TrafficSignalControllerCondition::new(
+            "Controller1",
+            "stop",
+        )),
+    );
+    // XSD:2466-2470
+    assert_wire(
+        r#"<ByValueCondition><VariableCondition variableRef="lapCount" rule="notEqualTo" value="3"/></ByValueCondition>"#,
+        &ByValueCondition::variable(VariableCondition::new("lapCount", Rule::NotEqualTo, "3")),
+    );
 }

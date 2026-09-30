@@ -413,6 +413,8 @@ mod tests {
         };
         assert_eq!(time_condition.value.as_literal().unwrap(), &5.0);
         assert_eq!(time_condition.rule, Value::Literal(Rule::GreaterThan));
+        // XSD:953-960 `Condition@delay` is required; the builder emits 0.
+        assert_eq!(condition.delay, Double::literal(0.0));
     }
 
     #[test]
@@ -440,6 +442,7 @@ mod tests {
             .speed_above(30.0)
             .build()
             .unwrap();
+        assert_eq!(condition.delay, Double::literal(0.0));
 
         let ConditionChoice::ByEntityCondition(by_entity) = condition.choice else {
             panic!("Expected ByEntityCondition");
