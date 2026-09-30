@@ -61,22 +61,17 @@ where
                 }
             }
         }
-
-        fn visit_none<E>(self) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(None)
-        }
-
-        fn visit_unit<E>(self) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(None)
-        }
     }
 
+    // `visit_none`/`visit_unit` are not implemented: this is only ever reached
+    // through `deserialize_with` on a present `@targetLaneOffset` attribute
+    // (`default` handles the absent-attribute case without calling this
+    // function at all), and `deserialize_any` on quick-xml's attribute-value
+    // deserializer always yields a string, never a unit/none token. The two
+    // methods were unreachable private dead code; deleting them keeps the
+    // `Visitor` impl to the path that actually runs (falling back to
+    // `Visitor`'s default `visit_none`/`visit_unit`, which error, is
+    // unobservable for the same reason).
     deserializer.deserialize_any(OptionalDoubleVisitor)
 }
 

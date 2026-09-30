@@ -23,11 +23,20 @@ use openscenario_rs::types::actions::control::{
     AssignControllerAction, AssignControllerActionChoice, ControllerAction, ControllerActionChoice,
 };
 use openscenario_rs::types::actions::movement::{
-    AbsoluteSpeed, RelativeSpeedToMaster, SpeedActionTarget, SpeedActionTargetChoice, SteadyState,
-    TimeReference, TimeReferenceChoice, Timing, TrajectoryRef, TrajectoryRefChoice,
+    AbsoluteSpeed, AbsoluteTargetLaneOffset, AbsoluteTargetSpeed, AssignRouteAction, FinalSpeed,
+    FinalSpeedChoice, LaneOffsetAction, LaneOffsetActionDynamics, LaneOffsetTarget,
+    LongitudinalAction, LongitudinalActionChoice, LongitudinalDistanceAction,
+    RelativeSpeedToMaster, RelativeTargetLaneOffset, RelativeTargetSpeed, SpeedActionTarget,
+    SpeedActionTargetChoice, SpeedProfileAction, SpeedProfileEntry, SteadyState, TimeReference,
+    TimeReferenceChoice, Timing, TrajectoryRef, TrajectoryRefChoice, TransitionDynamics,
 };
 use openscenario_rs::types::basic::{Double, Value};
-use openscenario_rs::types::enums::ReferenceContext;
+use openscenario_rs::types::enums::{
+    DynamicsDimension, DynamicsShape, FollowingMode, ReferenceContext, RouteStrategy,
+    SpeedTargetValueType,
+};
+use openscenario_rs::types::positions::Position;
+use openscenario_rs::types::routing::{Route, RouteRef, Waypoint};
 
 fn de<T: serde::de::DeserializeOwned>(xml: &str) -> T {
     quick_xml::de::from_str(xml).unwrap_or_else(|e| panic!("deserialize failed for {xml}: {e}"))
@@ -146,11 +155,9 @@ fn time_reference_none_branch_round_trips_byte_exact() {
 fn time_reference_timing_branch_round_trips_byte_exact() {
     let xml = r#"<TimeReference><Timing domainAbsoluteRelative="absolute" scale="1" offset="0"/></TimeReference>"#;
     round_trips::<TimeReference>(xml);
-    let built = TimeReference::timing(Timing {
-        domain_absolute_relative: Value::Literal(ReferenceContext::Absolute),
-        scale: Double::literal(1.0),
-        offset: Double::literal(0.0),
-    });
+    // `Timing::new` is exercised here rather than a struct literal so the
+    // constructor itself (not just the derived `Deserialize`) is covered.
+    let built = TimeReference::timing(Timing::new(ReferenceContext::Absolute, 1.0, 0.0));
     assert_eq!(de::<TimeReference>(xml), built);
 }
 
@@ -311,4 +318,238 @@ fn assign_controller_action_rejects_two_branches() {
         r#"<AssignControllerAction><Controller name="c" controllerType="movement"/><ObjectController><Controller name="d" controllerType="movement"/></ObjectController></AssignControllerAction>"#,
     );
     assert!(message.contains("duplicate field"), "got: {message}");
+}
+
+// ---------------------------------------------------------------------------
+// Constructors reachable only through the Rust API, not through Deserialize.
+//
+// Every test above builds a value by parsing XML, so it exercises the derived
+// `Deserialize` impl but never the hand-written `impl` blocks movement.rs
+// defines beside each type (`::new`, the choice-branch builders, the
+// `with_*` chain setters). Those constructors are the schema-fabrication
+// guard this crate relies on instead of `Default` (see the removed-`Default`
+// comments throughout movement.rs), so a wrong literal or a swapped field
+// inside one would not be caught by any test above. Each row here builds a
+// value with the constructor and checks it against an independently
+// specified expectation (a parsed document or a field-by-field assertion),
+// not against the constructor's own output.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn speed_action_target_choice_accessors_match_the_selected_branch() {
+    let absolute = SpeedActionTargetChoice::AbsoluteTargetSpeed(AbsoluteTargetSpeed::new(30.0));
+    assert!(absolute.as_absolute().is_some(), "absolute branch");
+    assert!(
+        absolute.as_relative().is_none(),
+        "absolute branch has no relative view"
+    );
+
+    let relative = SpeedActionTargetChoice::RelativeTargetSpeed(RelativeTargetSpeed::new(
+        2.0,
+        "Ego",
+        SpeedTargetValueType::Delta,
+        true,
+    ));
+    assert_eq!(
+        relative.as_relative().unwrap().entity_ref,
+        "Ego",
+        "as_relative must return the branch that was constructed"
+    );
+    assert!(
+        relative.as_absolute().is_none(),
+        "relative branch has no absolute view"
+    );
+}
+
+#[test]
+fn speed_action_target_relative_constructor_matches_the_parsed_document() {
+    let built = SpeedActionTarget::relative(RelativeTargetSpeed::new(
+        2.0,
+        "Ego",
+        SpeedTargetValueType::Delta,
+        true,
+    ));
+    let xml = r#"<SpeedActionTarget><RelativeTargetSpeed value="2" entityRef="Ego" speedTargetValueType="delta" continuous="true"/></SpeedActionTarget>"#;
+    assert_eq!(
+        de::<SpeedActionTarget>(xml),
+        built,
+        "SpeedActionTarget::relative + RelativeTargetSpeed::new must match the XSD document"
+    );
+}
+
+#[test]
+fn trajectory_ref_choice_as_catalog_reference_matches_the_selected_branch() {
+    let xml = r#"<TrajectoryRef><CatalogReference catalogName="TrajectoryCatalog" entryName="Lane"/></TrajectoryRef>"#;
+    let reference: TrajectoryRef = de(xml);
+    let catalog = reference
+        .trajectory_ref
+        .as_catalog_reference()
+        .expect("catalog branch");
+    assert_eq!(
+        catalog.catalog_name.as_literal(),
+        Some(&"TrajectoryCatalog".to_string())
+    );
+    assert!(
+        reference.trajectory_ref.as_trajectory().is_none(),
+        "the catalog branch has no inline-trajectory view"
+    );
+}
+
+#[test]
+fn transition_dynamics_with_following_mode_builder_matches_the_parsed_document() {
+    let built = TransitionDynamics::new(DynamicsDimension::Time, DynamicsShape::Linear, 2.0)
+        .with_following_mode(FollowingMode::Position);
+    let xml = r#"<TransitionDynamics dynamicsDimension="time" dynamicsShape="linear" followingMode="position" value="2"/>"#;
+    assert_eq!(de::<TransitionDynamics>(xml), built);
+}
+
+#[test]
+fn assign_route_action_constructors_match_the_expected_branch() {
+    let route = Route::new(
+        "R1",
+        false,
+        vec![
+            Waypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+            Waypoint::new(Position::world_origin(), RouteStrategy::Fastest),
+        ],
+    )
+    .expect("two waypoints satisfy the XSD Route minOccurs=2 bound");
+
+    let direct = AssignRouteAction::direct_route(route.clone());
+    assert!(
+        matches!(direct.route, RouteRef::Direct(_)),
+        "direct_route must select the Direct branch"
+    );
+
+    let catalog = AssignRouteAction::catalog_route("RouteCatalog", "Loop");
+    assert!(
+        matches!(catalog.route, RouteRef::Catalog(_)),
+        "catalog_route must select the Catalog branch"
+    );
+
+    let via_new = AssignRouteAction::new(RouteRef::Direct(route));
+    assert_eq!(
+        via_new.route, direct.route,
+        "new(RouteRef::Direct(route)) must equal direct_route(route)"
+    );
+}
+
+#[test]
+fn lane_offset_action_with_continuous_builder_overrides_the_constructor_value() {
+    let action = LaneOffsetAction::new(
+        LaneOffsetActionDynamics::new(DynamicsShape::Linear),
+        LaneOffsetTarget::absolute(1.0),
+        false,
+    )
+    .with_continuous(true);
+    assert_eq!(
+        action.continuous.as_literal(),
+        Some(&true),
+        "with_continuous must overwrite the constructor's `continuous` argument"
+    );
+}
+
+#[test]
+fn relative_and_absolute_target_lane_offset_constructors_set_the_given_fields() {
+    let relative = RelativeTargetLaneOffset::new("Ego", 1.5);
+    assert_eq!(relative.entity_ref.as_literal(), Some(&"Ego".to_string()));
+    assert_eq!(relative.value.as_literal(), Some(&1.5));
+
+    let absolute = AbsoluteTargetLaneOffset::new(2.0);
+    assert_eq!(absolute.value.as_literal(), Some(&2.0));
+}
+
+#[test]
+fn longitudinal_distance_action_builder_chain_sets_both_optional_fields() {
+    let action = LongitudinalDistanceAction::new("Ego", true, false)
+        .with_distance(10.0)
+        .with_time_gap(1.5);
+    assert_eq!(action.distance.unwrap().as_literal(), Some(&10.0));
+    assert_eq!(action.time_gap.unwrap().as_literal(), Some(&1.5));
+    assert_eq!(action.freespace.as_literal(), Some(&true));
+    assert_eq!(action.continuous.as_literal(), Some(&false));
+}
+
+#[test]
+fn speed_profile_action_builder_chain_and_longitudinal_wrapper() {
+    let entry = SpeedProfileEntry::new(10.0).with_time(2.0);
+    assert_eq!(entry.time.as_ref().unwrap().as_literal(), Some(&2.0));
+    assert_eq!(entry.speed.as_literal(), Some(&10.0));
+
+    let profile = SpeedProfileAction::new(FollowingMode::Follow, vec![entry])
+        .expect("one entry satisfies the XSD SpeedProfileEntry minOccurs=1 bound")
+        .with_entity_ref("Ego");
+    assert_eq!(
+        profile.entity_ref.as_ref().unwrap().as_literal(),
+        Some(&"Ego".to_string())
+    );
+
+    let wrapped = LongitudinalAction::speed_profile(profile);
+    assert!(matches!(
+        wrapped.longitudinal_action_choice,
+        LongitudinalActionChoice::SpeedProfileAction(_)
+    ));
+}
+
+#[test]
+fn final_speed_constructors_match_the_selected_branch() {
+    let absolute = FinalSpeed::absolute(AbsoluteSpeed::new(30.0));
+    match absolute.speed_choice {
+        FinalSpeedChoice::AbsoluteSpeed(speed) => {
+            assert_eq!(speed.value.as_literal(), Some(&30.0));
+        }
+        other => panic!("expected AbsoluteSpeed, got {other:?}"),
+    }
+
+    let relative = FinalSpeed::relative(RelativeSpeedToMaster::new(
+        SpeedTargetValueType::Delta,
+        -5.0,
+    ));
+    match relative.speed_choice {
+        FinalSpeedChoice::RelativeSpeedToMaster(speed) => {
+            assert_eq!(speed.value.as_literal(), Some(&-5.0));
+            assert_eq!(
+                speed.speed_target_value_type,
+                Value::Literal(SpeedTargetValueType::Delta)
+            );
+        }
+        other => panic!("expected RelativeSpeedToMaster, got {other:?}"),
+    }
+}
+
+#[test]
+fn lane_change_target_lane_offset_accepts_empty_expression_and_parameter_forms() {
+    // `deserialize_optional_double` (movement.rs) is the deserializer behind
+    // `LaneChangeAction::target_lane_offset`. It handles four string shapes
+    // beyond a plain literal: empty (-> None), `${expr}` (-> expression),
+    // `$name` (-> parameter), and anything else unparsable (-> None, for XSD
+    // compliance). `test_xml_deserialization` in movement.rs's own `mod
+    // tests` already covers the plain-literal branch (`targetLaneOffset="0.5"`).
+    fn parse_with_offset(offset_attr: &str) -> Option<Double> {
+        let xml = format!(
+            r#"<LaneChangeAction{offset_attr}><LaneChangeActionDynamics dynamicsDimension="time" dynamicsShape="linear" value="1"/><LaneChangeTarget><RelativeTargetLane entityRef="Ego" value="-1"/></LaneChangeTarget></LaneChangeAction>"#
+        );
+        de::<openscenario_rs::types::actions::movement::LaneChangeAction>(&xml).target_lane_offset
+    }
+
+    assert_eq!(
+        parse_with_offset(r#" targetLaneOffset="""#),
+        None,
+        "an empty string must parse as absent, not an error"
+    );
+    assert_eq!(
+        parse_with_offset(r#" targetLaneOffset="${1.0 + 1.0}""#),
+        Some(Double::expression("1.0 + 1.0".to_string())),
+        "a braced value is always the expression production, never a parameter"
+    );
+    assert_eq!(
+        parse_with_offset(r#" targetLaneOffset="$offset""#),
+        Some(Double::parameter("offset".to_string())),
+        "a `$`-prefixed value is a parameter reference"
+    );
+    assert_eq!(
+        parse_with_offset(r#" targetLaneOffset="not-a-number""#),
+        None,
+        "an unparsable, non-parameter, non-expression string falls back to None"
+    );
 }
