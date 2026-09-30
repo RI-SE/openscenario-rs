@@ -12,8 +12,8 @@ use openscenario_rs::types::conditions::{
     AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition,
     CollisionConditionChoice, CollisionTarget, EndOfRoadCondition, EntityCondition,
     OffroadCondition, RelativeAngleCondition, RelativeClearanceCondition, RelativeLaneRange,
-    RelativeSpeedCondition, StandStillCondition, TimeHeadwayCondition, TimeToCollisionCondition,
-    TimeToCollisionTarget,
+    RelativeSpeedCondition, SpeedCondition, StandStillCondition, TimeHeadwayCondition,
+    TimeToCollisionCondition, TimeToCollisionTarget, TraveledDistanceCondition,
 };
 use openscenario_rs::types::enums::{
     AngleType, CoordinateSystem, DirectionalDimension, ObjectType, RelativeDistanceType,
@@ -84,6 +84,21 @@ fn motion_conditions_match_xsd_wire_form() {
     assert_wire(
         r#"<StandStillCondition duration="5.5"/>"#,
         &StandStillCondition::with_duration(5.5),
+    );
+    // SpeedCondition XSD:2055-2059
+    assert_wire(
+        r#"<SpeedCondition value="10" rule="greaterThan"/>"#,
+        &SpeedCondition::new(10.0, Rule::GreaterThan),
+    );
+    assert_wire(
+        r#"<SpeedCondition value="8" rule="lessThan" direction="longitudinal"/>"#,
+        &SpeedCondition::new(8.0, Rule::LessThan)
+            .with_direction(DirectionalDimension::Longitudinal),
+    );
+    // TraveledDistanceCondition XSD:2392-2394
+    assert_wire(
+        r#"<TraveledDistanceCondition value="120"/>"#,
+        &TraveledDistanceCondition::new(120.0),
     );
 }
 
@@ -370,6 +385,43 @@ fn by_entity_condition_constructors_match_xsd_wire_form() {
             true,
         ),
     );
+    // ByEntityCondition::new — the general constructor the per-condition helpers above build on.
+    assert_wire(
+        &by_entity_xml(r#"<StandStillCondition duration="6"/>"#),
+        &ByEntityCondition::new(
+            ego(),
+            EntityCondition::StandStill(StandStillCondition::new(6.0)),
+        ),
+    );
+    // `offroad` builds the XSD-compliant OffroadCondition (distinct from `off_road` above).
+    assert_wire(
+        &by_entity_xml(r#"<OffroadCondition duration="7"/>"#),
+        &ByEntityCondition::offroad(ego(), 7.0),
+    );
+    assert_wire(
+        &by_entity_xml(
+            r#"<AngleCondition angleType="heading" angle="0.2" angleTolerance="0.05"/>"#,
+        ),
+        &ByEntityCondition::angle(ego(), AngleType::Heading, 0.2, 0.05),
+    );
+    assert_wire(
+        &by_entity_xml(r#"<RelativeSpeedCondition entityRef="Lead" rule="lessThan" value="3"/>"#),
+        &ByEntityCondition::relative_speed(ego(), "Lead", Rule::LessThan, 3.0),
+    );
+    assert_wire(
+        &by_entity_xml(r#"<TraveledDistanceCondition value="50"/>"#),
+        &ByEntityCondition::traveled_distance(ego(), 50.0),
+    );
+    assert_wire(
+        &by_entity_xml(r#"<RelativeClearanceCondition oppositeLanes="true" freeSpace="false"/>"#),
+        &ByEntityCondition::relative_clearance(ego(), true, false),
+    );
+    assert_wire(
+        &by_entity_xml(
+            r#"<RelativeAngleCondition entityRef="Lead" angleType="heading" angle="0.4" angleTolerance="0.1"/>"#,
+        ),
+        &ByEntityCondition::relative_angle(ego(), "Lead", AngleType::Heading, 0.4, 0.1),
+    );
 }
 
 #[test]
@@ -380,6 +432,19 @@ fn entity_condition_rejects_two_conditions() {
         .to_string();
     assert!(
         error.contains("EntityCondition can only contain one condition type"),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
+fn entity_condition_rejects_empty_element() {
+    // XSD `EntityCondition` (:1135-1156) is an xsd:choice with no "none" branch.
+    let xml = r#"<EntityCondition/>"#;
+    let error = quick_xml::de::from_str::<EntityCondition>(xml)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("EntityCondition must contain exactly one condition type"),
         "unexpected error: {error}"
     );
 }
