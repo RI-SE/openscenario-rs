@@ -55,16 +55,18 @@ fn distribution_definition_emits_the_schema_element_name() {
     assert_eq!(def, round_tripped);
 }
 
+/// XSD group `DistributionDefinition` is a choice of exactly two elements, `Deterministic` and
+/// `Stochastic`. A third `UserDefined` branch was never in the schema, so an element of that name
+/// in the choice's position is rejected, naming it, rather than read as a third kind.
 #[test]
-fn distribution_definition_has_no_user_defined_branch() {
-    // XSD group `DistributionDefinition` is a choice of exactly two elements, `Deterministic`
-    // and `Stochastic`. A third `UserDefined` branch was never in the schema; this test
-    // exists so that reintroducing it (a compile-time change, not a runtime one) draws a
-    // reviewer's attention here. Matching exhaustively on both real branches, with no
-    // wildcard arm, fails to compile if a third variant reappears.
-    let def = DistributionDefinition::Deterministic(sample_deterministic());
-    match def {
-        DistributionDefinition::Deterministic(_) => {}
-        DistributionDefinition::Stochastic(_) => {}
-    }
+fn distribution_definition_rejects_an_element_outside_the_schema_choice() {
+    let err = quick_xml::de::from_str::<DistributionDefinition>(
+        r#"<UserDefinedDistribution type="custom">content</UserDefinedDistribution>"#,
+    )
+    .expect_err("the choice has no UserDefinedDistribution branch");
+    assert!(
+        err.to_string()
+            .contains("unknown variant `UserDefinedDistribution`"),
+        "{err}"
+    );
 }

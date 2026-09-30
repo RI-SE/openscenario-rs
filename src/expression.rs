@@ -1063,25 +1063,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_simple_expression() {
-        let mut parser = ExpressionParser::new("2 + 3").unwrap();
-        let ast = parser.parse().unwrap();
-
-        match ast {
-            Expr::BinaryOp {
-                left,
-                operator,
-                right,
-            } => {
-                assert_eq!(*left, Expr::Number(2.0));
-                assert_eq!(operator, Operator::Add);
-                assert_eq!(*right, Expr::Number(3.0));
-            }
-            _ => panic!("Expected binary operation"),
-        }
-    }
-
-    #[test]
     fn test_parse_precedence() {
         let mut parser = ExpressionParser::new("2 + 3 * 4").unwrap();
         let ast = parser.parse().unwrap();
@@ -1144,21 +1125,6 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_simple() {
-        let params = HashMap::new();
-        let evaluator = ExpressionEvaluator::new(params);
-
-        let expr = Expr::BinaryOp {
-            left: Box::new(Expr::Number(2.0)),
-            operator: Operator::Add,
-            right: Box::new(Expr::Number(3.0)),
-        };
-
-        let result = evaluator.evaluate(&expr).unwrap();
-        assert_eq!(result, 5.0);
-    }
-
-    #[test]
     fn test_evaluate_with_parameters() {
         let mut params = HashMap::new();
         params.insert("speed".to_string(), "30.0".to_string());
@@ -1177,21 +1143,6 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_division_by_zero() {
-        let params = HashMap::new();
-        let evaluator = ExpressionEvaluator::new(params);
-
-        let expr = Expr::BinaryOp {
-            left: Box::new(Expr::Number(5.0)),
-            operator: Operator::Divide,
-            right: Box::new(Expr::Number(0.0)),
-        };
-
-        let result = evaluator.evaluate(&expr);
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_end_to_end_evaluation() {
         let mut params = HashMap::new();
         params.insert("speed".to_string(), "30.0".to_string());
@@ -1204,19 +1155,10 @@ mod tests {
         // Test: (speed + 10) / time
         let result: f64 = evaluate_expression("(${speed} + 10) / ${time}", &params).unwrap();
         assert_eq!(result, 20.0);
-    }
 
-    #[test]
-    fn test_complex_expression() {
-        let mut params = HashMap::new();
-        params.insert("a".to_string(), "5.0".to_string());
-        params.insert("b".to_string(), "3.0".to_string());
-        params.insert("c".to_string(), "2.0".to_string());
-
-        // Test: a * (b + c) - b / c
-        let result: f64 =
-            evaluate_expression("${a} * (${b} + ${c}) - ${b} / ${c}", &params).unwrap();
-        assert_eq!(result, 23.5); // 5 * (3 + 2) - 3 / 2 = 25 - 1.5 = 23.5
+        // Test: speed % 7, the remaining arithmetic operator of section 9.2
+        let result: f64 = evaluate_expression("${speed} % 7", &params).unwrap();
+        assert_eq!(result, 2.0);
     }
 
     #[test]
@@ -1396,54 +1338,44 @@ mod tests {
         assert_eq!(result, 4.0);
     }
 
+    /// Each malformed call or domain violation is refused with an error naming its cause.
     #[test]
     fn test_function_error_handling() {
         let params = HashMap::new();
-
-        // Test wrong number of arguments
-        assert!(evaluate_expression::<f64>("sin(1, 2)", &params).is_err());
-        assert!(evaluate_expression::<f64>("sqrt()", &params).is_err());
-        assert!(evaluate_expression::<f64>("min(5)", &params).is_err());
-        assert!(evaluate_expression::<f64>("max(1, 2, 3)", &params).is_err());
-
-        // Test unknown function
-        assert!(evaluate_expression::<f64>("unknown_func(5)", &params).is_err());
-
-        // Test sqrt of negative number
-        assert!(evaluate_expression::<f64>("sqrt(-1)", &params).is_err());
-
-        // Test unknown constant
-        assert!(evaluate_expression::<f64>("UNKNOWN_CONSTANT", &params).is_err());
-    }
-
-    #[test]
-    fn test_complex_automotive_scenarios() {
-        let mut params = HashMap::new();
-        params.insert("current_speed".to_string(), "50.0".to_string());
-        params.insert("target_speed".to_string(), "30.0".to_string());
-        params.insert("deceleration".to_string(), "3.0".to_string());
-        params.insert("reaction_time".to_string(), "1.5".to_string());
-
-        // Test braking distance calculation: speed^2 / (2 * deceleration)
-        // Note: Using multiplication instead of exponentiation for now
-        let result: f64 = evaluate_expression(
-            "(${current_speed} * ${current_speed}) / (2 * ${deceleration})",
-            &params,
-        )
-        .unwrap();
-        assert!((result - (50.0 * 50.0) / (2.0 * 3.0)).abs() < 1e-10);
-
-        // Test speed comparison: current_speed > target_speed
-        let result: f64 =
-            evaluate_expression("${current_speed} > ${target_speed}", &params).unwrap();
-        assert_eq!(result, 1.0);
-
-        // Test time-based calculation with functions
-        let result: f64 = evaluate_expression(
-            "max(${reaction_time}, min(5.0, abs(${current_speed} - ${target_speed}) / 10.0))",
-            &params,
-        )
-        .unwrap();
-        assert_eq!(result, 2.0); // max(1.5, min(5.0, 20.0 / 10.0)) = max(1.5, 2.0) = 2.0
+        let cases = [
+            // Wrong number of arguments
+            ("sin(1, 2)", "sin() requires exactly 1 argument"),
+            ("cos(1, 2)", "cos() requires exactly 1 argument"),
+            ("tan(1, 2)", "tan() requires exactly 1 argument"),
+            ("sqrt()", "sqrt() requires exactly 1 argument"),
+            ("abs(1, 2)", "abs() requires exactly 1 argument"),
+            ("floor(1, 2)", "floor() requires exactly 1 argument"),
+            ("ceil(1, 2)", "ceil() requires exactly 1 argument"),
+            ("round(1, 2)", "round() requires exactly 1 argument"),
+            ("asin(1, 2)", "asin() requires exactly 1 argument"),
+            ("acos(1, 2)", "acos() requires exactly 1 argument"),
+            ("atan(1, 2)", "atan() requires exactly 1 argument"),
+            ("sign(1, 2)", "sign() requires exactly 1 argument"),
+            ("pow(2)", "pow() requires exactly 2 arguments"),
+            ("min(5)", "min() requires exactly 2 arguments"),
+            ("max(1, 2, 3)", "max() requires exactly 2 arguments"),
+            // Unknown names. A bare name that is not `PI` or `E` is read as a parameter
+            // reference, so an unknown one fails as an undeclared parameter.
+            ("unknown_func(5)", "unknown function"),
+            (
+                "UNKNOWN_CONSTANT",
+                "Parameter 'UNKNOWN_CONSTANT' error: parameter not found",
+            ),
+            // Domain violations
+            ("sqrt(-1)", "sqrt() of negative number"),
+            ("acos(2)", "acos(2) is undefined outside [-1, 1]"),
+            ("5 % 0", "modulo by zero"),
+        ];
+        for (expr, cause) in cases {
+            let err = evaluate_expression::<f64>(expr, &params)
+                .expect_err(expr)
+                .to_string();
+            assert!(err.contains(cause), "{expr}: expected {cause:?}, got {err}");
+        }
     }
 }

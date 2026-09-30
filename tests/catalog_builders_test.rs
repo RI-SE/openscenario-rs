@@ -4,25 +4,7 @@ mod catalog_builder_tests {
         CatalogLocationsBuilder, PedestrianCatalogReferenceBuilder, ScenarioBuilder,
         VehicleCatalogReferenceBuilder,
     };
-
-    #[test]
-    fn test_catalog_locations_builder() {
-        let locations = CatalogLocationsBuilder::new()
-            .with_vehicle_catalog("./catalogs/vehicles")
-            .with_pedestrian_catalog("./catalogs/pedestrians")
-            .with_controller_catalog("./catalogs/controllers")
-            .build();
-
-        assert!(locations.vehicle_catalog.is_some());
-        assert!(locations.pedestrian_catalog.is_some());
-        assert!(locations.controller_catalog.is_some());
-
-        let vehicle_catalog = locations.vehicle_catalog.unwrap();
-        assert_eq!(
-            vehicle_catalog.directory.path.to_string(),
-            "./catalogs/vehicles"
-        );
-    }
+    use openscenario_rs::types::basic::Directory;
 
     #[test]
     fn test_vehicle_catalog_reference_builder() {
@@ -58,6 +40,9 @@ mod catalog_builder_tests {
 
     #[test]
     fn all_eight_catalog_location_kinds_can_be_set() {
+        let empty = CatalogLocationsBuilder::new().build();
+        assert!(!empty.has_catalogs(), "nothing set must build no location");
+
         let locations = CatalogLocationsBuilder::new()
             .with_vehicle_catalog("./catalogs/vehicles")
             .with_pedestrian_catalog("./catalogs/pedestrians")
@@ -69,25 +54,52 @@ mod catalog_builder_tests {
             .with_route_catalog("./catalogs/routes")
             .build();
 
-        assert!(locations.vehicle_catalog.is_some());
-        assert!(locations.pedestrian_catalog.is_some());
-        assert!(locations.controller_catalog.is_some());
-        assert!(locations.misc_object_catalog.is_some());
-        assert!(locations.environment_catalog.is_some());
-        assert!(locations.maneuver_catalog.is_some());
-        assert!(locations.trajectory_catalog.is_some());
-        assert!(locations.route_catalog.is_some());
-
-        assert_eq!(
-            locations
-                .route_catalog
-                .unwrap()
-                .directory
+        assert_eq!(locations.catalog_count(), 8);
+        let path = |directory: Option<&Directory>| {
+            directory
+                .expect("location set")
                 .path
                 .as_literal()
-                .unwrap(),
-            "./catalogs/routes"
-        );
+                .expect("literal path")
+                .clone()
+        };
+        let set = [
+            (
+                path(locations.vehicle_catalog.as_ref().map(|l| &l.directory)),
+                "vehicles",
+            ),
+            (
+                path(locations.pedestrian_catalog.as_ref().map(|l| &l.directory)),
+                "pedestrians",
+            ),
+            (
+                path(locations.controller_catalog.as_ref().map(|l| &l.directory)),
+                "controllers",
+            ),
+            (
+                path(locations.misc_object_catalog.as_ref().map(|l| &l.directory)),
+                "misc",
+            ),
+            (
+                path(locations.environment_catalog.as_ref().map(|l| &l.directory)),
+                "environments",
+            ),
+            (
+                path(locations.maneuver_catalog.as_ref().map(|l| &l.directory)),
+                "maneuvers",
+            ),
+            (
+                path(locations.trajectory_catalog.as_ref().map(|l| &l.directory)),
+                "trajectories",
+            ),
+            (
+                path(locations.route_catalog.as_ref().map(|l| &l.directory)),
+                "routes",
+            ),
+        ];
+        for (actual, kind) in set {
+            assert_eq!(actual, format!("./catalogs/{kind}"), "{kind} location");
+        }
     }
 
     #[test]
@@ -115,37 +127,4 @@ mod catalog_builder_tests {
         assert!(catalog_locations.vehicle_catalog.is_some());
         assert!(catalog_locations.pedestrian_catalog.is_some());
     }
-
-    #[test]
-    fn test_catalog_pedestrian_with_all_fields() {
-        use openscenario_rs::types::basic::Value;
-        use openscenario_rs::types::catalogs::entities::CatalogPedestrian;
-
-        let catalog_pedestrian = CatalogPedestrian {
-            name: Value::literal("TestPedestrian".to_string()),
-            pedestrian_category: Value::Literal(
-                openscenario_rs::types::enums::PedestrianCategory::Pedestrian,
-            ),
-            mass: Value::Literal("75.0".to_string()),
-            role: Some(Value::Literal(openscenario_rs::types::enums::Role::Civil)),
-            model3d: Some("./models/ped.glb".to_string()),
-            bounding_box: openscenario_rs::types::geometry::BoundingBox::new(
-                openscenario_rs::types::geometry::Center::new(0.0, 0.0, 0.0),
-                openscenario_rs::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
-            ),
-            properties: None,
-            parameter_declarations: None,
-        };
-
-        assert_eq!(
-            catalog_pedestrian.name.as_literal().unwrap(),
-            "TestPedestrian"
-        );
-        assert_eq!(catalog_pedestrian.mass.as_literal().unwrap(), "75.0");
-        assert!(catalog_pedestrian.role.is_some());
-        assert!(catalog_pedestrian.model3d.is_some());
-    }
-
-    // Note: Integration tests with actual catalog resolution would require
-    // mock catalog files and are better suited for integration test suites
 }

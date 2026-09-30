@@ -377,19 +377,19 @@ mod tests {
     #[test]
     fn test_parameter_value_distribution_zero_branches_rejected() {
         let xml = r#"<ParameterValueDistribution><ScenarioFile filepath="test.xosc"/></ParameterValueDistribution>"#;
-        let result: std::result::Result<ParameterValueDistribution, _> =
-            quick_xml::de::from_str(xml);
-        assert!(result.is_err(), "empty choice must be rejected: {result:?}");
+        let err = quick_xml::de::from_str::<ParameterValueDistribution>(xml)
+            .expect_err("empty choice must be rejected");
+        assert!(err.to_string().contains("missing field `$value`"), "{err}");
     }
 
     #[test]
     fn test_parameter_value_distribution_two_branches_rejected() {
         let xml = r#"<ParameterValueDistribution><ScenarioFile filepath="test.xosc"/><Deterministic></Deterministic><Stochastic numberOfTestRuns="1"><StochasticDistribution parameterName="speed"><NormalDistribution expectedValue="0" variance="1"/></StochasticDistribution></Stochastic></ParameterValueDistribution>"#;
-        let result: std::result::Result<ParameterValueDistribution, _> =
-            quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<ParameterValueDistribution>(xml)
+            .expect_err("two branches on the choice must be rejected");
         assert!(
-            result.is_err(),
-            "two branches on the choice must be rejected: {result:?}"
+            err.to_string().contains("duplicate field `$value`"),
+            "{err}"
         );
     }
 
@@ -457,11 +457,6 @@ mod tests {
             .parameter_value_sets
             .is_empty());
         assert!(group.validate().is_ok());
-
-        let default_group = DeterministicMultiParameterDistributionTypeGroup::new(
-            sample_multi_parameter_distribution().distribution_type,
-        );
-        assert!(default_group.validate().is_ok());
     }
 
     #[test]
@@ -474,9 +469,5 @@ mod tests {
             .as_deterministic()
             .is_some());
         assert!(group.validate().is_ok());
-
-        let default_group =
-            ParameterValueDistributionDefinitionGroup::new(sample_parameter_value_distribution());
-        assert!(default_group.validate().is_ok());
     }
 }

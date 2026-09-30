@@ -61,15 +61,6 @@ fn a_property_parameter_resolves_through_the_resolving_entry_point() {
     );
 }
 
-#[test]
-fn the_same_property_stays_a_reference_through_parse_str() {
-    let document = parse_str(FIXTURE).expect("fixture parses");
-    assert_eq!(
-        ego_property_value(&document),
-        Value::Parameter("p".to_string())
-    );
-}
-
 // --- Section 9.1's shadowing example -------------------------------------------------------
 
 /// "If there are multiple parameters with the same name and overlapping scopes in the scenario,
@@ -82,8 +73,12 @@ fn a_maneuver_declaration_shadows_the_global_inside_the_maneuver_only() {
 }
 
 #[test]
-fn without_resolution_both_uses_stay_references() {
+fn without_resolution_every_use_stays_a_reference() {
     let document = parse_str(FIXTURE).expect("fixture parses");
+    assert_eq!(
+        ego_property_value(&document),
+        Value::Parameter("p".to_string())
+    );
     assert_eq!(target_speeds(&document), vec!["$ego_speed", "$ego_speed"]);
 }
 

@@ -10,44 +10,36 @@ mod parameter_builder_tests {
     use openscenario_rs::types::road::RoadNetwork;
     #[test]
     fn test_parameter_declarations_builder() {
-        let params = ParameterDeclarationsBuilder::new()
+        assert!(ParameterDeclarationsBuilder::new().is_empty());
+
+        let builder = ParameterDeclarationsBuilder::new()
             .add_string_parameter("vehicle_name", "ego")
             .add_double_parameter("initial_speed", 25.0)
-            .add_int_parameter("lane_id", 1)
+            .add_int_parameter("lane_id", -1)
             .add_boolean_parameter("enable_logging", true)
             .add_datetime_parameter("start_time", "2023-01-01T00:00:00")
             .add_unsigned_short_parameter("num_vehicles", 5)
-            .add_unsigned_int_parameter("scenario_id", 12345)
-            .build();
+            .add_unsigned_int_parameter("scenario_id", 12345);
+        assert_eq!(builder.len(), 7);
+        assert!(!builder.is_empty());
 
-        assert_eq!(params.parameter_declarations.len(), 7);
-
-        // Check string parameter
-        let vehicle_param = &params.parameter_declarations[0];
-        assert_eq!(vehicle_param.name.to_string(), "vehicle_name");
-        assert_eq!(
-            vehicle_param.parameter_type,
-            Value::Literal(ParameterType::String)
-        );
-        assert_eq!(vehicle_param.value.to_string(), "ego");
-
-        // Check double parameter
-        let speed_param = &params.parameter_declarations[1];
-        assert_eq!(speed_param.name.to_string(), "initial_speed");
-        assert_eq!(
-            speed_param.parameter_type,
-            Value::Literal(ParameterType::Double)
-        );
-        assert_eq!(speed_param.value.to_string(), "25");
-
-        // Check boolean parameter
-        let logging_param = &params.parameter_declarations[3];
-        assert_eq!(logging_param.name.to_string(), "enable_logging");
-        assert_eq!(
-            logging_param.parameter_type,
-            Value::Literal(ParameterType::Boolean)
-        );
-        assert_eq!(logging_param.value.to_string(), "true");
+        let declared: Vec<(String, Value<ParameterType>, String)> = builder
+            .build()
+            .parameter_declarations
+            .into_iter()
+            .map(|d| (d.name.to_string(), d.parameter_type, d.value.to_string()))
+            .collect();
+        let expected = [
+            ("vehicle_name", ParameterType::String, "ego"),
+            ("initial_speed", ParameterType::Double, "25"),
+            ("lane_id", ParameterType::Int, "-1"),
+            ("enable_logging", ParameterType::Boolean, "true"),
+            ("start_time", ParameterType::DateTime, "2023-01-01T00:00:00"),
+            ("num_vehicles", ParameterType::UnsignedShort, "5"),
+            ("scenario_id", ParameterType::UnsignedInt, "12345"),
+        ]
+        .map(|(name, ty, value)| (name.to_string(), Value::Literal(ty), value.to_string()));
+        assert_eq!(declared, expected);
     }
 
     #[test]
@@ -147,15 +139,5 @@ mod parameter_builder_tests {
             openscenario_rs::types::basic::Value::Parameter(name) => assert_eq!(name, "speed"),
             _ => panic!("Expected parameter reference"),
         }
-    }
-
-    #[test]
-    fn test_empty_parameter_declarations_builder() {
-        let params = ParameterDeclarationsBuilder::new().build();
-        assert_eq!(params.parameter_declarations.len(), 0);
-
-        let builder = ParameterDeclarationsBuilder::new();
-        assert_eq!(builder.len(), 0);
-        assert!(builder.is_empty());
     }
 }

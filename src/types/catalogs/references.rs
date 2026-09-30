@@ -134,6 +134,7 @@ mod tests {
             "VehicleCatalog"
         );
         assert_eq!(reference.entry_name.as_literal().unwrap(), "SportsCar");
+        assert!(reference.parameter_assignments.is_none());
     }
 
     #[test]
@@ -161,77 +162,15 @@ mod tests {
     }
 
     #[test]
-    fn test_parameter_assignment() {
-        let assignment = ParameterAssignment::new("TestParam".to_string(), "TestValue".to_string());
-
-        let params = HashMap::new();
-        assert_eq!(
-            assignment.parameter_ref.resolve(&params).unwrap(),
-            "TestParam"
-        );
-        assert_eq!(assignment.value.resolve(&params).unwrap(), "TestValue");
-    }
-
-    #[test]
-    fn test_parameterized_reference() {
-        let reference = VehicleCatalogReference {
-            catalog_name: Value::Parameter("CatalogNameParam".to_string()),
-            entry_name: Value::Literal("DefaultVehicle".to_string()),
-            parameter_assignments: None,
-            phantom: PhantomData,
-        };
-
-        let mut context_params = HashMap::new();
-        context_params.insert("CatalogNameParam".to_string(), "DynamicCatalog".to_string());
-
-        assert_eq!(
-            reference.catalog_name.resolve(&context_params).unwrap(),
-            "DynamicCatalog"
-        );
-        assert_eq!(
-            reference.entry_name.resolve(&context_params).unwrap(),
-            "DefaultVehicle"
-        );
-    }
-
-    #[test]
-    fn test_controller_catalog_reference() {
-        let reference = ControllerCatalogReference::new(
-            "ControllerCatalog".to_string(),
-            "AIDriver".to_string(),
-        );
-
-        assert_eq!(
-            reference.catalog_name.as_literal().unwrap(),
-            "ControllerCatalog"
-        );
-        assert_eq!(reference.entry_name.as_literal().unwrap(), "AIDriver");
-    }
-
-    #[test]
-    fn test_pedestrian_catalog_reference() {
-        let reference = PedestrianCatalogReference::new(
-            "PedestrianCatalog".to_string(),
-            "WalkingPerson".to_string(),
-        );
-
-        assert_eq!(
-            reference.catalog_name.as_literal().unwrap(),
-            "PedestrianCatalog"
-        );
-        assert_eq!(reference.entry_name.as_literal().unwrap(), "WalkingPerson");
-    }
-
-    #[test]
     fn test_catalog_reference_defaults() {
-        let vehicle_ref = VehicleCatalogReference::default();
-        let controller_ref = ControllerCatalogReference::default();
-        let pedestrian_ref = PedestrianCatalogReference::default();
-
-        // All should have valid default values
-        assert!(vehicle_ref.catalog_name.as_literal().is_some());
-        assert!(controller_ref.catalog_name.as_literal().is_some());
-        assert!(pedestrian_ref.catalog_name.as_literal().is_some());
+        // `CatalogReference<T>` is generic, so one entry type stands for all of them.
+        let reference = VehicleCatalogReference::default();
+        assert_eq!(
+            reference.catalog_name.as_literal().unwrap(),
+            "DefaultCatalog"
+        );
+        assert_eq!(reference.entry_name.as_literal().unwrap(), "DefaultEntry");
+        assert!(reference.parameter_assignments.is_none());
     }
 
     #[test]

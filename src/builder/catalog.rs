@@ -380,34 +380,3 @@ impl Default for CatalogEntityBuilder {
         Self::new()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_catalog_locations_builder() {
-        let locations = CatalogLocationsBuilder::new()
-            .with_vehicle_catalog("./catalogs/vehicles")
-            .with_pedestrian_catalog("./catalogs/pedestrians")
-            .build();
-
-        assert!(locations.vehicle_catalog.is_some());
-        assert!(locations.pedestrian_catalog.is_some());
-        assert!(locations.controller_catalog.is_none());
-    }
-
-    #[test]
-    fn test_vehicle_catalog_reference_builder() {
-        let reference = VehicleCatalogReferenceBuilder::new()
-            .from_catalog("vehicle_catalog")
-            .entry("sedan")
-            .with_parameter("color", "red")
-            .build()
-            .unwrap();
-
-        assert_eq!(reference.catalog_name.to_string(), "vehicle_catalog");
-        assert_eq!(reference.entry_name.to_string(), "sedan");
-        assert!(reference.parameter_assignments.is_some());
-    }
-}

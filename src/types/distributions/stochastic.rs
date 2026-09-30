@@ -299,33 +299,34 @@ impl DistributionSampler for UniformDistribution {
 mod tests {
     use super::*;
 
+    /// `Stochastic::validate` visits every distribution it holds, so an invalid one after
+    /// valid ones of other kinds is still reported.
     #[test]
-    fn test_probability_distribution_set_validation() {
-        let valid_set = ProbabilityDistributionSet {
-            elements: MinVec::new(vec![
-                ProbabilityDistributionSetElement {
-                    value: OSString::Literal("A".to_string()),
-                    weight: OSString::Literal("0.6".to_string()),
-                },
-                ProbabilityDistributionSetElement {
-                    value: OSString::Literal("B".to_string()),
-                    weight: OSString::Literal("0.4".to_string()),
-                },
-            ])
-            .unwrap(),
-        };
-        assert!(valid_set.validate().is_ok());
-
-        assert!(MinVec::<ProbabilityDistributionSetElement, 1>::new(vec![]).is_err());
-    }
-
-    #[test]
-    fn test_range_validation() {
-        let valid_range = Range {
-            lower_limit: Value::Literal("0.0".to_string()),
-            upper_limit: Value::Literal("10.0".to_string()),
-        };
-        assert!(valid_range.validate().is_ok());
+    fn stochastic_validation_reports_an_invalid_distribution_it_holds() {
+        let xml = r#"<Stochastic numberOfTestRuns="10">
+    <StochasticDistribution parameterName="speed">
+        <UniformDistribution><Range lowerLimit="0" upperLimit="1"/></UniformDistribution>
+    </StochasticDistribution>
+    <StochasticDistribution parameterName="lane">
+        <ProbabilityDistributionSet><Element value="1" weight="1"/></ProbabilityDistributionSet>
+    </StochasticDistribution>
+    <StochasticDistribution parameterName="gap">
+        <Histogram><Bin weight="1"><Range lowerLimit="0" upperLimit="5"/></Bin></Histogram>
+    </StochasticDistribution>
+    <StochasticDistribution parameterName="custom">
+        <UserDefinedDistribution type=" ">content</UserDefinedDistribution>
+    </StochasticDistribution>
+</Stochastic>"#;
+        let stochastic: Stochastic = quick_xml::de::from_str(xml).expect("fixture parses");
+        assert_eq!(stochastic.distributions.len(), 4);
+        let err = stochastic
+            .validate()
+            .expect_err("the user-defined distribution has a blank type");
+        assert!(
+            err.to_string()
+                .contains("UserDefinedDistribution type cannot be empty"),
+            "{err}"
+        );
     }
 
     #[test]
@@ -340,23 +341,6 @@ mod tests {
         let sample = uniform.sample().unwrap();
         assert!(sample.contains("uniform"));
         assert!(!uniform.is_deterministic());
-    }
-
-    #[test]
-    fn test_histogram_validation() {
-        let valid_histogram = Histogram {
-            bins: MinVec::new(vec![HistogramBin {
-                range: Range {
-                    lower_limit: Value::Literal("0.0".to_string()),
-                    upper_limit: Value::Literal("5.0".to_string()),
-                },
-                weight: Value::Literal("0.3".to_string()),
-            }])
-            .unwrap(),
-        };
-        assert!(valid_histogram.validate().is_ok());
-
-        assert!(MinVec::<HistogramBin, 1>::new(vec![]).is_err());
     }
 
     #[test]

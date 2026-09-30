@@ -480,6 +480,24 @@ mod tests {
         assert_eq!(environment.name.as_literal().unwrap(), "TestEnvironment");
         assert!(environment.parameter_declarations.is_none());
         assert!(environment.time_of_day.is_none());
+
+        let declarations = ParameterDeclarations {
+            parameter_declarations: vec![ParameterDeclaration {
+                name: OSString::literal("visibility".to_string()),
+                parameter_type: Value::Literal(ParameterType::Double),
+                value: OSString::literal("10000.0".to_string()),
+                constraint_groups: Vec::new(),
+            }],
+        };
+        let parameterized = CatalogEnvironment::with_parameters(
+            "ParameterizedEnvironment".to_string(),
+            declarations.clone(),
+        );
+        assert_eq!(
+            parameterized.name.as_literal().unwrap(),
+            "ParameterizedEnvironment"
+        );
+        assert_eq!(parameterized.parameter_declarations, Some(declarations));
     }
 
     #[test]
@@ -540,62 +558,6 @@ mod tests {
     }
 
     #[test]
-    fn test_environment_with_parameters() {
-        let param_decl = ParameterDeclarations {
-            parameter_declarations: vec![ParameterDeclaration {
-                name: OSString::literal("visibility".to_string()),
-                parameter_type: Value::Literal(ParameterType::Double),
-                value: OSString::literal("10000.0".to_string()),
-                constraint_groups: Vec::new(),
-            }],
-        };
-
-        let mut environment =
-            CatalogEnvironment::with_parameters("ParameterizedEnvironment".to_string(), param_decl);
-
-        // Set fog with parameterized visibility
-        let fog = CatalogFog {
-            visual_range: Value::Parameter("visibility".to_string()),
-            bounding_box: None,
-        };
-        let mut weather = CatalogWeather::default();
-        weather.fog = Some(fog);
-        environment.set_weather(weather);
-
-        assert_eq!(
-            environment.name.as_literal().unwrap(),
-            "ParameterizedEnvironment"
-        );
-        assert!(environment.parameter_declarations.is_some());
-        assert!(matches!(
-            environment
-                .weather
-                .as_ref()
-                .unwrap()
-                .fog
-                .as_ref()
-                .unwrap()
-                .visual_range,
-            Value::Parameter(_)
-        ));
-    }
-
-    #[test]
-    fn test_road_condition_parameters() {
-        let road_condition = CatalogRoadCondition {
-            friction_scale_factor: Value::Parameter("frictionFactor".to_string()),
-            wetness: Some(Value::Literal(Wetness::Moist)),
-            properties: None,
-        };
-
-        assert!(matches!(
-            road_condition.friction_scale_factor,
-            Value::Parameter(_)
-        ));
-        assert_eq!(road_condition.wetness, Some(Value::Literal(Wetness::Moist)));
-    }
-
-    #[test]
     fn test_resolve_environment() {
         let mut catalog_env = CatalogEnvironment::new("TestEnvironment".to_string());
 
@@ -604,10 +566,15 @@ mod tests {
         catalog_env.set_time_of_day(CatalogTimeOfDay::new(Value::Literal(
             "2021-06-21T12:00:00".to_string(),
         )));
+        catalog_env.set_road_condition(CatalogRoadCondition {
+            friction_scale_factor: Value::Parameter("frictionFactor".to_string()),
+            wetness: Some(Value::Literal(Wetness::Moist)),
+            properties: None,
+        });
 
-        let scenario_env = catalog_env
-            .resolve_environment(&std::collections::HashMap::new())
-            .unwrap();
+        let parameters =
+            std::collections::HashMap::from([("frictionFactor".to_string(), "0.7".to_string())]);
+        let scenario_env = catalog_env.resolve_environment(&parameters).unwrap();
 
         assert_eq!(scenario_env.name.as_literal().unwrap(), "TestEnvironment");
         assert_eq!(
@@ -638,20 +605,9 @@ mod tests {
                 .unwrap(),
             &1.0
         );
-    }
-
-    #[test]
-    fn test_defaults() {
-        let environment = CatalogEnvironment::new("DefaultCatalogEnvironment".to_string());
-        let weather = CatalogWeather::default();
-
-        assert_eq!(
-            environment.name.as_literal().unwrap(),
-            "DefaultCatalogEnvironment"
-        );
-        assert!(environment.time_of_day.is_none());
-        assert!(weather.cloud_state.is_none());
-        assert!(weather.sun.is_none());
+        let road_condition = scenario_env.road_condition.as_ref().unwrap();
+        assert_eq!(road_condition.friction_scale_factor, Double::literal(0.7));
+        assert_eq!(road_condition.wetness, Some(Value::Literal(Wetness::Moist)));
     }
 
     /// Regression: `fractionalCloudCover` is an XSD attribute on `Weather`

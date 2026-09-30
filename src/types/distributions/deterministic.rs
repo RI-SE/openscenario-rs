@@ -402,26 +402,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_distribution_set_validation() {
-        let valid_set = DistributionSet {
-            elements: MinVec::new(vec![
-                DistributionSetElement {
-                    value: Value::Literal("10.0".to_string()),
-                },
-                DistributionSetElement {
-                    value: Value::Literal("20.0".to_string()),
-                },
-            ])
-            .unwrap(),
-        };
-        assert!(valid_set.validate().is_ok());
-
-        // The empty set is no longer a value that can be built, so the bound is
-        // asserted where it now lives rather than through `validate()`.
-        assert!(MinVec::<DistributionSetElement, 1>::new(vec![]).is_err());
-    }
-
-    #[test]
     fn test_distribution_set_sampling() {
         let dist_set = DistributionSet {
             elements: MinVec::new(vec![
@@ -435,7 +415,7 @@ mod tests {
             .unwrap(),
         };
 
-        assert!(dist_set.sample().is_ok());
+        assert_eq!(dist_set.sample().unwrap(), "10.0");
         let values = dist_set.enumerate().unwrap();
         assert_eq!(values.len(), 2);
         assert_eq!(values[0], "10.0");
@@ -512,19 +492,19 @@ mod tests {
     #[test]
     fn test_deterministic_single_parameter_distribution_zero_branches_rejected() {
         let xml = r#"<DeterministicSingleParameterDistribution parameterName="speed"></DeterministicSingleParameterDistribution>"#;
-        let result: std::result::Result<DeterministicSingleParameterDistribution, _> =
-            quick_xml::de::from_str(xml);
-        assert!(result.is_err(), "empty choice must be rejected: {result:?}");
+        let err = quick_xml::de::from_str::<DeterministicSingleParameterDistribution>(xml)
+            .expect_err("empty choice must be rejected");
+        assert!(err.to_string().contains("missing field `$value`"), "{err}");
     }
 
     #[test]
     fn test_deterministic_single_parameter_distribution_two_branches_rejected() {
         let xml = r#"<DeterministicSingleParameterDistribution parameterName="speed"><DistributionSet><Element value="1.0"/></DistributionSet><DistributionRange stepWidth="1.0"><Range lowerLimit="0.0" upperLimit="1.0"/></DistributionRange></DeterministicSingleParameterDistribution>"#;
-        let result: std::result::Result<DeterministicSingleParameterDistribution, _> =
-            quick_xml::de::from_str(xml);
+        let err = quick_xml::de::from_str::<DeterministicSingleParameterDistribution>(xml)
+            .expect_err("two branches on the choice must be rejected");
         assert!(
-            result.is_err(),
-            "two branches on the choice must be rejected: {result:?}"
+            err.to_string().contains("duplicate field `$value`"),
+            "{err}"
         );
     }
 
@@ -535,6 +515,7 @@ mod tests {
         let xml = r#"<Deterministic></Deterministic>"#;
         let det: Deterministic = quick_xml::de::from_str(xml).expect("deserialize");
         assert!(det.is_empty());
+        assert_eq!(det.total_count(), 0);
         let serialized = quick_xml::se::to_string(&det).expect("serialize");
         assert_eq!(serialized, "<Deterministic/>");
     }

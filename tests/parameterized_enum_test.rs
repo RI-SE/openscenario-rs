@@ -188,9 +188,17 @@ fn a_parameter_that_resolves_to_a_non_variant_errors() {
     let v = ego_vehicle(&doc);
     let mut params = HashMap::new();
     params.insert("cat".to_string(), "spaceship".to_string());
-    v.vehicle_category
+    let msg = v
+        .vehicle_category
         .resolve(&params)
-        .expect_err("`spaceship` is not a VehicleCategory, even via a parameter");
+        .expect_err("`spaceship` is not a VehicleCategory, even via a parameter")
+        .to_string();
+    // The parameter was found; its value is what fails, so the error must name that value
+    // rather than report a missing parameter.
+    assert!(
+        msg.contains("failed to parse 'spaceship'"),
+        "error should name the value that is not a variant: {msg}"
+    );
 }
 
 #[test]

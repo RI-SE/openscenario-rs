@@ -410,11 +410,9 @@ mod tests {
     #[test]
     fn test_catalog_controller_rejects_invalid_controller_type() {
         let xml = r#"<Controller name="BadController" controllerType="notARealType"/>"#;
-        let result: std::result::Result<CatalogController, _> = quick_xml::de::from_str(xml);
-        assert!(
-            result.is_err(),
-            "invalid controllerType value should be rejected"
-        );
+        let err = quick_xml::de::from_str::<CatalogController>(xml)
+            .expect_err("invalid controllerType value should be rejected");
+        assert!(err.to_string().contains("notARealType"), "{err}");
     }
 
     #[test]
@@ -447,24 +445,22 @@ mod tests {
         <Dimensions width="0.5" length="0.5" height="1.8"/>
     </BoundingBox>
 </Pedestrian>"#;
-        let result: std::result::Result<CatalogPedestrian, _> = quick_xml::de::from_str(xml);
-        assert!(
-            result.is_err(),
-            "invalid pedestrianCategory value should be rejected"
-        );
+        let err = quick_xml::de::from_str::<CatalogPedestrian>(xml)
+            .expect_err("invalid pedestrianCategory value should be rejected");
+        assert!(err.to_string().contains("notARealCategory"), "{err}");
     }
 
     /// The XSD requires a Maneuver to carry at least one Event (`Maneuver` :1453,
     /// `Event` at the default `minOccurs="1"`).
     ///
-    /// This used to be checked by a hand-written guard in the typed catalog conversion, tested
-    /// by building an event-less `CatalogManeuver` and asserting resolution failed. That
-    /// value can no longer be built at all, so there is nothing left for the guard to
-    /// report and nothing for a resolution test to construct. The bound is asserted here
-    /// where it now lives.
+    /// This used to be checked by a hand-written guard in the typed catalog conversion. The
+    /// `events` field is now a `MinVec<Event, 1>`, so an event-less catalog maneuver is
+    /// refused where it enters the crate: at parse time.
     #[test]
-    fn a_catalog_maneuver_cannot_be_built_without_events() {
-        assert!(MinVec::<crate::types::scenario::story::Event, 1>::new(Vec::new()).is_err());
+    fn a_catalog_maneuver_without_events_is_refused_at_parse() {
+        let err = quick_xml::de::from_str::<CatalogManeuver>(r#"<Maneuver name="empty"/>"#)
+            .expect_err("a Maneuver needs at least one Event");
+        assert!(err.to_string().contains("Event"), "{err}");
     }
 
     /// Regression: `mass`, `miscObjectCategory` and `<Properties>` are part of

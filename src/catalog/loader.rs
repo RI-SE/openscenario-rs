@@ -374,18 +374,6 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_catalog_loader_creation() {
-        let loader = CatalogLoader::new();
-        assert!(loader.base_path.is_none());
-
-        let loader_with_path = CatalogLoader::with_base_path("/tmp");
-        assert_eq!(
-            loader_with_path.base_path.as_ref().unwrap(),
-            Path::new("/tmp")
-        );
-    }
-
-    #[test]
     fn test_discover_catalog_files() -> Result<()> {
         // Create a temporary directory with some test files
         let temp_dir = TempDir::new().unwrap();
@@ -400,19 +388,17 @@ mod tests {
         let loader = CatalogLoader::new();
 
         let files = loader.discover_catalog_files(&directory)?;
-        assert_eq!(files.len(), 2);
+        let names: Vec<_> = files
+            .iter()
+            .map(|f| f.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        // Only `.xosc` files, sorted.
+        assert_eq!(names, ["catalog1.xosc", "catalog2.xosc"]);
 
-        // Files should be sorted
-        assert!(files[0]
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .starts_with("catalog"));
-        assert!(files[1]
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .starts_with("catalog"));
+        // A relative directory is taken from the loader's base path.
+        let rooted = CatalogLoader::with_base_path(dir_path.parent().unwrap());
+        let relative = Directory::new(dir_path.file_name().unwrap().to_string_lossy().into_owned());
+        assert_eq!(rooted.discover_catalog_files(&relative)?, files);
 
         Ok(())
     }
@@ -647,9 +633,10 @@ mod tests {
         let directory = Directory::new(dir_path.to_string_lossy().to_string());
         let loader = CatalogLoader::new();
 
-        assert!(loader
+        let err = loader
             .load_controller_catalogs_from_directory(&directory)
-            .is_err());
+            .expect_err("a malformed catalog file is an error");
+        assert!(err.to_string().contains("broken.xosc"), "{err}");
     }
 
     /// Regression: catalog files used to be modeled as a standalone

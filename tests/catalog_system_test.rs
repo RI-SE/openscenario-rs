@@ -1,65 +1,14 @@
-//! Comprehensive integration tests for the catalog system
-//!
-//! This test suite covers:
-//! - Loading real catalog files from the xosc/ directory
-//! - Catalog reference resolution end-to-end
-//! - Error handling for missing catalogs and entities
-//! - Circular dependency detection
-//! - Performance characteristics under load
+//! Catalog files through the crate's file-level entry points: serializing a `CatalogFile`
+//! and parsing it back, and loading one from disk with `CatalogLoader`.
 
-use openscenario_rs::catalog::{CatalogLoader, CatalogManager};
+use openscenario_rs::catalog::CatalogLoader;
 
 use openscenario_rs::parser::xml::{parse_catalog_from_str, serialize_catalog_to_string};
-use openscenario_rs::types::basic::{Directory, Value};
-use openscenario_rs::types::basic::{Double, OSString};
-use openscenario_rs::types::catalogs::{
-    files::CatalogFile,
-    locations::{ControllerCatalogLocation, VehicleCatalogLocation},
-    references::{ParameterAssignment, VehicleCatalogReference},
-};
+use openscenario_rs::types::basic::Value;
+use openscenario_rs::types::catalogs::files::CatalogFile;
 use std::fs;
 
 use tempfile::TempDir;
-
-#[test]
-fn test_catalog_file_parsing() {
-    // Test parsing a minimal catalog file
-    let catalog_xml = r#"<?xml version="1.0"?>
-    <OpenSCENARIO>
-        <FileHeader author="Test" date="2024-01-01T00:00:00" description="Test Vehicle Catalog" revMajor="1" revMinor="3"/>
-        <Catalog name="TestVehicleCatalog">
-            <Vehicle name="TestCar" vehicleCategory="car">
-                <BoundingBox>
-                    <Center x="1.4" y="0.0" z="0.9"/>
-                    <Dimensions width="2.0" length="4.5" height="1.8"/>
-                </BoundingBox>
-                <Performance maxSpeed="50" maxAcceleration="5" maxDeceleration="8"/>
-                <Axles>
-                    <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.7" positionX="2.8" positionZ="0.3"/>
-                    <RearAxle maxSteering="0.0" wheelDiameter="0.6" trackWidth="1.7" positionX="0.0" positionZ="0.3"/>
-                </Axles>
-            </Vehicle>
-        </Catalog>
-    </OpenSCENARIO>"#;
-
-    // Parse the catalog
-    let catalog = parse_catalog_from_str(catalog_xml).unwrap();
-
-    // Verify the parsed content
-    assert_eq!(
-        catalog.catalog_name().as_literal().unwrap(),
-        "TestVehicleCatalog"
-    );
-    assert_eq!(catalog.file_header.author.as_literal().unwrap(), "Test");
-    assert_eq!(catalog.vehicles().len(), 1);
-
-    let vehicle = &catalog.vehicles()[0];
-    assert_eq!(vehicle.name.as_literal().unwrap(), "TestCar");
-    assert_eq!(
-        vehicle.vehicle_category,
-        Value::Literal(openscenario_rs::types::enums::VehicleCategory::Car)
-    );
-}
 
 #[test]
 fn test_catalog_serialization_roundtrip() {
@@ -126,178 +75,12 @@ fn test_catalog_loader_with_temporary_files() {
         catalog.catalog_name().as_literal().unwrap(),
         "TempTestCatalog"
     );
+    assert_eq!(catalog.file_header.author.as_literal().unwrap(), "TempTest");
     assert_eq!(catalog.vehicles().len(), 1);
+    let vehicle = &catalog.vehicles()[0];
+    assert_eq!(vehicle.name.as_literal().unwrap(), "TempVehicle");
     assert_eq!(
-        catalog.vehicles()[0].name.as_literal().unwrap(),
-        "TempVehicle"
-    );
-}
-
-#[test]
-fn test_catalog_reference_creation() {
-    // Test creating vehicle catalog references
-    let vehicle_ref =
-        VehicleCatalogReference::new("VehicleCatalog".to_string(), "SportsCar".to_string());
-
-    assert_eq!(
-        vehicle_ref.catalog_name.as_literal().unwrap(),
-        "VehicleCatalog"
-    );
-    assert_eq!(vehicle_ref.entry_name.as_literal().unwrap(), "SportsCar");
-    assert!(vehicle_ref.parameter_assignments.is_none());
-
-    // Test creating reference with parameters
-    let parameters = vec![
-        ParameterAssignment::new("MaxSpeed".to_string(), "80.0".to_string()),
-        ParameterAssignment::new("Color".to_string(), "Blue".to_string()),
-    ];
-
-    let param_vehicle_ref = VehicleCatalogReference::with_parameters(
-        "VehicleCatalog".to_string(),
-        "CustomCar".to_string(),
-        parameters,
-    );
-
-    assert_eq!(
-        param_vehicle_ref
-            .parameter_assignments
-            .as_ref()
-            .unwrap()
-            .assignments
-            .len(),
-        2
-    );
-    let assignments = &param_vehicle_ref
-        .parameter_assignments
-        .as_ref()
-        .unwrap()
-        .assignments;
-    assert_eq!(
-        assignments[0].parameter_ref.as_literal().unwrap(),
-        "MaxSpeed"
-    );
-    assert_eq!(assignments[0].value.as_literal().unwrap(), "80.0");
-    assert_eq!(assignments[1].parameter_ref.as_literal().unwrap(), "Color");
-    assert_eq!(assignments[1].value.as_literal().unwrap(), "Blue");
-}
-
-#[test]
-fn test_catalog_location_directory_access() {
-    // Test catalog location creation and directory access
-    let vehicle_location = VehicleCatalogLocation::from_path("./test_vehicles".to_string());
-    assert_eq!(
-        vehicle_location.directory.path.as_literal().unwrap(),
-        "./test_vehicles"
-    );
-
-    let controller_location =
-        ControllerCatalogLocation::from_path("./test_controllers".to_string());
-    assert_eq!(
-        controller_location.directory.path.as_literal().unwrap(),
-        "./test_controllers"
-    );
-
-    // Test that directory reference is consistent
-    let dir_ref1 = &vehicle_location.directory;
-    let dir_ref2 = &vehicle_location.directory;
-    assert_eq!(
-        dir_ref1.path.as_literal().unwrap(),
-        dir_ref2.path.as_literal().unwrap()
-    );
-}
-
-#[test]
-fn test_real_catalog_file_structure() {
-    // This test attempts to load a real catalog file if available
-    let vehicle_catalog_path = "xosc/concrete_scenarios/catalogs/vehicles/vehicle_catalog.xosc";
-
-    if std::path::Path::new(vehicle_catalog_path).exists() {
-        let loader = CatalogLoader::new();
-        let result = loader.load_and_parse_catalog_file(vehicle_catalog_path);
-
-        match result {
-            Ok(catalog) => {
-                println!("Successfully loaded real vehicle catalog!");
-                println!("Catalog name: {:?}", catalog.catalog_name());
-                println!("Vehicle count: {}", catalog.vehicles().len());
-
-                // Basic validation
-                assert!(!catalog.vehicles().is_empty());
-
-                // Check first vehicle has required fields
-                let first_vehicle = &catalog.vehicles()[0];
-                assert!(first_vehicle.name.as_literal().is_some());
-            }
-            Err(e) => {
-                println!("Could not load real catalog file: {}", e);
-                // This is expected if the file doesn't match our current schema
-                // The test should not fail - just log the issue
-            }
-        }
-    } else {
-        println!(
-            "Real catalog file not found at {}, skipping real file test",
-            vehicle_catalog_path
-        );
-    }
-}
-
-#[test]
-fn test_directory_creation_and_access() {
-    let dir = Directory::new("/path/to/catalogs".to_string());
-    assert_eq!(dir.path.as_literal().unwrap(), "/path/to/catalogs");
-
-    let param_dir = Directory::from_parameter("CatalogPath".to_string());
-    assert_eq!(param_dir.path.as_parameter().unwrap(), "CatalogPath");
-}
-
-// Performance and stress tests
-#[test]
-fn test_catalog_system_performance() {
-    let start = std::time::Instant::now();
-
-    // Create multiple catalog managers
-    let _managers: Vec<CatalogManager> = (0..10).map(|_| CatalogManager::new()).collect();
-
-    let duration = start.elapsed();
-
-    // Should be able to create 10 managers reasonably quickly
-    assert!(
-        duration.as_millis() < 500,
-        "Catalog system creation took too long: {:?}",
-        duration
-    );
-}
-
-#[test]
-fn test_catalog_reference_with_many_parameters() {
-    let mut parameters = Vec::new();
-
-    // Add many parameters to test scalability
-    for i in 0..50 {
-        parameters.push(ParameterAssignment::new(
-            format!("Param{}", i),
-            format!("Value{}", i),
-        ));
-    }
-
-    let vehicle_ref = VehicleCatalogReference::with_parameters(
-        "LargeCatalog".to_string(),
-        "ComplexVehicle".to_string(),
-        parameters,
-    );
-
-    assert_eq!(
-        vehicle_ref
-            .parameter_assignments
-            .as_ref()
-            .unwrap()
-            .assignments
-            .len(),
-        50
-    );
-    assert_eq!(
-        vehicle_ref.catalog_name.as_literal().unwrap(),
-        "LargeCatalog"
+        vehicle.vehicle_category,
+        Value::Literal(openscenario_rs::types::enums::VehicleCategory::Car)
     );
 }

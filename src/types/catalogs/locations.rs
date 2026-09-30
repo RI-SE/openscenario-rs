@@ -270,28 +270,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_vehicle_catalog_location() {
-        let location = VehicleCatalogLocation::from_path("/catalogs/vehicles".to_string());
-        assert_eq!(
-            location.directory.path.as_literal().unwrap(),
-            "/catalogs/vehicles"
-        );
-
-        let directory = Directory::new("./vehicles".to_string());
-        let location2 = VehicleCatalogLocation::new(directory.clone());
-        assert_eq!(&location2.directory, &directory);
-    }
-
-    #[test]
-    fn test_controller_catalog_location() {
-        let location = ControllerCatalogLocation::from_path("/catalogs/controllers".to_string());
-        assert_eq!(
-            location.directory.path.as_literal().unwrap(),
-            "/catalogs/controllers"
-        );
-    }
-
-    #[test]
     fn test_catalog_locations_container() {
         let mut locations = CatalogLocations::new();
         assert!(!locations.has_catalogs());
@@ -305,6 +283,16 @@ mod tests {
 
         assert!(locations.has_catalogs());
         assert_eq!(locations.catalog_count(), 2);
+
+        locations.pedestrian_catalog = Some(PedestrianCatalogLocation::from_path("/p".to_string()));
+        locations.misc_object_catalog =
+            Some(MiscObjectCatalogLocation::from_path("/m".to_string()));
+        locations.environment_catalog =
+            Some(EnvironmentCatalogLocation::from_path("/e".to_string()));
+        locations.maneuver_catalog = Some(ManeuverCatalogLocation::from_path("/ma".to_string()));
+        locations.trajectory_catalog = Some(TrajectoryCatalogLocation::from_path("/t".to_string()));
+        locations.route_catalog = Some(RouteCatalogLocation::from_path("/r".to_string()));
+        assert_eq!(locations.catalog_count(), 8);
     }
 
     #[test]
@@ -343,5 +331,11 @@ mod tests {
             "/trajectories"
         );
         assert_eq!(route.directory.path.as_literal().unwrap(), "/routes");
+
+        let directory = Directory::new("./vehicles".to_string());
+        assert_eq!(
+            VehicleCatalogLocation::new(directory.clone()).directory,
+            directory
+        );
     }
 }

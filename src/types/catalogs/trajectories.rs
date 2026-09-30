@@ -520,16 +520,10 @@ mod tests {
         assert_eq!(trajectory.name.as_literal().unwrap(), "TestTrajectory");
         assert_eq!(trajectory.closed.as_literal(), Some(&false));
         assert!(trajectory.parameter_declarations.is_none());
-    }
-
-    #[test]
-    fn test_catalog_polyline() {
-        let pos1 = Position::world_origin();
-        let pos2 = Position::world_origin();
-
-        let polyline = CatalogPolyline::from_positions(vec![pos1, pos2]).unwrap();
-
-        assert_eq!(polyline.vertices.len(), 2);
+        match &trajectory.shape.shape {
+            CatalogTrajectoryShape::Polyline(polyline) => assert_eq!(polyline.vertices.len(), 2),
+            other => panic!("expected Polyline, got {other:?}"),
+        }
     }
 
     #[test]
@@ -585,6 +579,23 @@ mod tests {
         assert_eq!(nurbs.knots.len(), 2);
         assert!(nurbs.control_points[0].weight.is_some());
         assert!(nurbs.control_points[1].weight.is_none());
+
+        // Resolution substitutes a parameterized order and keeps every point and knot.
+        let mut parameterized = nurbs;
+        parameterized.order = Value::Parameter("order".to_string());
+        let trajectory = CatalogTrajectory::new(
+            "Curve".to_string(),
+            CatalogTrajectoryShape::Nurbs(parameterized),
+        );
+        let parameters = std::collections::HashMap::from([("order".to_string(), "4".to_string())]);
+        let resolved = trajectory.resolve_trajectory(&parameters).unwrap();
+        let resolved = resolved
+            .shape
+            .as_nurbs()
+            .expect("a catalog NURBS resolves to a NURBS");
+        assert_eq!(resolved.order, Value::Literal(4));
+        assert_eq!(resolved.control_points.len(), 2);
+        assert_eq!(resolved.knots[1].value, Value::Literal(1.0));
     }
 
     #[test]
@@ -660,6 +671,17 @@ mod tests {
             }
             _ => panic!("Expected clothoid shape"),
         }
+
+        // Resolution substitutes the parameter into the scenario clothoid.
+        let parameters =
+            std::collections::HashMap::from([("length".to_string(), "100.0".to_string())]);
+        let resolved = trajectory.resolve_trajectory(&parameters).unwrap();
+        let clothoid = resolved
+            .shape
+            .as_clothoid()
+            .expect("a catalog clothoid resolves to a clothoid");
+        assert_eq!(clothoid.length, Double::literal(100.0));
+        assert_eq!(clothoid.curvature, Double::literal(0.0));
     }
 
     #[test]
@@ -718,51 +740,6 @@ mod tests {
             .expect("expected polyline shape");
         assert_eq!(polyline.vertices.len(), 2);
         assert_eq!(polyline.vertices[1].time, Some(Value::Literal(5.0)));
-    }
-
-    #[test]
-    fn test_constructors_do_not_fabricate_name_or_shape() {
-        let trajectory = CatalogTrajectory::new(
-            "ExplicitTrajectory".to_string(),
-            CatalogTrajectoryShape::Polyline(
-                CatalogPolyline::from_positions(vec![
-                    Position::world_origin(),
-                    Position::world_origin(),
-                ])
-                .unwrap(),
-            ),
-        );
-        let clothoid = CatalogClothoid::new(
-            Value::Literal(0.0),
-            Value::Literal(0.0),
-            Value::Literal(1.0),
-            Position::world_origin(),
-        );
-        let control_points = vec![
-            NurbsControlPoint {
-                position: Position::world_origin(),
-                time: None,
-                weight: None,
-            },
-            NurbsControlPoint {
-                position: Position::world_origin(),
-                time: None,
-                weight: None,
-            },
-        ];
-        let knots = vec![
-            NurbsKnot {
-                value: Value::Literal(0.0),
-            },
-            NurbsKnot {
-                value: Value::Literal(1.0),
-            },
-        ];
-        let nurbs = CatalogNurbs::new(Value::Literal(2), control_points, knots).unwrap();
-
-        assert_eq!(trajectory.name.as_literal().unwrap(), "ExplicitTrajectory");
-        assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.0);
-        assert_eq!(nurbs.order.as_literal().unwrap(), &2);
     }
 
     // ------------------------------------------------------------------

@@ -122,12 +122,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_resolver_creation() {
-        let resolver = CatalogResolver::new();
-        assert!(!resolver.is_resolving("test"));
-    }
-
-    #[test]
     fn test_circular_dependency_detection() {
         let mut resolver = CatalogResolver::new();
 

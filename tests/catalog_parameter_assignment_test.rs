@@ -454,6 +454,8 @@ fn catalog_manager_applies_an_assignment() {
     assert_eq!(resolved.entity.performance.max_speed, Value::Literal(55.0));
 }
 
+/// `more_vehicles.xosc` sorts before `vehicles.xosc` and holds a `sedan` (max speed 99) in the
+/// catalog `Other`; a lookup by entry name alone would return that one instead of this default.
 #[test]
 fn catalog_manager_uses_the_entry_default_for_an_unassigned_parameter() {
     let resolved = CatalogManager::new()
@@ -518,16 +520,6 @@ fn catalog_manager_resolves_a_controller_with_an_assignment() {
     assert!(xml.contains(r#"value="0.9""#), "{xml}");
 }
 
-/// `more_vehicles.xosc` sorts before `vehicles.xosc` and holds a `sedan` in the catalog
-/// `Other`; a lookup by entry name alone would return that one.
-#[test]
-fn catalog_manager_does_not_take_an_entry_of_another_catalog() {
-    let resolved = CatalogManager::new()
-        .resolve_vehicle_reference(&sedan_reference(Vec::new()), &vehicle_location())
-        .expect("reference resolves");
-    assert_eq!(resolved.entity.performance.max_speed, Value::Literal(30.0));
-}
-
 #[test]
 fn catalog_manager_matches_the_catalog_name() {
     let reference = VehicleCatalogReference::new("Other".to_string(), "sedan".to_string());
@@ -535,6 +527,19 @@ fn catalog_manager_matches_the_catalog_name() {
         .resolve_vehicle_reference(&reference, &vehicle_location())
         .expect("reference resolves");
     assert_eq!(resolved.entity.performance.max_speed, Value::Literal(99.0));
+}
+
+/// A relative catalog directory is taken from the manager's base path, not from the working
+/// directory.
+#[test]
+fn catalog_manager_takes_a_relative_directory_from_its_base_path() {
+    let resolved = CatalogManager::with_base_path(fixture_dir())
+        .resolve_vehicle_reference(
+            &sedan_reference(Vec::new()),
+            &VehicleCatalogLocation::from_path("catalogs/vehicles".to_string()),
+        )
+        .expect("the relative directory resolves against the base path");
+    assert_eq!(resolved.entity.performance.max_speed, Value::Literal(30.0));
 }
 
 /// A reference built outside a document has no scope around it, so a `$name` in an assigned

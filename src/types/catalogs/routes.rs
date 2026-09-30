@@ -213,6 +213,14 @@ mod tests {
         assert_eq!(route.closed.as_literal().unwrap(), &false);
         assert!(route.parameter_declarations.is_none());
         assert_eq!(route.waypoint_count(), 2);
+        assert_eq!(
+            route.waypoints[0].route_strategy,
+            Value::Literal(RouteStrategy::Shortest)
+        );
+        assert_eq!(
+            route.waypoints[1].route_strategy,
+            Value::Literal(RouteStrategy::Fastest)
+        );
     }
 
     #[test]
@@ -223,28 +231,6 @@ mod tests {
         )];
         assert!(CatalogRoute::new("ShortRoute".to_string(), one).is_err());
         assert!(CatalogRoute::new("EmptyRoute".to_string(), Vec::new()).is_err());
-    }
-
-    #[test]
-    fn test_route_waypoints() {
-        let pos1 = Position::world_origin();
-        let pos2 = Position::world_origin();
-
-        let waypoint1 = RouteWaypoint::with_strategy(pos1, RouteStrategy::Shortest);
-        let waypoint2 = RouteWaypoint::with_strategy(pos2, RouteStrategy::Fastest);
-
-        let route =
-            CatalogRoute::new("WaypointRoute".to_string(), vec![waypoint1, waypoint2]).unwrap();
-
-        assert_eq!(route.waypoint_count(), 2);
-        assert_eq!(
-            route.waypoints[0].route_strategy,
-            Value::Literal(RouteStrategy::Shortest)
-        );
-        assert_eq!(
-            route.waypoints[1].route_strategy,
-            Value::Literal(RouteStrategy::Fastest)
-        );
     }
 
     #[test]
@@ -334,21 +320,5 @@ mod tests {
             assignments.assignments[1].parameter_ref,
             Value::Parameter(_)
         ));
-    }
-
-    #[test]
-    fn test_constructors_do_not_fabricate_name_or_strategy() {
-        let waypoints = vec![
-            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Shortest),
-            RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest),
-        ];
-        let route = CatalogRoute::new("ExplicitRoute".to_string(), waypoints).unwrap();
-        let waypoint = RouteWaypoint::new(Position::world_origin(), RouteStrategy::Fastest);
-
-        assert_eq!(route.name.as_literal().unwrap(), "ExplicitRoute");
-        assert_eq!(
-            waypoint.route_strategy,
-            Value::Literal(RouteStrategy::Fastest)
-        );
     }
 }

@@ -54,56 +54,39 @@ const TWO_BRANCH: &str = concat!(
     r#"</StochasticDistribution>"#,
 );
 
+/// Parses `xml` as a `StochasticDistribution` and serializes it again. A byte-exact result
+/// proves every repeated child and the sibling `@parameterName` attribute were read.
+fn round_trip(xml: &str) -> String {
+    let dist: StochasticDistribution = quick_xml::de::from_str(xml).expect("parse must succeed");
+    quick_xml::se::to_string(&dist).expect("serialize must succeed")
+}
+
+/// XSD `ProbabilityDistributionSet` (`:1795`) and `Histogram` (`:1297`) take one or more
+/// children, and the flatten defect rejected a single child as well as several.
 #[test]
-fn single_element_probability_distribution_set_parses() {
-    let dist: StochasticDistribution = quick_xml::de::from_str(ONE_ELEMENT_PROBABILITY_SET)
-        .expect("a single <Element> child must parse");
-    let _ = dist;
+fn single_element_probability_distribution_set_round_trips_byte_exact() {
+    assert_eq!(
+        round_trip(ONE_ELEMENT_PROBABILITY_SET),
+        ONE_ELEMENT_PROBABILITY_SET
+    );
 }
 
 #[test]
-fn two_element_probability_distribution_set_parses() {
-    let dist: StochasticDistribution = quick_xml::de::from_str(TWO_ELEMENT_PROBABILITY_SET)
-        .expect("two <Element> children must parse");
-    let _ = dist;
-}
-
-#[test]
-fn single_bin_histogram_parses() {
-    let dist: StochasticDistribution =
-        quick_xml::de::from_str(ONE_BIN_HISTOGRAM).expect("a single <Bin> child must parse");
-    let _ = dist;
-}
-
-#[test]
-fn two_bin_histogram_parses() {
-    let dist: StochasticDistribution =
-        quick_xml::de::from_str(TWO_BIN_HISTOGRAM).expect("two <Bin> children must parse");
-    let _ = dist;
+fn single_bin_histogram_round_trips_byte_exact() {
+    assert_eq!(round_trip(ONE_BIN_HISTOGRAM), ONE_BIN_HISTOGRAM);
 }
 
 #[test]
 fn two_element_probability_distribution_set_round_trips_byte_exact() {
-    let dist: StochasticDistribution =
-        quick_xml::de::from_str(TWO_ELEMENT_PROBABILITY_SET).expect("parse must succeed");
-    let serialized = quick_xml::se::to_string(&dist).expect("serialize must succeed");
     assert_eq!(
-        serialized.as_bytes(),
-        TWO_ELEMENT_PROBABILITY_SET.as_bytes(),
-        "serialized output must equal the source document byte-for-byte, including the sibling @parameterName attribute"
+        round_trip(TWO_ELEMENT_PROBABILITY_SET),
+        TWO_ELEMENT_PROBABILITY_SET
     );
 }
 
 #[test]
 fn two_bin_histogram_round_trips_byte_exact() {
-    let dist: StochasticDistribution =
-        quick_xml::de::from_str(TWO_BIN_HISTOGRAM).expect("parse must succeed");
-    let serialized = quick_xml::se::to_string(&dist).expect("serialize must succeed");
-    assert_eq!(
-        serialized.as_bytes(),
-        TWO_BIN_HISTOGRAM.as_bytes(),
-        "serialized output must equal the source document byte-for-byte, including the sibling @parameterName attribute"
-    );
+    assert_eq!(round_trip(TWO_BIN_HISTOGRAM), TWO_BIN_HISTOGRAM);
 }
 
 #[test]

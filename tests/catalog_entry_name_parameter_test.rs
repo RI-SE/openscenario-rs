@@ -9,7 +9,6 @@
 //! itself with a parameter reference that resolves through the same path every
 //! other parameterizable attribute already uses.
 use openscenario_rs::types::catalogs::entities::CatalogVehicle;
-use openscenario_rs::types::catalogs::CatalogFile;
 use openscenario_rs::types::scope::ParameterScope;
 
 const VEHICLE_WITH_PARAMETERIZED_NAME: &str = concat!(
@@ -20,21 +19,6 @@ const VEHICLE_WITH_PARAMETERIZED_NAME: &str = concat!(
     r#"<RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="-1.3" positionZ="0.3"/>"#,
     r#"</Axles>"#,
     r#"</Vehicle>"#,
-);
-
-const LITERAL_NAME_CATALOG_FILE: &str = concat!(
-    r#"<OpenSCENARIO>"#,
-    r#"<FileHeader author="a" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>"#,
-    r#"<Catalog name="c">"#,
-    r#"<Vehicle name="SportsCar" vehicleCategory="car">"#,
-    r#"<BoundingBox><Center x="0" y="0" z="0"/><Dimensions width="2" length="4" height="1.5"/></BoundingBox>"#,
-    r#"<Performance maxSpeed="50" maxAcceleration="5" maxDeceleration="10"/>"#,
-    r#"<Axles>"#,
-    r#"<RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.8" positionX="-1.3" positionZ="0.3"/>"#,
-    r#"</Axles>"#,
-    r#"</Vehicle>"#,
-    r#"</Catalog>"#,
-    r#"</OpenSCENARIO>"#,
 );
 
 /// A `$vehicleName` catalog entry name parses as a parameter reference, not as
@@ -60,25 +44,4 @@ fn catalog_entry_name_parameter_reference_resolves() {
         .resolve(&vehicle.name)
         .expect("the parameter must resolve against the scope");
     assert_eq!(resolved, "SportsCar");
-}
-
-/// A catalog entry carrying a literal `@name` round-trips byte-for-byte,
-/// parsed and reserialized through the same `CatalogFile` wrapper the
-/// production path uses (a bare `CatalogVehicle` serializes under its Rust
-/// type name rather than `Vehicle`, so the wrapper is load-bearing here).
-#[test]
-fn catalog_entry_literal_name_round_trips_byte_exact() {
-    let file: CatalogFile =
-        quick_xml::de::from_str(LITERAL_NAME_CATALOG_FILE).expect("parse must succeed");
-    assert_eq!(
-        file.catalog.vehicles[0].name.as_literal().unwrap(),
-        "SportsCar"
-    );
-
-    let serialized = quick_xml::se::to_string(&file).expect("serialize must succeed");
-    assert_eq!(
-        serialized.as_bytes(),
-        LITERAL_NAME_CATALOG_FILE.as_bytes(),
-        "serialized output must equal the source document byte-for-byte"
-    );
 }

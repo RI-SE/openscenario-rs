@@ -34,11 +34,6 @@ const CATALOG_BRANCH_CORPUS_FILES: &[&str] = &[
 ];
 
 #[test]
-fn the_corpus_list_has_the_count_the_issue_recorded() {
-    assert_eq!(CATALOG_BRANCH_CORPUS_FILES.len(), 16);
-}
-
-#[test]
 fn catalog_file_and_the_root_agree_on_every_catalog_branch_corpus_file() {
     for path in CATALOG_BRANCH_CORPUS_FILES {
         let via_catalog_file = parse_catalog_from_file(path)

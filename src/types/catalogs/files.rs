@@ -215,32 +215,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_catalog_file_creation() {
-        let catalog = CatalogFile::new(
-            "TestCatalog".to_string(),
-            "TestAuthor".to_string(),
-            "Test Description".to_string(),
-        );
-
-        assert_eq!(catalog.catalog_name().as_literal().unwrap(), "TestCatalog");
-        assert_eq!(
-            catalog.file_header.author.as_literal().unwrap(),
-            "TestAuthor"
-        );
-        assert_eq!(catalog.catalog.entity_count(), 0);
-    }
-
-    #[test]
-    fn test_catalog_content_entity_management() {
-        let content = CatalogContent::new("TestCatalog".to_string());
-
-        // Initially empty
-        assert_eq!(content.entity_count(), 0);
-        assert_eq!(content.entity_names().len(), 0);
-        assert_eq!(content.name.as_literal().unwrap(), "TestCatalog");
-    }
-
-    #[test]
     fn test_catalog_file_new_takes_explicit_name_and_author() {
         // `CatalogFile`/`CatalogContent` have no `Default` — `FileHeader`'s
         // `@author`/`@description` and `Catalog`'s `@name` are all `use="required"`
@@ -259,6 +233,7 @@ mod tests {
             catalog.file_header.author.as_literal().unwrap(),
             "ExplicitAuthor"
         );
+        assert_eq!(catalog.catalog.entity_count(), 0);
     }
 
     #[test]
@@ -266,6 +241,7 @@ mod tests {
         let content = CatalogContent::new("ExplicitCatalog".to_string());
         assert_eq!(content.name.as_literal().unwrap(), "ExplicitCatalog");
         assert_eq!(content.entity_count(), 0);
+        assert!(content.entity_names().is_empty());
     }
 
     /// Regression: inline `<Environment>` entries in a catalog file used to be

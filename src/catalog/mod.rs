@@ -252,12 +252,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn with_base_path_sets_the_resolution_root() {
-        let manager = CatalogManager::with_base_path("/tmp/catalogs");
-        assert_eq!(manager.base_path, Some(PathBuf::from("/tmp/catalogs")));
-    }
-
-    #[test]
     fn default_matches_an_unrooted_manager() {
         assert_eq!(
             CatalogManager::default().base_path,

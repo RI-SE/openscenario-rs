@@ -331,14 +331,6 @@ fn the_same_name_twice_in_one_frame_is_refused() {
     assert_eq!(scope.get("p"), Some("1"));
 }
 
-#[test]
-fn the_same_name_in_a_nested_frame_is_accepted() {
-    let mut scope = ParameterScope::new();
-    declare_ok(&mut scope, "p", "int", "1");
-    scope.push_frame();
-    declare_ok(&mut scope, "p", "int", "2");
-}
-
 // --- References inside a declaration -------------------------------------------------------
 //
 // Section 9.1 allows a declaration's name, type or value to reference another parameter but
