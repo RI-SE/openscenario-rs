@@ -570,6 +570,127 @@ mod tests {
         );
     }
 
+    fn range_with_lower(lower: Value<f64>) -> DistributionRange {
+        DistributionRange::new(
+            Value::literal("1.0".to_string()),
+            crate::types::basic::Range {
+                lower_limit: lower,
+                upper_limit: Value::literal(10.0),
+            },
+        )
+    }
+
+    /// `DistributionRange::new`, `::validate` and `DistributionSampler::{sample,
+    /// is_deterministic}` had no test at all.
+    #[test]
+    fn distribution_range_sample_and_validate() {
+        let range = range_with_lower(Value::literal(0.0));
+        assert!(range.validate().is_ok());
+        assert_eq!(range.sample().unwrap(), "0");
+        assert!(range.is_deterministic());
+    }
+
+    #[test]
+    fn distribution_range_sample_rejects_parameterized_and_expression_lower_limit() {
+        let range = range_with_lower(Value::Parameter("lo".to_string()));
+        let err = range
+            .sample()
+            .expect_err("a parameterized lower limit cannot be sampled");
+        assert!(
+            err.to_string().contains("without parameter resolution"),
+            "{err}"
+        );
+
+        let range = range_with_lower(Value::Expression("${lo}".to_string()));
+        let err = range
+            .sample()
+            .expect_err("an expression lower limit cannot be sampled");
+        assert!(
+            err.to_string().contains("without expression evaluation"),
+            "{err}"
+        );
+    }
+
+    /// `DeterministicSingleParameterDistributionType::validate` dispatches on its three
+    /// branches; every existing test only ever built the `DistributionSet` branch
+    /// (`sample_single`). This reaches the other two.
+    #[test]
+    fn deterministic_single_parameter_distribution_validates_range_and_user_defined_branches() {
+        let range_dist = DeterministicSingleParameterDistribution::new(
+            Value::literal("speed".to_string()),
+            DeterministicSingleParameterDistributionType::DistributionRange(range_with_lower(
+                Value::literal(0.0),
+            )),
+        );
+        assert!(range_dist.validate().is_ok());
+
+        let user_dist = DeterministicSingleParameterDistribution::new(
+            Value::literal("mode".to_string()),
+            DeterministicSingleParameterDistributionType::UserDefinedDistribution(
+                crate::types::distributions::UserDefinedDistribution::new(
+                    "x".to_string(),
+                    "custom".to_string(),
+                ),
+            ),
+        );
+        assert!(user_dist.validate().is_ok());
+    }
+
+    /// `DeterministicMultiParameterDistribution::validate` (delegates to
+    /// `ValueSetDistribution::validate`) was never called by any test.
+    #[test]
+    fn deterministic_multi_parameter_distribution_validate_delegates_to_value_set() {
+        let multi = sample_multi();
+        assert!(multi.validate().is_ok());
+    }
+
+    /// `DistributionSet::{sample, enumerate}` only had literal-value coverage; the
+    /// parameterized/expression error arms of both were untested.
+    #[test]
+    fn distribution_set_sample_and_enumerate_reject_parameter_and_expression_elements() {
+        let param_set = DistributionSet {
+            elements: MinVec::new(vec![DistributionSetElement {
+                value: Value::Parameter("p".to_string()),
+            }])
+            .unwrap(),
+        };
+        let err = param_set
+            .sample()
+            .expect_err("a parameterized element cannot be sampled");
+        assert!(
+            err.to_string().contains("without parameter resolution"),
+            "{err}"
+        );
+        let err = param_set
+            .enumerate()
+            .expect_err("a parameterized element cannot be enumerated");
+        assert!(
+            err.to_string().contains("without parameter resolution"),
+            "{err}"
+        );
+
+        let expr_set = DistributionSet {
+            elements: MinVec::new(vec![DistributionSetElement {
+                value: Value::Expression("${p}".to_string()),
+            }])
+            .unwrap(),
+        };
+        let err = expr_set
+            .sample()
+            .expect_err("an expression element cannot be sampled");
+        assert!(
+            err.to_string().contains("without expression evaluation"),
+            "{err}"
+        );
+        let err = expr_set
+            .enumerate()
+            .expect_err("an expression element cannot be enumerated");
+        assert!(
+            err.to_string().contains("without expression evaluation"),
+            "{err}"
+        );
+    }
+
     #[test]
     fn distribution_set_new_takes_no_result() {
         // `first` proves the schema minimum, so `DistributionSet::new` returns `Self`

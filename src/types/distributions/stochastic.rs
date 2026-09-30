@@ -329,6 +329,103 @@ mod tests {
         );
     }
 
+    /// `Stochastic::validate` visits every distribution kind; the prior fixture only reached
+    /// `ProbabilityDistributionSet`/`Uniform`/`Histogram`/`UserDefinedDistribution`. This
+    /// exercises the three remaining `StochasticDistributionType::validate` match arms
+    /// (`Normal`, `LogNormal`, `Poisson`) and the all-valid `Ok(())` return of
+    /// `Stochastic::validate` itself, which only runs when no distribution errors.
+    #[test]
+    fn stochastic_validation_passes_for_normal_lognormal_and_poisson_distributions() {
+        let xml = r#"<Stochastic numberOfTestRuns="5">
+    <StochasticDistribution parameterName="a">
+        <NormalDistribution expectedValue="0" variance="1"/>
+    </StochasticDistribution>
+    <StochasticDistribution parameterName="b">
+        <LogNormalDistribution expectedValue="1" variance="2"/>
+    </StochasticDistribution>
+    <StochasticDistribution parameterName="c">
+        <PoissonDistribution expectedValue="3"/>
+    </StochasticDistribution>
+</Stochastic>"#;
+        let stochastic: Stochastic = quick_xml::de::from_str(xml).expect("fixture parses");
+        assert!(stochastic.validate().is_ok());
+    }
+
+    /// `ProbabilityDistributionSet::sample` had no test at all: it returns the first
+    /// element's literal value, or an error for a parameterized/expression value it cannot
+    /// resolve without a parameter context.
+    #[test]
+    fn probability_distribution_set_sample_returns_first_literal_element() {
+        let set = ProbabilityDistributionSet {
+            elements: MinVec::new(vec![
+                ProbabilityDistributionSetElement {
+                    value: OSString::Literal("a".to_string()),
+                    weight: OSString::Literal("0.5".to_string()),
+                },
+                ProbabilityDistributionSetElement {
+                    value: OSString::Literal("b".to_string()),
+                    weight: OSString::Literal("0.5".to_string()),
+                },
+            ])
+            .unwrap(),
+        };
+        assert_eq!(set.sample().unwrap(), "a");
+        assert!(!set.is_deterministic());
+    }
+
+    #[test]
+    fn probability_distribution_set_sample_rejects_parameter_and_expression_values() {
+        let param_set = ProbabilityDistributionSet {
+            elements: MinVec::new(vec![ProbabilityDistributionSetElement {
+                value: OSString::Parameter("p".to_string()),
+                weight: OSString::Literal("1.0".to_string()),
+            }])
+            .unwrap(),
+        };
+        let err = param_set
+            .sample()
+            .expect_err("a parameterized element cannot be sampled");
+        assert!(
+            err.to_string().contains("without parameter resolution"),
+            "{err}"
+        );
+
+        let expr_set = ProbabilityDistributionSet {
+            elements: MinVec::new(vec![ProbabilityDistributionSetElement {
+                value: OSString::Expression("${p}".to_string()),
+                weight: OSString::Literal("1.0".to_string()),
+            }])
+            .unwrap(),
+        };
+        let err = expr_set
+            .sample()
+            .expect_err("an expression element cannot be sampled");
+        assert!(
+            err.to_string().contains("without expression evaluation"),
+            "{err}"
+        );
+    }
+
+    /// Only the error branch here — a parameterized `Range` cannot be sampled without
+    /// resolution. This deliberately does not exercise (pin) the placeholder literal-value
+    /// output of `UniformDistribution::sample` (FINDINGS F9).
+    #[test]
+    fn uniform_distribution_sample_rejects_parameterized_range() {
+        let uniform = UniformDistribution {
+            range: Range {
+                lower_limit: Value::Parameter("lo".to_string()),
+                upper_limit: Value::Literal("10.0".to_string()),
+            },
+        };
+        let err = uniform
+            .sample()
+            .expect_err("a parameterized range cannot be sampled");
+        assert!(
+            err.to_string().contains("without parameter resolution"),
+            "{err}"
+        );
+    }
+
     #[test]
     fn test_uniform_distribution_sampling() {
         let uniform = UniformDistribution {
