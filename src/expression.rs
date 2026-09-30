@@ -200,11 +200,11 @@ impl ExpressionParser {
                         }
                         tokens.push(Token::Parameter(param_name));
                     } else {
-                        // Simple $paramName format (deprecated but supported)
+                        // Simple $paramName format (deprecated but supported). read_identifier
+                        // itself errors on an empty read (see its own empty check below), so a
+                        // second empty check here can never be reached; it was uncovered and
+                        // dead.
                         let param_name = Self::read_identifier(&mut chars)?;
-                        if param_name.is_empty() {
-                            return Err(Error::parse_error(input, "empty parameter name"));
-                        }
                         tokens.push(Token::Parameter(param_name));
                     }
                 }
@@ -1370,6 +1370,37 @@ mod tests {
             ("sqrt(-1)", "sqrt() of negative number"),
             ("acos(2)", "acos(2) is undefined outside [-1, 1]"),
             ("5 % 0", "modulo by zero"),
+            ("pow(0, -1)", "pow(0, -1) is not finite"),
+            // The generic non-finite backstop for a combination that overflows without going
+            // through a function that already names its own domain violation.
+            ("1e300 * 1e300", "is not finite"),
+            // Tokenizer errors: single '=' / '!' (the two-character forms are the only ones
+            // section 9.2 supports), an unterminated `${...}` reference, a character outside
+            // the grammar, and a bare '$' with nothing that can be read as an identifier after
+            // it.
+            ("5 = 3", "single '=' not supported, use '==' for equality"),
+            ("5 ! 3", "single '!' not supported, use '!=' for inequality"),
+            ("${abc", "missing closing brace in parameter reference"),
+            ("5 & 3", "unexpected character: '&'"),
+            ("$+1", "Expected identifier but found empty string"),
+            // Parser errors: an operator with nothing after it, an unterminated function call
+            // (both while still reading arguments and with none at all), two arguments with no
+            // separator, an unterminated parenthesized expression, and a token (here a leading
+            // '+', which -- unlike '-' -- has no unary form) where an operand is expected.
+            ("5 +", "unexpected end of expression"),
+            ("sin(1", "missing closing parenthesis in function call"),
+            ("sin(1 2)", "expected ',' or ')' in function call"),
+            ("sin(", "missing closing parenthesis in function call"),
+            ("(5", "missing closing parenthesis"),
+            ("+5", "unexpected token: Operator(Add)"),
+            // A Boolean-shaped expression (its AST root is Not/And/Or) evaluated where a numeric
+            // result is required -- `evaluate`, not `evaluate_bool`, is used because the target
+            // type here is `f64`.
+            (
+                "not $flag",
+                "a Boolean expression (not/and/or) cannot be used where a numeric value is \
+                 expected",
+            ),
         ];
         for (expr, cause) in cases {
             let err = evaluate_expression::<f64>(expr, &params)
@@ -1377,5 +1408,45 @@ mod tests {
                 .to_string();
             assert!(err.contains(cause), "{expr}: expected {cause:?}, got {err}");
         }
+    }
+
+    /// `evaluate_bool` (used when the target attribute is `Boolean`) refuses a parameter whose
+    /// bound text is not the literal `"true"`/`"false"`, and refuses any expression shape that
+    /// is neither `not`/`and`/`or`, a comparison, nor a bare parameter -- an arithmetic
+    /// expression is well-formed but not Boolean-shaped.
+    #[test]
+    fn test_boolean_error_handling() {
+        let mut params = HashMap::new();
+        params.insert("maybe".to_string(), "perhaps".to_string());
+
+        let err = evaluate_expression::<bool>("$maybe", &params)
+            .expect_err("$maybe")
+            .to_string();
+        assert!(
+            err.contains("parameter value 'perhaps' is not a Boolean ('true' or 'false')"),
+            "got: {err}"
+        );
+
+        let err = evaluate_expression::<bool>("5 + 3", &params)
+            .expect_err("5 + 3")
+            .to_string();
+        assert!(
+            err.contains(
+                "expected a Boolean expression (not/and/or, a comparison, or a Boolean parameter)"
+            ),
+            "got: {err}"
+        );
+    }
+
+    /// `evaluate_expression` names the target type's own parse failure, not just the numeric
+    /// evaluator's result, when the evaluated text does not fit `T` -- here `u32`, which (unlike
+    /// `f64`) rejects a negative literal.
+    #[test]
+    fn test_evaluate_expression_reports_target_type_parse_failure() {
+        let params = HashMap::new();
+        let err = evaluate_expression::<u32>("-1", &params)
+            .expect_err("-1")
+            .to_string();
+        assert!(err.contains("failed to parse result '-1'"), "got: {err}");
     }
 }
