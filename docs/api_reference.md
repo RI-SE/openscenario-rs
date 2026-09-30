@@ -60,9 +60,6 @@ pub use parser::xml::{
     parse_from_str, parse_from_str_resolved, serialize_catalog_to_file,
     serialize_catalog_to_string, serialize_to_file, serialize_to_string,
 };
-pub use parser::choice_groups::{
-    parse_choice_group, ChoiceGroupParser, ChoiceGroupRegistry, XsdChoiceGroup,
-};
 pub use expression::evaluate_expression;
 pub use catalog::{
     CatalogLoader, CatalogManager, CatalogResolver, ResolvedCatalog,
@@ -208,18 +205,6 @@ impl ValidationResult {
 Findings are categorized by `ValidationErrorCategory` (`MissingRequired`, `InvalidReference`,
 `ConstraintViolation`, `SemanticError`, `TypeMismatch`, `ParameterError`) and
 `ValidationWarningCategory` (`Deprecated`, `Suspicious`, `Performance`, `BestPractice`).
-
-### `parser::choice_groups`
-
-```rust
-pub trait XsdChoiceGroup { /* ... */ }
-pub struct ChoiceGroupParser;
-pub struct ChoiceGroupRegistry;
-pub fn parse_choice_group(/* ... */);
-```
-
-Infrastructure for XSD choice groups, re-exported at the crate root. The module documents
-itself as a simplified implementation sufficient for current needs.
 
 ## Schema validation (feature `validation`)
 

@@ -1,8 +1,7 @@
 //! Parsing of OpenSCENARIO documents: scenarios, catalogs, and parameter variations.
 //!
 //! [`xml`] holds the entry points, [`validation`] the domain checks that run after
-//! a successful parse, [`choice_groups`] the handling for the XSD constructs
-//! serde cannot express directly, and [`resolve`] the pass that resolves a document's
+//! a successful parse, and [`resolve`] the pass that resolves a document's
 //! parameter references against its own declarations.
 //!
 //! ```rust,no_run
@@ -27,7 +26,6 @@
 //! # }
 //! ```
 
-pub mod choice_groups;
 pub mod resolve;
 pub mod validation;
 pub mod xml;

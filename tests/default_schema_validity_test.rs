@@ -230,10 +230,6 @@ const NOT_XSD_BACKED: &[(&str, &str)] = &[
         "Non-XSD tooling: `src/parser/validation.rs` driver.",
     ),
     (
-        "ChoiceGroupRegistry",
-        "Parser infrastructure (`src/parser/choice_groups.rs`), never serialized.",
-    ),
-    (
         "CatalogManager",
         "Catalog subsystem state (`src/catalog/`), never serialized.",
     ),

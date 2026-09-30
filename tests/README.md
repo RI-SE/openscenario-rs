@@ -32,7 +32,6 @@ neighbors rather than in a new file.
 | File | Covers |
 |---|---|
 | `xsd_validation_test.rs` | Choice-group `validate()` and `get_action_type()` across the type tree |
-| `xsd_choice_groups_test.rs` | Choice-group structure against the schema |
 | `xsd_pedestrian_compliance_test.rs` | Pedestrian conformance |
 | `init_action_choices_test.rs` | All seven `GlobalAction` and ten `PrivateAction` branches |
 

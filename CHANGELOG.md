@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking:** the `parser::choice_groups` module and its crate-root re-exports
+  `XsdChoiceGroup`, `ChoiceGroupParser`, `ChoiceGroupRegistry` and `parse_choice_group`. Nothing
+  in the crate implemented or called them; the schema's choice groups are parsed through serde.
+
 ## [0.5.0] - 2026-09-22
 
 This release is the result of a five-pass conformance campaign against

@@ -629,12 +629,12 @@ would otherwise still fabricate `"DefaultCatalog"` through the derive even with 
 impl gone. Both lost their `#[derive(Default)]`; the storyboard one gained a `::new()` it never
 had.
 
-`src/catalog/{mod,loader,resolver,parameters}.rs`, `src/parser/{validation,choice_groups}.rs`,
+`src/catalog/{mod,loader,resolver,parameters}.rs`, `src/parser/validation.rs`,
 `src/builder/{scenario,catalog}.rs`, and `src/types/controllers/mod.rs` were all **verified, not
 assumed**: every remaining impl there was read against its type's shape, not just its file's
 prior "done" status.
 
-**`grep -rn "^impl Default for" src/` now finds 12 — every one reviewed individually, none
+**`grep -rn "^impl Default for" src/` now finds 11 — every one reviewed individually, none
 fabricating:**
 
 - `catalog/loader.rs` `CatalogLoader`, `catalog/mod.rs` `CatalogManager`, `catalog/resolver.rs`
@@ -642,9 +642,8 @@ fabricating:**
   `builder/catalog.rs` `CatalogEntityBuilder`, `builder/scenario.rs`
   `ScenarioBuilder<Empty>` — all pure delegations to a non-fabricating `::new()`; no field is
   invented, only empty collections/`None`.
-- `parser/validation.rs` `ValidationConfig`/`ScenarioValidator`/`ValidationResult`,
-  `parser/choice_groups.rs` `ChoiceGroupRegistry` — non-XSD tooling types (validation feature
-  toggles, a zero-field parser registry, an empty validation-run result). These describe the
+- `parser/validation.rs` `ValidationConfig`/`ScenarioValidator`/`ValidationResult` — non-XSD
+  tooling types (validation feature toggles, an empty validation-run result). These describe the
   crate's own machinery, not `.xosc` content, so the policy's rationale (a default that
   "describes something nobody wrote" in a *scenario*) does not apply to them.
 - `types/catalogs/locations.rs` `CatalogLocations` — delegates to `::new()`, all eight catalog
