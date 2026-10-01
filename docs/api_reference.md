@@ -186,7 +186,6 @@ pub struct ValidationConfig {
     pub validate_constraints: bool,
     pub validate_semantics: bool,
     pub max_errors: usize,
-    pub use_cache: bool,
 }
 
 pub struct ValidationResult {
@@ -278,11 +277,9 @@ pub trait Resolve<T> {
 pub struct ValidationContext {
     pub entities: HashMap<String, EntityRef>,
     pub catalogs: HashMap<String, CatalogRef>,
-    pub strict_mode: bool,
 }
 impl ValidationContext {
     pub fn new() -> Self;
-    pub fn with_strict_mode(self) -> Self;                             // chainable
     pub fn add_entity(&mut self, name: String, entity_ref: EntityRef); // not chainable
 }
 ```

@@ -131,9 +131,17 @@ if !result.is_valid() {
 }
 ```
 
-`ValidationConfig` carries `strict_mode` (treat warnings as failures), `validate_references`,
-`validate_constraints`, `validate_semantics`, `max_errors` and `use_cache`, and has a
-`Default`. `ValidationResult` separates `errors` from `warnings` and offers `is_valid()`
+`ValidationConfig` has a `Default` and carries these switches:
+
+- `validate_references`, `validate_constraints` and `validate_semantics` turn on the
+  `InvalidReference`, `ConstraintViolation` and `SemanticError` checks. All three default to on.
+- `strict_mode` reports every warning as an error of category `SemanticError`, keeping its
+  location, message and suggestion.
+- `max_errors` is the most errors a result holds; the rest are dropped.
+
+Missing required fields and warnings are always checked, whatever the switches say.
+
+`ValidationResult` separates `errors` from `warnings` and offers `is_valid()`
 (no errors), `is_clean()` (no errors and no warnings), `total_issues()` and `summary()`.
 
 Errors are categorized as `MissingRequired`, `InvalidReference`, `ConstraintViolation`,
@@ -151,7 +159,7 @@ Two smaller mechanisms operate on individual values rather than whole documents.
 ```rust
 use openscenario_rs::types::{EntityRef, ObjectType, Validate, ValidationContext};
 
-let mut ctx = ValidationContext::new().with_strict_mode();
+let mut ctx = ValidationContext::new();
 ctx.add_entity(
     "ego".to_string(),
     EntityRef { name: "ego".to_string(), object_type: ObjectType::Vehicle },
@@ -160,8 +168,7 @@ ctx.add_entity(
 value.validate(&ctx)?;
 ```
 
-Note that `with_strict_mode` is chainable but `add_entity` is not – it takes `&mut self` and
-two arguments.
+Note that `add_entity` is not chainable – it takes `&mut self` and two arguments.
 
 **Choice-group `validate()`** is an inherent method, not the trait, and returns
 `Result<(), String>`. Types modeling an XSD choice as parallel `Option` fields (`GlobalAction`,

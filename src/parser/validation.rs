@@ -20,8 +20,9 @@
 //! # }
 //! ```
 //!
-//! Structure is always checked; [`ValidationConfig`] switches the reference,
-//! constraint and semantic passes on or off and caps how many errors to collect.
+//! Missing required fields and every warning are always reported. [`ValidationConfig`] switches
+//! the reference, constraint and semantic checks on or off, can promote warnings to errors, and
+//! caps how many errors are returned.
 //!
 //! ```rust,no_run
 //! use openscenario_rs::parser::validation::{ScenarioValidator, ValidationConfig};
@@ -78,34 +79,31 @@ use crate::{
     },
     FileHeader, OpenScenario,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
-/// Runs the four validation passes over a parsed document: structure (hierarchy and
-/// required fields), references (entities and catalogs), constraints (business rules),
-/// and semantics (logical consistency). [`ValidationConfig`] selects which run.
+/// Runs four kinds of check over a parsed document: structure (hierarchy and required fields),
+/// references (entities), constraints (business rules), and semantics (logical consistency).
+/// [`ValidationConfig`] selects which of the last three run.
 #[derive(Debug)]
 pub struct ScenarioValidator {
     /// Validation configuration options
     config: ValidationConfig,
-    /// Cache for performance optimization
-    validation_cache: HashMap<String, ValidationResult>,
 }
 
 /// Configuration for validation behavior
 #[derive(Debug, Clone)]
 pub struct ValidationConfig {
-    /// Enable strict validation mode (fail on warnings)
+    /// Report every warning as an error (category `SemanticError`), so a document with
+    /// warnings is not valid.
     pub strict_mode: bool,
-    /// Enable cross-reference validation
+    /// Report `InvalidReference` errors, such as an actor that names no entity.
     pub validate_references: bool,
-    /// Enable constraint validation
+    /// Report `ConstraintViolation` errors, such as a duplicate entity name.
     pub validate_constraints: bool,
-    /// Enable semantic validation
+    /// Report `SemanticError` errors, such as an unknown document type.
     pub validate_semantics: bool,
-    /// Maximum validation errors before stopping
+    /// The most errors a result holds; the rest are dropped.
     pub max_errors: usize,
-    /// Enable performance optimizations
-    pub use_cache: bool,
 }
 
 impl Default for ValidationConfig {
@@ -116,7 +114,6 @@ impl Default for ValidationConfig {
             validate_constraints: true,
             validate_semantics: true,
             max_errors: 100,
-            use_cache: true,
         }
     }
 }
@@ -195,8 +192,6 @@ pub struct ValidationMetrics {
     pub duration_ms: u64,
     /// Number of validated elements
     pub elements_validated: usize,
-    /// Cache hit ratio (0.0 to 1.0)
-    pub cache_hit_ratio: f64,
 }
 
 /// True when `value` is a literal empty string. A `$parameter` or `${expression}` is not empty:
@@ -223,16 +218,12 @@ impl ScenarioValidator {
     pub fn new() -> Self {
         Self {
             config: ValidationConfig::default(),
-            validation_cache: HashMap::new(),
         }
     }
 
     /// Create a validator with custom configuration
     pub fn with_config(config: ValidationConfig) -> Self {
-        Self {
-            config,
-            validation_cache: HashMap::new(),
-        }
+        Self { config }
     }
 
     /// Validate a complete OpenSCENARIO document.
@@ -248,7 +239,6 @@ impl ScenarioValidator {
             metrics: ValidationMetrics {
                 duration_ms: 0,
                 elements_validated: 0,
-                cache_hit_ratio: 0.0,
             },
         };
 
@@ -274,7 +264,7 @@ impl ScenarioValidator {
                 // Catalog files have their own validation rules
             }
             crate::types::scenario::storyboard::OpenScenarioDocumentType::Unknown => {
-                result.errors.push(ValidationError {
+                self.push_error(&mut result, ValidationError {
                     category: ValidationErrorCategory::SemanticError,
                     location: "root".to_string(),
                     message: "Unknown document type - no valid scenario, parameter variation, or catalog structure found".to_string(),
@@ -286,19 +276,42 @@ impl ScenarioValidator {
         // Update metrics
         let duration = start_time.elapsed();
         result.metrics.duration_ms = duration.as_millis() as u64;
-        result.metrics.cache_hit_ratio = self.calculate_cache_hit_ratio();
+
+        if self.config.strict_mode {
+            for warning in result.warnings.drain(..) {
+                result.errors.push(ValidationError {
+                    category: ValidationErrorCategory::SemanticError,
+                    location: warning.location,
+                    message: warning.message,
+                    suggestion: warning.suggestion,
+                });
+            }
+        }
+        result.errors.truncate(self.config.max_errors);
 
         result
+    }
+
+    /// Record `error` unless the switch for its category is off. Missing required fields and
+    /// type or parameter errors are structure, which is always checked.
+    fn push_error(&self, result: &mut ValidationResult, error: ValidationError) {
+        let enabled = match error.category {
+            ValidationErrorCategory::InvalidReference => self.config.validate_references,
+            ValidationErrorCategory::ConstraintViolation => self.config.validate_constraints,
+            ValidationErrorCategory::SemanticError => self.config.validate_semantics,
+            ValidationErrorCategory::MissingRequired
+            | ValidationErrorCategory::TypeMismatch
+            | ValidationErrorCategory::ParameterError => true,
+        };
+        if enabled {
+            result.errors.push(error);
+        }
     }
 
     /// Build validation context from scenario
     fn build_validation_context(&self, scenario: &OpenScenario) -> ScenarioContext {
         let mut context = ValidationContext::new();
         let mut has_parameterised_entity = false;
-
-        if self.config.strict_mode {
-            context = context.with_strict_mode();
-        }
 
         // Register entities (only for scenario definitions)
         if let Some(entities) = &scenario.entities {
@@ -332,12 +345,15 @@ impl ScenarioValidator {
     fn validate_file_header(&self, header: &FileHeader, result: &mut ValidationResult) {
         // Check required fields
         if is_empty_literal(&header.author) {
-            result.errors.push(ValidationError {
-                category: ValidationErrorCategory::MissingRequired,
-                location: "FileHeader.author".to_string(),
-                message: "Author field is required and cannot be empty".to_string(),
-                suggestion: Some("Provide a valid author name".to_string()),
-            });
+            self.push_error(
+                result,
+                ValidationError {
+                    category: ValidationErrorCategory::MissingRequired,
+                    location: "FileHeader.author".to_string(),
+                    message: "Author field is required and cannot be empty".to_string(),
+                    suggestion: Some("Provide a valid author name".to_string()),
+                },
+            );
         }
 
         if is_empty_literal(&header.description) {
@@ -357,12 +373,15 @@ impl ScenarioValidator {
         };
 
         if rev_major < 1 {
-            result.errors.push(ValidationError {
-                category: ValidationErrorCategory::ConstraintViolation,
-                location: "FileHeader.revMajor".to_string(),
-                message: "Major revision must be at least 1".to_string(),
-                suggestion: Some("Use OpenSCENARIO version 1.0 or later".to_string()),
-            });
+            self.push_error(
+                result,
+                ValidationError {
+                    category: ValidationErrorCategory::ConstraintViolation,
+                    location: "FileHeader.revMajor".to_string(),
+                    message: "Major revision must be at least 1".to_string(),
+                    suggestion: Some("Use OpenSCENARIO version 1.0 or later".to_string()),
+                },
+            );
         }
 
         if rev_major > 1 || (rev_major == 1 && rev_minor > 3) {
@@ -400,12 +419,15 @@ impl ScenarioValidator {
                 continue;
             };
             if !names.insert(name.clone()) {
-                result.errors.push(ValidationError {
-                    category: ValidationErrorCategory::ConstraintViolation,
-                    location: format!("Entities.ScenarioObject[name='{}']", name),
-                    message: "Duplicate entity names are not allowed".to_string(),
-                    suggestion: Some("Ensure all entity names are unique".to_string()),
-                });
+                self.push_error(
+                    result,
+                    ValidationError {
+                        category: ValidationErrorCategory::ConstraintViolation,
+                        location: format!("Entities.ScenarioObject[name='{}']", name),
+                        message: "Duplicate entity names are not allowed".to_string(),
+                        suggestion: Some("Ensure all entity names are unique".to_string()),
+                    },
+                );
             }
         }
     }
@@ -420,12 +442,15 @@ impl ScenarioValidator {
     ) {
         // Validate name
         if is_empty_literal(&obj.name) {
-            result.errors.push(ValidationError {
-                category: ValidationErrorCategory::MissingRequired,
-                location: format!("{}.name", location),
-                message: "ScenarioObject name is required".to_string(),
-                suggestion: Some("Provide a unique name for the entity".to_string()),
-            });
+            self.push_error(
+                result,
+                ValidationError {
+                    category: ValidationErrorCategory::MissingRequired,
+                    location: format!("{}.name", location),
+                    message: "ScenarioObject name is required".to_string(),
+                    suggestion: Some("Provide a unique name for the entity".to_string()),
+                },
+            );
         }
 
         // Entity-specific validation could be added here when Validate trait is implemented
@@ -471,12 +496,15 @@ impl ScenarioValidator {
         result: &mut ValidationResult,
     ) {
         if is_empty_literal(&story.name) {
-            result.errors.push(ValidationError {
-                category: ValidationErrorCategory::MissingRequired,
-                location: format!("{}.name", location),
-                message: "Story name is required".to_string(),
-                suggestion: Some("Provide a descriptive name for the story".to_string()),
-            });
+            self.push_error(
+                result,
+                ValidationError {
+                    category: ValidationErrorCategory::MissingRequired,
+                    location: format!("{}.name", location),
+                    message: "Story name is required".to_string(),
+                    suggestion: Some("Provide a descriptive name for the story".to_string()),
+                },
+            );
         }
 
         // `acts` is a `MinVec<Act, 1>`: a story always has an act, so there is no empty case.
@@ -499,12 +527,15 @@ impl ScenarioValidator {
         result: &mut ValidationResult,
     ) {
         if is_empty_literal(&act.name) {
-            result.errors.push(ValidationError {
-                category: ValidationErrorCategory::MissingRequired,
-                location: format!("{}.name", location),
-                message: "Act name is required".to_string(),
-                suggestion: Some("Provide a descriptive name for the act".to_string()),
-            });
+            self.push_error(
+                result,
+                ValidationError {
+                    category: ValidationErrorCategory::MissingRequired,
+                    location: format!("{}.name", location),
+                    message: "Act name is required".to_string(),
+                    suggestion: Some("Provide a descriptive name for the act".to_string()),
+                },
+            );
         }
 
         for (index, mg) in act.maneuver_groups.iter().enumerate() {
@@ -534,14 +565,17 @@ impl ScenarioValidator {
             if !context.has_parameterised_entity
                 && !context.registry.entities.contains_key(entity_name)
             {
-                result.errors.push(ValidationError {
-                    category: ValidationErrorCategory::InvalidReference,
-                    location: format!("{}.Actors.EntityRef[{}]", location, index),
-                    message: format!("Referenced entity '{}' not found", entity_name),
-                    suggestion: Some(
-                        "Ensure the entity is defined in the Entities section".to_string(),
-                    ),
-                });
+                self.push_error(
+                    result,
+                    ValidationError {
+                        category: ValidationErrorCategory::InvalidReference,
+                        location: format!("{}.Actors.EntityRef[{}]", location, index),
+                        message: format!("Referenced entity '{}' not found", entity_name),
+                        suggestion: Some(
+                            "Ensure the entity is defined in the Entities section".to_string(),
+                        ),
+                    },
+                );
             }
         }
 
@@ -619,19 +653,6 @@ impl ScenarioValidator {
         // Additional condition-specific validation could be added here
         result.metrics.elements_validated += 1;
     }
-
-    /// Calculate cache hit ratio for performance metrics
-    fn calculate_cache_hit_ratio(&self) -> f64 {
-        if !self.config.use_cache {
-            return 0.0;
-        }
-        // Simplified implementation - in real scenario would track hits/misses
-        if self.validation_cache.is_empty() {
-            0.0
-        } else {
-            0.85 // Simulated 85% hit ratio
-        }
-    }
 }
 
 impl ValidationResult {
@@ -643,7 +664,6 @@ impl ValidationResult {
             metrics: ValidationMetrics {
                 duration_ms: 0,
                 elements_validated: 0,
-                cache_hit_ratio: 0.0,
             },
         }
     }
@@ -701,7 +721,6 @@ mod tests {
         assert_eq!(result.warnings.len(), 0);
         assert_eq!(result.metrics.duration_ms, 0);
         assert_eq!(result.metrics.elements_validated, 0);
-        assert_eq!(result.metrics.cache_hit_ratio, 0.0);
         assert_eq!(ValidationResult::default(), ValidationResult::new());
     }
 
@@ -744,7 +763,6 @@ mod tests {
             metrics: ValidationMetrics {
                 duration_ms: 42,
                 elements_validated: 7,
-                cache_hit_ratio: 0.0,
             },
         }
     }
@@ -1032,71 +1050,143 @@ mod tests {
         );
     }
 
+    /// One row per `ValidationConfig` switch: the same document validated with the switch on (the
+    /// default) and with it changed, and the findings each run must produce. A row whose switch
+    /// is never read fails because both runs report the same thing.
     #[test]
-    fn test_validation_metrics() {
-        let mut validator = ScenarioValidator::new();
-        let scenario = crate::types::scenario::storyboard::test_scenario_document();
-
-        let result = validator.validate_scenario(&scenario);
-
-        // Should have some metrics
-        assert!(result.metrics.duration_ms < 1000); // Should be fast
-        assert_eq!(result.metrics.cache_hit_ratio, 0.0); // No cache hits for empty scenario
-    }
-
-    #[test]
-    fn test_strict_mode() {
-        let config = ValidationConfig {
-            strict_mode: true,
+    fn each_config_switch_changes_what_is_reported() {
+        const GHOST: &str = "error InvalidReference @ Storyboard.Story[0].Act[0].ManeuverGroup[0].Actors.EntityRef[0]";
+        let base = clean();
+        let ghost_actor = swap(
+            &base,
+            r#"<EntityRef entityRef="Ego"/>"#,
+            r#"<EntityRef entityRef="Ghost"/>"#,
+        );
+        let rev_zero = swap(&base, r#"revMajor="1""#, r#"revMajor="0""#);
+        let duplicate = with_second_object(&base, "Ego");
+        let no_root = format!("<OpenSCENARIO>{HEADER}</OpenSCENARIO>");
+        let empty_author = swap(&base, r#"author="Tester""#, r#"author="""#);
+        let empty_description = swap(
+            &base,
+            r#"description="Validator fixture""#,
+            r#"description="""#,
+        );
+        let two_defects = swap(&empty_author, r#"revMajor="1""#, r#"revMajor="0""#);
+        let all_off = ValidationConfig {
+            validate_references: false,
+            validate_constraints: false,
+            validate_semantics: false,
             ..Default::default()
         };
-        let mut validator = ScenarioValidator::with_config(config);
 
-        // Create scenario with entities to ensure validation occurs
-        let vehicle = crate::types::entities::vehicle::Vehicle {
-            name: crate::types::basic::Value::literal("TestCar".to_string()),
-            vehicle_category: Value::Literal(crate::types::enums::VehicleCategory::Car),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: crate::types::geometry::BoundingBox::new(
-                crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                crate::types::geometry::Dimensions::new(2.0, 4.5, 1.5),
+        let rows: Vec<(&str, &String, ValidationConfig, Vec<String>)> = vec![
+            (
+                "references on",
+                &ghost_actor,
+                ValidationConfig::default(),
+                vec![GHOST.into()],
             ),
-            performance: crate::types::entities::vehicle::Performance {
-                max_speed: crate::types::basic::Value::literal(200.0),
-                max_acceleration: crate::types::basic::Value::literal(10.0),
-                max_acceleration_rate: None,
-                max_deceleration: crate::types::basic::Value::literal(10.0),
-                max_deceleration_rate: None,
-            },
-            axles: crate::types::entities::axles::Axles::car(),
-            properties: None,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
+            (
+                "references off",
+                &ghost_actor,
+                ValidationConfig {
+                    validate_references: false,
+                    ..Default::default()
+                },
+                vec![],
+            ),
+            (
+                "constraints on, revision",
+                &rev_zero,
+                ValidationConfig::default(),
+                vec!["error ConstraintViolation @ FileHeader.revMajor".into()],
+            ),
+            (
+                "constraints off, revision",
+                &rev_zero,
+                ValidationConfig {
+                    validate_constraints: false,
+                    ..Default::default()
+                },
+                vec![],
+            ),
+            (
+                "constraints off, duplicate names",
+                &duplicate,
+                ValidationConfig {
+                    validate_constraints: false,
+                    ..Default::default()
+                },
+                vec![],
+            ),
+            (
+                "semantics on",
+                &no_root,
+                ValidationConfig::default(),
+                vec!["error SemanticError @ root".into()],
+            ),
+            (
+                "semantics off",
+                &no_root,
+                ValidationConfig {
+                    validate_semantics: false,
+                    ..Default::default()
+                },
+                vec![],
+            ),
+            (
+                "required fields are checked with every pass off",
+                &empty_author,
+                all_off.clone(),
+                vec!["error MissingRequired @ FileHeader.author".into()],
+            ),
+            (
+                "warnings are reported with every pass off",
+                &empty_description,
+                all_off,
+                vec!["warning BestPractice @ FileHeader.description".into()],
+            ),
+            (
+                "strict mode promotes a warning",
+                &empty_description,
+                ValidationConfig {
+                    strict_mode: true,
+                    ..Default::default()
+                },
+                vec!["error SemanticError @ FileHeader.description".into()],
+            ),
+            (
+                "max_errors caps the errors",
+                &two_defects,
+                ValidationConfig {
+                    max_errors: 1,
+                    ..Default::default()
+                },
+                vec!["error MissingRequired @ FileHeader.author".into()],
+            ),
+            (
+                "max_errors above the count keeps every error",
+                &two_defects,
+                ValidationConfig {
+                    max_errors: 2,
+                    ..Default::default()
+                },
+                vec![
+                    "error MissingRequired @ FileHeader.author".into(),
+                    "error ConstraintViolation @ FileHeader.revMajor".into(),
+                ],
+            ),
+        ];
 
-        let scenario_object = crate::types::entities::ScenarioObject {
-            name: crate::types::basic::Value::literal("TestVehicle".to_string()),
-            entity: crate::types::entities::EntityObjectChoice::Vehicle(vehicle),
-            object_controller: Default::default(),
-        };
-
-        let entities = crate::types::entities::Entities {
-            scenario_objects: vec![scenario_object],
-            entity_selections: Vec::new(),
-        };
-
-        let mut scenario = crate::types::scenario::storyboard::test_scenario_document();
-        scenario.entities = Some(entities);
-
-        let result = validator.validate_scenario(&scenario);
-
-        // In strict mode with entities, should have validation metrics
-        assert!(result.metrics.elements_validated > 0);
-        // Should also validate that strict mode is actually enabled in the validator
-        assert!(validator.config.strict_mode);
+        let mut failures = Vec::new();
+        for (label, xml, config, expected) in rows {
+            let scenario = crate::parse_from_str(xml).unwrap();
+            let result = ScenarioValidator::with_config(config).validate_scenario(&scenario);
+            let got = findings(&result);
+            if got != expected {
+                failures.push(format!("{label}: expected {expected:?}, got {got:?}"));
+            }
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
     }
 }

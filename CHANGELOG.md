@@ -95,6 +95,9 @@ All notable changes to this project are recorded here. The format follows
   ParameterValueDistributionDefinitionGroup}`. No type held them. The first duplicated
   `DeterministicMultiParameterDistribution` field for field; the second only wrapped a
   `ParameterValueDistribution`. Use those types directly.
+- **Breaking:** `ValidationConfig::use_cache`, `ValidationMetrics::cache_hit_ratio` and
+  `ValidationContext::{strict_mode, with_strict_mode}` are removed. The cache was never filled, so the
+  ratio was always 0.0; to treat warnings as errors, set `ValidationConfig::strict_mode`.
 
 ### Fixed
 
@@ -119,6 +122,10 @@ All notable changes to this project are recorded here. The format follows
   `LogNormalDistribution` whose `variance` or `Range` lower limit is not positive; `$parameter`
   and `${expression}` operands are left to parameter resolution. `basic::Range::new` now panics on
   an inverted range in release builds as well, as its documentation states.
+- `ValidationConfig` switches now do what the module documents. `validate_references`,
+  `validate_constraints` and `validate_semantics` gate the checks of their category, `strict_mode`
+  reports warnings as `SemanticError` errors, and `max_errors` caps `errors`; missing-required checks
+  and warnings are always on.
 
 ## [0.5.0] - 2026-09-22
 

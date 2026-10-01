@@ -137,20 +137,12 @@ pub struct ValidationContext {
     pub entities: HashMap<String, EntityRef>,
     /// Available catalog entries for catalog reference validation  
     pub catalogs: HashMap<String, CatalogRef>,
-    /// Validation settings and options
-    pub strict_mode: bool,
 }
 
 impl ValidationContext {
     /// Create a new validation context
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Enable strict validation mode
-    pub fn with_strict_mode(mut self) -> Self {
-        self.strict_mode = true;
-        self
     }
 
     /// Add an entity to the validation registry
