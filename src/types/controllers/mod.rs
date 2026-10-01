@@ -1,7 +1,7 @@
 //! Controller definitions and the properties that configure them. The actions that
 //! assign and activate a controller live in [`crate::types::actions::control`].
 
-use crate::types::basic::{Directory, OSString, ParameterDeclarations, Value};
+use crate::types::basic::{OSString, ParameterDeclarations, Value};
 use crate::types::catalogs::references::ControllerCatalogReference;
 use crate::types::entities::vehicle::Properties;
 use crate::types::enums::ControllerType;
@@ -67,22 +67,6 @@ pub enum ObjectControllerChoice {
     Controller(Controller),
 }
 
-/// Catalog location for controller definitions.
-///
-/// Specifies where controller catalog files can be found.
-///
-/// `#[derive(Default)]` removed — `Directory`'s `Default` fabricated an
-/// empty `@path` (`Schema/OpenSCENARIO.xsd:1067-1069` declares `@path` `use="required"`
-/// with no schema default). This type has no constructor or call site of its own; it
-/// appears to be an unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ControllerCatalogLocation {
-    /// Directory containing controller catalog files
-    #[serde(rename = "Directory")]
-    pub directory: Directory,
-}
-
 // Helper implementations for common controller operations
 
 impl Controller {
@@ -93,34 +77,6 @@ impl Controller {
             controller_type: Some(Value::Literal(controller_type)),
             parameter_declarations: None,
             properties: None,
-        }
-    }
-
-    /// Creates a controller with parameters.
-    pub fn with_parameters(
-        name: String,
-        controller_type: ControllerType,
-        parameters: ParameterDeclarations,
-    ) -> Self {
-        Self {
-            name: Value::Literal(name),
-            controller_type: Some(Value::Literal(controller_type)),
-            parameter_declarations: Some(parameters),
-            properties: None,
-        }
-    }
-
-    /// Creates a controller with properties.
-    pub fn with_properties(
-        name: String,
-        controller_type: ControllerType,
-        properties: Properties,
-    ) -> Self {
-        Self {
-            name: Value::Literal(name),
-            controller_type: Some(Value::Literal(controller_type)),
-            parameter_declarations: None,
-            properties: Some(properties),
         }
     }
 }

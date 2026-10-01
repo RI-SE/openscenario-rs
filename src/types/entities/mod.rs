@@ -299,6 +299,20 @@ mod tests {
     }
 
     #[test]
+    fn pedestrian_mut_edits_only_the_pedestrian_branch() {
+        let mut obj = ScenarioObject::new_pedestrian(
+            "Walker".to_string(),
+            Pedestrian::new_pedestrian("Inner".to_string()),
+        );
+        obj.pedestrian_mut().unwrap().mass = crate::types::basic::Double::literal(60.0);
+        assert_eq!(obj.pedestrian().unwrap().mass.as_literal(), Some(&60.0));
+
+        let mut car =
+            ScenarioObject::new_vehicle("Car".to_string(), Vehicle::new_car("Car".to_string()));
+        assert!(car.pedestrian_mut().is_none());
+    }
+
+    #[test]
     fn test_entities_container() {
         let mut entities = Entities::new();
 

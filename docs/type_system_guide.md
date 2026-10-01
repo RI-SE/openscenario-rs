@@ -503,7 +503,8 @@ parameter-sigil change is a separate matter.
 fabricating impl was replaced with `#[derive(Default)]`, matching the sibling `PrivateAction`/
 `GlobalAction` choice groups in the same file. One collateral `#[derive(Default)]` removal
 outside that file list: `ControllerCatalogLocation` (`src/types/controllers/mod.rs`),
-an apparently-unused duplicate of `catalogs::locations::ControllerCatalogLocation`.
+an unused duplicate of `catalogs::locations::ControllerCatalogLocation`, since deleted
+outright; `catalogs::locations::ControllerCatalogLocation` is the only one.
 
 A further pass (`entities/vehicle.rs`, `scenario/{monitors,variables,story}.rs`,
 `positions/{relative,mod}.rs`, `builder/**` outside `builder/conditions/*`) closed the coverage

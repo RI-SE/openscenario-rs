@@ -15,6 +15,12 @@ All notable changes to this project are recorded here. The format follows
   `EndOfRoadCondition`, not the XSD's `OffroadCondition`, silently giving callers a different
   trigger than the one they asked for. Use `offroad` for the XSD-compliant `OffroadCondition`,
   or `end_of_road` for the condition `off_road` actually built.
+- **Breaking:** `Controller::with_parameters` and `Controller::with_properties`. Nothing called
+  them; build with `Controller::new` and set the `parameter_declarations` or `properties` field.
+- **Breaking:** `types::controllers::ControllerCatalogLocation`, an unused duplicate of
+  `types::catalogs::locations::ControllerCatalogLocation` (re-exported as
+  `types::ControllerCatalogLocation`), which is the type `CatalogLocations` and the catalog
+  loader use.
 
 ## [0.5.0] - 2026-09-22
 
