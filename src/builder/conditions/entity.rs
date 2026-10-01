@@ -6,10 +6,9 @@ use crate::types::{
     basic::{Double, OSString},
     conditions::entity::{
         AccelerationCondition, ByEntityCondition, EndOfRoadCondition, EntityCondition,
-        ReachPositionCondition, SpeedCondition, TraveledDistanceCondition,
+        SpeedCondition, TraveledDistanceCondition,
     },
     enums::{ConditionEdge, DirectionalDimension, Rule},
-    positions::Position,
     scenario::triggers::{Condition, ConditionChoice, EntityRef, TriggeringEntities},
 };
 
@@ -256,73 +255,6 @@ impl TraveledDistanceConditionBuilder {
     }
 }
 
-/// Builder for reach position conditions
-#[derive(Debug, Default)]
-pub struct ReachPositionConditionBuilder {
-    entity_ref: Option<String>,
-    position: Option<Position>,
-    tolerance: Option<f64>,
-}
-
-impl ReachPositionConditionBuilder {
-    /// Create new reach position condition builder
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Set target entity
-    pub fn for_entity(mut self, entity_ref: &str) -> Self {
-        self.entity_ref = Some(entity_ref.to_string());
-        self
-    }
-
-    /// Set target position
-    pub fn at_position(mut self, position: Position) -> Self {
-        self.position = Some(position);
-        self
-    }
-
-    /// Set tolerance for position matching
-    pub fn with_tolerance(mut self, tolerance: f64) -> Self {
-        self.tolerance = Some(tolerance);
-        self
-    }
-
-    /// Build the condition
-    pub fn build(self) -> BuilderResult<Condition> {
-        if self.entity_ref.is_none() {
-            return Err(BuilderError::validation_error(
-                "Entity reference is required",
-            ));
-        }
-        if self.position.is_none() {
-            return Err(BuilderError::validation_error("Position is required"));
-        }
-
-        let reach_position_condition = ReachPositionCondition {
-            position: self.position.unwrap(),
-            tolerance: self
-                .tolerance
-                .map(Double::literal)
-                .unwrap_or(Double::literal(1.0)),
-        };
-
-        let by_entity_condition = ByEntityCondition {
-            triggering_entities: TriggeringEntities::any(vec![EntityRef {
-                entity_ref: OSString::literal(self.entity_ref.unwrap()),
-            }])?,
-            entity_condition: EntityCondition::ReachPosition(reach_position_condition),
-        };
-
-        Ok(Condition {
-            name: OSString::literal("ReachPositionCondition".to_string()),
-            condition_edge: Value::Literal(ConditionEdge::Rising),
-            delay: Double::literal(0.0),
-            choice: ConditionChoice::ByEntityCondition(by_entity_condition),
-        })
-    }
-}
-
 /// Builder for end of road conditions
 #[derive(Debug, Default)]
 pub struct EndOfRoadConditionBuilder {
@@ -438,38 +370,6 @@ mod tests {
                 assert_eq!(*distance_condition.value.as_literal().unwrap(), 100.0);
             } else {
                 panic!("Expected TraveledDistance condition");
-            }
-        } else {
-            panic!("Expected ByEntityCondition");
-        }
-    }
-
-    #[test]
-    fn test_reach_position_condition_builder() {
-        use crate::types::basic::Double;
-        use crate::types::positions::{Position, WorldPosition};
-
-        let position = Position::world(WorldPosition {
-            x: Double::literal(100.0),
-            y: Double::literal(200.0),
-            z: Some(Double::literal(0.0)),
-            h: Some(Double::literal(0.0)),
-            p: Some(Double::literal(0.0)),
-            r: Some(Double::literal(0.0)),
-        });
-
-        let condition = ReachPositionConditionBuilder::new()
-            .for_entity("ego")
-            .at_position(position)
-            .with_tolerance(2.0)
-            .build()
-            .unwrap();
-
-        if let ConditionChoice::ByEntityCondition(by_entity) = condition.choice {
-            if let EntityCondition::ReachPosition(reach_condition) = by_entity.entity_condition {
-                assert_eq!(*reach_condition.tolerance.as_literal().unwrap(), 2.0);
-            } else {
-                panic!("Expected ReachPosition condition");
             }
         } else {
             panic!("Expected ByEntityCondition");

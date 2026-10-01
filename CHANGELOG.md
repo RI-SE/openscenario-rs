@@ -17,6 +17,10 @@ All notable changes to this project are recorded here. The format follows
   its `TrafficDefinition` argument (the schema makes `TrafficDistribution` optional, so add it with
   `with_traffic_distribution`), and `TrafficSourceAction::with_velocity` is replaced by `with_speed`,
   which writes `speed`.
+- **Breaking:** `DistanceConditionBuilder` writes `relativeDistanceType="euclidianDistance"`, not the
+  deprecated `cartesianDistance`, and `StoryBuilder::stop_when_entity_reaches` writes a
+  `DistanceCondition` (reference-point distance, `lessOrEqual` 1 m) instead of the deprecated
+  `ReachPositionCondition`.
 - **Breaking:** `Vehicle::new_truck`'s bounding box height is now 3.8 m (was 3.5 m), matching
   `Dimensions::truck()` rather than the removed `Dimensions::truck_default()`.
 - **Breaking:** distribution attributes the schema types as `Double` are now `Double`, not
@@ -38,6 +42,12 @@ All notable changes to this project are recorded here. The format follows
 
 ### Removed
 
+- **Breaking:** `RelativeDistanceConditionBuilder::cartesian` and `RelativeDistanceCondition::cartesian`,
+  which wrote the deprecated `cartesianDistance`. Use `euclidian`, which writes `euclidianDistance`.
+- **Breaking:** `ReachPositionConditionBuilder`, `ByEntityCondition::reach_position` and the builder's
+  re-exports. `ReachPositionCondition` is deprecated since 1.2; use `DistanceConditionBuilder` or
+  `ByEntityCondition::distance` with `freespace` false and rule `lessOrEqual`. Documents that
+  contain `ReachPositionCondition` still parse.
 - **Deprecated traffic builder methods.** `TrafficSwarmAction::with_velocity` (use
   `with_initial_speed_range`), `TrafficSwarmAction::with_traffic_definition` (use
   `with_traffic_distribution`) and `TrafficSinkAction::with_traffic_definition` (no replacement)

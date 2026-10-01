@@ -84,17 +84,23 @@ impl StoryboardBuilder {
         Ok(self.with_stop_trigger(trigger))
     }
 
-    /// Stop when entity reaches position
+    /// Stop when the entity reaches a position, within 1 m.
+    ///
+    /// Writes a `DistanceCondition` (reference-point distance, `lessOrEqual` 1 m).
+    /// `ReachPositionCondition` is deprecated since 1.2 in favour of it.
     pub fn stop_when_entity_reaches(
         self,
         entity: &str,
         position: crate::types::positions::Position,
     ) -> BuilderResult<Self> {
-        use crate::builder::conditions::{ReachPositionConditionBuilder, TriggerBuilder};
+        use crate::builder::conditions::{DistanceConditionBuilder, TriggerBuilder};
+        use crate::types::enums::Rule;
 
-        let reach_condition = ReachPositionConditionBuilder::new()
+        let reach_condition = DistanceConditionBuilder::new()
             .for_entity(entity)
-            .at_position(position)
+            .to_position(position)
+            .distance_rule(1.0, Rule::LessOrEqual)
+            .use_freespace(false)
             .build()?;
 
         let trigger = TriggerBuilder::new()

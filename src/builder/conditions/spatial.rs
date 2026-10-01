@@ -1,6 +1,5 @@
 //! Condition builders for spatial relationships: `DistanceCondition` to a position,
-//! `RelativeDistanceCondition` between entities, `ReachPositionCondition`, and
-//! `CollisionCondition`.
+//! `RelativeDistanceCondition` between entities, and `CollisionCondition`.
 
 use crate::builder::{BuilderError, BuilderResult};
 use crate::types::basic::Value;
@@ -120,7 +119,7 @@ impl DistanceConditionBuilder {
                     rule: self.rule,
                     along_route: None,
                     coordinate_system: None,
-                    relative_distance_type: Some(Value::Literal(RelativeDistanceType::Cartesian)),
+                    relative_distance_type: Some(Value::Literal(RelativeDistanceType::Euclidian)),
                     routing_algorithm: None,
                 }),
             }),
@@ -193,9 +192,9 @@ impl RelativeDistanceConditionBuilder {
         self
     }
 
-    /// Set distance type to cartesian
-    pub fn cartesian(mut self) -> Self {
-        self.relative_distance_type = Some(Value::Literal(RelativeDistanceType::Cartesian));
+    /// Set distance type to euclidian (the magnitude of the distance vector)
+    pub fn euclidian(mut self) -> Self {
+        self.relative_distance_type = Some(Value::Literal(RelativeDistanceType::Euclidian));
         self
     }
 
@@ -480,6 +479,24 @@ mod tests {
         }
     }
 
+    /// `DistanceCondition` (XSD:1072-1085): the builder writes `relativeDistanceType` explicitly
+    /// as `euclidianDistance`, the 1.3 form, never the deprecated `cartesianDistance`.
+    #[test]
+    fn distance_condition_builder_emits_euclidian_distance() {
+        let condition = DistanceConditionBuilder::new()
+            .for_entity("ego")
+            .to_position(create_test_position())
+            .closer_than(5.0)
+            .build()
+            .unwrap();
+        let xml = condition_xml(&condition);
+        assert!(
+            xml.contains(r#"relativeDistanceType="euclidianDistance""#),
+            "{xml}"
+        );
+        assert!(!xml.contains("cartesianDistance"), "{xml}");
+    }
+
     fn condition_xml(condition: &Condition) -> String {
         quick_xml::se::to_string_with_root("Condition", condition).expect("serialize Condition")
     }
@@ -499,8 +516,8 @@ mod tests {
     }
 
     /// `RelativeDistanceCondition` (XSD:1843-1851): each threshold and distance-type setter
-    /// lands on its own required attribute. `cartesian()` emits `cartesianDistance`, the
-    /// `RelativeDistanceType` literal at XSD:448 (deprecated in 1.3, still valid).
+    /// lands on its own required attribute. `euclidian()` emits `euclidianDistance`, the
+    /// `RelativeDistanceType` literal that replaces the deprecated `cartesianDistance` (XSD:448).
     #[test]
     fn relative_distance_condition_builder_emits_xsd_condition() {
         let rows = [
@@ -525,14 +542,14 @@ mod tests {
                 r#"<RelativeDistanceCondition entityRef="lead" value="30.5" freespace="false" relativeDistanceType="lateral" rule="greaterThan"/>"#,
             ),
             (
-                "cartesian",
+                "euclidian",
                 RelativeDistanceConditionBuilder::new()
                     .for_entity("ego")
                     .to_entity("target")
                     .closer_than(2.0)
                     .use_freespace(false)
-                    .cartesian(),
-                r#"<RelativeDistanceCondition entityRef="target" value="2" freespace="false" relativeDistanceType="cartesianDistance" rule="lessThan"/>"#,
+                    .euclidian(),
+                r#"<RelativeDistanceCondition entityRef="target" value="2" freespace="false" relativeDistanceType="euclidianDistance" rule="lessThan"/>"#,
             ),
         ];
         for (row, builder, expected) in rows {

@@ -1001,18 +1001,6 @@ impl ByEntityCondition {
         )
     }
 
-    /// Create a reach position condition
-    pub fn reach_position(
-        triggering_entities: TriggeringEntities,
-        position: Position,
-        tolerance: f64,
-    ) -> Self {
-        Self::new(
-            triggering_entities,
-            EntityCondition::ReachPosition(ReachPositionCondition::new(position, tolerance)),
-        )
-    }
-
     /// Create a distance condition
     pub fn distance(
         triggering_entities: TriggeringEntities,

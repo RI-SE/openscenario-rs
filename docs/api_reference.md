@@ -543,7 +543,7 @@ Catalog: `CatalogEntityBuilder`, `CatalogLocationsBuilder`,
 `PedestrianCatalogReferenceBuilder`, `VehicleCatalogReferenceBuilder`.
 
 Conditions: `AccelerationConditionBuilder`, `CollisionConditionBuilder`,
-`ParameterConditionBuilder`, `ReachPositionConditionBuilder`,
+`ParameterConditionBuilder`,
 `RelativeDistanceConditionBuilder`, `SpeedConditionBuilder`, `TimeConditionBuilder`,
 `TraveledDistanceConditionBuilder`, `TriggerBuilder`, `ValueSpeedConditionBuilder`,
 `VariableConditionBuilder`.

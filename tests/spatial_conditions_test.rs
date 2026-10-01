@@ -94,7 +94,7 @@ fn relative_distance_condition_matches_xsd_wire_form() {
         &RelativeDistanceCondition::lateral(entity("Adjacent"), 3.0, false, Rule::LessThan),
     );
     assert_wire(
-        r#"<RelativeDistanceCondition entityRef="Lead" value="15" freespace="false" relativeDistanceType="cartesianDistance" rule="notEqualTo"/>"#,
-        &RelativeDistanceCondition::cartesian(entity("Lead"), 15.0, false, Rule::NotEqualTo),
+        r#"<RelativeDistanceCondition entityRef="Lead" value="15" freespace="false" relativeDistanceType="euclidianDistance" rule="notEqualTo"/>"#,
+        &RelativeDistanceCondition::euclidian(entity("Lead"), 15.0, false, Rule::NotEqualTo),
     );
 }

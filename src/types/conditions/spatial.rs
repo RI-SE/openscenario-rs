@@ -230,8 +230,8 @@ impl RelativeDistanceCondition {
         )
     }
 
-    /// Create cartesian distance condition
-    pub fn cartesian(
+    /// Create euclidian distance condition
+    pub fn euclidian(
         entity_ref: impl Into<OSString>,
         distance: f64,
         freespace: bool,
@@ -241,7 +241,7 @@ impl RelativeDistanceCondition {
             entity_ref,
             distance,
             freespace,
-            RelativeDistanceType::Cartesian,
+            RelativeDistanceType::Euclidian,
             rule,
         )
     }

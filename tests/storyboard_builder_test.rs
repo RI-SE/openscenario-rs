@@ -50,10 +50,12 @@ fn stop_after_time_sets_a_simulation_time_stop_trigger() {
     );
 }
 
-/// XSD `ByEntityCondition` (`:825`), `TriggeringEntities` (`:2400`) and
-/// `ReachPositionCondition` (`:1819`, `@tolerance` required, defaulted to 1 by the builder).
+/// XSD `ByEntityCondition` (`:825`), `TriggeringEntities` (`:2400`) and `DistanceCondition`
+/// (`:1072`). `ReachPositionCondition` is deprecated since 1.2 in favour of `DistanceCondition`,
+/// so the shortcut writes a reference-point distance to the position, `lessOrEqual` a 1 m
+/// tolerance (the old default), the tolerance circle being closed.
 #[test]
-fn stop_when_entity_reaches_sets_a_reach_position_stop_trigger() {
+fn stop_when_entity_reaches_sets_a_distance_stop_trigger() {
     let position = Position::world(WorldPosition::with_full_orientation(
         500.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     ));
@@ -70,12 +72,12 @@ fn stop_when_entity_reaches_sets_a_reach_position_stop_trigger() {
         stop_trigger_xml(&scenario),
         concat!(
             r#"<StopTrigger><ConditionGroup>"#,
-            r#"<Condition name="ReachPositionCondition" conditionEdge="rising" delay="0">"#,
+            r#"<Condition name="DistanceCondition" conditionEdge="rising" delay="0">"#,
             r#"<ByEntityCondition>"#,
             r#"<TriggeringEntities triggeringEntitiesRule="any"><EntityRef entityRef="ego"/></TriggeringEntities>"#,
-            r#"<EntityCondition><ReachPositionCondition tolerance="1">"#,
+            r#"<EntityCondition><DistanceCondition value="1" freespace="false" rule="lessOrEqual" relativeDistanceType="euclidianDistance">"#,
             r#"<Position><WorldPosition x="500" y="0" z="0" h="0" p="0" r="0"/></Position>"#,
-            r#"</ReachPositionCondition></EntityCondition>"#,
+            r#"</DistanceCondition></EntityCondition>"#,
             r#"</ByEntityCondition></Condition></ConditionGroup></StopTrigger>"#,
         )
     );

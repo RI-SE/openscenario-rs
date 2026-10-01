@@ -50,7 +50,7 @@ fn main() {
     let intersection_pos = Position::world_origin(); // Would be set to intersection coordinates
     let intersection_condition = DistanceCondition::less_than(intersection_pos, 50.0, true)
         .with_coordinate_system(CoordinateSystem::Road)
-        .with_distance_type(RelativeDistanceType::Cartesian);
+        .with_distance_type(RelativeDistanceType::Euclidian);
 
     println!("✓ Trigger when vehicle is within 50m of intersection");
     println!(
@@ -128,7 +128,7 @@ fn main() {
     println!("6. XML Serialization Example");
     println!("----------------------------");
 
-    let demo_condition = RelativeDistanceCondition::cartesian(
+    let demo_condition = RelativeDistanceCondition::euclidian(
         OSString::literal("ego_vehicle".to_string()),
         15.0,
         false, // reference point distance

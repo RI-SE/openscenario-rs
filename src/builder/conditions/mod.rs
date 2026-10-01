@@ -11,7 +11,7 @@ pub mod value;
 
 pub use entity::{
     AccelerationConditionBuilder, EndOfRoadConditionBuilder, EnhancedSpeedConditionBuilder,
-    ReachPositionConditionBuilder, TraveledDistanceConditionBuilder,
+    TraveledDistanceConditionBuilder,
 };
 pub use spatial::{
     CollisionConditionBuilder, DistanceConditionBuilder, RelativeDistanceConditionBuilder,

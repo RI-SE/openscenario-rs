@@ -275,7 +275,7 @@ a story. `StoryboardBuilder` also offers stop-trigger shortcuts – `stop_after_
 
 `TriggerBuilder` assembles condition groups, and each condition family has its own builder:
 `SpeedConditionBuilder`, `AccelerationConditionBuilder`, `TimeConditionBuilder`,
-`TraveledDistanceConditionBuilder`, `ReachPositionConditionBuilder`,
+`TraveledDistanceConditionBuilder`,
 `RelativeDistanceConditionBuilder`, `CollisionConditionBuilder`, `ParameterConditionBuilder`,
 `VariableConditionBuilder` and `ValueSpeedConditionBuilder`. All are re-exported at
 `openscenario_rs::builder`.

@@ -11,9 +11,10 @@ use openscenario_rs::types::basic::{Boolean, Double};
 use openscenario_rs::types::conditions::{
     AccelerationCondition, AngleCondition, ByEntityCondition, CollisionCondition,
     CollisionConditionChoice, CollisionTarget, EndOfRoadCondition, EntityCondition,
-    OffroadCondition, RelativeAngleCondition, RelativeClearanceCondition, RelativeLaneRange,
-    RelativeSpeedCondition, SpeedCondition, StandStillCondition, TimeHeadwayCondition,
-    TimeToCollisionCondition, TimeToCollisionTarget, TraveledDistanceCondition,
+    OffroadCondition, ReachPositionCondition, RelativeAngleCondition, RelativeClearanceCondition,
+    RelativeLaneRange, RelativeSpeedCondition, SpeedCondition, StandStillCondition,
+    TimeHeadwayCondition, TimeToCollisionCondition, TimeToCollisionTarget,
+    TraveledDistanceCondition,
 };
 use openscenario_rs::types::enums::{
     AngleType, CoordinateSystem, DirectionalDimension, ObjectType, RelativeDistanceType,
@@ -291,10 +292,13 @@ fn by_entity_condition_constructors_match_xsd_wire_form() {
         &by_entity_xml(
             r#"<ReachPositionCondition tolerance="3"><Position><WorldPosition x="100" y="200"/></Position></ReachPositionCondition>"#,
         ),
-        &ByEntityCondition::reach_position(
+        // Deprecated since 1.2, still a valid document form: no constructor, but it must read and write.
+        &ByEntityCondition::new(
             ego(),
-            Position::world(WorldPosition::new(100.0, 200.0)),
-            3.0,
+            EntityCondition::ReachPosition(ReachPositionCondition::new(
+                Position::world(WorldPosition::new(100.0, 200.0)),
+                3.0,
+            )),
         ),
     );
     assert_wire(
