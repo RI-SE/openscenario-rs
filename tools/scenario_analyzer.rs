@@ -412,7 +412,7 @@ struct DistributionDetails {
 struct RangeInfo {
     lower_limit: String,
     upper_limit: String,
-    step_width: String,
+    step_width: f64,
     calculated_count: usize,
 }
 
