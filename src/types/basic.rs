@@ -289,7 +289,7 @@ pub type DateTime = Value<XsdDateTime>;
 /// [`XsdDateTime::aware`] or [`XsdDateTime::naive`], which was never parsed from XML, falls
 /// back to the canonical form.
 ///
-/// `PartialEq`, `Eq` and `Hash` compare the parsed [`XsdDateTimeValue`] only; the recorded
+/// `PartialEq`, `Eq` and `Hash` compare the parsed `XsdDateTimeValue` only; the recorded
 /// `source` text takes no part. Two values that name the same instant through different
 /// spellings -- `Z` and `+00:00`, or `.5` and `.500` -- therefore compare equal even though
 /// each still serializes as the text it was parsed from. A value with no explicit offset
