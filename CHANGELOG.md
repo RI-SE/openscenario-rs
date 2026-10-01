@@ -33,6 +33,9 @@ All notable changes to this project are recorded here. The format follows
   constructed it, and it repeated `DetachedPedestrianBuilder` method for method. Use
   `ScenarioBuilder::add_pedestrian` (closure over `DetachedPedestrianBuilder`) or
   `DetachedPedestrianBuilder::new(name).build()`.
+- **Breaking:** `Route::check_waypoint_reachability`. It returned `true` for every waypoint
+  without consulting the road network, so a caller could not tell a reachable route from an
+  unreachable one. No replacement: the crate does not model road-network connectivity.
 
 ## [0.5.0] - 2026-09-22
 

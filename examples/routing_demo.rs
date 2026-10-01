@@ -137,21 +137,6 @@ fn demo_route_analytics() -> Result<(), Box<dyn std::error::Error>> {
         println!("    Segment {}: {:.2} meters", i + 1, distance);
     }
 
-    // Check waypoint reachability
-    let reachability = route.check_waypoint_reachability()?;
-    println!("  Waypoint reachability:");
-    for (i, reachable) in reachability.iter().enumerate() {
-        println!(
-            "    Waypoint {}: {}",
-            i + 1,
-            if *reachable {
-                "✅ Reachable"
-            } else {
-                "❌ Unreachable"
-            }
-        );
-    }
-
     Ok(())
 }
 

@@ -226,14 +226,6 @@ impl Route {
         Ok(distances)
     }
 
-    /// Check if all waypoints are reachable from their predecessors
-    ///
-    /// This is a simplified implementation that always returns true.
-    /// In a real implementation, this would check road network connectivity.
-    pub fn check_waypoint_reachability(&self) -> crate::Result<Vec<bool>> {
-        Ok(vec![true; self.waypoints.len()])
-    }
-
     /// Calculate distance between two waypoints
     ///
     /// This is a simplified implementation using Euclidean distance for WorldPosition.
@@ -510,34 +502,6 @@ mod tests {
             "SerializationTest"
         );
         assert_eq!(deserialized.waypoints.len(), 2);
-    }
-
-    #[test]
-    fn test_complex_multi_waypoint_route() {
-        let route = Route::new(
-            "ComplexRoute",
-            true,
-            vec![
-                Waypoint::world_position(0.0, 0.0, 0.0, RouteStrategy::Shortest),
-                Waypoint::lane_position("road1", "lane1", 100.0, RouteStrategy::Fastest),
-                Waypoint::relative_world_position(
-                    "vehicle1",
-                    50.0,
-                    0.0,
-                    0.0,
-                    RouteStrategy::LeastIntersections,
-                ),
-                Waypoint::world_position(200.0, 200.0, 0.0, RouteStrategy::Random),
-            ],
-        )
-        .unwrap();
-
-        assert_eq!(route.waypoint_count(), 4);
-        assert!(route.is_closed().unwrap());
-
-        let reachability = route.check_waypoint_reachability().unwrap();
-        assert_eq!(reachability.len(), 4);
-        assert!(reachability.iter().all(|&x| x)); // All should be reachable in this simple implementation
     }
 
     #[test]
