@@ -162,7 +162,7 @@ osc_enum_deprecated_variants! {
     /// type. The schema marks `overwrite` deprecated in favor of
     /// `override`; both remain valid wire values and are kept here.
     pub enum Priority {
-        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; use `Priority::Override`")]
+        #[deprecated(note = "deprecated since OpenSCENARIO 1.2; use `Priority::Override`")]
         Overwrite => "overwrite",
         Override => "override",
         Parallel => "parallel",
@@ -214,7 +214,7 @@ osc_enum_deprecated_variants! {
         DateTime => "dateTime",
         Double => "double",
         Int => "int",
-        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; use `ParameterType::Int`")]
+        #[deprecated(note = "deprecated since OpenSCENARIO 1.2; use `ParameterType::Int`")]
         Integer => "integer",
         String => "string",
         UnsignedInt => "unsignedInt",
@@ -287,7 +287,7 @@ osc_enum_deprecated_variants! {
     pub enum RelativeDistanceType {
         Longitudinal => "longitudinal",
         Lateral => "lateral",
-        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; use `RelativeDistanceType::Euclidian`")]
+        #[deprecated(note = "deprecated since OpenSCENARIO 1.1; use `RelativeDistanceType::Euclidian`")]
         Cartesian => "cartesianDistance",
         Euclidian => "euclidianDistance",
     }
@@ -322,7 +322,7 @@ osc_enum_deprecated_variants! {
         TrafficIsland => "trafficIsland",
         Tree => "tree",
         Vegetation => "vegetation",
-        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; describe wind with the `Wind` element of `Weather`")]
+        #[deprecated(note = "deprecated since OpenSCENARIO 1.1; describe wind with the `Wind` element of `Weather`")]
         Wind => "wind",
     }
 }
