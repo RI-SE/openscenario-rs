@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate different Value types
     let literal_value = Double::literal(25.0);
     let parameter_value = Double::parameter("vehicle_speed".to_string());
-    let expression_value = Double::expression("vehicle_speed + 10".to_string());
+    let expression_value = Double::expression("$vehicle_speed + 10".to_string());
 
     println!("Value Types:");
     println!("  Literal: {:?}", literal_value);
@@ -37,10 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Resolved Values:");
     println!("  Literal: {}", literal_value.resolve(&params)?);
     println!("  Parameter: {}", parameter_value.resolve(&params)?);
-    // For expression, we'll just show the expression string since full evaluation isn't implemented yet
-    if let Some(expr) = expression_value.as_expression() {
-        println!("  Expression: {}", expr);
-    }
+    println!("  Expression: {}", expression_value.resolve(&params)?);
     println!();
 
     // Show serialization
