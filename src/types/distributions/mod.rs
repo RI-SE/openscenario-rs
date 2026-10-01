@@ -192,36 +192,10 @@ pub enum DeterministicParameterDistributionGroup {
     DeterministicSingleParameterDistribution(DeterministicSingleParameterDistribution),
 }
 
-/// DeterministicMultiParameterDistributionType group - XSD group wrapper for value set sequence
-///
-/// XSD group `DeterministicMultiParameterDistributionType` (`:1034-1038`) is an `xsd:sequence`
-/// of one required element, not a choice, so this type is out of this file's choice-conversion
-/// scope. It duplicates `DeterministicMultiParameterDistribution` field for field and remains
-/// unused scaffolding; left as-is rather than deleted, since removing it is not a choice fix.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DeterministicMultiParameterDistributionTypeGroup {
-    #[serde(rename = "ValueSetDistribution")]
-    pub value_set_distribution: ValueSetDistribution,
-}
-
-/// ParameterValueDistributionDefinition group - XSD group wrapper for parameter value distribution sequence
-///
-/// XSD group `ParameterValueDistributionDefinition` (`:1667-1670`) is an `xsd:sequence` of one
-/// required element, not a choice; same scope note as
-/// `DeterministicMultiParameterDistributionTypeGroup` above.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParameterValueDistributionDefinitionGroup {
-    #[serde(rename = "ParameterValueDistribution")]
-    pub parameter_value_distribution: ParameterValueDistribution,
-}
-
 // No Default for DeterministicParameterDistributionGroup: it wraps an xsd:choice whose every
 // variant carries required content (see the notes on `DistributionDefinition` and
 // `DeterministicSingleParameterDistributionType` above) — there is no schema-valid "empty"
-// member to pick. `DeterministicMultiParameterDistributionTypeGroup` and
-// `ParameterValueDistributionDefinitionGroup` drop their derived `Default` for the same reason:
-// their single field (`ValueSetDistribution`, `ParameterValueDistribution`) no longer implements
-// it, and wrapping a required element is never "states nothing" anyway. Use each type's `new()`.
+// member to pick.
 
 // Helper implementations for ergonomic group usage
 
@@ -247,34 +221,6 @@ impl DeterministicParameterDistributionGroup {
     }
 }
 
-impl DeterministicMultiParameterDistributionTypeGroup {
-    /// Create new multi parameter distribution type group
-    pub fn new(value_set_distribution: ValueSetDistribution) -> Self {
-        Self {
-            value_set_distribution,
-        }
-    }
-
-    /// Get the value set distribution
-    pub fn value_set_distribution(&self) -> &ValueSetDistribution {
-        &self.value_set_distribution
-    }
-}
-
-impl ParameterValueDistributionDefinitionGroup {
-    /// Create new parameter value distribution definition group
-    pub fn new(parameter_value_distribution: ParameterValueDistribution) -> Self {
-        Self {
-            parameter_value_distribution,
-        }
-    }
-
-    /// Get the parameter value distribution
-    pub fn parameter_value_distribution(&self) -> &ParameterValueDistribution {
-        &self.parameter_value_distribution
-    }
-}
-
 // Validation trait implementations - delegate to underlying types
 
 impl ValidateDistribution for DeterministicParameterDistributionGroup {
@@ -283,18 +229,6 @@ impl ValidateDistribution for DeterministicParameterDistributionGroup {
             Self::DeterministicSingleParameterDistribution(dist) => dist.validate(),
             Self::DeterministicMultiParameterDistribution(dist) => dist.validate(),
         }
-    }
-}
-
-impl ValidateDistribution for DeterministicMultiParameterDistributionTypeGroup {
-    fn validate(&self) -> Result<()> {
-        self.value_set_distribution.validate()
-    }
-}
-
-impl ValidateDistribution for ParameterValueDistributionDefinitionGroup {
-    fn validate(&self) -> Result<()> {
-        self.parameter_value_distribution.validate()
     }
 }
 
@@ -375,6 +309,39 @@ mod tests {
     }
 
     #[test]
+    fn test_parameter_value_distribution_validate_reaches_multi_parameter_entries() {
+        // `validate` descends through the `Deterministic` branch into each entry, so a
+        // multi-parameter value set that assigns `parameter` twice fails the whole distribution.
+        let mut det = sample_deterministic_parameter_distribution();
+        det.add_multi(sample_multi_parameter_distribution());
+        let file = File {
+            filepath: "test.xosc".to_string(),
+        };
+        let valid = ParameterValueDistribution::new_deterministic(file.clone(), det.clone());
+        assert!(valid.validate().is_ok());
+
+        det.add_multi(DeterministicMultiParameterDistribution::new(
+            ValueSetDistribution::new(
+                ParameterValueSet::new(
+                    ParameterAssignment::new("parameter".to_string(), Value::Literal("0".into())),
+                    vec![ParameterAssignment::new(
+                        "parameter".to_string(),
+                        Value::Literal("1".into()),
+                    )],
+                ),
+                vec![],
+            ),
+        ));
+        let err = ParameterValueDistribution::new_deterministic(file, det)
+            .validate()
+            .expect_err("duplicate parameterRef in a multi-parameter entry must be rejected");
+        assert!(
+            err.to_string().contains("Duplicate parameter reference"),
+            "{err}"
+        );
+    }
+
+    #[test]
     fn test_parameter_value_distribution_zero_branches_rejected() {
         let xml = r#"<ParameterValueDistribution><ScenarioFile filepath="test.xosc"/></ParameterValueDistribution>"#;
         let err = quick_xml::de::from_str::<ParameterValueDistribution>(xml)
@@ -445,69 +412,5 @@ mod tests {
         let reparsed: DeterministicParameterDistributionGroup =
             quick_xml::de::from_str(&xml).expect("deserialize");
         assert_eq!(group, reparsed);
-    }
-
-    /// A value set that assigns `parameter` twice, which `ParameterValueSet::validate` rejects.
-    fn duplicate_ref_value_set_distribution() -> ValueSetDistribution {
-        ValueSetDistribution::new(
-            ParameterValueSet::new(
-                ParameterAssignment::new("parameter".to_string(), Value::Literal("0".into())),
-                vec![ParameterAssignment::new(
-                    "parameter".to_string(),
-                    Value::Literal("1".into()),
-                )],
-            ),
-            vec![],
-        )
-    }
-
-    // Each group wraps one required element; its accessor hands that element back and its
-    // `validate` is the wrapped element's, so an invalid inner value fails through the group.
-
-    #[test]
-    fn test_deterministic_multi_parameter_distribution_type_group() {
-        let value_set_dist = sample_multi_parameter_distribution().distribution_type;
-        let group = DeterministicMultiParameterDistributionTypeGroup::new(value_set_dist.clone());
-        assert_eq!(group.value_set_distribution(), &value_set_dist);
-        assert!(group.validate().is_ok());
-
-        let invalid = DeterministicMultiParameterDistributionTypeGroup::new(
-            duplicate_ref_value_set_distribution(),
-        );
-        let err = invalid
-            .validate()
-            .expect_err("duplicate parameterRef must be rejected");
-        assert!(
-            err.to_string().contains("Duplicate parameter reference"),
-            "{err}"
-        );
-    }
-
-    #[test]
-    fn test_parameter_value_distribution_definition_group() {
-        let param_value_dist = sample_parameter_value_distribution();
-        let group = ParameterValueDistributionDefinitionGroup::new(param_value_dist.clone());
-        assert_eq!(group.parameter_value_distribution(), &param_value_dist);
-        assert!(group.validate().is_ok());
-
-        let mut det = Deterministic::default();
-        det.add_multi(DeterministicMultiParameterDistribution::new(
-            duplicate_ref_value_set_distribution(),
-        ));
-        let invalid = ParameterValueDistributionDefinitionGroup::new(
-            ParameterValueDistribution::new_deterministic(
-                File {
-                    filepath: "test.xosc".to_string(),
-                },
-                det,
-            ),
-        );
-        let err = invalid
-            .validate()
-            .expect_err("duplicate parameterRef must be rejected");
-        assert!(
-            err.to_string().contains("Duplicate parameter reference"),
-            "{err}"
-        );
     }
 }

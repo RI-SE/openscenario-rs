@@ -61,6 +61,13 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** the `catalog::CatalogLocation` trait and `CatalogManager::load_catalog`. No
   type implemented the trait, so `load_catalog` could not be called. Load catalogs with
   `CatalogManager::discover_and_load_catalogs` or `CatalogLoader`.
+- **Breaking:** `types::catalogs::routes::{RouteParameterAssignments, RouteParameterAssignment}`.
+  No field held them, and they duplicated `types::catalogs::references::{ParameterAssignments,
+  ParameterAssignment}` with the same wire names. Use those.
+- **Breaking:** `types::distributions::{DeterministicMultiParameterDistributionTypeGroup,
+  ParameterValueDistributionDefinitionGroup}`. No type held them. The first duplicated
+  `DeterministicMultiParameterDistribution` field for field; the second only wrapped a
+  `ParameterValueDistribution`. Use those types directly.
 
 ## [0.5.0] - 2026-09-22
 

@@ -55,28 +55,6 @@ pub struct RouteWaypoint {
     pub route_strategy: Value<RouteStrategy>,
 }
 
-/// Parameter assignments for route references
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "ParameterAssignments")]
-pub struct RouteParameterAssignments {
-    /// List of parameter assignments
-    #[serde(rename = "ParameterAssignment")]
-    pub assignments: Vec<RouteParameterAssignment>,
-}
-
-/// Individual parameter assignment for routes
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename = "ParameterAssignment")]
-pub struct RouteParameterAssignment {
-    /// Parameter name to assign
-    #[serde(rename = "@parameterRef")]
-    pub parameter_ref: OSString,
-
-    /// Value to assign to the parameter
-    #[serde(rename = "@value")]
-    pub value: OSString,
-}
-
 // Implementation methods for catalog routes
 
 impl CatalogRoute {
@@ -144,42 +122,6 @@ impl RouteWaypoint {
         Self {
             position,
             route_strategy: Value::Literal(strategy),
-        }
-    }
-}
-
-impl RouteParameterAssignments {
-    /// Creates parameter assignments from a list of pairs
-    pub fn from_pairs<I>(pairs: I) -> Self
-    where
-        I: IntoIterator<Item = (OSString, OSString)>,
-    {
-        let assignments = pairs
-            .into_iter()
-            .map(|(parameter_ref, value)| RouteParameterAssignment {
-                parameter_ref,
-                value,
-            })
-            .collect();
-
-        Self { assignments }
-    }
-
-    /// Adds a parameter assignment
-    pub fn add_assignment(&mut self, parameter_ref: OSString, value: OSString) {
-        self.assignments.push(RouteParameterAssignment {
-            parameter_ref,
-            value,
-        });
-    }
-}
-
-impl RouteParameterAssignment {
-    /// Creates a new parameter assignment
-    pub fn new(parameter_ref: OSString, value: OSString) -> Self {
-        Self {
-            parameter_ref,
-            value,
         }
     }
 }
@@ -291,53 +233,5 @@ mod tests {
         let route = CatalogRoute::with_closed("ClosedRoute".to_string(), waypoints, true).unwrap();
 
         assert_eq!(route.closed.as_literal().unwrap(), &true);
-    }
-
-    #[test]
-    fn test_parameter_assignments() {
-        // `from_pairs` keeps the pairs in order, `add_assignment` appends after them, and
-        // `RouteParameterAssignment::new` builds the same element; each writes the reference
-        // to `parameterRef` and the value to `value` (XSD `ParameterAssignment` and
-        // `ParameterAssignments`, `Schema/OpenSCENARIO.xsd:1620-1628`).
-        let mut assignments = RouteParameterAssignments::from_pairs(vec![
-            (
-                Value::Literal("param1".to_string()),
-                Value::Literal("value1".to_string()),
-            ),
-            (
-                Value::Parameter("param2".to_string()),
-                Value::Literal("value2".to_string()),
-            ),
-        ]);
-        assignments.add_assignment(
-            Value::Literal("param3".to_string()),
-            Value::Literal("value3".to_string()),
-        );
-
-        let expected = [
-            RouteParameterAssignment::new(
-                Value::Literal("param1".to_string()),
-                Value::Literal("value1".to_string()),
-            ),
-            RouteParameterAssignment::new(
-                Value::Parameter("param2".to_string()),
-                Value::Literal("value2".to_string()),
-            ),
-            RouteParameterAssignment::new(
-                Value::Literal("param3".to_string()),
-                Value::Literal("value3".to_string()),
-            ),
-        ];
-        assert_eq!(assignments.assignments, expected);
-
-        let xml = quick_xml::se::to_string(&assignments).expect("serialize");
-        assert_eq!(
-            xml,
-            "<ParameterAssignments>\
-             <ParameterAssignment parameterRef=\"param1\" value=\"value1\"/>\
-             <ParameterAssignment parameterRef=\"$param2\" value=\"value2\"/>\
-             <ParameterAssignment parameterRef=\"param3\" value=\"value3\"/>\
-             </ParameterAssignments>"
-        );
     }
 }

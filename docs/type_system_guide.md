@@ -579,10 +579,11 @@ per the classification method above:
   `DeterministicSingleParameterDistributionTypeGroup` are xsd:choice wrappers with the same
   no-empty-variant problem as above. `UserDefinedDistribution::default()` invented
   `content`/`type` literal `"default"` for two fields both `use="required"`; it now has a
-  `::new(content, distribution_type)`. Two structs (`DeterministicMultiParameterDistributionTypeGroup`,
-  `ParameterValueDistributionDefinitionGroup`) also lost a *derived* `Default` (not counted in the
-  44/26, since the grep is for hand-written `impl Default for`) once their single required field's
-  type stopped implementing it.
+  `::new(content, distribution_type)`. Two single-field group wrapper structs also lost a
+  *derived* `Default` (not counted in the 44/26, since the grep is for hand-written
+  `impl Default for`) once their single required field's type stopped implementing it; both were
+  later removed as unused duplicates of `DeterministicMultiParameterDistribution` and
+  `ParameterValueDistribution`.
 - `stochastic.rs` (1 impl, removed): `Stochastic::default()` fabricated `numberOfTestRuns: 1`
   where `Schema/OpenSCENARIO.xsd:2085` marks the attribute `use="required"` with no schema
   default, and defaulted `distributions` to an empty `Vec` where `StochasticDistribution` also
