@@ -134,6 +134,11 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- **A catalog reference that does not resolve no longer reads as a parse failure.** `parse_file_resolved`
+  now prefixes a failure in the resolution pass (a missing catalog directory or entry, an undeclared
+  parameter) with "Failed to resolve file: <path>", and keeps "Failed to parse file: <path>" for the typed
+  parse that follows.
+
 - **File-level errors now name the file.** A missing file is `Error::FileNotFound { path }`, any
   other read failure `Error::FileReadError { path, .. }`, and a write failure
   `Error::FileWriteError { path, reason }`; the 100 MB size refusal and the `_validated` structural

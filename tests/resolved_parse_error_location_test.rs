@@ -107,7 +107,7 @@ fn a_typed_parse_error_inside_an_inlined_entry_names_the_catalog_file() {
 
 /// Before the fix, wrapping a `ParameterError` with a file-level context prepended that context
 /// into the message field the `Parameter '{param}' error: ` prefix already introduces, so the
-/// generic "Failed to parse file: ..." sentence landed between the prefix and the actual
+/// generic "Failed to resolve file: ..." sentence landed between the prefix and the actual
 /// reason -- as if the file itself had failed to parse, with the real cause trailing after a
 /// second colon. The context now appends instead, so the parameter's own message reads as one
 /// unbroken sentence and the file context is a distinguishable trailing clause.
@@ -139,11 +139,11 @@ fn wrapping_a_parameter_error_with_file_context_does_not_split_its_message() {
     );
     // The file-level context survives, as a trailing clause, not spliced into the reason.
     assert!(
-        msg.ends_with(&format!("(Failed to parse file: {})", path.display())),
+        msg.ends_with(&format!("(Failed to resolve file: {})", path.display())),
         "{msg}"
     );
     // The two are joined by ` (`, so `with_context` never wrote `context: message`.
-    assert!(!msg.contains("error: Failed to parse file"), "{msg}");
+    assert!(!msg.contains("error: Failed to resolve file"), "{msg}");
 }
 
 // --- Resolution itself fails: the message names the element and its source line ------------
@@ -217,6 +217,57 @@ fn a_resolution_failure_names_the_element_and_its_line() {
             if !msg.contains(want) {
                 failures.push(format!("{label}: expected `{want}` in: {msg}"));
             }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+// --- A reference that does not resolve is not reported as a file that did not parse --------
+
+/// The XML of these scenarios is well formed and schema-valid; only a catalog reference fails to
+/// resolve. The message must still name the file (every file entry point's error does), but it
+/// must not say the file failed to *parse*, which sends the reader looking for bad XML.
+#[test]
+fn an_unresolvable_catalog_reference_is_reported_as_a_resolution_failure_naming_the_file() {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("resolved_parse_error_location");
+    std::fs::create_dir_all(&dir).expect("temporary directory");
+    let catalogs = fixture_dir();
+    let rows = [
+        (
+            "a catalog directory that does not exist",
+            "no_such_catalog_dir".to_string(),
+            "sedan",
+        ),
+        (
+            "a catalog entry the catalog does not have",
+            catalogs.display().to_string(),
+            "no_such_entry",
+        ),
+    ];
+
+    let mut failures = Vec::new();
+    for (index, (label, directory, entry)) in rows.iter().enumerate() {
+        let path = dir.join(format!("unresolvable_{index}.xosc"));
+        let xml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2024-01-01T00:00:00" author="a" description="d"/>
+  <CatalogLocations><VehicleCatalog><Directory path="{directory}"/></VehicleCatalog></CatalogLocations>
+  <RoadNetwork/>
+  <Entities>
+    <ScenarioObject name="Ego"><CatalogReference catalogName="vehicles" entryName="{entry}"/></ScenarioObject>
+  </Entities>
+  <Storyboard><Init><Actions/></Init><StopTrigger/></Storyboard>
+</OpenSCENARIO>"#
+        );
+        std::fs::write(&path, xml).expect("fixture written");
+
+        let msg = parse_file_resolved(&path).unwrap_err().to_string();
+        if !msg.contains(&path.display().to_string()) {
+            failures.push(format!("{label}: the path is missing from: {msg}"));
+        }
+        if msg.contains("Failed to parse") {
+            failures.push(format!("{label}: says the file failed to parse: {msg}"));
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));

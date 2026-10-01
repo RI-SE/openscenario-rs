@@ -199,7 +199,16 @@ pub fn parse_from_str_resolved(xml: &str) -> Result<OpenScenario> {
 pub fn parse_from_file_resolved<P: AsRef<Path>>(path: P) -> Result<OpenScenario> {
     let xml_content = read_scenario_file(&path)?;
     let base_dir = path.as_ref().parent().unwrap_or(Path::new(""));
-    parse_resolved(&xml_content, base_dir).map_err(|e| {
+    let (resolved, map) =
+        super::resolve::resolve_parameters_with_map(remove_bom(&xml_content), base_dir).map_err(
+            |e| {
+                e.with_context(&format!(
+                    "Failed to resolve file: {}",
+                    path.as_ref().display()
+                ))
+            },
+        )?;
+    parse_resolved_str(&resolved, &map).map_err(|e| {
         e.with_context(&format!(
             "Failed to parse file: {}",
             path.as_ref().display()
