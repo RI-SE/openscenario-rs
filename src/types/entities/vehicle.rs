@@ -217,7 +217,7 @@ impl Vehicle {
             parameter_declarations: None,
             bounding_box: BoundingBox {
                 center: crate::types::geometry::Center::new(0.0, 0.0, 0.0),
-                dimensions: crate::types::geometry::Dimensions::truck_default(),
+                dimensions: crate::types::geometry::Dimensions::truck(),
             },
             performance: Performance {
                 max_speed: Double::literal(120.0),
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn presets_set_category_axles_and_footprint() {
         let params = std::collections::HashMap::new();
-        // (preset, category, axle count, wheelbase, footprint = width * length)
+        // (preset, category, axle count, wheelbase, footprint = width * length, height)
         let cases = [
             (
                 Vehicle::new_car("C".into()),
@@ -307,6 +307,7 @@ mod tests {
                 2,
                 2.8,
                 2.0 * 4.5,
+                1.5,
             ),
             (
                 Vehicle::new_truck("T".into()),
@@ -314,6 +315,7 @@ mod tests {
                 3,
                 5.0,
                 2.5 * 12.0,
+                3.8,
             ),
             (
                 Vehicle::new_motorcycle("M".into()),
@@ -321,9 +323,10 @@ mod tests {
                 2,
                 1.6,
                 0.8 * 2.2,
+                1.3,
             ),
         ];
-        for (vehicle, category, axles, wheelbase, footprint) in cases {
+        for (vehicle, category, axles, wheelbase, footprint, height) in cases {
             let name = vehicle.name.as_literal().unwrap().clone();
             assert_eq!(vehicle.vehicle_category, Value::Literal(category), "{name}");
             assert_eq!(vehicle.axle_count(), axles, "{name}: axle_count");
@@ -333,6 +336,11 @@ mod tests {
                 vehicle.footprint_area(&params).unwrap(),
                 footprint,
                 "{name}"
+            );
+            assert_eq!(
+                vehicle.bounding_box.dimensions.height.as_literal().unwrap(),
+                &height,
+                "{name}: height"
             );
         }
     }

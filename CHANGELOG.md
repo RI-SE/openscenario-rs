@@ -14,8 +14,17 @@ All notable changes to this project are recorded here. The format follows
   parser as an expression, not a parameter reference. Callers relying on the old `${name}`
   spelling will see a behaviour change.
 
+### Changed
+
+- **Breaking:** `Vehicle::new_truck`'s bounding box height is now 3.8 m (was 3.5 m), matching
+  `Dimensions::truck()` rather than the removed `Dimensions::truck_default()`.
+
 ### Removed
 
+- **Breaking:** `Dimensions::{vehicle_default, pedestrian_default, truck_default}`. Nothing but
+  `Vehicle::new_truck` and an example called them, and all three disagreed with the authoritative
+  presets (`Dimensions::car`, `Dimensions::pedestrian`, `Dimensions::truck`) they duplicated. Use
+  those presets instead.
 - **Breaking:** the `parser::choice_groups` module and its crate-root re-exports
   `XsdChoiceGroup`, `ChoiceGroupParser`, `ChoiceGroupRegistry` and `parse_choice_group`. Nothing
   in the crate implemented or called them; the schema's choice groups are parsed through serde.

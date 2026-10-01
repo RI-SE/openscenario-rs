@@ -3,7 +3,7 @@
 //! This example demonstrates the enhanced vehicle components:
 //! - Enhanced BoundingBox with volume and contains_point methods
 //! - Center distance calculations
-//! - New Dimensions default methods (vehicle_default, pedestrian_default, truck_default)
+//! - Dimensions presets (car, pedestrian, truck)
 //! - Complete Axle system with multi-axle support
 //! - Integration with Vehicle types
 
@@ -22,11 +22,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let bbox = BoundingBox {
         center: Center::new(0.0, 0.0, 0.0),
-        dimensions: Dimensions::vehicle_default(),
+        dimensions: Dimensions::car(),
     };
 
     let volume = bbox.volume()?;
-    println!("Vehicle bounding box volume: {:.2} m³", volume);
+    println!("Car bounding box volume: {:.2} m³", volume);
 
     // Test point containment
     let test_points = [
@@ -67,19 +67,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Distance between centers: {:.2} m", distance);
     println!();
 
-    // Demo 3: New Dimensions Defaults
-    println!("3. New Dimensions Defaults");
+    // Demo 3: Dimensions Presets
+    println!("3. Dimensions Presets");
     println!("--------------------------");
 
-    let vehicle_dims = Dimensions::vehicle_default();
-    let pedestrian_dims = Dimensions::pedestrian_default();
-    let truck_dims = Dimensions::truck_default();
+    let car_dims = Dimensions::car();
+    let pedestrian_dims = Dimensions::pedestrian();
+    let truck_dims = Dimensions::truck();
 
     println!(
-        "Vehicle dimensions: {:.1}m × {:.1}m × {:.1}m",
-        vehicle_dims.width.as_literal().unwrap(),
-        vehicle_dims.length.as_literal().unwrap(),
-        vehicle_dims.height.as_literal().unwrap()
+        "Car dimensions: {:.1}m × {:.1}m × {:.1}m",
+        car_dims.width.as_literal().unwrap(),
+        car_dims.length.as_literal().unwrap(),
+        car_dims.height.as_literal().unwrap()
     );
 
     println!(

@@ -268,21 +268,6 @@ impl BoundingBox {
 }
 
 impl Dimensions {
-    /// Create dimensions for a standard vehicle (alias for car)
-    pub fn vehicle_default() -> Self {
-        Self::new(2.0, 4.5, 1.8)
-    }
-
-    /// Create dimensions for a pedestrian
-    pub fn pedestrian_default() -> Self {
-        Self::new(0.6, 0.6, 1.8)
-    }
-
-    /// Create dimensions for a truck
-    pub fn truck_default() -> Self {
-        Self::new(2.5, 12.0, 3.5)
-    }
-
     /// Create new dimensions with specified values
     pub fn new(width: f64, length: f64, height: f64) -> Self {
         Self {
@@ -937,26 +922,5 @@ mod tests {
         let distance = center1.distance_to(&center2).unwrap();
         let expected = ((3.0_f64 * 3.0) + (4.0 * 4.0) + (5.0 * 5.0)).sqrt(); // sqrt(9 + 16 + 25) = sqrt(50)
         assert!((distance - expected).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_dimensions_new_defaults() {
-        // Test vehicle_default
-        let vehicle_dims = Dimensions::vehicle_default();
-        assert_eq!(vehicle_dims.width.as_literal().unwrap(), &2.0);
-        assert_eq!(vehicle_dims.length.as_literal().unwrap(), &4.5);
-        assert_eq!(vehicle_dims.height.as_literal().unwrap(), &1.8);
-
-        // Test pedestrian_default
-        let pedestrian_dims = Dimensions::pedestrian_default();
-        assert_eq!(pedestrian_dims.width.as_literal().unwrap(), &0.6);
-        assert_eq!(pedestrian_dims.length.as_literal().unwrap(), &0.6);
-        assert_eq!(pedestrian_dims.height.as_literal().unwrap(), &1.8);
-
-        // Test truck_default
-        let truck_dims = Dimensions::truck_default();
-        assert_eq!(truck_dims.width.as_literal().unwrap(), &2.5);
-        assert_eq!(truck_dims.length.as_literal().unwrap(), &12.0);
-        assert_eq!(truck_dims.height.as_literal().unwrap(), &3.5);
     }
 }
