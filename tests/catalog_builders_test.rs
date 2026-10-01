@@ -22,6 +22,17 @@ mod catalog_builder_tests {
 
         let params = reference.parameter_assignments.unwrap();
         assert_eq!(params.assignments.len(), 2);
+        let value_of = |name: &str| {
+            params
+                .assignments
+                .iter()
+                .find(|a| a.parameter_ref.to_string() == name)
+                .unwrap_or_else(|| panic!("no assignment for parameterRef {name}"))
+                .value
+                .to_string()
+        };
+        assert_eq!(value_of("color"), "red");
+        assert_eq!(value_of("engine_power"), "150");
     }
 
     #[test]
@@ -36,6 +47,11 @@ mod catalog_builder_tests {
         assert_eq!(reference.catalog_name.to_string(), "pedestrian_catalog");
         assert_eq!(reference.entry_name.to_string(), "adult_male");
         assert!(reference.parameter_assignments.is_some());
+
+        let params = reference.parameter_assignments.unwrap();
+        assert_eq!(params.assignments.len(), 1);
+        assert_eq!(params.assignments[0].parameter_ref.to_string(), "height");
+        assert_eq!(params.assignments[0].value.to_string(), "1.8");
     }
 
     #[test]

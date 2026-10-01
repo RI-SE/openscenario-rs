@@ -25,7 +25,7 @@ use openscenario_rs::types::actions::control::{
 use openscenario_rs::types::actions::movement::{
     AbsoluteSpeed, AbsoluteTargetLaneOffset, AssignRouteAction, FinalSpeed, FollowTrajectoryAction,
     LaneOffsetAction, LaneOffsetActionDynamics, LaneOffsetTarget, LaneOffsetTargetChoice,
-    LongitudinalAction, LongitudinalDistanceAction, RelativeSpeedToMaster,
+    LateralDistanceAction, LongitudinalAction, LongitudinalDistanceAction, RelativeSpeedToMaster,
     RelativeTargetLaneOffset, RelativeTargetSpeed, RoutingAction, SpeedActionTarget,
     SpeedActionTargetChoice, SpeedProfileAction, SpeedProfileEntry, SteadyState, TimeReference,
     TimeReferenceChoice, Timing, Trajectory, TrajectoryRef, TrajectoryRefChoice,
@@ -440,6 +440,16 @@ fn movement_action_constructors_match_the_xsd_document() {
             .with_distance(10.0)
             .with_time_gap(1.5),
         r#"<LongitudinalDistanceAction entityRef="Ego" distance="10" timeGap="1.5" freespace="true" continuous="false"/>"#
+    );
+
+    // `freespace`/`continuous` are deliberately distinct booleans so an
+    // argument swap inside `LateralDistanceAction::new` lands a wrong value
+    // on a distinguishable attribute.
+    constructor_matches_document!(
+        "LateralDistanceAction::new + with_distance",
+        LateralDistanceAction,
+        LateralDistanceAction::new("Ego", true, false).with_distance(2.5),
+        r#"<LateralDistanceAction entityRef="Ego" distance="2.5" freespace="true" continuous="false"/>"#
     );
 
     constructor_matches_document!(

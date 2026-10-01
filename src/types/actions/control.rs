@@ -529,14 +529,16 @@ mod tests {
 
     #[test]
     fn test_activate_controller_all_domains_serialization() {
-        let action = ActivateControllerAction::all_domains(true, true, false, false);
+        // Each of the four booleans differs from its neighbours so a constructor
+        // that swaps any pair of arguments (e.g. lighting/animation) lands a
+        // wrong value on a distinguishable attribute instead of an equal one.
+        let action = ActivateControllerAction::all_domains(true, false, false, true);
         let xml = quick_xml::se::to_string(&action).expect("Serialization should succeed");
 
-        // Should contain explicit boolean values, not empty strings
-        assert!(xml.contains("longitudinal=\"true\""));
-        assert!(xml.contains("lateral=\"true\""));
-        assert!(xml.contains("lighting=\"false\""));
-        assert!(xml.contains("animation=\"false\""));
+        assert!(xml.contains("longitudinal=\"true\""), "longitudinal: {xml}");
+        assert!(xml.contains("lateral=\"false\""), "lateral: {xml}");
+        assert!(xml.contains("lighting=\"false\""), "lighting: {xml}");
+        assert!(xml.contains("animation=\"true\""), "animation: {xml}");
     }
 
     #[test]
