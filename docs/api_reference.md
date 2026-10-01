@@ -446,22 +446,22 @@ The module also exposes `ExpressionParser::{new, parse}` and
 pub type Result<T> = std::result::Result<T, Error>;
 ```
 
-`Error` is a single `thiserror` enum with 26 variants:
+`Error` is a single `thiserror` enum with 25 variants:
 
 | Group | Variants |
 |---|---|
-| XML and IO | `XmlParseError`, `XmlSerializeError`, `IoError`, `FileNotFound`, `DirectoryNotFound`, `FileReadError`, `FileWriteError` |
+| XML and IO | `XmlParseError`, `ResolvedParseError`, `XmlSerializeError`, `IoError`, `FileNotFound`, `DirectoryNotFound`, `FileReadError` |
 | Lookup | `EntityNotFound`, `CatalogEntryNotFound`, `CatalogNotFound`, `ParameterNotFound` |
 | Validation | `ValidationError`, `MissingRequiredField`, `InvalidValue`, `OutOfRange`, `TypeMismatch`, `ConstraintViolation` |
-| Structure | `InvalidXmlStructure`, `MalformedXml`, `ChoiceGroupError`, `InconsistentState` |
+| Structure | `InvalidXmlStructure`, `MalformedXml`, `InconsistentState` |
 | Parameters and expressions | `ParameterError`, `CircularDependency`, `ParseError`, `ExpressionError` |
 | Catalog | `CatalogError` |
 
 Constructor helpers exist for most: `Error::file_not_found`, `entity_not_found`,
 `catalog_not_found`, `validation_error`, `missing_field`, `invalid_value`, `out_of_range`,
 `type_mismatch`, `parameter_error`, `parameter_not_found`, `invalid_xml`, `malformed_xml`,
-`parsing_error`, `circular_dependency`, `parse_error`, `expression_error`,
-`constraint_violation`, `catalog_error`, `choice_group_error`.
+`circular_dependency`, `parse_error`, `expression_error`, `constraint_violation`,
+`catalog_error`.
 
 `Error::with_context(self, &str) -> Self` prefixes the message of a subset of variants. It is
 a silent no-op on the rest, so do not rely on it to attach context universally.

@@ -53,10 +53,6 @@ pub enum Error {
     #[error("Cannot read file {path}: {reason}")]
     FileReadError { path: String, reason: String },
 
-    /// Cannot write file
-    #[error("Cannot write file {path}: {reason}")]
-    FileWriteError { path: String, reason: String },
-
     // Reference Errors
     /// Entity reference not found
     #[error("Entity '{entity}' not found")]
@@ -144,10 +140,6 @@ pub enum Error {
     #[error("Catalog error: {0}")]
     CatalogError(String),
 
-    /// XSD Choice Group parsing errors
-    #[error("Choice group error: {message}")]
-    ChoiceGroupError { message: String },
-
     // Parsing/Expression Errors
     /// Failed to parse input
     #[error("Failed to parse '{input}': {reason}")]
@@ -187,14 +179,6 @@ impl Error {
     /// Create a file read error
     pub fn file_read_error(path: &str, reason: &str) -> Self {
         Error::FileReadError {
-            path: path.to_string(),
-            reason: reason.to_string(),
-        }
-    }
-
-    /// Create a file write error
-    pub fn file_write_error(path: &str, reason: &str) -> Self {
-        Error::FileWriteError {
             path: path.to_string(),
             reason: reason.to_string(),
         }
@@ -307,14 +291,6 @@ impl Error {
         }
     }
 
-    /// Create a parsing error with location information
-    pub fn parsing_error(msg: &str, line: usize, col: usize) -> Self {
-        Error::ValidationError {
-            field: format!("line {}, column {}", line, col),
-            message: msg.to_string(),
-        }
-    }
-
     // Other Errors
 
     /// Create a circular dependency error
@@ -350,13 +326,6 @@ impl Error {
     /// Create a catalog error
     pub fn catalog_error(message: &str) -> Self {
         Error::CatalogError(message.to_string())
-    }
-
-    /// Create a choice group error
-    pub fn choice_group_error(message: &str) -> Self {
-        Error::ChoiceGroupError {
-            message: message.to_string(),
-        }
     }
 
     /// Create a typed-parse error located in a resolved document, naming where `location` puts
@@ -404,9 +373,6 @@ impl Error {
             Error::CatalogError(ref mut msg) => {
                 *msg = format!("{}: {}", context, msg);
             }
-            Error::ChoiceGroupError { ref mut message } => {
-                *message = format!("{}: {}", context, message);
-            }
             Error::ParameterError {
                 ref mut message, ..
             } => {
@@ -418,9 +384,6 @@ impl Error {
                 *message = format!("{} ({})", message, context);
             }
             Error::FileReadError { ref mut reason, .. } => {
-                *reason = format!("{}: {}", context, reason);
-            }
-            Error::FileWriteError { ref mut reason, .. } => {
                 *reason = format!("{}: {}", context, reason);
             }
             Error::ParseError { ref mut reason, .. } => {

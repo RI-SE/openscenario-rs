@@ -38,6 +38,13 @@ All notable changes to this project are recorded here. The format follows
   unreachable one. No replacement: the crate does not model road-network connectivity.
 - **Breaking:** `TrafficDefinition::with_both`, an alias of `TrafficDefinition::new` with the
   same arguments. Call `TrafficDefinition::new`.
+- **Breaking:** `Error::ChoiceGroupError` and `Error::choice_group_error`, left over from the
+  removed `parser::choice_groups` module; nothing else produced them.
+- **Breaking:** `Error::FileWriteError` and `Error::file_write_error`. The crate never built
+  this error; a failed write surfaces as `Error::IoError`.
+- **Breaking:** `Error::parsing_error`. Nothing called it, and its name promised a parse error
+  while it built a `ValidationError` with the line and column in the `field` slot. Use
+  `Error::parse_error`, or `Error::validation_error` with a field name.
 
 ## [0.5.0] - 2026-09-22
 

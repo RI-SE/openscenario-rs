@@ -110,23 +110,44 @@ mod tests {
         assert_eq!(single_var.len(), 1);
     }
 
+    /// Each typed helper states its own `@variableType` and writes the value in the text form
+    /// the `@value` attribute carries.
     #[test]
     fn test_variable_declaration_creation() {
-        let string_var =
-            VariableDeclaration::string_variable("name".to_string(), "value".to_string());
-        assert_eq!(
-            string_var.variable_type,
-            Value::Literal(ParameterType::String)
-        );
-
-        let int_var = VariableDeclaration::int_variable("count".to_string(), 42);
-        assert_eq!(int_var.variable_type, Value::Literal(ParameterType::Int));
-
-        let bool_var = VariableDeclaration::bool_variable("flag".to_string(), true);
-        assert_eq!(
-            bool_var.variable_type,
-            Value::Literal(ParameterType::Boolean)
-        );
+        let cases = [
+            (
+                VariableDeclaration::string_variable("name".to_string(), "value".to_string()),
+                ParameterType::String,
+                "value",
+            ),
+            (
+                VariableDeclaration::int_variable("count".to_string(), 42),
+                ParameterType::Int,
+                "42",
+            ),
+            (
+                VariableDeclaration::double_variable("ratio".to_string(), 1.5),
+                ParameterType::Double,
+                "1.5",
+            ),
+            (
+                VariableDeclaration::bool_variable("flag".to_string(), true),
+                ParameterType::Boolean,
+                "true",
+            ),
+        ];
+        for (decl, var_type, value) in cases {
+            assert_eq!(
+                decl.variable_type,
+                Value::Literal(var_type.clone()),
+                "{var_type:?}"
+            );
+            assert_eq!(
+                decl.value.as_literal(),
+                Some(&value.to_string()),
+                "{var_type:?}"
+            );
+        }
     }
 
     #[test]
