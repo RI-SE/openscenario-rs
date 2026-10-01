@@ -289,12 +289,101 @@ mod tests {
         if let Some(v) = obj.vehicle() {
             assert_eq!(v.name.as_literal().unwrap(), "InnerVehicle");
         }
+        // get_entity_object()'s Vehicle branch is asserted, with every other branch,
+        // by get_entity_object_covers_every_branch below.
+    }
 
-        match obj.get_entity_object() {
-            Some(EntityObject::Vehicle(v)) => {
-                assert_eq!(v.name.as_literal().unwrap(), "InnerVehicle");
+    #[test]
+    fn get_entity_object_covers_every_branch() {
+        // One table row per `EntityObjectChoice` branch, so a regression confined to a
+        // single arm (e.g. the Pedestrian branch losing its clone, or a None branch
+        // starting to return a value) fails through that row alone.
+        enum Expected {
+            Vehicle(&'static str),
+            Pedestrian(&'static str),
+            MiscObject(&'static str),
+            None,
+        }
+
+        let rows: Vec<(&str, ScenarioObject, Expected)> = vec![
+            (
+                "Vehicle",
+                ScenarioObject::new_vehicle(
+                    "V".to_string(),
+                    Vehicle::new_car("InnerVehicle".to_string()),
+                ),
+                Expected::Vehicle("InnerVehicle"),
+            ),
+            (
+                "Pedestrian",
+                ScenarioObject::new_pedestrian(
+                    "P".to_string(),
+                    Pedestrian::new_pedestrian("InnerPedestrian".to_string()),
+                ),
+                Expected::Pedestrian("InnerPedestrian"),
+            ),
+            (
+                "MiscObject",
+                ScenarioObject::new_misc_object(
+                    "M".to_string(),
+                    MiscObject::new(
+                        "InnerMisc".to_string(),
+                        10.0,
+                        crate::types::enums::MiscObjectCategory::Barrier,
+                    ),
+                ),
+                Expected::MiscObject("InnerMisc"),
+            ),
+            (
+                "CatalogReference",
+                ScenarioObject::new_catalog_reference(
+                    "C".to_string(),
+                    EntityCatalogReference::new("VehicleCatalog", "Car"),
+                ),
+                Expected::None,
+            ),
+            (
+                "ExternalObjectReference",
+                ScenarioObject {
+                    name: OSString::literal("E".to_string()),
+                    entity: EntityObjectChoice::ExternalObjectReference(
+                        ExternalObjectReference::new("Ext"),
+                    ),
+                    object_controller: Vec::new(),
+                },
+                Expected::None,
+            ),
+        ];
+
+        for (kind, obj, expected) in rows {
+            let actual = obj.get_entity_object();
+            match (expected, actual) {
+                (Expected::Vehicle(name), Some(EntityObject::Vehicle(v))) => {
+                    assert_eq!(
+                        v.name.as_literal().unwrap(),
+                        name,
+                        "{kind}: vehicle name mismatch"
+                    );
+                }
+                (Expected::Pedestrian(name), Some(EntityObject::Pedestrian(p))) => {
+                    assert_eq!(
+                        p.name.as_literal().unwrap(),
+                        name,
+                        "{kind}: pedestrian name mismatch"
+                    );
+                }
+                (Expected::MiscObject(name), Some(EntityObject::MiscObject(m))) => {
+                    assert_eq!(
+                        m.name.as_literal().unwrap(),
+                        name,
+                        "{kind}: misc object name mismatch"
+                    );
+                }
+                (Expected::None, None) => {}
+                (_, actual) => {
+                    panic!("{kind}: unexpected get_entity_object() result: {actual:?}")
+                }
             }
-            _ => panic!("Expected vehicle"),
         }
     }
 
@@ -342,13 +431,8 @@ mod tests {
         assert!(obj.misc_object().is_some());
         assert!(obj.vehicle().is_none());
         assert!(obj.pedestrian().is_none());
-
-        match obj.get_entity_object() {
-            Some(EntityObject::MiscObject(m)) => {
-                assert_eq!(m.name.as_literal().unwrap(), "Barrier1");
-            }
-            _ => panic!("Expected misc object"),
-        }
+        // get_entity_object()'s MiscObject branch is asserted, with every other branch,
+        // by get_entity_object_covers_every_branch below.
 
         let xml = quick_xml::se::to_string(&obj).unwrap();
         assert!(xml.contains("MiscObject"));

@@ -623,20 +623,43 @@ mod tests {
 
     #[test]
     fn test_validation_rules() {
-        let rule = EntityReferenceValidationRule;
-        assert_eq!(rule.name(), "EntityReferenceValidation");
-        assert!(!rule.description().is_empty());
+        // One row per `BuilderValidationRule` impl, asserting the exact description text
+        // rather than only that it is non-empty: a "non-empty" check still passes if two
+        // rules' descriptions were swapped, or truncated to one character.
+        let rows: &[(&str, &str, &dyn BuilderValidationRule)] = &[
+            (
+                "EntityReferenceValidation",
+                "Validates that all entity references in actions and conditions exist",
+                &EntityReferenceValidationRule,
+            ),
+            (
+                "ParameterReferenceValidation",
+                "Validates that all parameter references are properly declared",
+                &ParameterReferenceValidationRule,
+            ),
+            (
+                "CatalogReferenceValidation",
+                "Validates that catalog locations are specified when catalog references are used",
+                &CatalogReferenceValidationRule,
+            ),
+            (
+                "StoryboardStructureValidation",
+                "Validates the hierarchical structure of the storyboard",
+                &StoryboardStructureValidationRule,
+            ),
+        ];
 
-        let rule = ParameterReferenceValidationRule;
-        assert_eq!(rule.name(), "ParameterReferenceValidation");
-        assert!(!rule.description().is_empty());
-
-        let rule = CatalogReferenceValidationRule;
-        assert_eq!(rule.name(), "CatalogReferenceValidation");
-        assert!(!rule.description().is_empty());
-
-        let rule = StoryboardStructureValidationRule;
-        assert_eq!(rule.name(), "StoryboardStructureValidation");
-        assert!(!rule.description().is_empty());
+        for (expected_name, expected_description, rule) in rows {
+            assert_eq!(
+                rule.name(),
+                *expected_name,
+                "name mismatch for {expected_name}"
+            );
+            assert_eq!(
+                rule.description(),
+                *expected_description,
+                "description mismatch for {expected_name}"
+            );
+        }
     }
 }
