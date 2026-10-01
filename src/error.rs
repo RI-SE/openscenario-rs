@@ -53,6 +53,10 @@ pub enum Error {
     #[error("Cannot read file {path}: {reason}")]
     FileReadError { path: String, reason: String },
 
+    /// Cannot write file
+    #[error("Cannot write file {path}: {reason}")]
+    FileWriteError { path: String, reason: String },
+
     // Reference Errors
     /// Entity reference not found
     #[error("Entity '{entity}' not found")]
@@ -275,6 +279,27 @@ impl Error {
 
     // XML/Structure Errors
 
+    /// Map an I/O failure on `path` while reading it: [`FileNotFound`](Error::FileNotFound) when
+    /// the file does not exist, [`FileReadError`](Error::FileReadError) otherwise.
+    pub fn file_read(path: &std::path::Path, source: &std::io::Error) -> Self {
+        let path = path.display().to_string();
+        match source.kind() {
+            std::io::ErrorKind::NotFound => Error::FileNotFound { path },
+            _ => Error::FileReadError {
+                path,
+                reason: source.to_string(),
+            },
+        }
+    }
+
+    /// Map an I/O failure on `path` while writing it to [`FileWriteError`](Error::FileWriteError).
+    pub fn file_write(path: &std::path::Path, source: &std::io::Error) -> Self {
+        Error::FileWriteError {
+            path: path.display().to_string(),
+            reason: source.to_string(),
+        }
+    }
+
     /// Create an invalid XML structure error
     pub fn invalid_xml(message: &str) -> Self {
         Error::InvalidXmlStructure {
@@ -383,8 +408,12 @@ impl Error {
                 // description ended and the specific one began.
                 *message = format!("{} ({})", message, context);
             }
-            Error::FileReadError { ref mut reason, .. } => {
+            Error::FileReadError { ref mut reason, .. }
+            | Error::FileWriteError { ref mut reason, .. } => {
                 *reason = format!("{}: {}", context, reason);
+            }
+            Error::InvalidXmlStructure { ref mut message } => {
+                *message = format!("{}: {}", context, message);
             }
             Error::ParseError { ref mut reason, .. } => {
                 *reason = format!("{}: {}", context, reason);
@@ -412,7 +441,6 @@ impl Error {
             | Error::TypeMismatch { .. }
             | Error::ParameterNotFound { .. }
             | Error::CircularDependency { .. }
-            | Error::InvalidXmlStructure { .. }
             | Error::MalformedXml { .. }
             | Error::ConstraintViolation { .. }
             | Error::InconsistentState { .. } => {}

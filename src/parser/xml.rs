@@ -113,12 +113,12 @@ fn parse_from_file_internal<P: AsRef<Path>>(path: P, validate_xml: bool) -> Resu
 
 /// Read a scenario file into memory, refusing one larger than [`MAX_FILE_SIZE`].
 fn read_scenario_file<P: AsRef<Path>>(path: P) -> Result<String> {
-    let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to read file metadata: {}",
-            path.as_ref().display()
-        ))
-    })?;
+    read_limited(path.as_ref())
+}
+
+/// Read `path` as text, refusing a file larger than [`MAX_FILE_SIZE`]. Every failure names the path.
+fn read_limited(path: &Path) -> Result<String> {
+    let metadata = fs::metadata(path).map_err(|e| Error::file_read(path, &e))?;
 
     if metadata.len() > MAX_FILE_SIZE {
         return Err(Error::out_of_range(
@@ -126,15 +126,11 @@ fn read_scenario_file<P: AsRef<Path>>(path: P) -> Result<String> {
             &metadata.len().to_string(),
             "0",
             &MAX_FILE_SIZE.to_string(),
-        ));
+        )
+        .with_context(&format!("File too large: {}", path.display())));
     }
 
-    let xml_content = fs::read_to_string(&path)
-        .map_err(Error::from)
-        .map_err(|e| {
-            e.with_context(&format!("Failed to read file: {}", path.as_ref().display()))
-        })?;
-    Ok(xml_content)
+    fs::read_to_string(path).map_err(|e| Error::file_read(path, &e))
 }
 
 /// Internal helper to parse catalog from file
@@ -142,30 +138,7 @@ fn parse_catalog_from_file_internal<P: AsRef<Path>>(
     path: P,
     validate_xml: bool,
 ) -> Result<CatalogFile> {
-    let metadata = fs::metadata(&path).map_err(Error::from).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to read catalog file metadata: {}",
-            path.as_ref().display()
-        ))
-    })?;
-
-    if metadata.len() > MAX_FILE_SIZE {
-        return Err(Error::out_of_range(
-            "file_size",
-            &metadata.len().to_string(),
-            "0",
-            &MAX_FILE_SIZE.to_string(),
-        ));
-    }
-
-    let xml_content = fs::read_to_string(&path)
-        .map_err(Error::from)
-        .map_err(|e| {
-            e.with_context(&format!(
-                "Failed to read catalog file: {}",
-                path.as_ref().display()
-            ))
-        })?;
+    let xml_content = read_limited(path.as_ref())?;
 
     let cleaned_content = remove_bom(&xml_content);
 
@@ -295,12 +268,7 @@ pub fn serialize_to_string(scenario: &OpenScenario) -> Result<String> {
 pub fn serialize_to_file<P: AsRef<Path>>(scenario: &OpenScenario, path: P) -> Result<()> {
     let xml = serialize_to_string(scenario)?;
 
-    fs::write(&path, xml).map_err(Error::from).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to write file: {}",
-            path.as_ref().display()
-        ))
-    })
+    fs::write(&path, xml).map_err(|e| Error::file_write(path.as_ref(), &e))
 }
 
 /// Validate XML structure before parsing
@@ -438,12 +406,7 @@ pub fn serialize_catalog_to_string(catalog: &CatalogFile) -> Result<String> {
 pub fn serialize_catalog_to_file<P: AsRef<Path>>(catalog: &CatalogFile, path: P) -> Result<()> {
     let xml = serialize_catalog_to_string(catalog)?;
 
-    fs::write(&path, xml).map_err(Error::from).map_err(|e| {
-        e.with_context(&format!(
-            "Failed to write catalog file: {}",
-            path.as_ref().display()
-        ))
-    })
+    fs::write(&path, xml).map_err(|e| Error::file_write(path.as_ref(), &e))
 }
 
 #[cfg(test)]

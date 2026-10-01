@@ -8,6 +8,12 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- **File-level errors now name the file.** A missing file is `Error::FileNotFound { path }`, any
+  other read failure `Error::FileReadError { path, .. }`, and a write failure the new
+  `Error::FileWriteError { path, reason }`; the 100 MB size refusal and the `_validated` structural
+  rejections carry the path too, and `Error::with_context` now applies to `InvalidXmlStructure`.
+  Code matching `Error::IoError` on these entry points must match the new variants.
+
 - **`ScenarioValidator` no longer reports errors on schema-valid documents.** An empty
   `<Entities/>` is valid (`Schema/OpenSCENARIO.xsd:1122-1127`), and a `$parameter` author,
   entity, story, act or actor name or revision is skipped instead of read as an empty value.
