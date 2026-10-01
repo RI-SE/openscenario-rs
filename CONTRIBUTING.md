@@ -137,11 +137,33 @@ limitation is visible until the document that exercises it is actually written.
 
 Every new or corrected type needs a round-trip test: build the value, serialize it, parse it
 back, and compare. `tests/` is organized by area (conditions, positions, actions, catalogs,
-entity selection, builders), so put it next to its neighbors rather than in a new file.
+entity selection, builders; see [tests/README.md](tests/README.md) for the current layout), so
+put it next to its neighbors rather than in a new file. Before adding a file, check whether an
+existing table-driven test in that area can take a new row instead.
 
 A choice group's round-trip test follows the same rule as any other: it goes next to its
 neighbors, not into one dedicated file. Feed a minimal schema-valid document in, check the
 deserialized variant and its field values, re-serialize, and assert the emitted element name.
+
+A few further rules, each here because its absence let a real test rot into noise:
+
+- **Every test asserts an observable result.** The emitted XML element or attribute, a parsed
+  field's value, or a specific error variant and message. A test that only constructs a value
+  and calls `assert!(true)`, or calls a function without checking what it returns, proves
+  nothing the compiler was not already proving by letting the crate build – delete it rather
+  than add it.
+- **One contract, one owner.** If two files assert the same behavior through the same path
+  (not two distinct risks, such as a unit-level check and a separate wire-format round trip),
+  that is duplication, not coverage; extend the owner instead of adding a sibling.
+- **Prefer the real boundary.** A round-trip test through the public parse/serialize API is a
+  stronger keeper than a test that only calls a constructor, because it also proves the value
+  reaches the wire correctly.
+- **A green round trip proves *stable*, not *lossless*.** serde drops XML it does not model
+  identically on every pass, so a passing comparison does not mean nothing was lost; say in the
+  test, or nearby, what it does and does not prove when that distinction matters.
+- **Public API gets a real caller, not just a test.** If the only caller of a `pub` item is a
+  test, that is a sign the item should not be public (or should not exist) – raise it rather
+  than quietly keeping it alive with another test.
 
 ## The conformance gates
 

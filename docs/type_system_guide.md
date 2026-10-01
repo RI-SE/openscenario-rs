@@ -409,7 +409,7 @@ Each now has an explicit constructor instead: `TransitionDynamics::new`,
 also removed, each gaining an explicit `::new`. Call sites were fixed in
 `src/types/scenario/init.rs`, `src/types/positions/mod.rs`, `src/types/positions/trajectory.rs`,
 `examples/action_wrappers_demo.rs`, and `tests/xsd_validation_test.rs`,
-`tests/advanced_positions_test.rs`, `tests/actions_serialization_test.rs`.
+`tests/actions_serialization_test.rs`.
 
 The pass over `src/types/actions/traffic.rs` removed all 18 fabricating impls in that file,
 leaving only the benign `TrafficStopAction` (an empty XSD complexType). Removed:

@@ -83,7 +83,8 @@ pub fn fixtures() -> Vec<BuilderFixture> {
     ]
 }
 
-/// The scenario `main/tests/scenario_builder_test.rs:8` builds.
+/// The minimal shape `main/tests/scenario_builder_test.rs::test_parameter_support` builds,
+/// without the parameters.
 fn minimal() -> BuilderResult<OpenScenario> {
     ScenarioBuilder::new()
         .with_header("Test", "Author")
@@ -106,7 +107,7 @@ fn header_and_entities_only() -> BuilderResult<OpenScenario> {
         .build()
 }
 
-/// `main/tests/scenario_builder_test.rs:23`.
+/// `main/tests/scenario_builder_test.rs::test_parameter_support`.
 fn with_parameters() -> BuilderResult<OpenScenario> {
     ScenarioBuilder::new()
         .with_header("Test", "Author")
@@ -119,7 +120,8 @@ fn with_parameters() -> BuilderResult<OpenScenario> {
         .build()
 }
 
-/// `main/tests/complete_scenario_builder_test.rs:41` — an `Init` with no actions at all.
+/// `main/tests/complete_scenario_builder_test.rs::test_minimal_storyboard_creation` — an
+/// `Init` with no actions at all.
 fn explicit_empty_init() -> BuilderResult<OpenScenario> {
     use openscenario_rs::types::scenario::init::{Actions, Init};
 
@@ -152,7 +154,7 @@ fn one_vehicle() -> BuilderResult<OpenScenario> {
         .build()
 }
 
-/// `main/tests/pedestrian_builder_test.rs:9`.
+/// `main/tests/pedestrian_builder_test.rs::test_multiple_pedestrians`.
 fn one_pedestrian() -> BuilderResult<OpenScenario> {
     ScenarioBuilder::new()
         .with_header("Test", "Author")
@@ -182,7 +184,8 @@ fn template_alks() -> BuilderResult<OpenScenario> {
     BasicScenarioTemplate::alks_template().build()
 }
 
-/// `main/tests/complete_scenario_builder_test.rs:7` — the nested closure API.
+/// `main/tests/complete_scenario_builder_test.rs::test_complete_scenario_with_actions` — the
+/// nested closure API.
 fn story_with_speed_action() -> BuilderResult<OpenScenario> {
     ScenarioBuilder::new()
         .with_header("Highway Test", "Test Author")

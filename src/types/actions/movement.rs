@@ -917,9 +917,8 @@ impl SpeedAction {
 
 // `Trajectory` and `TrajectoryFollowingMode` no longer
 // implement `Default` — see the constructors below. External call sites in
-// `tests/xsd_validation_test.rs`, `src/types/positions/mod.rs`,
-// `src/types/positions/trajectory.rs` and `tests/advanced_positions_test.rs`
-// fixed to use them.
+// `tests/xsd_validation_test.rs`, `src/types/positions/mod.rs`, and
+// `src/types/positions/trajectory.rs` fixed to use them.
 
 impl Trajectory {
     /// Create a new `Trajectory`.
