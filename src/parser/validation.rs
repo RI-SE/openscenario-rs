@@ -211,6 +211,13 @@ impl Default for ScenarioValidator {
     }
 }
 
+/// The entity registry plus what registration could not record.
+struct ScenarioContext {
+    registry: ValidationContext,
+    /// An entity name is a `$parameter` or `${expression}`, so a literal reference may name it.
+    has_parameterised_entity: bool,
+}
+
 impl ScenarioValidator {
     /// Create a new validator with default configuration
     pub fn new() -> Self {
@@ -285,8 +292,9 @@ impl ScenarioValidator {
     }
 
     /// Build validation context from scenario
-    fn build_validation_context(&self, scenario: &OpenScenario) -> ValidationContext {
+    fn build_validation_context(&self, scenario: &OpenScenario) -> ScenarioContext {
         let mut context = ValidationContext::new();
+        let mut has_parameterised_entity = false;
 
         if self.config.strict_mode {
             context = context.with_strict_mode();
@@ -297,6 +305,7 @@ impl ScenarioValidator {
             for obj in &entities.scenario_objects {
                 // A parameterised name is unknown here, so the entity cannot be referenced by it.
                 let Some(name) = obj.name.as_literal() else {
+                    has_parameterised_entity = true;
                     continue;
                 };
                 let entity_ref = EntityRef {
@@ -313,7 +322,10 @@ impl ScenarioValidator {
             }
         }
 
-        context
+        ScenarioContext {
+            registry: context,
+            has_parameterised_entity,
+        }
     }
 
     /// Validate file header
@@ -368,7 +380,7 @@ impl ScenarioValidator {
     fn validate_entities(
         &self,
         entities: &Entities,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         result: &mut ValidationResult,
     ) {
         // Validate each scenario object
@@ -402,7 +414,7 @@ impl ScenarioValidator {
     fn validate_scenario_object(
         &self,
         obj: &ScenarioObject,
-        _context: &ValidationContext,
+        _context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -426,7 +438,7 @@ impl ScenarioValidator {
     fn validate_storyboard(
         &self,
         storyboard: &Storyboard,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         result: &mut ValidationResult,
     ) {
         // Validate stories
@@ -454,7 +466,7 @@ impl ScenarioValidator {
     fn validate_story(
         &self,
         story: &ScenarioStory,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -482,7 +494,7 @@ impl ScenarioValidator {
     fn validate_act(
         &self,
         act: &Act,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -509,7 +521,7 @@ impl ScenarioValidator {
     fn validate_maneuver_group(
         &self,
         mg: &ManeuverGroup,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -518,7 +530,10 @@ impl ScenarioValidator {
             let Some(entity_name) = entity_ref.entity_ref.as_literal() else {
                 continue;
             };
-            if !context.entities.contains_key(entity_name) {
+            // A parameterised entity name may resolve to this literal, so it cannot be ruled out.
+            if !context.has_parameterised_entity
+                && !context.registry.entities.contains_key(entity_name)
+            {
                 result.errors.push(ValidationError {
                     category: ValidationErrorCategory::InvalidReference,
                     location: format!("{}.Actors.EntityRef[{}]", location, index),
@@ -544,7 +559,7 @@ impl ScenarioValidator {
     fn validate_maneuver(
         &self,
         maneuver: &Maneuver,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -562,7 +577,7 @@ impl ScenarioValidator {
     fn validate_event(
         &self,
         event: &Event,
-        context: &ValidationContext,
+        context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -588,7 +603,7 @@ impl ScenarioValidator {
     fn validate_condition(
         &self,
         condition: &Condition,
-        _context: &ValidationContext,
+        _context: &ScenarioContext,
         location: &str,
         result: &mut ValidationResult,
     ) {
@@ -937,6 +952,20 @@ mod tests {
             (
                 "parameterised actor",
                 swap(&base, r#"entityRef="Ego""#, r#"entityRef="$ego""#),
+                vec![],
+            ),
+            (
+                "literal actor naming a parameterised entity",
+                swap(&base, r#"<ScenarioObject name="Ego">"#, r#"<ScenarioObject name="$egoName">"#),
+                vec![],
+            ),
+            (
+                "unknown literal actor beside a parameterised entity",
+                swap(
+                    &with_second_object(&base, "$other"),
+                    r#"<EntityRef entityRef="Ego"/>"#,
+                    r#"<EntityRef entityRef="Ghost"/>"#,
+                ),
                 vec![],
             ),
             (
