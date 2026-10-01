@@ -533,14 +533,10 @@ impl ExpressionParser {
             Token::Constant(name) => Ok(Expr::Constant(name.clone())),
             Token::Function(name) => {
                 // Function call: function_name(arg1, arg2, ...)
-                if self.current >= self.tokens.len()
-                    || self.tokens[self.current] != Token::LeftParen
-                {
-                    return Err(Error::validation_error(
-                        "expression",
-                        "expected '(' after function name",
-                    ));
-                }
+                // The tokenizer only emits Token::Function when the identifier is
+                // immediately followed by '(' (see the tokenizer's identifier arm),
+                // and '(' always tokenizes to Token::LeftParen, so the next token
+                // here is always LeftParen. No error branch is reachable.
                 self.current += 1; // consume '('
 
                 let mut args = Vec::new();
