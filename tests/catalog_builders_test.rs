@@ -217,4 +217,130 @@ mod catalog_builder_tests {
             "{error}"
         );
     }
+
+    /// `ScenarioBuilder::add_catalog_vehicle` / `add_catalog_pedestrian`
+    /// (`src/builder/entities/catalog.rs`) are the public entry points onto
+    /// `CatalogVehicleBuilder`/`CatalogPedestrianBuilder`: they resolve a catalog reference
+    /// through `CatalogEntityBuilder` and bake the result straight into the scenario's
+    /// `Entities` — the XSD's `CatalogReference` choice (`EntityObject` group,
+    /// `Schema/OpenSCENARIO.xsd:1949-1957`) never survives to the built document, only the
+    /// `Vehicle`/`Pedestrian` it named does. A `ParameterAssignment` on the reference overrides
+    /// the entry's own default (ASAM OpenSCENARIO XML 1.3 section 9.5: "the ParameterAssignment
+    /// element within CatalogReference may be used to override these defaults"), so asserting
+    /// the resolved `mass` instead of the catalog entry's constant default proves the assignment
+    /// actually reached the entry rather than being accepted and dropped.
+    #[test]
+    fn add_catalog_vehicle_and_add_catalog_pedestrian_resolve_with_parameter_assignments() {
+        use openscenario_rs::builder::CatalogEntityBuilder;
+        use openscenario_rs::types::entities::EntityObjectChoice;
+        use openscenario_rs::types::road::RoadNetwork;
+
+        let root = tempfile::TempDir::new().unwrap();
+        let vehicles_dir = root.path().join("Vehicles");
+        let pedestrians_dir = root.path().join("Pedestrians");
+        std::fs::create_dir(&vehicles_dir).unwrap();
+        std::fs::create_dir(&pedestrians_dir).unwrap();
+        std::fs::write(
+            vehicles_dir.join("VehicleCatalog.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+  <FileHeader author="t" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+  <Catalog name="VehicleCatalog">
+    <Vehicle name="Sedan" vehicleCategory="car" mass="$mass">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="mass" parameterType="double" value="1500"/>
+      </ParameterDeclarations>
+      <BoundingBox><Center x="1.4" y="0" z="0.9"/><Dimensions width="1.8" length="4.5" height="1.5"/></BoundingBox>
+      <Performance maxSpeed="60" maxAcceleration="5" maxDeceleration="9"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.6" positionX="2.8" positionZ="0.3"/>
+        <RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.6" positionX="0" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+        std::fs::write(
+            pedestrians_dir.join("PedestrianCatalog.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+  <FileHeader author="t" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+  <Catalog name="PedestrianCatalog">
+    <Pedestrian name="Walker" pedestrianCategory="pedestrian" mass="$mass">
+      <ParameterDeclarations>
+        <ParameterDeclaration name="mass" parameterType="double" value="80"/>
+      </ParameterDeclarations>
+      <BoundingBox><Center x="0" y="0" z="0.9"/><Dimensions width="0.5" length="0.5" height="1.8"/></BoundingBox>
+    </Pedestrian>
+  </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+
+        let locations = CatalogLocationsBuilder::new()
+            .with_vehicle_catalog(vehicles_dir.to_str().unwrap())
+            .with_pedestrian_catalog(pedestrians_dir.to_str().unwrap())
+            .build();
+
+        let mut builder = ScenarioBuilder::new()
+            .with_header("Catalog Entity Builders Test", "Test Author")
+            .with_catalog_locations(locations.clone())
+            .with_road_network(RoadNetwork::default())
+            .with_entities();
+
+        builder
+            .add_catalog_vehicle("Ego")
+            .with_catalog_builder(
+                CatalogEntityBuilder::new().with_catalog_locations(locations.clone()),
+            )
+            .from_catalog("VehicleCatalog", "Sedan")
+            .with_parameter("mass", "2200")
+            .finish()
+            .expect("vehicle resolves");
+
+        builder
+            .add_catalog_pedestrian("Pedestrian1")
+            .with_catalog_builder(CatalogEntityBuilder::new().with_catalog_locations(locations))
+            .from_catalog("PedestrianCatalog", "Walker")
+            .with_parameter("mass", "95")
+            .finish()
+            .expect("pedestrian resolves");
+
+        let scenario = builder
+            .with_storyboard(|s| s)
+            .build()
+            .expect("scenario builds");
+
+        let entities = scenario.entities.expect("entities present");
+        assert_eq!(entities.scenario_objects.len(), 2, "both entities added");
+
+        let ego = &entities.scenario_objects[0];
+        assert_eq!(ego.name.as_literal().unwrap(), "Ego");
+        match &ego.entity {
+            EntityObjectChoice::Vehicle(vehicle) => {
+                assert_eq!(vehicle.name.as_literal().unwrap(), "Sedan");
+                assert_eq!(
+                    vehicle.mass.as_ref().and_then(|m| m.as_literal()).copied(),
+                    Some(2200.0),
+                    "with_parameter must override the catalog entry's default mass"
+                );
+            }
+            other => panic!("Ego is not a resolved Vehicle: {other:?}"),
+        }
+
+        let pedestrian_object = &entities.scenario_objects[1];
+        assert_eq!(pedestrian_object.name.as_literal().unwrap(), "Pedestrian1");
+        match &pedestrian_object.entity {
+            EntityObjectChoice::Pedestrian(pedestrian) => {
+                assert_eq!(pedestrian.name.as_literal().unwrap(), "Walker");
+                assert_eq!(
+                    pedestrian.mass.as_literal().copied(),
+                    Some(95.0),
+                    "with_parameter must override the catalog entry's default mass"
+                );
+            }
+            other => panic!("Pedestrian1 is not a resolved Pedestrian: {other:?}"),
+        }
+    }
 }
