@@ -686,6 +686,82 @@ mod tests {
         assert!(validator.config.validate_references);
     }
 
+    /// `ValidationResult::new()` starts with no findings and zeroed metrics, and
+    /// `Default::default()` is the same value.
+    #[test]
+    fn validation_result_new_is_empty_with_zeroed_metrics() {
+        let result = ValidationResult::new();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.warnings.len(), 0);
+        assert_eq!(result.metrics.duration_ms, 0);
+        assert_eq!(result.metrics.elements_validated, 0);
+        assert_eq!(result.metrics.cache_hit_ratio, 0.0);
+        assert_eq!(ValidationResult::default(), ValidationResult::new());
+    }
+
+    fn two_errors_three_warnings() -> ValidationResult {
+        ValidationResult {
+            errors: vec![
+                ValidationError {
+                    category: ValidationErrorCategory::MissingRequired,
+                    location: "FileHeader.author".to_string(),
+                    message: "author is required".to_string(),
+                    suggestion: None,
+                },
+                ValidationError {
+                    category: ValidationErrorCategory::InvalidReference,
+                    location: "Entities.ScenarioObject[0].EntityRef".to_string(),
+                    message: "Referenced entity 'Ghost' not found".to_string(),
+                    suggestion: None,
+                },
+            ],
+            warnings: vec![
+                ValidationWarning {
+                    category: ValidationWarningCategory::BestPractice,
+                    location: "FileHeader.description".to_string(),
+                    message: "description should be provided".to_string(),
+                    suggestion: None,
+                },
+                ValidationWarning {
+                    category: ValidationWarningCategory::Suspicious,
+                    location: "Storyboard.stories".to_string(),
+                    message: "storyboard has no stories".to_string(),
+                    suggestion: None,
+                },
+                ValidationWarning {
+                    category: ValidationWarningCategory::Deprecated,
+                    location: "FileHeader.rev1.4".to_string(),
+                    message: "revision newer than 1.3".to_string(),
+                    suggestion: None,
+                },
+            ],
+            metrics: ValidationMetrics {
+                duration_ms: 42,
+                elements_validated: 7,
+                cache_hit_ratio: 0.0,
+            },
+        }
+    }
+
+    /// `total_issues` counts errors and warnings together, not either alone.
+    #[test]
+    fn validation_result_total_issues_counts_errors_and_warnings() {
+        let result = two_errors_three_warnings();
+        assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.warnings.len(), 3);
+        assert_eq!(result.total_issues(), 5);
+    }
+
+    /// `summary` reports the exact counts and metrics in its fixed sentence.
+    #[test]
+    fn validation_result_summary_reports_exact_text() {
+        let result = two_errors_three_warnings();
+        assert_eq!(
+            result.summary(),
+            "Validation complete: 2 errors, 3 warnings, 7 elements validated in 42ms"
+        );
+    }
+
     /// A document the validator has nothing to say about: every name it checks is filled in,
     /// the actor exists, and the header is OpenSCENARIO 1.3.
     const CLEAN: &str = r#"<?xml version="1.0" encoding="UTF-8"?>

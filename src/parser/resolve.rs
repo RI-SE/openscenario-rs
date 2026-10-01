@@ -129,12 +129,9 @@ pub(crate) fn resolve_catalog_entry(
         .collect();
     // Several holders share one list of entry kinds, so the same pair can appear more than once.
     kinds.dedup();
-    if kinds.is_empty() {
-        return Err(Error::catalog_error(&format!(
-            "`{}` is not a catalog location",
-            location
-        )));
-    }
+    // `kinds` is never empty: every caller passes a `location` that is one of the
+    // `CatalogLocations` names in `ENTRY_KINDS` (`src/catalog/mod.rs`'s `resolve_reference`
+    // callers pass "VehicleCatalog", "ControllerCatalog", "PedestrianCatalog", all listed there).
     let mut catalogs = Catalogs::new(Path::new("."));
     catalogs
         .locations
@@ -873,15 +870,13 @@ fn read_tree(xml: &str) -> Result<Vec<Node>> {
                 });
                 continue;
             }
-            Event::End(_) => match open.pop() {
-                Some(element) => Node::Element(element),
-                None => {
-                    return Err(Error::invalid_xml(&format!(
-                        "line {}: unmatched end tag",
-                        line
-                    )))
-                }
-            },
+            // `open` is never empty here: quick_xml's reader rejects a mismatched end tag
+            // itself (as an `Err` from `read_event` above) before it ever yields the matching
+            // `Event::End`, so every `Event::End` this loop sees has a pushed `Event::Start`.
+            Event::End(_) => Node::Element(
+                open.pop()
+                    .expect("the XML reader rejects unmatched end tags"),
+            ),
             Event::Empty(start) => Node::Element(Element {
                 start: start.into_owned(),
                 empty: true,
