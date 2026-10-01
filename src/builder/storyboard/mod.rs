@@ -7,12 +7,9 @@ pub use maneuver::{
     DetachedAssignRouteActionBuilder, DetachedFollowTrajectoryActionBuilder,
     DetachedLongitudinalDistanceActionBuilder, DetachedManeuverBuilder, DetachedSpeedActionBuilder,
     DetachedSpeedProfileActionBuilder, DetachedSynchronizeActionBuilder,
-    DetachedTeleportActionBuilder, DetachedVisibilityActionBuilder, ManeuverBuilder,
-    SpeedActionEventBuilder, TeleportActionEventBuilder,
+    DetachedTeleportActionBuilder, DetachedVisibilityActionBuilder,
 };
-pub use story::{
-    ActBuilder, DetachedActBuilder, DetachedStoryBuilder, StoryBuilder, StoryboardBuilder,
-};
+pub use story::{DetachedActBuilder, DetachedStoryBuilder, StoryBuilder, StoryboardBuilder};
 
 use crate::types::scenario::story::ScenarioStory;
 

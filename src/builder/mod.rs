@@ -105,9 +105,8 @@ pub use init::{GlobalActionBuilder, InitActionBuilder, PrivateActionBuilder};
 pub use parameters::{ParameterDeclarationsBuilder, ParameterizedValueBuilder};
 pub use scenario::ScenarioBuilder;
 pub use storyboard::{
-    ActBuilder, DetachedActBuilder, DetachedFollowTrajectoryActionBuilder, DetachedManeuverBuilder,
-    DetachedSpeedActionBuilder, DetachedStoryBuilder, ManeuverBuilder, StoryBuilder,
-    StoryboardBuilder,
+    DetachedActBuilder, DetachedFollowTrajectoryActionBuilder, DetachedManeuverBuilder,
+    DetachedSpeedActionBuilder, DetachedStoryBuilder, StoryBuilder, StoryboardBuilder,
 };
 pub use templates::{BasicScenarioTemplate, ScenarioTemplate};
 pub use validation::{BuilderValidatable, BuilderValidationContext, ValidationContextBuilder};

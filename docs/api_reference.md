@@ -561,9 +561,9 @@ Init: `GlobalActionBuilder`, `InitActionBuilder`, `PrivateActionBuilder`.
 
 Parameters: `ParameterDeclarationsBuilder`, `ParameterizedValueBuilder`.
 
-Storyboard: `ActBuilder`, `DetachedActBuilder`, `DetachedFollowTrajectoryActionBuilder`,
+Storyboard: `DetachedActBuilder`, `DetachedFollowTrajectoryActionBuilder`,
 `DetachedManeuverBuilder`, `DetachedSpeedActionBuilder`, `DetachedStoryBuilder`,
-`ManeuverBuilder`, `StoryBuilder`, `StoryboardBuilder`.
+`StoryBuilder`, `StoryboardBuilder`.
 
 Templates: `BasicScenarioTemplate`, `ScenarioTemplate`.
 

@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- **The attached storyboard builder chain.** `StoryBuilder::add_act`, `ActBuilder`, `ManeuverBuilder`,
+  `SpeedActionEventBuilder`, `TeleportActionEventBuilder`, `TeleportPositionEventBuilder`,
+  `EventTriggerBuilder`, and the `attach_to` methods that took them (on `DetachedManeuverBuilder` and
+  the speed, teleport and follow-trajectory action builders) could not complete a storyboard: each
+  borrowed its parent for the parent's whole lifetime, so `finish()` never compiled. Use
+  `DetachedStoryBuilder::add_act`, `DetachedActBuilder::add_maneuver` and `attach_to_detached`.
+
 ### Fixed
 
 - **File-level errors now name the file.** A missing file is `Error::FileNotFound { path }`, any
