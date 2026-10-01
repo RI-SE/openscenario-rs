@@ -378,7 +378,6 @@ pub struct CatalogManager;
 impl CatalogManager {
     pub fn new() -> Self;
     pub fn with_base_path<P: AsRef<Path>>(base_path: P) -> Self;
-    pub fn load_catalog<T: CatalogLocation>(&mut self, location: &T) -> Result<T::CatalogType>;
     pub fn resolve_vehicle_reference(
         &mut self,
         reference: &VehicleCatalogReference,

@@ -45,6 +45,13 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** `Error::parsing_error`. Nothing called it, and its name promised a parse error
   while it built a `ValidationError` with the line and column in the `field` slot. Use
   `Error::parse_error`, or `Error::validation_error` with a field name.
+- **Breaking:** the `Default` impl for `CatalogReference<T>`. It invented the catalog name
+  `"DefaultCatalog"` and entry name `"DefaultEntry"`, which name nothing a scenario declares;
+  the XSD makes both attributes required with no default (`Schema/OpenSCENARIO.xsd:883-884`).
+  Build a reference with `CatalogReference::new` or `CatalogReference::with_parameters`.
+- **Breaking:** the `catalog::CatalogLocation` trait and `CatalogManager::load_catalog`. No
+  type implemented the trait, so `load_catalog` could not be called. Load catalogs with
+  `CatalogManager::discover_and_load_catalogs` or `CatalogLoader`.
 
 ## [0.5.0] - 2026-09-22
 

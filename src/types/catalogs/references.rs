@@ -80,17 +80,6 @@ impl<T: CatalogEntity> CatalogReference<T> {
     }
 }
 
-impl<T: CatalogEntity> Default for CatalogReference<T> {
-    fn default() -> Self {
-        Self {
-            catalog_name: Value::Literal("DefaultCatalog".to_string()),
-            entry_name: Value::Literal("DefaultEntry".to_string()),
-            parameter_assignments: None,
-            phantom: PhantomData,
-        }
-    }
-}
-
 impl ParameterAssignment {
     /// Create a new parameter assignment
     pub fn new(parameter_ref: String, value: String) -> Self {
@@ -159,18 +148,6 @@ mod tests {
         assert_eq!(assignments[0].value.as_literal().unwrap(), "200.0");
         assert_eq!(assignments[1].parameter_ref.as_literal().unwrap(), "Color");
         assert_eq!(assignments[1].value.as_literal().unwrap(), "Red");
-    }
-
-    #[test]
-    fn test_catalog_reference_defaults() {
-        // `CatalogReference<T>` is generic, so one entry type stands for all of them.
-        let reference = VehicleCatalogReference::default();
-        assert_eq!(
-            reference.catalog_name.as_literal().unwrap(),
-            "DefaultCatalog"
-        );
-        assert_eq!(reference.entry_name.as_literal().unwrap(), "DefaultEntry");
-        assert!(reference.parameter_assignments.is_none());
     }
 
     #[test]

@@ -447,27 +447,67 @@ mod tests {
         assert_eq!(group, reparsed);
     }
 
+    /// A value set that assigns `parameter` twice, which `ParameterValueSet::validate` rejects.
+    fn duplicate_ref_value_set_distribution() -> ValueSetDistribution {
+        ValueSetDistribution::new(
+            ParameterValueSet::new(
+                ParameterAssignment::new("parameter".to_string(), Value::Literal("0".into())),
+                vec![ParameterAssignment::new(
+                    "parameter".to_string(),
+                    Value::Literal("1".into()),
+                )],
+            ),
+            vec![],
+        )
+    }
+
+    // Each group wraps one required element; its accessor hands that element back and its
+    // `validate` is the wrapped element's, so an invalid inner value fails through the group.
+
     #[test]
     fn test_deterministic_multi_parameter_distribution_type_group() {
         let value_set_dist = sample_multi_parameter_distribution().distribution_type;
-        let group = DeterministicMultiParameterDistributionTypeGroup::new(value_set_dist);
-
-        assert!(!group
-            .value_set_distribution()
-            .parameter_value_sets
-            .is_empty());
+        let group = DeterministicMultiParameterDistributionTypeGroup::new(value_set_dist.clone());
+        assert_eq!(group.value_set_distribution(), &value_set_dist);
         assert!(group.validate().is_ok());
+
+        let invalid = DeterministicMultiParameterDistributionTypeGroup::new(
+            duplicate_ref_value_set_distribution(),
+        );
+        let err = invalid
+            .validate()
+            .expect_err("duplicate parameterRef must be rejected");
+        assert!(
+            err.to_string().contains("Duplicate parameter reference"),
+            "{err}"
+        );
     }
 
     #[test]
     fn test_parameter_value_distribution_definition_group() {
         let param_value_dist = sample_parameter_value_distribution();
-        let group = ParameterValueDistributionDefinitionGroup::new(param_value_dist);
-
-        assert!(group
-            .parameter_value_distribution()
-            .as_deterministic()
-            .is_some());
+        let group = ParameterValueDistributionDefinitionGroup::new(param_value_dist.clone());
+        assert_eq!(group.parameter_value_distribution(), &param_value_dist);
         assert!(group.validate().is_ok());
+
+        let mut det = Deterministic::default();
+        det.add_multi(DeterministicMultiParameterDistribution::new(
+            duplicate_ref_value_set_distribution(),
+        ));
+        let invalid = ParameterValueDistributionDefinitionGroup::new(
+            ParameterValueDistribution::new_deterministic(
+                File {
+                    filepath: "test.xosc".to_string(),
+                },
+                det,
+            ),
+        );
+        let err = invalid
+            .validate()
+            .expect_err("duplicate parameterRef must be rejected");
+        assert!(
+            err.to_string().contains("Duplicate parameter reference"),
+            "{err}"
+        );
     }
 }

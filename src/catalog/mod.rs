@@ -26,18 +26,6 @@ pub mod resolver;
 pub use loader::CatalogLoader;
 pub use resolver::{CatalogResolver, ResolvedCatalog};
 
-/// Trait for types that can be loaded from catalog directories
-pub trait CatalogLocation {
-    /// The type of catalog this location points to
-    type CatalogType;
-
-    /// Load the catalog from the directory path
-    fn load_catalog(&self) -> Result<Self::CatalogType, crate::error::Error>;
-
-    /// Get the directory path for this catalog location
-    fn directory(&self) -> &Directory;
-}
-
 /// Trait for catalog types that can resolve references
 pub trait ResolvableCatalog {
     /// The type of entities this catalog contains
@@ -87,14 +75,6 @@ impl CatalogManager {
             loader: CatalogLoader::with_base_path(&base_path),
             base_path: Some(base_path.as_ref().to_path_buf()),
         }
-    }
-
-    /// Load a catalog from a directory, using cache if available
-    pub fn load_catalog<T: CatalogLocation>(
-        &mut self,
-        location: &T,
-    ) -> Result<T::CatalogType, crate::error::Error> {
-        location.load_catalog()
     }
 
     /// Resolve a vehicle catalog reference to an actual vehicle

@@ -295,7 +295,11 @@ mod tests {
 
     #[test]
     fn test_parameter_assignments() {
-        let pairs = vec![
+        // `from_pairs` keeps the pairs in order, `add_assignment` appends after them, and
+        // `RouteParameterAssignment::new` builds the same element; each writes the reference
+        // to `parameterRef` and the value to `value` (XSD `ParameterAssignment` and
+        // `ParameterAssignments`, `Schema/OpenSCENARIO.xsd:1620-1628`).
+        let mut assignments = RouteParameterAssignments::from_pairs(vec![
             (
                 Value::Literal("param1".to_string()),
                 Value::Literal("value1".to_string()),
@@ -304,21 +308,36 @@ mod tests {
                 Value::Parameter("param2".to_string()),
                 Value::Literal("value2".to_string()),
             ),
-        ];
-
-        let assignments = RouteParameterAssignments::from_pairs(pairs);
-
-        assert_eq!(assignments.assignments.len(), 2);
-        assert_eq!(
-            assignments.assignments[0]
-                .parameter_ref
-                .as_literal()
-                .unwrap(),
-            "param1"
+        ]);
+        assignments.add_assignment(
+            Value::Literal("param3".to_string()),
+            Value::Literal("value3".to_string()),
         );
-        assert!(matches!(
-            assignments.assignments[1].parameter_ref,
-            Value::Parameter(_)
-        ));
+
+        let expected = [
+            RouteParameterAssignment::new(
+                Value::Literal("param1".to_string()),
+                Value::Literal("value1".to_string()),
+            ),
+            RouteParameterAssignment::new(
+                Value::Parameter("param2".to_string()),
+                Value::Literal("value2".to_string()),
+            ),
+            RouteParameterAssignment::new(
+                Value::Literal("param3".to_string()),
+                Value::Literal("value3".to_string()),
+            ),
+        ];
+        assert_eq!(assignments.assignments, expected);
+
+        let xml = quick_xml::se::to_string(&assignments).expect("serialize");
+        assert_eq!(
+            xml,
+            "<ParameterAssignments>\
+             <ParameterAssignment parameterRef=\"param1\" value=\"value1\"/>\
+             <ParameterAssignment parameterRef=\"$param2\" value=\"value2\"/>\
+             <ParameterAssignment parameterRef=\"param3\" value=\"value3\"/>\
+             </ParameterAssignments>"
+        );
     }
 }
