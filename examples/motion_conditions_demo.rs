@@ -59,7 +59,7 @@ fn main() {
     println!("\n4. ByEntityCondition Integration:");
 
     let triggering_entities = TriggeringEntities::any(vec![EntityRef::new("Ego")]).unwrap();
-    let conditions = vec![
+    let conditions = [
         ByEntityCondition::acceleration(triggering_entities.clone(), 4.0, Rule::GreaterThan),
         ByEntityCondition::standstill(triggering_entities.clone(), 3.0),
         ByEntityCondition::acceleration_with_direction(
@@ -98,19 +98,19 @@ fn main() {
     println!("\n5. Real-World Scenario Examples:");
 
     // Emergency braking detection
-    let emergency_braking = AccelerationCondition::longitudinal(-8.0, Rule::LessThan);
+    let _emergency_braking = AccelerationCondition::longitudinal(-8.0, Rule::LessThan);
     println!("   Emergency braking: longitudinal acceleration < -8.0 m/s²");
 
     // Sharp turn detection
-    let sharp_turn = AccelerationCondition::lateral(4.0, Rule::GreaterThan);
+    let _sharp_turn = AccelerationCondition::lateral(4.0, Rule::GreaterThan);
     println!("   Sharp turn: lateral acceleration > 4.0 m/s²");
 
     // Traffic jam detection
-    let traffic_jam = StandStillCondition::with_duration(30.0);
+    let _traffic_jam = StandStillCondition::with_duration(30.0);
     println!("   Traffic jam: standstill for 30.0 seconds");
 
     // Parking completion
-    let parking_complete = StandStillCondition::with_duration(5.0);
+    let _parking_complete = StandStillCondition::with_duration(5.0);
     println!("   Parking complete: standstill for 5.0 seconds");
 
     // 6. Demonstrate serialization capability

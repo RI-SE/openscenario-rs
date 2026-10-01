@@ -368,13 +368,13 @@ mod cut_in_scenario_tests {
             .position
             .world_position()
             .expect("WorldPosition");
-        assert_eq!(first.h, Some(Value::Literal(9.2884257876425379e-04)));
+        assert_eq!(first.h, Some(Value::Literal(9.288_425_787_642_538e-4)));
 
         let second = &polyline.vertices[1];
         assert_eq!(second.time, Some(Value::Literal(0.04)));
         let second = second.position.world_position().expect("WorldPosition");
-        assert_eq!(second.x, Value::Literal(9.3177232986101521e-01));
-        assert_eq!(second.y, Value::Literal(8.6547006258363979e-04));
+        assert_eq!(second.x, Value::Literal(9.317_723_298_610_152e-1));
+        assert_eq!(second.y, Value::Literal(8.654_700_625_836_398e-4));
     }
 }
 

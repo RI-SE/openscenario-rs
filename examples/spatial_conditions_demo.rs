@@ -104,10 +104,10 @@ fn main() {
     println!("-----------------------------------");
 
     // Condition 1: Approach merge point
-    let merge_approach = ReachPositionCondition::at_world_position(2000.0, 500.0, 0.0, 0.0, 5.0);
+    let _merge_approach = ReachPositionCondition::at_world_position(2000.0, 500.0, 0.0, 0.0, 5.0);
 
     // Condition 2: Safe gap in traffic
-    let gap_condition = RelativeDistanceCondition::longitudinal(
+    let _gap_condition = RelativeDistanceCondition::longitudinal(
         OSString::literal("highway_traffic".to_string()),
         30.0,
         true,

@@ -43,7 +43,7 @@ fn demonstrate_private_actions() {
     // Create a TeleportAction wrapped in PrivateAction
     let teleport_action = TeleportAction::new(Position::world(WorldPosition::new(100.0, 50.0)));
     let private_action = PrivateAction::TeleportAction(teleport_action);
-    let core_action = Action::PrivateAction(private_action);
+    let _core_action = Action::PrivateAction(private_action);
 
     println!("   - Created TeleportAction wrapped in PrivateAction");
 
@@ -53,7 +53,7 @@ fn demonstrate_private_actions() {
         SpeedActionTarget::absolute(10.0),
     ));
     let private_action = PrivateAction::LongitudinalAction(longitudinal_action);
-    let core_action = Action::PrivateAction(private_action);
+    let _core_action = Action::PrivateAction(private_action);
 
     println!("   - Created LongitudinalAction wrapped in PrivateAction");
 
@@ -66,7 +66,7 @@ fn demonstrate_private_actions() {
         ),
     };
     let private_action = PrivateAction::ControllerAction(controller_action);
-    let core_action = Action::PrivateAction(private_action);
+    let _core_action = Action::PrivateAction(private_action);
 
     println!("   - Created ControllerAction wrapped in PrivateAction\n");
 }
@@ -85,7 +85,7 @@ fn demonstrate_global_actions() {
         )),
     };
     let global_action = GlobalAction::TrafficAction(traffic_action);
-    let action = Action::GlobalAction(global_action);
+    let _action = Action::GlobalAction(global_action);
 
     println!("   - Created TrafficSourceAction wrapped in GlobalAction");
 
@@ -95,7 +95,7 @@ fn demonstrate_global_actions() {
         action: EntityActionChoice::DeleteEntityAction(DeleteEntityAction::default()),
     };
     let global_action = GlobalAction::EntityAction(entity_action);
-    let core_action = Action::GlobalAction(global_action);
+    let _core_action = Action::GlobalAction(global_action);
 
     println!("   - Created EntityAction wrapped in GlobalAction");
 
@@ -107,7 +107,7 @@ fn demonstrate_global_actions() {
         ),
     };
     let global_action = GlobalAction::InfrastructureAction(infra_action);
-    let core_action = Action::GlobalAction(global_action);
+    let _core_action = Action::GlobalAction(global_action);
 
     println!("   - Created InfrastructureAction wrapped in GlobalAction\n");
 }
@@ -225,7 +225,7 @@ fn demonstrate_traffic_actions() {
     );
 
     // Create TrafficSinkAction
-    let traffic_action = TrafficAction {
+    let _traffic_action = TrafficAction {
         traffic_name: None,
         action: TrafficActionChoice::TrafficSinkAction(TrafficSinkAction::new(
             10.0,

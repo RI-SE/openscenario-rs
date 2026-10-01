@@ -77,9 +77,7 @@ fn resolve_file_paths_in_document(
     let resolve_path_value = |value: &mut Value<String>, file_type: &str| -> bool {
         if let Some(literal_path) = value.as_literal() {
             // Only resolve if it's a relative path (not absolute)
-            if !literal_path.starts_with('/')
-                && !literal_path.chars().nth(1).map_or(false, |c| c == ':')
-            {
+            if !literal_path.starts_with('/') && !(literal_path.chars().nth(1) == Some(':')) {
                 match resolve_file_path(base_scenario_path, literal_path) {
                     Ok(resolved_path) => {
                         let resolved_str = resolved_path.to_string_lossy().to_string();
@@ -210,9 +208,7 @@ fn resolve_file_paths_in_document(
         // The scenario_file.filepath is a plain String, not a Value<String>
         // We need to handle this differently
         let scenario_filepath = &param_dist.scenario_file.filepath;
-        if !scenario_filepath.starts_with('/')
-            && !scenario_filepath.chars().nth(1).map_or(false, |c| c == ':')
-        {
+        if !scenario_filepath.starts_with('/') && !(scenario_filepath.chars().nth(1) == Some(':')) {
             match resolve_file_path(base_scenario_path, scenario_filepath) {
                 Ok(resolved_path) => {
                     let resolved_str = resolved_path.to_string_lossy().to_string();
@@ -539,9 +535,9 @@ fn resolve_file_path(
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let base_dir = base_scenario_path.parent().unwrap_or(Path::new("."));
 
-    let resolved_path = if relative_filepath.starts_with("./") {
+    let resolved_path = if let Some(stripped) = relative_filepath.strip_prefix("./") {
         // Explicit relative path: "./path/file.ext"
-        base_dir.join(&relative_filepath[2..])
+        base_dir.join(stripped)
     } else if relative_filepath.starts_with("../") {
         // Parent directory relative path: "../path/file.ext"
         base_dir.join(relative_filepath)

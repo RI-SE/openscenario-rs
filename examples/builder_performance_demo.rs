@@ -112,11 +112,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scenario = if !scenarios.is_empty() {
         &scenarios[0]
     } else {
-        let mut builder = ScenarioBuilder::new()
+        let builder = ScenarioBuilder::new()
             .with_header("Serialization Test", "Benchmark")
             .with_entities();
 
-        builder = builder.add_vehicle("ego", |v| v.car());
+        let _builder = builder.add_vehicle("ego", |v| v.car());
         return Ok(()); // Skip serialization test if no scenarios
     };
 

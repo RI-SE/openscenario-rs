@@ -200,8 +200,6 @@ struct StoryboardStatistics {
 struct DetailedInitAnalysis {
     entity_initializations: Vec<EntityInitialization>,
     environment_setup: Option<EnvironmentSetup>,
-    global_actions_count: usize,
-    private_actions_count: usize,
 }
 
 /// Entity initialization details
@@ -241,7 +239,6 @@ struct EnvironmentSetup {
 struct InitActionDetail {
     action_type: String,
     action_description: String,
-    parameters: Vec<(String, String)>,
 }
 
 /// Detailed Act analysis
@@ -269,7 +266,6 @@ struct DetailedManeuverGroupAnalysis {
 struct DetailedManeuverAnalysis {
     maneuver_name: String,
     events: Vec<DetailedEventAnalysis>,
-    parameters: Vec<(String, String)>,
 }
 
 /// Detailed Event analysis
@@ -277,7 +273,6 @@ struct DetailedManeuverAnalysis {
 struct DetailedEventAnalysis {
     event_name: String,
     priority: Option<String>,
-    maximum_execution_count: Option<u32>,
     start_conditions: Vec<ConditionAnalysis>,
     actions: Vec<EventActionAnalysis>,
 }
@@ -288,7 +283,6 @@ struct EventActionAnalysis {
     action_name: String,
     action_type: String,
     action_category: String,
-    parameters: Vec<(String, String)>,
 }
 
 /// Condition analysis
@@ -297,50 +291,26 @@ struct ConditionAnalysis {
     condition_type: String,
     condition_description: String,
     trigger_value: Option<String>,
-    entity_ref: Option<String>,
 }
 
 /// Timing information
 #[derive(Debug)]
 struct TimingInfo {
     execution_order: u32,
-    estimated_duration: Option<String>,
-    dependencies: Vec<String>,
 }
 
 /// Execution flow analysis
 #[derive(Debug)]
 struct ExecutionFlowAnalysis {
     flow_diagram: Vec<FlowStep>,
-    condition_dependencies: Vec<ConditionDependency>,
-    actor_interactions: Vec<ActorInteraction>,
     timeline_analysis: TimelineAnalysis,
 }
 
 /// Flow step in execution
 #[derive(Debug)]
 struct FlowStep {
-    step_type: String,
     step_name: String,
     level: u32,
-    description: String,
-}
-
-/// Condition dependency mapping
-#[derive(Debug)]
-struct ConditionDependency {
-    source: String,
-    target: String,
-    condition_type: String,
-    description: String,
-}
-
-/// Actor interaction analysis
-#[derive(Debug)]
-struct ActorInteraction {
-    primary_actor: String,
-    secondary_actor: Option<String>,
-    interaction_type: String,
     description: String,
 }
 
@@ -348,8 +318,6 @@ struct ActorInteraction {
 #[derive(Debug)]
 struct TimelineAnalysis {
     sequence_steps: Vec<TimelineStep>,
-    parallel_executions: Vec<ParallelExecution>,
-    estimated_total_duration: Option<String>,
 }
 
 /// Timeline step
@@ -358,15 +326,6 @@ struct TimelineStep {
     step_order: u32,
     step_name: String,
     step_type: String,
-    actors_involved: Vec<String>,
-    estimated_start_time: Option<String>,
-}
-
-/// Parallel execution block
-#[derive(Debug)]
-struct ParallelExecution {
-    execution_name: String,
-    parallel_actions: Vec<String>,
     actors_involved: Vec<String>,
 }
 
@@ -846,18 +805,12 @@ fn analyze_storyboard(document: &OpenScenario) -> StoryboardAnalysis {
         detailed_init_analysis: DetailedInitAnalysis {
             entity_initializations: Vec::new(),
             environment_setup: None,
-            global_actions_count: 0,
-            private_actions_count: 0,
         },
         detailed_acts: Vec::new(),
         execution_flow: ExecutionFlowAnalysis {
             flow_diagram: Vec::new(),
-            condition_dependencies: Vec::new(),
-            actor_interactions: Vec::new(),
             timeline_analysis: TimelineAnalysis {
                 sequence_steps: Vec::new(),
-                parallel_executions: Vec::new(),
-                estimated_total_duration: None,
             },
         },
     };
@@ -959,8 +912,6 @@ fn analyze_init_detailed(
     let mut analysis = DetailedInitAnalysis {
         entity_initializations: Vec::new(),
         environment_setup: None,
-        global_actions_count: init.actions.global_actions.len(),
-        private_actions_count: init.actions.private_actions.len(),
     };
 
     // Analyze global actions (environment setup)
@@ -1055,7 +1006,6 @@ fn analyze_init_detailed(
                 entity_init.actions.push(InitActionDetail {
                     action_type: "TeleportAction".to_string(),
                     action_description: "Set initial position".to_string(),
-                    parameters: Vec::new(),
                 });
             }
 
@@ -1110,7 +1060,6 @@ fn analyze_init_detailed(
                 entity_init.actions.push(InitActionDetail {
                     action_type: "LongitudinalAction".to_string(),
                     action_description: "Set initial speed".to_string(),
-                    parameters: Vec::new(),
                 });
             }
         }
@@ -1146,8 +1095,6 @@ fn analyze_acts_detailed(
                 stop_conditions: Vec::new(),
                 timing_info: TimingInfo {
                     execution_order: act_idx as u32 + 1,
-                    estimated_duration: None,
-                    dependencies: Vec::new(),
                 },
             };
 
@@ -1198,7 +1145,6 @@ fn analyze_acts_detailed(
                     let mut detailed_maneuver = DetailedManeuverAnalysis {
                         maneuver_name: maneuver_name.clone(),
                         events: Vec::new(),
-                        parameters: Vec::new(),
                     };
 
                     // Analyze events within the maneuver
@@ -1211,11 +1157,6 @@ fn analyze_acts_detailed(
                         let mut detailed_event = DetailedEventAnalysis {
                             event_name: event_name.clone(),
                             priority: Some(format!("{:?}", event.priority)),
-                            maximum_execution_count: event
-                                .maximum_execution_count
-                                .as_ref()
-                                .and_then(|v| v.as_literal())
-                                .copied(),
                             start_conditions: Vec::new(),
                             actions: Vec::new(),
                         };
@@ -1248,7 +1189,6 @@ fn analyze_acts_detailed(
                                 action_name,
                                 action_type,
                                 action_category,
-                                parameters: Vec::new(),
                             });
                         }
 
@@ -1274,12 +1214,8 @@ fn analyze_execution_flow(
 ) -> ExecutionFlowAnalysis {
     let mut flow_analysis = ExecutionFlowAnalysis {
         flow_diagram: Vec::new(),
-        condition_dependencies: Vec::new(),
-        actor_interactions: Vec::new(),
         timeline_analysis: TimelineAnalysis {
             sequence_steps: Vec::new(),
-            parallel_executions: Vec::new(),
-            estimated_total_duration: None,
         },
     };
 
@@ -1288,7 +1224,6 @@ fn analyze_execution_flow(
     // Build flow diagram
     for story in stories {
         flow_analysis.flow_diagram.push(FlowStep {
-            step_type: "Story".to_string(),
             step_name: story
                 .name
                 .as_literal()
@@ -1300,7 +1235,6 @@ fn analyze_execution_flow(
         for act in &story.acts {
             step_order += 1;
             flow_analysis.flow_diagram.push(FlowStep {
-                step_type: "Act".to_string(),
                 step_name: act
                     .name
                     .as_literal()
@@ -1331,12 +1265,10 @@ fn analyze_execution_flow(
                                 .map_or("Unknown".to_string(), |v| v.clone())
                         })
                         .collect(),
-                    estimated_start_time: None,
                 });
 
             for maneuver_group in &act.maneuver_groups {
                 flow_analysis.flow_diagram.push(FlowStep {
-                    step_type: "ManeuverGroup".to_string(),
                     step_name: maneuver_group
                         .name
                         .as_literal()
@@ -1351,7 +1283,6 @@ fn analyze_execution_flow(
 
                 for maneuver in &maneuver_group.maneuvers {
                     flow_analysis.flow_diagram.push(FlowStep {
-                        step_type: "Maneuver".to_string(),
                         step_name: maneuver
                             .name
                             .as_literal()
@@ -1362,7 +1293,6 @@ fn analyze_execution_flow(
 
                     for event in &maneuver.events {
                         flow_analysis.flow_diagram.push(FlowStep {
-                            step_type: "Event".to_string(),
                             step_name: event
                                 .name
                                 .as_literal()
@@ -1383,18 +1313,13 @@ fn analyze_execution_flow(
 fn analyze_trigger_conditions(
     _trigger: &openscenario_rs::types::scenario::triggers::Trigger,
 ) -> Vec<ConditionAnalysis> {
-    let mut conditions = Vec::new();
-
     // For now, provide a simplified analysis
     // In a full implementation, this would analyze all condition types
-    conditions.push(ConditionAnalysis {
+    vec![ConditionAnalysis {
         condition_type: "Trigger".to_string(),
         condition_description: "Complex trigger condition".to_string(),
         trigger_value: None,
-        entity_ref: None,
-    });
-
-    conditions
+    }]
 }
 
 /// Analyze private action type
@@ -2255,7 +2180,7 @@ fn print_storyboard_analysis(
 /// Print parameter variation analysis
 fn print_parameter_variation_analysis(
     analysis: &ParameterVariationAnalysis,
-    config: &Config,
+    _config: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     print_section("📊 Parameter Variation Analysis", "", 0);
     println!("═══════════════════════════════");
