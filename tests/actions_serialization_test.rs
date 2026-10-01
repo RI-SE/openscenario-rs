@@ -5,12 +5,13 @@
 //! the wrong field, picks the wrong choice branch or drops a required attribute fails
 //! here rather than in a downstream document.
 
+use openscenario_rs::types::actions::traffic::TrafficSignalAction;
 use openscenario_rs::types::actions::trailer::ConnectTrailerAction;
 use openscenario_rs::types::actions::wrappers::{
-    AddEntityAction, CustomCommandAction, ModifyRule, NamedAction, ParameterAction,
-    ParameterActionChoice, ParameterModifyAction, ParameterSetAction, PrivateAction, TrafficAction,
-    TrafficActionChoice, UserDefinedAction, VariableAction, VariableActionChoice,
-    VariableModifyAction, VariableModifyRule, VariableSetAction,
+    AddEntityAction, CustomCommandAction, InfrastructureAction, ModifyRule, NamedAction,
+    ParameterAction, ParameterActionChoice, ParameterModifyAction, ParameterSetAction,
+    PrivateAction, TrafficAction, TrafficActionChoice, UserDefinedAction, VariableAction,
+    VariableActionChoice, VariableModifyAction, VariableModifyRule, VariableSetAction,
 };
 use openscenario_rs::types::actions::{TrafficStopAction, VisibilityAction};
 use openscenario_rs::types::positions::{Position, WorldPosition};
@@ -124,6 +125,14 @@ fn named_constructors_emit_the_xsd_wire_form() {
                 UserDefinedAction::new(CustomCommandAction::new("cmd", "go")),
             )),
             r#"<Action name="a2"><UserDefinedAction><CustomCommandAction type="cmd">go</CustomCommandAction></UserDefinedAction></Action>"#,
+        ),
+        // XSD `InfrastructureAction` (:1306-1310) / `TrafficSignalAction` (:2248-2254) /
+        // `TrafficSignalStateAction` (:2286-2289): `@name` is the signal id, `@state` its state.
+        (
+            xml(&InfrastructureAction::new(
+                TrafficSignalAction::state_action("signal7".to_string(), "green".to_string()),
+            )),
+            r#"<InfrastructureAction><TrafficSignalAction><TrafficSignalStateAction name="signal7" state="green"/></TrafficSignalAction></InfrastructureAction>"#,
         ),
         // XSD `ConnectTrailerAction`: required `@trailerRef`.
         (

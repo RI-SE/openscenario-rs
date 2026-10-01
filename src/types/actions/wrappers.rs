@@ -448,7 +448,7 @@ impl EntityAction {
     pub fn add(entity_ref: impl Into<String>, position: Position) -> Self {
         EntityAction {
             entity_ref: OSString::literal(entity_ref.into()),
-            action: EntityActionChoice::AddEntityAction(AddEntityAction { position }),
+            action: EntityActionChoice::AddEntityAction(AddEntityAction::new(position)),
         }
     }
 
@@ -652,17 +652,6 @@ mod tests {
     fn test_variable_multiply_new_value() {
         let rule = VariableMultiplyByValueRule::new(1.0);
         assert_eq!(rule.value.as_literal().unwrap(), &1.0);
-    }
-
-    #[test]
-    fn test_infrastructure_action_xml_roundtrip() {
-        let action = InfrastructureAction::new(TrafficSignalAction::state_action(
-            "TestSignal".to_string(),
-            "green".to_string(),
-        ));
-        let xml = quick_xml::se::to_string(&action).unwrap();
-        let deserialized: InfrastructureAction = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(action, deserialized);
     }
 
     #[test]

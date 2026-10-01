@@ -807,18 +807,6 @@ impl TrafficDefinition {
             controller_distribution,
         }
     }
-
-    /// Create traffic definition with both vehicles and controllers
-    ///
-    /// Kept for call-site compatibility; delegates to [`Self::new`] under a
-    /// caller-chosen name rather than inventing one.
-    pub fn with_both(
-        name: impl Into<String>,
-        vehicles: VehicleCategoryDistribution,
-        controllers: ControllerDistribution,
-    ) -> Self {
-        Self::new(name, vehicles, controllers)
-    }
 }
 
 impl VehicleCategoryDistribution {
@@ -1249,7 +1237,7 @@ mod tests {
         let vehicles = VehicleCategoryDistribution::urban_traffic();
         let controllers = ControllerDistribution::single_controller("AI1".to_string(), 1.0);
 
-        let definition = TrafficDefinition::with_both("UrbanTraffic", vehicles, controllers);
+        let definition = TrafficDefinition::new("UrbanTraffic", vehicles, controllers);
 
         assert_eq!(
             definition.name.as_literal(),

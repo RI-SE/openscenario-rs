@@ -36,6 +36,8 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** `Route::check_waypoint_reachability`. It returned `true` for every waypoint
   without consulting the road network, so a caller could not tell a reachable route from an
   unreachable one. No replacement: the crate does not model road-network connectivity.
+- **Breaking:** `TrafficDefinition::with_both`, an alias of `TrafficDefinition::new` with the
+  same arguments. Call `TrafficDefinition::new`.
 
 ## [0.5.0] - 2026-09-22
 

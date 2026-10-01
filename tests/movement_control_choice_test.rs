@@ -23,14 +23,16 @@ use openscenario_rs::types::actions::control::{
     AssignControllerAction, AssignControllerActionChoice, ControllerAction, ControllerActionChoice,
 };
 use openscenario_rs::types::actions::movement::{
-    AbsoluteSpeed, AbsoluteTargetLaneOffset, AssignRouteAction, FinalSpeed, LaneOffsetAction,
-    LaneOffsetActionDynamics, LaneOffsetTarget, LaneOffsetTargetChoice, LongitudinalAction,
-    LongitudinalDistanceAction, RelativeSpeedToMaster, RelativeTargetLaneOffset,
-    RelativeTargetSpeed, SpeedActionTarget, SpeedActionTargetChoice, SpeedProfileAction,
-    SpeedProfileEntry, SteadyState, TimeReference, TimeReferenceChoice, Timing, TrajectoryRef,
-    TrajectoryRefChoice, TransitionDynamics,
+    AbsoluteSpeed, AbsoluteTargetLaneOffset, AssignRouteAction, FinalSpeed, FollowTrajectoryAction,
+    LaneOffsetAction, LaneOffsetActionDynamics, LaneOffsetTarget, LaneOffsetTargetChoice,
+    LongitudinalAction, LongitudinalDistanceAction, RelativeSpeedToMaster,
+    RelativeTargetLaneOffset, RelativeTargetSpeed, RoutingAction, SpeedActionTarget,
+    SpeedActionTargetChoice, SpeedProfileAction, SpeedProfileEntry, SteadyState, TimeReference,
+    TimeReferenceChoice, Timing, Trajectory, TrajectoryRef, TrajectoryRefChoice,
+    TransitionDynamics,
 };
 use openscenario_rs::types::basic::Double;
+use openscenario_rs::types::catalogs::references::{CatalogReference, ParameterAssignment};
 use openscenario_rs::types::enums::{
     DynamicsDimension, DynamicsShape, FollowingMode, ReferenceContext, SpeedTargetValueType,
 };
@@ -452,6 +454,70 @@ fn movement_action_constructors_match_the_xsd_document() {
             .with_entity_ref("Ego"),
         ),
         r#"<LongitudinalAction><SpeedProfileAction entityRef="Ego" followingMode="follow"><SpeedProfileEntry time="2" speed="10"/></SpeedProfileAction></LongitudinalAction>"#
+    );
+
+    // XSD `TrajectoryRef` (:2380-2385) / `CatalogReference` (:879-885) /
+    // `ParameterAssignment` (:1620-1623). Two assignments, so a dropped or
+    // reordered one fails.
+    constructor_matches_document!(
+        "TrajectoryRef::from_catalog_with_parameters",
+        TrajectoryRef,
+        TrajectoryRef::from_catalog_with_parameters(
+            "TrajectoryCatalog".to_string(),
+            "Lane".to_string(),
+            vec![
+                ParameterAssignment::new("Speed".to_string(), "10".to_string()),
+                ParameterAssignment::new("Offset".to_string(), "2".to_string()),
+            ],
+        ),
+        r#"<TrajectoryRef><CatalogReference catalogName="TrajectoryCatalog" entryName="Lane"><ParameterAssignments><ParameterAssignment parameterRef="Speed" value="10"/><ParameterAssignment parameterRef="Offset" value="2"/></ParameterAssignments></CatalogReference></TrajectoryRef>"#
+    );
+
+    // XSD `FollowTrajectoryAction` (:1244-1257). These constructors fill the
+    // `Trajectory` / `CatalogReference` children the schema marks deprecated
+    // (:1246-1251), not `TrajectoryRef`, with a `<None/>` `TimeReference`
+    // (:2173-2178). The trajectory is parsed from its own document, so only the
+    // constructors under test build the action.
+    const TRAJECTORY_XML: &str = r#"<Trajectory name="T1" closed="false"><Shape><Polyline><Vertex time="0"><Position><WorldPosition x="0" y="0"/></Position></Vertex><Vertex time="1"><Position><WorldPosition x="5" y="0"/></Position></Vertex></Polyline></Shape></Trajectory>"#;
+    let trajectory: Trajectory = de(TRAJECTORY_XML);
+    constructor_matches_document!(
+        "FollowTrajectoryAction::with_trajectory",
+        FollowTrajectoryAction,
+        FollowTrajectoryAction::with_trajectory(trajectory, FollowingMode::Position),
+        &format!(
+            r#"<FollowTrajectoryAction>{TRAJECTORY_XML}<TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="position"/></FollowTrajectoryAction>"#
+        )
+    );
+    const FOLLOW_CATALOG_XML: &str = r#"<FollowTrajectoryAction><CatalogReference catalogName="TrajectoryCatalog" entryName="Lane"/><TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="follow"/></FollowTrajectoryAction>"#;
+    constructor_matches_document!(
+        "FollowTrajectoryAction::with_catalog_reference",
+        FollowTrajectoryAction,
+        FollowTrajectoryAction::with_catalog_reference(
+            CatalogReference::new("TrajectoryCatalog".to_string(), "Lane".to_string()),
+            FollowingMode::Follow,
+        ),
+        FOLLOW_CATALOG_XML
+    );
+    constructor_matches_document!(
+        "FollowTrajectoryAction::from_catalog",
+        FollowTrajectoryAction,
+        FollowTrajectoryAction::from_catalog(
+            "TrajectoryCatalog".to_string(),
+            "Lane".to_string(),
+            FollowingMode::Follow,
+        ),
+        FOLLOW_CATALOG_XML
+    );
+    // XSD `RoutingAction` (:1981-1988): the `FollowTrajectoryAction` branch.
+    constructor_matches_document!(
+        "RoutingAction::with_trajectory_from_catalog",
+        RoutingAction,
+        RoutingAction::with_trajectory_from_catalog(
+            "TrajectoryCatalog".to_string(),
+            "Lane".to_string(),
+            FollowingMode::Follow,
+        ),
+        &format!("<RoutingAction>{FOLLOW_CATALOG_XML}</RoutingAction>")
     );
 
     constructor_matches_document!(
