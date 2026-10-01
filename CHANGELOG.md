@@ -26,6 +26,11 @@ All notable changes to this project are recorded here. The format follows
   literal such as `variance="abc"` is now a parse error.
 - **Breaking:** `types::distributions::Range`, a copy of `types::basic::Range` with string limits,
   is removed; every distribution now holds `types::basic::Range`.
+- **Breaking:** `GeographicPosition::{new, with_height, at_coordinates}` wrote their arguments
+  to `latitude`/`longitude`, which the schema defines in radians and deprecates, and to `height`.
+  They are replaced by `from_degrees`, `from_degrees_with_altitude` and
+  `from_degrees_with_altitude_and_heading`, which take degrees and write `latitudeDeg`,
+  `longitudeDeg` and `altitude`; documents with the deprecated attributes still parse unchanged.
 
 ### Removed
 

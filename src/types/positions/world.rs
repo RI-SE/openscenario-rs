@@ -78,17 +78,19 @@ impl WorldPosition {
 
 /// Geographic position using latitude/longitude coordinates.
 ///
-/// Corresponds to XSD complexType `GeoPosition`. `latitude`/`longitude`/`height`
-/// are deprecated in favor of `latitudeDeg`/`longitudeDeg`/`altitude`; all are
-/// optional per the XSD (none use `use="required"`).
+/// Corresponds to XSD complexType `GeoPosition`. `latitude`/`longitude` (radians) and
+/// `height` are deprecated since OpenSCENARIO 1.2 in favor of `latitudeDeg`/`longitudeDeg`
+/// (degrees) and `altitude`. All are optional per the XSD (none use `use="required"`).
+/// The constructors write only the degree attributes. A document that uses the deprecated
+/// attributes still deserializes into the deprecated fields, without unit conversion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "GeoPosition")]
 pub struct GeographicPosition {
-    /// Latitude in degrees (deprecated — XSD attribute `latitude`)
+    /// Latitude in radians (deprecated — XSD attribute `latitude`)
     #[serde(rename = "@latitude", default, skip_serializing_if = "Option::is_none")]
     pub latitude: Option<Double>,
 
-    /// Longitude in degrees (deprecated — XSD attribute `longitude`)
+    /// Longitude in radians (deprecated — XSD attribute `longitude`)
     #[serde(
         rename = "@longitude",
         default,
@@ -96,11 +98,11 @@ pub struct GeographicPosition {
     )]
     pub longitude: Option<Double>,
 
-    /// Height above sea level in meters (deprecated — XSD attribute `height`)
+    /// Height above a reference surface in meters (deprecated — XSD attribute `height`)
     #[serde(rename = "@height", default, skip_serializing_if = "Option::is_none")]
     pub height: Option<Double>,
 
-    /// Latitude in degrees — XSD attribute `latitudeDeg` (current)
+    /// Latitude in degrees, range [-90..90] — XSD attribute `latitudeDeg` (current)
     #[serde(
         rename = "@latitudeDeg",
         default,
@@ -108,7 +110,7 @@ pub struct GeographicPosition {
     )]
     pub latitude_deg: Option<Double>,
 
-    /// Longitude in degrees — XSD attribute `longitudeDeg` (current)
+    /// Longitude in degrees, range [-180..180] — XSD attribute `longitudeDeg` (current)
     #[serde(
         rename = "@longitudeDeg",
         default,
@@ -116,7 +118,7 @@ pub struct GeographicPosition {
     )]
     pub longitude_deg: Option<Double>,
 
-    /// Altitude in meters — XSD attribute `altitude` (current)
+    /// Altitude above the road surface in meters — XSD attribute `altitude` (current)
     #[serde(rename = "@altitude", default, skip_serializing_if = "Option::is_none")]
     pub altitude: Option<Double>,
 
@@ -134,32 +136,31 @@ pub struct GeographicPosition {
 }
 
 impl GeographicPosition {
-    /// Create a new geographic position with latitude and longitude
-    /// (uses the deprecated `latitude`/`longitude` attributes for backward compatibility)
-    pub fn new(latitude: f64, longitude: f64) -> Self {
+    /// Create a geographic position from a latitude and longitude in degrees,
+    /// written to `latitudeDeg` and `longitudeDeg`.
+    pub fn from_degrees(latitude_deg: f64, longitude_deg: f64) -> Self {
         Self {
-            latitude: Some(Double::literal(latitude)),
-            longitude: Some(Double::literal(longitude)),
+            latitude: None,
+            longitude: None,
             height: None,
-            latitude_deg: None,
-            longitude_deg: None,
+            latitude_deg: Some(Double::literal(latitude_deg)),
+            longitude_deg: Some(Double::literal(longitude_deg)),
             altitude: None,
             vertical_road_selection: None,
             orientation: None,
         }
     }
 
-    /// Create geographic position with height
-    pub fn with_height(latitude: f64, longitude: f64, height: f64) -> Self {
+    /// Create a geographic position from a latitude and longitude in degrees and an
+    /// altitude in meters, written to `latitudeDeg`, `longitudeDeg` and `altitude`.
+    pub fn from_degrees_with_altitude(
+        latitude_deg: f64,
+        longitude_deg: f64,
+        altitude: f64,
+    ) -> Self {
         Self {
-            latitude: Some(Double::literal(latitude)),
-            longitude: Some(Double::literal(longitude)),
-            height: Some(Double::literal(height)),
-            latitude_deg: None,
-            longitude_deg: None,
-            altitude: None,
-            vertical_road_selection: None,
-            orientation: None,
+            altitude: Some(Double::literal(altitude)),
+            ..Self::from_degrees(latitude_deg, longitude_deg)
         }
     }
 
@@ -172,8 +173,14 @@ impl GeographicPosition {
         self
     }
 
-    /// Create position at coordinates with height and orientation
-    pub fn at_coordinates(latitude: f64, longitude: f64, height: f64, heading: f64) -> Self {
+    /// Create a geographic position from a latitude and longitude in degrees, an altitude
+    /// in meters and a heading in radians. The heading is written to `Orientation/@h`.
+    pub fn from_degrees_with_altitude_and_heading(
+        latitude_deg: f64,
+        longitude_deg: f64,
+        altitude: f64,
+        heading: f64,
+    ) -> Self {
         use crate::types::positions::road::Orientation;
 
         let orientation = Orientation {
@@ -183,7 +190,8 @@ impl GeographicPosition {
             reference_context: None,
         };
 
-        Self::with_height(latitude, longitude, height).with_orientation(orientation)
+        Self::from_degrees_with_altitude(latitude_deg, longitude_deg, altitude)
+            .with_orientation(orientation)
     }
 }
 
@@ -214,63 +222,90 @@ mod tests {
     }
 
     #[test]
-    fn test_geographic_position_new() {
-        let pos = GeographicPosition::new(48.137, 11.576);
-        assert_eq!(pos.latitude.unwrap().as_literal().unwrap(), &48.137);
-        assert_eq!(pos.longitude.unwrap().as_literal().unwrap(), &11.576);
-        assert!(pos.height.is_none());
-        assert!(pos.latitude_deg.is_none());
+    fn test_geographic_position_at_coordinates() {
+        // (constructor output, latitudeDeg, longitudeDeg, altitude, heading)
+        let cases = [
+            (
+                GeographicPosition::from_degrees(48.137, 11.576),
+                "48.137",
+                "11.576",
+                None,
+                None,
+            ),
+            (
+                GeographicPosition::from_degrees_with_altitude(48.0, -11.5, 500.0),
+                "48",
+                "-11.5",
+                Some("500"),
+                None,
+            ),
+            (
+                GeographicPosition::from_degrees_with_altitude_and_heading(
+                    -33.5, 151.25, 12.5, 1.57,
+                ),
+                "-33.5",
+                "151.25",
+                Some("12.5"),
+                Some("1.57"),
+            ),
+        ];
+        for (pos, lat, lon, alt, heading) in cases {
+            let xml = quick_xml::se::to_string(&pos).unwrap();
+            assert!(xml.contains(&format!("latitudeDeg=\"{lat}\"")), "{xml}");
+            assert!(xml.contains(&format!("longitudeDeg=\"{lon}\"")), "{xml}");
+            match alt {
+                Some(alt) => assert!(xml.contains(&format!("altitude=\"{alt}\"")), "{xml}"),
+                None => assert!(!xml.contains("altitude="), "{xml}"),
+            }
+            match heading {
+                Some(h) => assert!(xml.contains(&format!("<Orientation h=\"{h}\"/>")), "{xml}"),
+                None => assert!(!xml.contains("<Orientation"), "{xml}"),
+            }
+            // The radian and height attributes are deprecated since 1.2.
+            for deprecated in [" latitude=", " longitude=", " height="] {
+                assert!(!xml.contains(deprecated), "{xml}");
+            }
+            let deserialized: GeographicPosition = quick_xml::de::from_str(&xml).unwrap();
+            assert_eq!(pos, deserialized);
+        }
     }
 
     #[test]
-    fn test_geographic_position_deg_fields() {
-        let pos = GeographicPosition {
+    fn test_geographic_position_parse_deprecated_and_current_attributes() {
+        let literal = |v: f64| Some(Double::literal(v));
+        let empty = GeographicPosition {
             latitude: None,
             longitude: None,
             height: None,
-            latitude_deg: Some(Double::literal(48.137)),
-            longitude_deg: Some(Double::literal(11.576)),
-            altitude: Some(Double::literal(500.0)),
+            latitude_deg: None,
+            longitude_deg: None,
+            altitude: None,
             vertical_road_selection: None,
             orientation: None,
         };
-        let xml = quick_xml::se::to_string(&pos).unwrap();
-        assert!(xml.contains("latitudeDeg=\"48.137\""), "serialized: {xml}");
-        assert!(xml.contains("longitudeDeg=\"11.576\""), "serialized: {xml}");
-        assert!(xml.contains("altitude=\"500\""), "serialized: {xml}");
-        let deserialized: GeographicPosition = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(pos, deserialized);
-    }
-
-    #[test]
-    fn test_geographic_position_parse_without_lat_lon() {
-        let xml = r#"<GeographicPosition latitudeDeg="1" longitudeDeg="2"/>"#;
-        let pos: GeographicPosition = quick_xml::de::from_str(xml).unwrap();
-        assert!(pos.latitude.is_none());
-        assert!(pos.longitude.is_none());
-        assert_eq!(pos.latitude_deg.unwrap().as_literal().unwrap(), &1.0);
-    }
-
-    #[test]
-    fn test_geographic_position_at_coordinates() {
-        let pos = GeographicPosition::at_coordinates(48.0, 11.0, 500.0, 1.57);
-        assert_eq!(pos.latitude.unwrap().as_literal().unwrap(), &48.0);
-        assert_eq!(pos.longitude.unwrap().as_literal().unwrap(), &11.0);
-        assert_eq!(pos.height.unwrap().as_literal().unwrap(), &500.0);
-        let orientation = pos.orientation.expect("at_coordinates sets the heading");
-        assert_eq!(orientation.h.unwrap().as_literal().unwrap(), &1.57);
-        assert!(orientation.p.is_none());
-    }
-
-    #[test]
-    fn test_geographic_position_xml_roundtrip() {
-        let pos = GeographicPosition::with_height(48.0, 11.0, 500.0);
-        let xml = quick_xml::se::to_string(&pos).unwrap();
-        // The deprecated attribute names, which `with_height` writes.
-        assert!(xml.contains("latitude=\"48\""), "serialized: {xml}");
-        assert!(xml.contains("longitude=\"11\""), "serialized: {xml}");
-        assert!(xml.contains("height=\"500\""), "serialized: {xml}");
-        let deserialized: GeographicPosition = quick_xml::de::from_str(&xml).unwrap();
-        assert_eq!(pos, deserialized);
+        let cases = [
+            // Deprecated radian attributes are read as written, without unit conversion.
+            (
+                r#"<GeoPosition latitude="0.5" longitude="0.2" height="3"/>"#,
+                GeographicPosition {
+                    latitude: literal(0.5),
+                    longitude: literal(0.2),
+                    height: literal(3.0),
+                    ..empty.clone()
+                },
+            ),
+            (
+                r#"<GeoPosition latitudeDeg="1" longitudeDeg="2"/>"#,
+                GeographicPosition {
+                    latitude_deg: literal(1.0),
+                    longitude_deg: literal(2.0),
+                    ..empty.clone()
+                },
+            ),
+        ];
+        for (xml, expected) in cases {
+            let pos: GeographicPosition = quick_xml::de::from_str(xml).unwrap();
+            assert_eq!(pos, expected, "{xml}");
+        }
     }
 }
