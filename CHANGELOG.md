@@ -46,6 +46,8 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** the second argument of `CatalogClothoid::{new, with_start_position}` is now
   `curvaturePrime` in 1/m², not the deprecated `curvatureDot` in 1/s. These are different quantities,
   so convert a `curvatureDot` value by dividing it by the constant speed in m/s.
+- **Breaking:** `DistributionSet::enumerate` is now an inherent method, so it no longer needs the
+  removed `DistributionSampler` trait in scope.
 
 ### Removed
 
@@ -115,6 +117,10 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** `ValidationConfig::use_cache`, `ValidationMetrics::cache_hit_ratio` and
   `ValidationContext::{strict_mode, with_strict_mode}` are removed. The cache was never filled, so the
   ratio was always 0.0; to treat warnings as errors, set `ValidationConfig::strict_mode`.
+- **Breaking:** the `DistributionSampler` trait, with `sample` and `is_deterministic`, is removed.
+  `sample` returned a placeholder such as the string `uniform(0, 10)` or the first element, never a
+  draw, and the crate has no random number generator; sample in the simulator. Use the inherent
+  `DistributionSet::enumerate` to list a deterministic set.
 
 ### Fixed
 

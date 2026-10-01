@@ -66,7 +66,6 @@ pub use distributions::{
     DeterministicSingleParameterDistributionType,
     DistributionDefinition,
     DistributionRange,
-    DistributionSampler,
     DistributionSet,
     DistributionSetElement,
     Histogram,

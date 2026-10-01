@@ -60,25 +60,6 @@ pub struct UserDefinedDistribution {
     pub distribution_type: String,
 }
 
-/// Base trait for parameter distribution evaluation
-pub trait DistributionSampler {
-    type Output;
-
-    /// Sample a value from the distribution
-    fn sample(&self) -> Result<Self::Output>;
-
-    /// Get all possible values (for deterministic distributions)
-    fn enumerate(&self) -> Result<Vec<Self::Output>> {
-        Err(crate::error::Error::validation_error(
-            "enumeration",
-            "Enumeration not supported for this distribution type",
-        ))
-    }
-
-    /// Check if the distribution is deterministic
-    fn is_deterministic(&self) -> bool;
-}
-
 /// Trait for validating distribution parameters
 pub trait ValidateDistribution {
     fn validate(&self) -> Result<()>;

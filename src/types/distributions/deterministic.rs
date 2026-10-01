@@ -2,9 +2,7 @@
 
 use crate::error::Result;
 use crate::types::basic::{Double, MinVec, OSString, Value};
-use crate::types::distributions::{
-    DeterministicParameterDistributionGroup, DistributionSampler, ValidateDistribution,
-};
+use crate::types::distributions::{DeterministicParameterDistributionGroup, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
 /// Container for deterministic parameter distributions.
@@ -317,29 +315,12 @@ impl ParameterAssignment {
     }
 }
 
-impl DistributionSampler for DistributionSet {
-    type Output = String;
-
-    fn sample(&self) -> Result<Self::Output> {
-        if let Some(first_element) = self.elements.first() {
-            match &first_element.value {
-                Value::Literal(val) => Ok(val.clone()),
-                Value::Parameter(_) => Err(crate::error::Error::validation_error("sampling",
-                    "Cannot sample from parameterized distribution without parameter resolution"
-                )),
-                Value::Expression(_) => Err(crate::error::Error::validation_error("sampling",
-                    "Cannot sample from expression-based distribution without expression evaluation"
-                )),
-            }
-        } else {
-            Err(crate::error::Error::validation_error(
-                "sampling",
-                "Cannot sample from empty distribution set",
-            ))
-        }
-    }
-
-    fn enumerate(&self) -> Result<Vec<Self::Output>> {
+impl DistributionSet {
+    /// Every element's literal value, in document order.
+    ///
+    /// Fails if an element is a `$parameter` or `${expression}`, because the value is only
+    /// known after resolution.
+    pub fn enumerate(&self) -> Result<Vec<String>> {
         self.elements
             .iter()
             .map(|elem| match &elem.value {
@@ -355,32 +336,6 @@ impl DistributionSampler for DistributionSet {
             })
             .collect()
     }
-
-    fn is_deterministic(&self) -> bool {
-        true
-    }
-}
-
-impl DistributionSampler for DistributionRange {
-    type Output = String;
-
-    fn sample(&self) -> Result<Self::Output> {
-        match &self.range.lower_limit {
-            Value::Literal(val) => Ok(val.to_string()),
-            crate::types::basic::Value::Parameter(_) => Err(crate::error::Error::validation_error(
-                "sampling",
-                "Cannot sample from parameterized distribution without parameter resolution",
-            )),
-            crate::types::basic::Value::Expression(_) => Err(crate::error::Error::validation_error(
-                "sampling",
-                "Cannot sample from expression-based distribution without expression evaluation",
-            )),
-        }
-    }
-
-    fn is_deterministic(&self) -> bool {
-        true
-    }
 }
 
 #[cfg(test)]
@@ -388,7 +343,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_distribution_set_sampling() {
+    fn test_distribution_set_enumerate() {
         let dist_set = DistributionSet {
             elements: MinVec::new(vec![
                 DistributionSetElement {
@@ -401,12 +356,10 @@ mod tests {
             .unwrap(),
         };
 
-        assert_eq!(dist_set.sample().unwrap(), "10.0");
         let values = dist_set.enumerate().unwrap();
         assert_eq!(values.len(), 2);
         assert_eq!(values[0], "10.0");
         assert_eq!(values[1], "20.0");
-        assert!(dist_set.is_deterministic());
     }
 
     #[test]
@@ -566,14 +519,6 @@ mod tests {
         )
     }
 
-    /// `DistributionRange::new` and `DistributionSampler::{sample, is_deterministic}`.
-    #[test]
-    fn distribution_range_sample_returns_lower_limit() {
-        let range = range_with_lower(Value::literal(0.0));
-        assert_eq!(range.sample().unwrap(), "0");
-        assert!(range.is_deterministic());
-    }
-
     /// `DistributionRange::validate` checks its `Range` on literal limits (upper limit 10 in
     /// every row). The model reference states no range for `stepWidth`. `None` expects `Ok`;
     /// `Some(field)` expects a `ValidationError` on that field.
@@ -602,27 +547,6 @@ mod tests {
                 (result, expected) => panic!("{name}: expected {expected:?}, got {result:?}"),
             }
         }
-    }
-
-    #[test]
-    fn distribution_range_sample_rejects_parameterized_and_expression_lower_limit() {
-        let range = range_with_lower(Value::Parameter("lo".to_string()));
-        let err = range
-            .sample()
-            .expect_err("a parameterized lower limit cannot be sampled");
-        assert!(
-            err.to_string().contains("without parameter resolution"),
-            "{err}"
-        );
-
-        let range = range_with_lower(Value::Expression("${lo}".to_string()));
-        let err = range
-            .sample()
-            .expect_err("an expression lower limit cannot be sampled");
-        assert!(
-            err.to_string().contains("without expression evaluation"),
-            "{err}"
-        );
     }
 
     /// `DeterministicSingleParameterDistributionType::validate` dispatches on its three
@@ -658,23 +582,16 @@ mod tests {
         assert!(multi.validate().is_ok());
     }
 
-    /// `DistributionSet::{sample, enumerate}` only had literal-value coverage; the
-    /// parameterized/expression error arms of both were untested.
+    /// `DistributionSet::enumerate` only had literal-value coverage; the
+    /// parameterized/expression error arms were untested.
     #[test]
-    fn distribution_set_sample_and_enumerate_reject_parameter_and_expression_elements() {
+    fn distribution_set_enumerate_rejects_parameter_and_expression_elements() {
         let param_set = DistributionSet {
             elements: MinVec::new(vec![DistributionSetElement {
                 value: Value::Parameter("p".to_string()),
             }])
             .unwrap(),
         };
-        let err = param_set
-            .sample()
-            .expect_err("a parameterized element cannot be sampled");
-        assert!(
-            err.to_string().contains("without parameter resolution"),
-            "{err}"
-        );
         let err = param_set
             .enumerate()
             .expect_err("a parameterized element cannot be enumerated");
@@ -689,13 +606,6 @@ mod tests {
             }])
             .unwrap(),
         };
-        let err = expr_set
-            .sample()
-            .expect_err("an expression element cannot be sampled");
-        assert!(
-            err.to_string().contains("without expression evaluation"),
-            "{err}"
-        );
         let err = expr_set
             .enumerate()
             .expect_err("an expression element cannot be enumerated");

@@ -3,7 +3,7 @@
 use crate::error::Error;
 use crate::error::Result;
 use crate::types::basic::{Double, MinVec, OSString, Range, UnsignedInt, Value};
-use crate::types::distributions::{DistributionSampler, ValidateDistribution};
+use crate::types::distributions::ValidateDistribution;
 use serde::{Deserialize, Serialize};
 
 /// Container for stochastic distributions
@@ -260,55 +260,6 @@ impl ValidateDistribution for HistogramBin {
     }
 }
 
-impl DistributionSampler for ProbabilityDistributionSet {
-    type Output = String;
-
-    fn sample(&self) -> Result<Self::Output> {
-        // For basic implementation, return the first element
-        if let Some(first_element) = self.elements.first() {
-            match &first_element.value {
-                Value::Literal(val) => Ok(val.clone()),
-                Value::Parameter(_) => Err(crate::error::Error::validation_error("sampling",
-                    "Cannot sample from parameterized distribution without parameter resolution"
-                )),
-                Value::Expression(_) => Err(crate::error::Error::validation_error("sampling",
-                    "Cannot sample from expression-based distribution without expression evaluation"
-                )),
-            }
-        } else {
-            Err(crate::error::Error::validation_error(
-                "sampling",
-                "Cannot sample from empty probability distribution set",
-            ))
-        }
-    }
-
-    fn is_deterministic(&self) -> bool {
-        false
-    }
-}
-
-impl DistributionSampler for UniformDistribution {
-    type Output = String;
-
-    fn sample(&self) -> Result<Self::Output> {
-        // For basic implementation, return a placeholder
-        match (&self.range.lower_limit, &self.range.upper_limit) {
-            (Value::Literal(lower), Value::Literal(upper)) => {
-                Ok(format!("uniform({}, {})", lower, upper))
-            }
-            _ => Err(crate::error::Error::validation_error(
-                "sampling",
-                "Cannot sample from parameterized distribution without parameter resolution",
-            )),
-        }
-    }
-
-    fn is_deterministic(&self) -> bool {
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -436,95 +387,6 @@ mod tests {
                 (result, expected) => panic!("{name}: expected {expected:?}, got {result:?}"),
             }
         }
-    }
-
-    /// `ProbabilityDistributionSet::sample` had no test at all: it returns the first
-    /// element's literal value, or an error for a parameterized/expression value it cannot
-    /// resolve without a parameter context.
-    #[test]
-    fn probability_distribution_set_sample_returns_first_literal_element() {
-        let set = ProbabilityDistributionSet {
-            elements: MinVec::new(vec![
-                ProbabilityDistributionSetElement {
-                    value: OSString::Literal("a".to_string()),
-                    weight: Value::Literal(0.5),
-                },
-                ProbabilityDistributionSetElement {
-                    value: OSString::Literal("b".to_string()),
-                    weight: Value::Literal(0.5),
-                },
-            ])
-            .unwrap(),
-        };
-        assert_eq!(set.sample().unwrap(), "a");
-        assert!(!set.is_deterministic());
-    }
-
-    #[test]
-    fn probability_distribution_set_sample_rejects_parameter_and_expression_values() {
-        let param_set = ProbabilityDistributionSet {
-            elements: MinVec::new(vec![ProbabilityDistributionSetElement {
-                value: OSString::Parameter("p".to_string()),
-                weight: Value::Literal(1.0),
-            }])
-            .unwrap(),
-        };
-        let err = param_set
-            .sample()
-            .expect_err("a parameterized element cannot be sampled");
-        assert!(
-            err.to_string().contains("without parameter resolution"),
-            "{err}"
-        );
-
-        let expr_set = ProbabilityDistributionSet {
-            elements: MinVec::new(vec![ProbabilityDistributionSetElement {
-                value: OSString::Expression("${p}".to_string()),
-                weight: Value::Literal(1.0),
-            }])
-            .unwrap(),
-        };
-        let err = expr_set
-            .sample()
-            .expect_err("an expression element cannot be sampled");
-        assert!(
-            err.to_string().contains("without expression evaluation"),
-            "{err}"
-        );
-    }
-
-    /// Only the error branch here — a parameterized `Range` cannot be sampled without
-    /// resolution. This deliberately does not exercise (pin) the placeholder literal-value
-    /// output of `UniformDistribution::sample` (FINDINGS F9).
-    #[test]
-    fn uniform_distribution_sample_rejects_parameterized_range() {
-        let uniform = UniformDistribution {
-            range: Range {
-                lower_limit: Value::Parameter("lo".to_string()),
-                upper_limit: Value::Literal(10.0),
-            },
-        };
-        let err = uniform
-            .sample()
-            .expect_err("a parameterized range cannot be sampled");
-        assert!(
-            err.to_string().contains("without parameter resolution"),
-            "{err}"
-        );
-    }
-
-    #[test]
-    fn test_uniform_distribution_sampling() {
-        let uniform = UniformDistribution {
-            range: Range {
-                lower_limit: Value::Literal(0.0),
-                upper_limit: Value::Literal(10.0),
-            },
-        };
-
-        let sample = uniform.sample().unwrap();
-        assert!(sample.contains("uniform"));
-        assert!(!uniform.is_deterministic());
     }
 
     #[test]
