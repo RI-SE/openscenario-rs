@@ -13,8 +13,16 @@ All notable changes to this project are recorded here. The format follows
   and `E` are removed, and a bare name such as `x` fails with "unknown identifier 'x' in
   expression; parameters are referenced as $x" instead of "parameter not found". Write `$x` or
   `${x}` for a parameter.
+- **Traffic source constructors no longer write deprecated forms.** `TrafficSourceAction::new` drops
+  its `TrafficDefinition` argument (the schema makes `TrafficDistribution` optional, so add it with
+  `with_traffic_distribution`), and `TrafficSourceAction::with_velocity` is replaced by `with_speed`,
+  which writes `speed`.
 ### Removed
 
+- **Deprecated traffic builder methods.** `TrafficSwarmAction::with_velocity` (use
+  `with_initial_speed_range`), `TrafficSwarmAction::with_traffic_definition` (use
+  `with_traffic_distribution`) and `TrafficSinkAction::with_traffic_definition` (no replacement)
+  are removed. Documents that contain these elements still parse.
 - **The attached storyboard builder chain.** `StoryBuilder::add_act`, `ActBuilder`, `ManeuverBuilder`,
   `SpeedActionEventBuilder`, `TeleportActionEventBuilder`, `TeleportPositionEventBuilder`,
   `EventTriggerBuilder`, and the `attach_to` methods that took them (on `DetachedManeuverBuilder` and

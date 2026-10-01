@@ -10,14 +10,6 @@ use openscenario_rs::types::entities::{EntityDistribution, EntityDistributionEnt
 use openscenario_rs::types::enums::{DynamicsDimension, DynamicsShape};
 use openscenario_rs::types::positions::*;
 
-fn sample_traffic_definition() -> TrafficDefinition {
-    TrafficDefinition::new(
-        "DemoTrafficDefinition",
-        VehicleCategoryDistribution::mixed_traffic(),
-        ControllerDistribution::single_controller("DemoController".to_string(), 1.0),
-    )
-}
-
 fn main() {
     println!("=== OpenSCENARIO Action Wrapper Types Demo ===\n");
 
@@ -81,7 +73,6 @@ fn demonstrate_global_actions() {
             10.0,
             10.0,
             Position::world_origin(),
-            sample_traffic_definition(),
         )),
     };
     let global_action = GlobalAction::TrafficAction(traffic_action);
@@ -216,7 +207,6 @@ fn demonstrate_traffic_actions() {
             10.0,
             10.0,
             Position::world_origin(),
-            sample_traffic_definition(),
         )),
     };
     println!(

@@ -471,40 +471,26 @@ pub struct DirectionOfTravelDistribution {
 
 impl TrafficSourceAction {
     /// Create traffic source with radius, rate and position
-    pub fn new(
-        radius: f64,
-        rate: f64,
-        position: Position,
-        traffic_definition: TrafficDefinition,
-    ) -> Self {
+    ///
+    /// XSD `TrafficSourceAction` (`:2300-2314`): `TrafficDistribution` is
+    /// `minOccurs="0"`, so it is optional here; add it with
+    /// [`with_traffic_distribution`](Self::with_traffic_distribution).
+    pub fn new(radius: f64, rate: f64, position: Position) -> Self {
         Self {
             radius: Double::literal(radius),
             rate: Double::literal(rate),
             velocity: None,
             speed: None,
             position,
-            traffic_definition: Some(traffic_definition),
+            traffic_definition: None,
             traffic_distribution: None,
         }
     }
 
-    /// Create traffic source with velocity
-    pub fn with_velocity(
-        radius: f64,
-        rate: f64,
-        velocity: f64,
-        position: Position,
-        traffic_definition: TrafficDefinition,
-    ) -> Self {
-        Self {
-            radius: Double::literal(radius),
-            rate: Double::literal(rate),
-            velocity: Some(Double::literal(velocity)),
-            speed: None,
-            position,
-            traffic_definition: Some(traffic_definition),
-            traffic_distribution: None,
-        }
+    /// Set the initial speed of spawned vehicles (`@speed`)
+    pub fn with_speed(mut self, speed: f64) -> Self {
+        self.speed = Some(Double::literal(speed));
+        self
     }
 
     /// Set the traffic distribution for the source
@@ -522,21 +508,6 @@ impl TrafficSinkAction {
             radius: Double::literal(radius),
             position,
             traffic_definition: None,
-        }
-    }
-
-    /// Create traffic sink with traffic definition
-    pub fn with_traffic_definition(
-        rate: f64,
-        radius: f64,
-        position: Position,
-        traffic_definition: TrafficDefinition,
-    ) -> Self {
-        Self {
-            rate: Some(Double::literal(rate)),
-            radius: Double::literal(radius),
-            position,
-            traffic_definition: Some(traffic_definition),
         }
     }
 }
@@ -575,18 +546,6 @@ impl TrafficSwarmAction {
     /// Set offset for the swarm
     pub fn with_offset(mut self, offset: f64) -> Self {
         self.offset = Double::literal(offset);
-        self
-    }
-
-    /// Set velocity for the swarm (deprecated)
-    pub fn with_velocity(mut self, velocity: f64) -> Self {
-        self.velocity = Some(Double::literal(velocity));
-        self
-    }
-
-    /// Set traffic definition for the swarm
-    pub fn with_traffic_definition(mut self, traffic_definition: TrafficDefinition) -> Self {
-        self.traffic_definition = Some(traffic_definition);
         self
     }
 
@@ -1106,12 +1065,7 @@ mod tests {
 
     #[test]
     fn test_traffic_source_action_creation() {
-        let source = TrafficSourceAction::new(
-            5.0,
-            15.0,
-            Position::world_origin(),
-            sample_traffic_definition(),
-        );
+        let source = TrafficSourceAction::new(5.0, 15.0, Position::world_origin());
 
         assert_eq!(source.radius.as_literal(), Some(&5.0));
         assert_eq!(source.rate.as_literal(), Some(&15.0));
@@ -1119,20 +1073,52 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_source_with_velocity() {
-        let source = TrafficSourceAction::with_velocity(
-            5.0,
-            20.0,
-            60.0,
-            Position::world_origin(),
-            sample_traffic_definition(),
-        );
+    fn test_traffic_constructors_write_only_current_forms() {
+        let distribution = TrafficDistribution::new(vec![TrafficDistributionEntry {
+            weight: Double::literal(1.0),
+            entity_distribution: sample_entity_distribution(),
+            properties: None,
+        }])
+        .unwrap();
+        let range = Range {
+            lower_limit: Double::literal(10.0),
+            upper_limit: Double::literal(30.0),
+        };
+        let origin = || Position::world_origin();
 
-        assert_eq!(source.rate.as_literal(), Some(&20.0));
-        assert_eq!(
-            source.velocity.as_ref().and_then(|v| v.as_literal()),
-            Some(&60.0)
-        );
+        // (xml, markers that must be present)
+        let cases: Vec<(String, &[&str])> = vec![
+            (
+                quick_xml::se::to_string(
+                    &TrafficSourceAction::new(5.0, 15.0, origin())
+                        .with_speed(20.0)
+                        .with_traffic_distribution(distribution.clone()),
+                )
+                .unwrap(),
+                &["<TrafficDistribution>", r#"speed="20""#],
+            ),
+            (
+                quick_xml::se::to_string(
+                    &TrafficSwarmAction::new("Ego", 100.0, 50.0, 5)
+                        .with_traffic_distribution(distribution)
+                        .with_initial_speed_range(range),
+                )
+                .unwrap(),
+                &["<TrafficDistribution>", "<InitialSpeedRange"],
+            ),
+            (
+                quick_xml::se::to_string(&TrafficSinkAction::new(10.0, 30.0, origin())).unwrap(),
+                &["<TrafficSinkAction"],
+            ),
+        ];
+        for (xml, present) in cases {
+            for marker in present {
+                assert!(xml.contains(marker), "missing {marker} in {xml}");
+            }
+            for deprecated in ["TrafficDefinition", "velocity"] {
+                assert!(!xml.contains(deprecated), "found {deprecated} in {xml}");
+            }
+        }
     }
 
     #[test]
@@ -1145,24 +1131,8 @@ mod tests {
     }
 
     #[test]
-    fn test_traffic_sink_with_definition() {
-        let sink = TrafficSinkAction::with_traffic_definition(
-            12.0,
-            40.0,
-            Position::world_origin(),
-            sample_traffic_definition(),
-        );
-
-        assert_eq!(sink.rate.as_ref().unwrap().as_literal(), Some(&12.0));
-        assert_eq!(sink.radius.as_literal(), Some(&40.0));
-        assert!(sink.traffic_definition.is_some());
-    }
-
-    #[test]
     fn test_traffic_swarm_action_creation() {
-        let swarm = TrafficSwarmAction::new("LeadVehicle", 100.0, 50.0, 15)
-            .with_inner_radius(5.0)
-            .with_traffic_definition(sample_traffic_definition());
+        let swarm = TrafficSwarmAction::new("LeadVehicle", 100.0, 50.0, 15).with_inner_radius(5.0);
 
         assert_eq!(
             swarm.central_object.entity_ref.as_literal(),
@@ -1427,14 +1397,10 @@ mod tests {
         let swarm = TrafficSwarmAction::new("BuilderTest", 120.0, 80.0, 10)
             .with_inner_radius(25.0)
             .with_offset(15.0)
-            .with_velocity(55.0)
-            .with_traffic_definition(sample_traffic_definition())
             .with_central_swarm_object("NewCentralEntity");
 
         assert_eq!(swarm.inner_radius.as_literal().unwrap(), &25.0);
         assert_eq!(swarm.offset.as_literal().unwrap(), &15.0);
-        assert_eq!(swarm.velocity.unwrap().as_literal().unwrap(), &55.0);
-        assert!(swarm.traffic_definition.is_some());
         assert_eq!(
             swarm.central_object.entity_ref.as_literal().unwrap(),
             "NewCentralEntity"
@@ -1471,16 +1437,6 @@ mod tests {
             )])
             .unwrap(),
         }
-    }
-
-    /// A concrete `TrafficDefinition` for tests that need one but do not
-    /// care about its contents, replacing the removed `Default` impl.
-    fn sample_traffic_definition() -> TrafficDefinition {
-        TrafficDefinition::new(
-            "TestTrafficDefinition",
-            VehicleCategoryDistribution::mixed_traffic(),
-            ControllerDistribution::single_controller("TestController".to_string(), 1.0),
-        )
     }
 
     #[test]
@@ -1675,7 +1631,6 @@ mod tests {
             8.0,
             12.0,
             Position::world(crate::types::positions::WorldPosition::new(1.0, 2.0)),
-            sample_traffic_definition(),
         )
         .with_traffic_distribution(TrafficDistribution {
             traffic_distribution_entry: MinVec::new(vec![TrafficDistributionEntry {
