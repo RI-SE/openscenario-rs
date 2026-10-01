@@ -300,7 +300,7 @@ impl ActionBuilder for LaneOffsetActionBuilder {
 
         let lane_offset_action = LaneOffsetAction {
             continuous: Boolean::literal(self.continuous),
-            dynamics: self.dynamics.unwrap_or_else(|| LaneOffsetActionDynamics {
+            dynamics: self.dynamics.unwrap_or(LaneOffsetActionDynamics {
                 dynamics_shape: Value::Literal(DynamicsShape::Linear),
                 max_lateral_acc: None,
             }),

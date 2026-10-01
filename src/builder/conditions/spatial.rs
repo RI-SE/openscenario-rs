@@ -24,6 +24,12 @@ pub struct DistanceConditionBuilder {
     freespace: bool,
 }
 
+impl Default for DistanceConditionBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DistanceConditionBuilder {
     /// Create a new distance condition builder
     pub fn new() -> Self {
@@ -327,7 +333,6 @@ impl CollisionConditionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::builder::positions::PositionBuilder;
     use crate::types::{
         basic::Value,
         positions::{Position, WorldPosition},

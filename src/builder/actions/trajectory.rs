@@ -290,7 +290,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
             trajectory_following_mode: TrajectoryFollowingMode {
                 following_mode: self.following_mode.unwrap(),
             },
-            initial_distance_offset: self.initial_distance_offset.map(|v| Double::literal(v)),
+            initial_distance_offset: self.initial_distance_offset.map(Double::literal),
         };
 
         Ok(PrivateAction::RoutingAction(

@@ -52,8 +52,8 @@ where
                     if value.starts_with("${") && value.ends_with('}') && value.len() > 3 {
                         let content = &value[2..value.len() - 1];
                         Ok(Some(Double::expression(content.to_string())))
-                    } else if value.starts_with('$') {
-                        Ok(Some(Double::parameter(value[1..].to_string())))
+                    } else if let Some(stripped) = value.strip_prefix('$') {
+                        Ok(Some(Double::parameter(stripped.to_string())))
                     } else {
                         // For XSD compliance, empty or invalid values should be None
                         Ok(None)

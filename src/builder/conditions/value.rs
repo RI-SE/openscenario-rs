@@ -34,6 +34,12 @@ pub struct TimeConditionBuilder {
     rule: Value<Rule>,
 }
 
+impl Default for TimeConditionBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TimeConditionBuilder {
     /// Create a new time condition builder
     pub fn new() -> Self {

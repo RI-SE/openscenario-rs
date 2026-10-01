@@ -1,5 +1,11 @@
 //! `CatalogEnvironment`: an environment in its catalog-file form. Weather, time of day
 //! and road condition become reusable across scenarios through it.
+//!
+//! `#![allow(deprecated)]` is module-scoped (this file only): `CatalogWeather::cloud_state`
+//! is `Value<CloudState>`, and the `Serialize`/`Deserialize` derive re-splices that field
+//! type into a generated `impl` that is a sibling item, not nested inside `CatalogWeather`'s
+//! own attributes, so a `#[allow(deprecated)]` on the struct or the field does not reach it.
+#![allow(deprecated)]
 
 use crate::types::basic::{Boolean, Double, OSString, ParameterDeclarations, Value};
 use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType, Wetness};
@@ -69,7 +75,6 @@ pub struct CatalogWeather {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    #[allow(deprecated)]
     pub cloud_state: Option<Value<CloudState>>,
 
     /// Atmospheric pressure in hPa (optional, can be parameterized)

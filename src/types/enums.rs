@@ -42,6 +42,7 @@ macro_rules! osc_enum {
             pub const ALL: &'static [$name] = &[ $($name::$variant),+ ];
         }
 
+        #[allow(deprecated)]
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 let s = match self {
@@ -51,6 +52,7 @@ macro_rules! osc_enum {
             }
         }
 
+        #[allow(deprecated)]
         impl FromStr for $name {
             type Err = String;
 
@@ -525,14 +527,27 @@ osc_enum! {
     }
 }
 
-osc_enum! {
-    /// Cloud state enumeration (deprecated)
-    #[deprecated(note = "CloudState is deprecated, use FractionalCloudCover instead")]
-    pub enum CloudState {
-        Cloudy => "cloudy",
-        Free => "free",
-        Overcast => "overcast",
-        Rainy => "rainy",
-        SkyOff => "skyOff",
+// `CloudState`'s own osc_enum! expansion (Debug/Clone/PartialEq/Eq/Serialize/
+// Deserialize derives, Display, FromStr) necessarily refers to its variants by
+// name, which would otherwise warn on every one of those generated impls.
+// Scoped to this one deprecated enum, not the crate, per F8/OST-29.
+#[allow(deprecated)]
+mod cloud_state {
+    use serde::{Deserialize, Serialize};
+    use std::fmt;
+    use std::str::FromStr;
+
+    osc_enum! {
+        /// Cloud state enumeration (deprecated)
+        #[deprecated(note = "CloudState is deprecated, use FractionalCloudCover instead")]
+        pub enum CloudState {
+            Cloudy => "cloudy",
+            Free => "free",
+            Overcast => "overcast",
+            Rainy => "rainy",
+            SkyOff => "skyOff",
+        }
     }
 }
+#[allow(deprecated)]
+pub use cloud_state::CloudState;

@@ -313,7 +313,7 @@ impl CatalogEntityBuilder {
         let resolved = self
             .catalog_manager
             .resolve_vehicle_reference(reference, vehicle_location)
-            .map_err(|e| BuilderError::OpenScenarioError(e))?;
+            .map_err(BuilderError::OpenScenarioError)?;
 
         Ok(resolved.entity)
     }
@@ -336,7 +336,7 @@ impl CatalogEntityBuilder {
         let resolved = self
             .catalog_manager
             .resolve_pedestrian_reference(reference, pedestrian_location)
-            .map_err(|e| BuilderError::OpenScenarioError(e))?;
+            .map_err(BuilderError::OpenScenarioError)?;
 
         Ok(resolved.entity)
     }
@@ -359,7 +359,7 @@ impl CatalogEntityBuilder {
         let resolved = self
             .catalog_manager
             .resolve_controller_reference(reference, controller_location)
-            .map_err(|e| BuilderError::OpenScenarioError(e))?;
+            .map_err(BuilderError::OpenScenarioError)?;
 
         Ok(resolved.entity)
     }
@@ -369,7 +369,7 @@ impl CatalogEntityBuilder {
         if let Some(locations) = &self.catalog_locations {
             self.catalog_manager
                 .discover_and_load_catalogs(locations)
-                .map_err(|e| BuilderError::OpenScenarioError(e))?;
+                .map_err(BuilderError::OpenScenarioError)?;
         }
         Ok(())
     }

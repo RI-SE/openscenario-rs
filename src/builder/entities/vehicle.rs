@@ -287,7 +287,7 @@ impl DetachedVehicleBuilder {
                     max_deceleration: Double::literal(10.0),
                     max_deceleration_rate: None,
                 }),
-            axles: self.vehicle_data.axles.unwrap_or_else(|| Axles::car()),
+            axles: self.vehicle_data.axles.unwrap_or_else(Axles::car),
             properties: self.vehicle_data.properties,
             trailer_hitch: None,
             trailer_coupler: None,

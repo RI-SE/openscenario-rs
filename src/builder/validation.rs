@@ -455,7 +455,7 @@ impl BuilderValidationRule for StoryboardStructureValidationRule {
                 if story.acts.is_empty() {
                     return Err(BuilderError::validation_error(&format!(
                         "Story '{}' has no acts",
-                        story.name.to_string()
+                        story.name
                     )));
                 }
 
@@ -464,7 +464,7 @@ impl BuilderValidationRule for StoryboardStructureValidationRule {
                     if act.maneuver_groups.is_empty() {
                         return Err(BuilderError::validation_error(&format!(
                             "Act '{}' has no maneuver groups",
-                            act.name.to_string()
+                            act.name
                         )));
                     }
 
@@ -473,7 +473,7 @@ impl BuilderValidationRule for StoryboardStructureValidationRule {
                         if maneuver_group.maneuvers.is_empty() {
                             return Err(BuilderError::validation_error(&format!(
                                 "Maneuver group '{}' has no maneuvers",
-                                maneuver_group.name.to_string()
+                                maneuver_group.name
                             )));
                         }
                     }

@@ -452,7 +452,6 @@ impl DetachedManeuverBuilder {
 
 /// Detached builder for speed action events (no lifetime constraints)
 pub struct DetachedSpeedActionBuilder {
-    entity_ref: String,
     action_builder: SpeedActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -463,7 +462,6 @@ impl DetachedSpeedActionBuilder {
     pub fn new(entity_ref: &str) -> Self {
         Self {
             action_builder: SpeedActionBuilder::new().for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -640,7 +638,6 @@ impl DetachedSpeedActionBuilder {
 
 /// Detached builder for teleport action events (no lifetime constraints)
 pub struct DetachedTeleportActionBuilder {
-    entity_ref: String,
     action_builder: TeleportActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -651,7 +648,6 @@ impl DetachedTeleportActionBuilder {
     pub fn new(entity_ref: &str) -> Self {
         Self {
             action_builder: TeleportActionBuilder::new().for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -827,7 +823,6 @@ impl DetachedTeleportPositionBuilder {
 
 /// Detached builder for follow trajectory action events (no lifetime constraints)
 pub struct DetachedFollowTrajectoryActionBuilder {
-    entity_ref: String,
     action_builder: FollowTrajectoryActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -838,7 +833,6 @@ impl DetachedFollowTrajectoryActionBuilder {
     pub fn new(entity_ref: &str) -> Self {
         Self {
             action_builder: FollowTrajectoryActionBuilder::new().for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -1044,7 +1038,6 @@ impl DetachedFollowTrajectoryActionBuilder {
 
 /// Detached builder for longitudinal distance action
 pub struct DetachedLongitudinalDistanceActionBuilder {
-    entity_ref: String,
     action_builder: crate::builder::actions::LongitudinalDistanceActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -1055,7 +1048,6 @@ impl DetachedLongitudinalDistanceActionBuilder {
         Self {
             action_builder: crate::builder::actions::LongitudinalDistanceActionBuilder::new()
                 .for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -1104,7 +1096,6 @@ impl DetachedLongitudinalDistanceActionBuilder {
 
 /// Detached builder for speed profile action
 pub struct DetachedSpeedProfileActionBuilder {
-    entity_ref: String,
     action_builder: crate::builder::actions::SpeedProfileActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -1115,7 +1106,6 @@ impl DetachedSpeedProfileActionBuilder {
         Self {
             action_builder: crate::builder::actions::SpeedProfileActionBuilder::new()
                 .for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -1159,7 +1149,6 @@ impl DetachedSpeedProfileActionBuilder {
 
 /// Detached builder for assign route action
 pub struct DetachedAssignRouteActionBuilder {
-    entity_ref: String,
     action_builder: crate::builder::actions::AssignRouteActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -1170,7 +1159,6 @@ impl DetachedAssignRouteActionBuilder {
         Self {
             action_builder: crate::builder::actions::AssignRouteActionBuilder::new()
                 .for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -1220,7 +1208,6 @@ impl DetachedAssignRouteActionBuilder {
 
 /// Detached builder for synchronize action
 pub struct DetachedSynchronizeActionBuilder {
-    entity_ref: String,
     action_builder: crate::builder::actions::SynchronizeActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -1231,7 +1218,6 @@ impl DetachedSynchronizeActionBuilder {
         Self {
             action_builder: crate::builder::actions::SynchronizeActionBuilder::new()
                 .for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }
@@ -1285,7 +1271,6 @@ impl DetachedSynchronizeActionBuilder {
 
 /// Detached builder for visibility action
 pub struct DetachedVisibilityActionBuilder {
-    entity_ref: String,
     action_builder: crate::builder::actions::VisibilityActionBuilder,
     event_name: Option<String>,
     start_trigger: Option<Trigger>,
@@ -1296,7 +1281,6 @@ impl DetachedVisibilityActionBuilder {
         Self {
             action_builder: crate::builder::actions::VisibilityActionBuilder::new()
                 .for_entity(entity_ref),
-            entity_ref: entity_ref.to_string(),
             event_name: None,
             start_trigger: None,
         }

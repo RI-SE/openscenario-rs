@@ -255,8 +255,8 @@ impl CatalogEntity for CatalogPedestrian {
     }
 }
 
-/// Placeholder catalog entities for remaining types
-/// These provide basic structure for future implementation
+// Placeholder catalog entities for remaining types
+// These provide basic structure for future implementation
 
 /// Miscellaneous object entity definition for catalogs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

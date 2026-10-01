@@ -3,6 +3,13 @@
 //!
 //! Every field is optional, including the deprecated `@cloudState`, which is kept
 //! because a file that still sets it remains schema-valid.
+//!
+//! `#![allow(deprecated)]` is module-scoped (this file only): `Weather::cloud_state`
+//! is `Value<CloudState>`, and the `Serialize`/`Deserialize` derive on `Weather`
+//! re-splices that field type into a generated `impl` that is a sibling item, not
+//! nested inside `Weather`'s own attributes, so a `#[allow(deprecated)]` on the
+//! struct or the field does not reach it.
+#![allow(deprecated)]
 use crate::types::basic::{Double, Value};
 use crate::types::enums::{CloudState, FractionalCloudCover, PrecipitationType};
 use crate::types::geometry::BoundingBox;
@@ -12,7 +19,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Weather {
     /// Deprecated cloud state; prefer `fractional_cloud_cover`.
-    #[allow(deprecated)]
     #[serde(
         rename = "@cloudState",
         default,

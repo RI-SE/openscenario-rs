@@ -610,7 +610,6 @@ impl DetachedStoryBuilder {
 /// Helper builder for private actions within storyboard context
 pub struct PrivateActionBuilderForStoryboard {
     parent: InitActionBuilderForStoryboard,
-    entity_ref: String,
     private_builder: crate::builder::init::PrivateActionBuilder,
 }
 
@@ -623,7 +622,6 @@ impl PrivateActionBuilderForStoryboard {
                 storyboard_builder,
                 init_builder: InitActionBuilder::new(),
             },
-            entity_ref: entity_ref.to_string(),
             private_builder,
         }
     }

@@ -236,7 +236,7 @@ pub struct TrafficSignalGroupState {
 /// Traffic stop action for traffic stop enable/disable
 ///
 /// XSD `TrafficStopAction` is an empty complexType with no attributes or children.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TrafficStopAction {}
 
 /// The population a traffic source or swarm draws from: which vehicle categories
@@ -468,11 +468,6 @@ pub struct DirectionOfTravelDistribution {
 // :1926-1932, `RoadRange` :1949-1954, `DirectionOfTravelDistribution`
 // :1063-1066, `TrafficAreaAction` :2220-2227). Use the named constructors
 // below instead.
-impl Default for TrafficStopAction {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl TrafficSourceAction {
     /// Create traffic source with radius, rate and position

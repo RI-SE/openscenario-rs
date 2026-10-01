@@ -409,7 +409,7 @@ mod tests {
         let file_path = temp_dir.path().join("test_catalog.xosc");
         let content = "<?xml version=\"1.0\"?>\n<OpenSCENARIO>test</OpenSCENARIO>";
 
-        fs::write(&file_path, &content).unwrap();
+        fs::write(&file_path, content).unwrap();
 
         let loader = CatalogLoader::new();
         let loaded_content = loader.load_catalog_file(&file_path)?;
