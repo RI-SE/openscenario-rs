@@ -10,13 +10,15 @@ use crate::types::{
     geometry::{BoundingBox, Center, Dimensions},
 };
 
-/// Builder for vehicle entities with position integration
+/// Attached vehicle builder returned by `ScenarioBuilder::add_vehicle_mut`.
+///
+/// Every setter delegates to [`DetachedVehicleBuilder`]; `finish` builds the vehicle and
+/// adds it to the parent scenario's entities.
 pub struct VehicleBuilder<'parent> {
     parent: &'parent mut crate::builder::scenario::ScenarioBuilder<
         crate::builder::scenario::HasEntities,
     >,
-    name: String,
-    vehicle_data: PartialVehicleData,
+    inner: DetachedVehicleBuilder,
 }
 
 /// Detached vehicle builder that doesn't hold references
@@ -44,140 +46,50 @@ impl<'parent> VehicleBuilder<'parent> {
     ) -> Self {
         Self {
             parent,
-            name: name.to_string(),
-            vehicle_data: PartialVehicleData::default(),
+            inner: DetachedVehicleBuilder::new(name),
         }
     }
 
-    /// Set vehicle as passenger car
-    pub fn car(mut self) -> Self {
-        self.vehicle_data.vehicle_category = Some(Value::Literal(VehicleCategory::Car));
-        self.vehicle_data.name = Some("PassengerCar".to_string());
-
-        // Default car dimensions
-        self.vehicle_data.bounding_box = Some(BoundingBox {
-            center: Center {
-                x: Double::literal(1.4),
-                y: Double::literal(0.0),
-                z: Double::literal(0.9),
-            },
-            dimensions: Dimensions {
-                width: Double::literal(1.8),
-                length: Double::literal(4.5),
-                height: Double::literal(1.4),
-            },
-        });
-
-        // Default car performance
-        self.vehicle_data.performance = Some(Performance {
-            max_speed: Double::literal(200.0),
-            max_acceleration: Double::literal(10.0),
-            max_acceleration_rate: None,
-            max_deceleration: Double::literal(10.0),
-            max_deceleration_rate: None,
-        });
-
-        // Default car axles
-        self.vehicle_data.axles = Some(Axles::car());
-
-        self
+    fn map(self, f: impl FnOnce(DetachedVehicleBuilder) -> DetachedVehicleBuilder) -> Self {
+        Self {
+            parent: self.parent,
+            inner: f(self.inner),
+        }
     }
 
-    /// Set the vehicle category to a literal enum value.
-    ///
-    /// The literal case keeps the bare enum, so existing call sites are unchanged; see
-    /// [`Self::with_category_param`] for the `$name` parameter form the schema also allows
-    /// on this attribute.
-    pub fn with_category(mut self, category: VehicleCategory) -> Self {
-        self.vehicle_data.vehicle_category = Some(Value::Literal(category));
-        self
+    /// See [`DetachedVehicleBuilder::car`].
+    pub fn car(self) -> Self {
+        self.map(DetachedVehicleBuilder::car)
     }
 
-    /// Set the vehicle category to a parameter reference.
-    ///
-    /// `@vehicleCategory` is declared with an `xsd:union` whose second member is
-    /// `<xsd:restriction base="parameter"/>`, so `vehicleCategory="$cat"` is schema-valid;
-    /// `name` is the bare parameter name, without the `$`.
-    pub fn with_category_param(mut self, name: &str) -> Self {
-        self.vehicle_data.vehicle_category = Some(Value::Parameter(name.to_string()));
-        self
+    /// See [`DetachedVehicleBuilder::with_category`].
+    pub fn with_category(self, category: VehicleCategory) -> Self {
+        self.map(|b| b.with_category(category))
     }
 
-    /// Set vehicle as truck
-    pub fn truck(mut self) -> Self {
-        self.vehicle_data.vehicle_category = Some(Value::Literal(VehicleCategory::Truck));
-        self.vehicle_data.name = Some("Truck".to_string());
-
-        // Default truck dimensions
-        self.vehicle_data.bounding_box = Some(BoundingBox {
-            center: Center {
-                x: Double::literal(4.0),
-                y: Double::literal(0.0),
-                z: Double::literal(1.5),
-            },
-            dimensions: Dimensions {
-                width: Double::literal(2.5),
-                length: Double::literal(8.0),
-                height: Double::literal(3.0),
-            },
-        });
-
-        // Default truck performance
-        self.vehicle_data.performance = Some(Performance {
-            max_speed: Double::literal(120.0),
-            max_acceleration: Double::literal(3.0),
-            max_acceleration_rate: None,
-            max_deceleration: Double::literal(8.0),
-            max_deceleration_rate: None,
-        });
-
-        // Default truck axles
-        self.vehicle_data.axles = Some(Axles::truck());
-
-        self
+    /// See [`DetachedVehicleBuilder::with_category_param`].
+    pub fn with_category_param(self, name: &str) -> Self {
+        self.map(|b| b.with_category_param(name))
     }
 
-    /// Set custom dimensions
-    pub fn with_dimensions(mut self, length: f64, width: f64, height: f64) -> Self {
-        // No `BoundingBox::default()`: XSD `Center` and `Dimensions` are both
-        // `xsd:all` of required attributes with no schema default
-        // (`Schema/OpenSCENARIO.xsd:886-890,1058-1062`). If a center was already set
-        // via a category preset, keep it; otherwise the origin is the explicit
-        // fallback, not an invented one.
-        let existing_center = self
-            .vehicle_data
-            .bounding_box
-            .as_ref()
-            .map(|bbox| bbox.center.clone())
-            .unwrap_or_else(|| Center::new(0.0, 0.0, 0.0));
-
-        self.vehicle_data.bounding_box = Some(BoundingBox {
-            center: existing_center,
-            dimensions: Dimensions {
-                width: Double::literal(width),
-                length: Double::literal(length),
-                height: Double::literal(height),
-            },
-        });
-
-        self
+    /// See [`DetachedVehicleBuilder::truck`].
+    pub fn truck(self) -> Self {
+        self.map(DetachedVehicleBuilder::truck)
     }
 
-    /// Set custom performance characteristics
+    /// See [`DetachedVehicleBuilder::with_dimensions`].
+    pub fn with_dimensions(self, length: f64, width: f64, height: f64) -> Self {
+        self.map(|b| b.with_dimensions(length, width, height))
+    }
+
+    /// See [`DetachedVehicleBuilder::with_performance`].
     pub fn with_performance(
-        mut self,
+        self,
         max_speed: f64,
         max_acceleration: f64,
         max_deceleration: f64,
     ) -> Self {
-        self.vehicle_data.performance = Some(Performance {
-            max_speed: Double::literal(max_speed),
-            max_acceleration: Double::literal(max_acceleration),
-            max_acceleration_rate: None,
-            max_deceleration: Double::literal(max_deceleration),
-            max_deceleration_rate: None,
-        });
-        self
+        self.map(|b| b.with_performance(max_speed, max_acceleration, max_deceleration))
     }
 
     /// Finish vehicle and add to scenario
@@ -185,64 +97,16 @@ impl<'parent> VehicleBuilder<'parent> {
         self,
     ) -> &'parent mut crate::builder::scenario::ScenarioBuilder<crate::builder::scenario::HasEntities>
     {
-        let vehicle = Vehicle {
-            name: OSString::literal(
-                self.vehicle_data
-                    .name
-                    .unwrap_or_else(|| "DefaultVehicle".to_string()),
-            ),
-            vehicle_category: self
-                .vehicle_data
-                .vehicle_category
-                .unwrap_or(Value::Literal(VehicleCategory::Car)),
-            role: None,
-            mass: None,
-            model3d: None,
-            parameter_declarations: None,
-            bounding_box: self
-                .vehicle_data
-                .bounding_box
-                .unwrap_or_else(|| BoundingBox {
-                    center: Center::new(0.0, 0.0, 0.0),
-                    dimensions: Dimensions {
-                        width: Double::literal(2.0),
-                        length: Double::literal(4.5),
-                        height: Double::literal(1.5),
-                    },
-                }),
-            performance: self
-                .vehicle_data
-                .performance
-                .unwrap_or_else(|| Performance {
-                    max_speed: Double::literal(200.0),
-                    max_acceleration: Double::literal(10.0),
-                    max_acceleration_rate: None,
-                    max_deceleration: Double::literal(10.0),
-                    max_deceleration_rate: None,
-                }),
-            axles: self.vehicle_data.axles.unwrap_or_else(|| Axles::car()),
-            properties: self.vehicle_data.properties,
-            trailer_hitch: None,
-            trailer_coupler: None,
-            trailer: None,
-        };
-
-        let scenario_object = ScenarioObject::new_vehicle(self.name.clone(), vehicle);
-
-        // Add to parent's entities
+        let scenario_object = self.inner.build();
         if let Some(ref mut entities) = self.parent.data.entities {
             entities.add_object(scenario_object);
         }
-
         self.parent
     }
 
     /// Convert to detached builder for closure-based configuration
     pub fn detached(self) -> DetachedVehicleBuilder {
-        DetachedVehicleBuilder {
-            name: self.name,
-            vehicle_data: self.vehicle_data,
-        }
+        self.inner
     }
 }
 

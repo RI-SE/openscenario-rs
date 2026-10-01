@@ -5,7 +5,7 @@ pub mod pedestrian;
 pub mod vehicle;
 
 pub use catalog::{CatalogPedestrianBuilder, CatalogVehicleBuilder};
-pub use pedestrian::{DetachedPedestrianBuilder, PedestrianBuilder};
+pub use pedestrian::DetachedPedestrianBuilder;
 pub use vehicle::{DetachedVehicleBuilder, VehicleBuilder};
 
 use crate::types::entities::{Entities, ScenarioObject};

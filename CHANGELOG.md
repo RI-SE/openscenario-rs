@@ -29,6 +29,10 @@ All notable changes to this project are recorded here. The format follows
   `types::catalogs::locations::ControllerCatalogLocation` (re-exported as
   `types::ControllerCatalogLocation`), which is the type `CatalogLocations` and the catalog
   loader use.
+- **Breaking:** the attached `builder::entities::PedestrianBuilder`. Nothing in the crate
+  constructed it, and it repeated `DetachedPedestrianBuilder` method for method. Use
+  `ScenarioBuilder::add_pedestrian` (closure over `DetachedPedestrianBuilder`) or
+  `DetachedPedestrianBuilder::new(name).build()`.
 
 ## [0.5.0] - 2026-09-22
 

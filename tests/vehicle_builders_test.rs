@@ -35,4 +35,39 @@ mod vehicle_builder_tests {
             assert_eq!(vehicle.vehicle_category, Value::Literal(category), "{name}");
         }
     }
+
+    /// `add_vehicle_mut` hands back an attached builder: its setters reach the vehicle and
+    /// `finish` files it in the scenario under the given name.
+    #[test]
+    fn add_vehicle_mut_attaches_the_configured_vehicle() {
+        let mut builder = ScenarioBuilder::new()
+            .with_header("Attached Vehicle Test", "Test Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities();
+        builder
+            .add_vehicle_mut("lorry")
+            .truck()
+            .with_dimensions(12.0, 2.5, 3.8)
+            .with_performance(90.0, 2.0, 6.0)
+            .finish();
+        let scenario = builder.with_storyboard(|s| s).build().unwrap();
+
+        let vehicle = scenario
+            .entities
+            .unwrap()
+            .find_object("lorry")
+            .and_then(|o| o.vehicle())
+            .cloned()
+            .expect("finish() must add the vehicle to the scenario");
+        assert_eq!(
+            vehicle.vehicle_category,
+            Value::Literal(VehicleCategory::Truck)
+        );
+        assert_eq!(
+            vehicle.bounding_box.dimensions.length.as_literal(),
+            Some(&12.0)
+        );
+        assert_eq!(vehicle.performance.max_speed.as_literal(), Some(&90.0));
+    }
 }

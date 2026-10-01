@@ -570,9 +570,9 @@ Templates: `BasicScenarioTemplate`, `ScenarioTemplate`.
 
 Validation: `BuilderValidatable`, `BuilderValidationContext`, `ValidationContextBuilder`.
 
-> `PedestrianBuilder`, `CatalogVehicleBuilder`, `CatalogPedestrianBuilder` and
-> `DetachedPedestrianBuilder` exist but are **not** re-exported at `builder::`. Import them
-> from `openscenario_rs::builder::entities`.
+> `CatalogVehicleBuilder`, `CatalogPedestrianBuilder` and `DetachedPedestrianBuilder` exist
+> but are **not** re-exported at `builder::`. Import them from
+> `openscenario_rs::builder::entities`.
 
 
 ## Binaries
