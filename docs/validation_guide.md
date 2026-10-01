@@ -38,7 +38,7 @@ against the bundled `Schema/OpenSCENARIO.xsd`.
 
 ```toml
 [dependencies]
-openscenario-rs = { version = "0.4.0", features = ["validation"] }
+openscenario-rs = { version = "0.6.0", features = ["validation"] }
 ```
 
 ```rust

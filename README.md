@@ -42,7 +42,7 @@ open structural gap. Recent changes, including breaking ones, are in
 
 ```toml
 [dependencies]
-openscenario-rs = "0.4.0"
+openscenario-rs = "0.6.0"
 ```
 
 Requires Rust 1.90 or later. Neither optional feature is enabled by default.
