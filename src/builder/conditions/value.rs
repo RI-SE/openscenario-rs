@@ -513,4 +513,123 @@ mod tests {
             .to_string()
             .contains("Speed value is required"));
     }
+
+    fn condition_xml(condition: &Condition) -> String {
+        quick_xml::se::to_string_with_root("Condition", condition).expect("serialize Condition")
+    }
+
+    /// `ParameterCondition` (XSD:1629-1633) and `VariableCondition` (XSD:2466-2470) under
+    /// `ByValueCondition` (XSD:837-847): each threshold setter picks its `rule`, the `f64`
+    /// threshold is written as the XSD `String` `value`, and the reference lands on
+    /// `parameterRef` / `variableRef`.
+    #[test]
+    fn parameter_and_variable_condition_builders_emit_xsd_condition() {
+        let by_value = |name: &str, inner: &str| {
+            format!(
+                r#"<Condition name="{name}" conditionEdge="rising" delay="0"><ByValueCondition>{inner}</ByValueCondition></Condition>"#
+            )
+        };
+        let rows = [
+            (
+                "parameter value_above",
+                ParameterConditionBuilder::new()
+                    .parameter("max_speed")
+                    .value_above(60.0)
+                    .build(),
+                by_value(
+                    "ParameterCondition",
+                    r#"<ParameterCondition parameterRef="max_speed" rule="greaterThan" value="60"/>"#,
+                ),
+            ),
+            (
+                "parameter value_below",
+                ParameterConditionBuilder::new()
+                    .parameter("gap")
+                    .value_below(2.5)
+                    .build(),
+                by_value(
+                    "ParameterCondition",
+                    r#"<ParameterCondition parameterRef="gap" rule="lessThan" value="2.5"/>"#,
+                ),
+            ),
+            (
+                "parameter value_equals",
+                ParameterConditionBuilder::new()
+                    .parameter("lane")
+                    .value_equals(-1.0)
+                    .build(),
+                by_value(
+                    "ParameterCondition",
+                    r#"<ParameterCondition parameterRef="lane" rule="equalTo" value="-1"/>"#,
+                ),
+            ),
+            (
+                "variable value_above",
+                VariableConditionBuilder::new()
+                    .variable("count")
+                    .value_above(3.0)
+                    .build(),
+                by_value(
+                    "VariableCondition",
+                    r#"<VariableCondition variableRef="count" rule="greaterThan" value="3"/>"#,
+                ),
+            ),
+            (
+                "variable value_below",
+                VariableConditionBuilder::new()
+                    .variable("traffic_density")
+                    .value_below(0.5)
+                    .build(),
+                by_value(
+                    "VariableCondition",
+                    r#"<VariableCondition variableRef="traffic_density" rule="lessThan" value="0.5"/>"#,
+                ),
+            ),
+            (
+                "variable value_equals",
+                VariableConditionBuilder::new()
+                    .variable("phase")
+                    .value_equals(2.0)
+                    .build(),
+                by_value(
+                    "VariableCondition",
+                    r#"<VariableCondition variableRef="phase" rule="equalTo" value="2"/>"#,
+                ),
+            ),
+        ];
+        for (row, condition, expected) in rows {
+            let condition = condition.unwrap_or_else(|e| panic!("{row}: {e}"));
+            assert_eq!(condition_xml(&condition), expected, "{row}");
+        }
+    }
+
+    /// The reference and the threshold are both XSD-required (`use="required"`, no default).
+    #[test]
+    fn parameter_and_variable_condition_builders_refuse_missing_fields() {
+        let rows = [
+            (
+                ParameterConditionBuilder::new().value_above(1.0).build(),
+                "Parameter reference is required",
+            ),
+            (
+                ParameterConditionBuilder::new().parameter("p").build(),
+                "Parameter value is required",
+            ),
+            (
+                VariableConditionBuilder::new().value_below(1.0).build(),
+                "Variable reference is required",
+            ),
+            (
+                VariableConditionBuilder::new().variable("v").build(),
+                "Variable value is required",
+            ),
+        ];
+        for (result, message) in rows {
+            let error = result.expect_err(message).to_string();
+            assert!(
+                error.contains(message),
+                "expected `{message}`, got `{error}`"
+            );
+        }
+    }
 }

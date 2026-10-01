@@ -127,4 +127,78 @@ mod catalog_builder_tests {
         assert!(catalog_locations.vehicle_catalog.is_some());
         assert!(catalog_locations.pedestrian_catalog.is_some());
     }
+
+    /// `CatalogEntityBuilder` resolves a `VehicleCatalogReference` against the vehicle catalog
+    /// directory named in its `CatalogLocations` (XSD `VehicleCatalogLocation`, `Directory`):
+    /// an absolute directory from `new()`, a relative one against `with_base_path`. Without
+    /// locations it refuses rather than guessing a directory.
+    #[test]
+    fn catalog_entity_builder_resolves_vehicle_reference_from_its_locations() {
+        use openscenario_rs::builder::CatalogEntityBuilder;
+
+        let root = tempfile::TempDir::new().unwrap();
+        let vehicles = root.path().join("Vehicles");
+        std::fs::create_dir(&vehicles).unwrap();
+        std::fs::write(
+            vehicles.join("VehicleCatalog.xosc"),
+            r#"<?xml version="1.0"?>
+<OpenSCENARIO>
+  <FileHeader author="t" date="2024-01-01T00:00:00" description="d" revMajor="1" revMinor="3"/>
+  <Catalog name="VehicleCatalog">
+    <Vehicle name="Sedan" vehicleCategory="car">
+      <BoundingBox><Center x="1.4" y="0" z="0.9"/><Dimensions width="1.8" length="4.5" height="1.5"/></BoundingBox>
+      <Performance maxSpeed="60" maxAcceleration="5" maxDeceleration="9"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5" wheelDiameter="0.6" trackWidth="1.6" positionX="2.8" positionZ="0.3"/>
+        <RearAxle maxSteering="0" wheelDiameter="0.6" trackWidth="1.6" positionX="0" positionZ="0.3"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>"#,
+        )
+        .unwrap();
+        let reference = VehicleCatalogReferenceBuilder::new()
+            .from_catalog("VehicleCatalog")
+            .entry("Sedan")
+            .build()
+            .unwrap();
+
+        let rows = [
+            (
+                "new + absolute directory",
+                CatalogEntityBuilder::new().with_catalog_locations(
+                    CatalogLocationsBuilder::new()
+                        .with_vehicle_catalog(vehicles.to_str().unwrap())
+                        .build(),
+                ),
+            ),
+            (
+                "with_base_path + relative directory",
+                CatalogEntityBuilder::with_base_path(root.path()).with_catalog_locations(
+                    CatalogLocationsBuilder::new()
+                        .with_vehicle_catalog("Vehicles")
+                        .build(),
+                ),
+            ),
+        ];
+        for (row, mut builder) in rows {
+            let vehicle = builder
+                .resolve_vehicle_reference(&reference)
+                .unwrap_or_else(|e| panic!("{row}: {e}"));
+            assert_eq!(vehicle.name.as_literal().unwrap(), "Sedan", "{row}");
+            assert_eq!(
+                vehicle.bounding_box.dimensions.length.as_literal(),
+                Some(&4.5),
+                "{row}"
+            );
+        }
+
+        let error = CatalogEntityBuilder::new()
+            .resolve_vehicle_reference(&reference)
+            .expect_err("no locations set");
+        assert!(
+            error.to_string().contains("Catalog locations not set"),
+            "{error}"
+        );
+    }
 }

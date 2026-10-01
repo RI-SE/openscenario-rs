@@ -474,4 +474,177 @@ mod tests {
             _ => panic!("Expected Distance condition"),
         }
     }
+
+    fn condition_xml(condition: &Condition) -> String {
+        quick_xml::se::to_string_with_root("Condition", condition).expect("serialize Condition")
+    }
+
+    /// Wraps an `EntityCondition` child in the `Condition`/`ByEntityCondition` envelope the
+    /// builders emit for `ego` (XSD `Condition` :953, `ByEntityCondition` :825,
+    /// `TriggeringEntities` :2400).
+    fn by_entity_xml(name: &str, entity_condition: &str) -> String {
+        format!(
+            concat!(
+                r#"<Condition name="{}" conditionEdge="rising" delay="0"><ByEntityCondition>"#,
+                r#"<TriggeringEntities triggeringEntitiesRule="any"><EntityRef entityRef="ego"/></TriggeringEntities>"#,
+                r#"<EntityCondition>{}</EntityCondition></ByEntityCondition></Condition>"#,
+            ),
+            name, entity_condition
+        )
+    }
+
+    /// `RelativeDistanceCondition` (XSD:1843-1851): each threshold and distance-type setter
+    /// lands on its own required attribute. `cartesian()` emits `cartesianDistance`, the
+    /// `RelativeDistanceType` literal at XSD:448 (deprecated in 1.3, still valid).
+    #[test]
+    fn relative_distance_condition_builder_emits_xsd_condition() {
+        let rows = [
+            (
+                "closer_than + longitudinal + freespace",
+                RelativeDistanceConditionBuilder::new()
+                    .for_entity("ego")
+                    .to_entity("target")
+                    .closer_than(5.0)
+                    .use_freespace(true)
+                    .longitudinal(),
+                r#"<RelativeDistanceCondition entityRef="target" value="5" freespace="true" relativeDistanceType="longitudinal" rule="lessThan"/>"#,
+            ),
+            (
+                "farther_than + lateral",
+                RelativeDistanceConditionBuilder::new()
+                    .for_entity("ego")
+                    .to_entity("lead")
+                    .farther_than(30.5)
+                    .use_freespace(false)
+                    .lateral(),
+                r#"<RelativeDistanceCondition entityRef="lead" value="30.5" freespace="false" relativeDistanceType="lateral" rule="greaterThan"/>"#,
+            ),
+            (
+                "cartesian",
+                RelativeDistanceConditionBuilder::new()
+                    .for_entity("ego")
+                    .to_entity("target")
+                    .closer_than(2.0)
+                    .use_freespace(false)
+                    .cartesian(),
+                r#"<RelativeDistanceCondition entityRef="target" value="2" freespace="false" relativeDistanceType="cartesianDistance" rule="lessThan"/>"#,
+            ),
+        ];
+        for (row, builder, expected) in rows {
+            let condition = builder.build().unwrap_or_else(|e| panic!("{row}: {e}"));
+            assert_eq!(
+                condition_xml(&condition),
+                by_entity_xml("RelativeDistanceCondition", expected),
+                "{row}"
+            );
+        }
+    }
+
+    /// The three XSD-required attributes without a schema default (`freespace`,
+    /// `relativeDistanceType`, `rule`) and the entity, target and value are refused when unset.
+    #[test]
+    fn relative_distance_condition_builder_refuses_missing_required_fields() {
+        let complete = || {
+            RelativeDistanceConditionBuilder::new()
+                .for_entity("ego")
+                .to_entity("target")
+                .use_freespace(true)
+                .longitudinal()
+        };
+        let rows = [
+            (
+                RelativeDistanceConditionBuilder::new()
+                    .to_entity("target")
+                    .closer_than(5.0)
+                    .use_freespace(true)
+                    .longitudinal(),
+                "Entity reference is required",
+            ),
+            (
+                RelativeDistanceConditionBuilder::new()
+                    .for_entity("ego")
+                    .closer_than(5.0)
+                    .use_freespace(true)
+                    .longitudinal(),
+                "Target entity is required",
+            ),
+            (complete(), "Distance threshold is required"),
+            (
+                RelativeDistanceConditionBuilder::new()
+                    .for_entity("ego")
+                    .to_entity("target")
+                    .closer_than(5.0)
+                    .longitudinal(),
+                "Freespace flag is required",
+            ),
+            (
+                RelativeDistanceConditionBuilder::new()
+                    .for_entity("ego")
+                    .to_entity("target")
+                    .closer_than(5.0)
+                    .use_freespace(true),
+                "Relative distance type is required",
+            ),
+        ];
+        for (builder, message) in rows {
+            let error = builder.build().expect_err(message).to_string();
+            assert!(
+                error.contains(message),
+                "expected `{message}`, got `{error}`"
+            );
+        }
+    }
+
+    /// `CollisionCondition` (XSD:923-928) is a choice between `EntityRef` and `ByType`; the
+    /// entity wins when both are set, and neither set is refused.
+    #[test]
+    fn collision_condition_builder_emits_one_xsd_choice_branch() {
+        use crate::types::enums::ObjectType;
+
+        let rows = [
+            (
+                "target entity",
+                CollisionConditionBuilder::new()
+                    .for_entity("ego")
+                    .with_entity("target"),
+                r#"<CollisionCondition><EntityRef entityRef="target"/></CollisionCondition>"#,
+            ),
+            (
+                "object type",
+                CollisionConditionBuilder::new()
+                    .for_entity("ego")
+                    .collision_type(ObjectType::Pedestrian),
+                r#"<CollisionCondition><ByType type="pedestrian"/></CollisionCondition>"#,
+            ),
+            (
+                "both: entity takes precedence",
+                CollisionConditionBuilder::new()
+                    .for_entity("ego")
+                    .with_entity("target")
+                    .collision_type(ObjectType::Vehicle),
+                r#"<CollisionCondition><EntityRef entityRef="target"/></CollisionCondition>"#,
+            ),
+        ];
+        for (row, builder, expected) in rows {
+            let condition = builder.build().unwrap_or_else(|e| panic!("{row}: {e}"));
+            assert_eq!(
+                condition_xml(&condition),
+                by_entity_xml("CollisionCondition", expected),
+                "{row}"
+            );
+        }
+
+        let neither = CollisionConditionBuilder::new().for_entity("ego").build();
+        assert!(neither
+            .expect_err("no target")
+            .to_string()
+            .contains("Either a target entity or a collision type is required"));
+        let no_entity = CollisionConditionBuilder::new()
+            .with_entity("target")
+            .build();
+        assert!(no_entity
+            .expect_err("no triggering entity")
+            .to_string()
+            .contains("Entity reference is required"));
+    }
 }

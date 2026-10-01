@@ -111,4 +111,47 @@ mod detached_builders_tests {
         };
         assert_eq!(target.value, Value::Literal(30.0));
     }
+
+    /// `DetachedActBuilder::attach_to` puts the built act on the story, and the story reaches
+    /// the document through `StoryBuilder::finish` and `StoryboardBuilder::finish` (XSD
+    /// `Storyboard` :2112 → `Story` :2105 → `Act` :697 → `ManeuverGroup` → `Maneuver` → `Event`).
+    #[test]
+    fn detached_act_attached_to_story_reaches_the_document() {
+        let scenario_builder = ScenarioBuilder::new()
+            .with_header("Test", "Author")
+            .with_catalog_locations(CatalogLocations::default())
+            .with_road_network(RoadNetwork::default())
+            .with_entities()
+            .add_vehicle("vehicle1", |vehicle| vehicle.car());
+
+        let mut storyboard_builder = StoryboardBuilder::new(scenario_builder);
+        let mut story_builder = storyboard_builder.add_story_simple("TestStory");
+        let mut detached_act = story_builder.create_act("act1");
+        let mut detached_maneuver = detached_act.create_maneuver("maneuver1", "vehicle1");
+        detached_maneuver
+            .create_speed_action()
+            .named("speed_event")
+            .to_speed(30.0)
+            .attach_to_detached(&mut detached_maneuver)
+            .unwrap();
+        detached_maneuver
+            .attach_to_detached(&mut detached_act)
+            .unwrap();
+        detached_act.attach_to(&mut story_builder).unwrap();
+        story_builder.finish().expect("the story holds one act");
+
+        let scenario = storyboard_builder.finish().build().unwrap();
+        let stories = &scenario.storyboard.as_ref().unwrap().stories;
+        assert_eq!(stories.len(), 1);
+        assert_eq!(stories[0].name.as_literal().unwrap(), "TestStory");
+        let acts = stories[0].acts.as_slice();
+        assert_eq!(acts.len(), 1);
+        assert_eq!(acts[0].name.as_literal().unwrap(), "act1");
+        let group = &acts[0].maneuver_groups.as_slice()[0];
+        assert_eq!(group.maneuvers[0].name.as_literal().unwrap(), "maneuver1");
+        assert_eq!(
+            group.maneuvers[0].events[0].name.as_literal().unwrap(),
+            "speed_event"
+        );
+    }
 }
