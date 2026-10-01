@@ -154,4 +154,44 @@ mod detached_builders_tests {
             "speed_event"
         );
     }
+    /// A follow-trajectory event built on a detached maneuver carries its trajectory in the
+    /// 1.3 `TrajectoryRef` child (XSD `FollowTrajectoryAction` :1244-1257), not in the
+    /// `Trajectory` child the schema marks deprecated (:1246-1248).
+    #[test]
+    fn detached_follow_trajectory_event_writes_trajectory_ref() {
+        use openscenario_rs::types::actions::movement::{
+            RoutingActionChoice, Trajectory, TrajectoryRef,
+        };
+        use openscenario_rs::types::scenario::story::{
+            StoryActionChoice, StoryPrivateActionChoice,
+        };
+
+        let trajectory: Trajectory = quick_xml::de::from_str(
+            r#"<Trajectory name="T1" closed="false"><Shape><Polyline><Vertex time="0"><Position><WorldPosition x="0" y="0"/></Position></Vertex><Vertex time="1"><Position><WorldPosition x="5" y="0"/></Position></Vertex></Polyline></Shape></Trajectory>"#,
+        )
+        .unwrap();
+
+        let event = DetachedManeuverBuilder::new("maneuver1", "vehicle1")
+            .create_follow_trajectory_action()
+            .with_trajectory(trajectory.clone())
+            .following_mode_follow()
+            .build()
+            .unwrap();
+
+        let StoryActionChoice::PrivateAction(private) = &event.actions[0].action else {
+            panic!("expected a private action");
+        };
+        let StoryPrivateActionChoice::RoutingAction(routing) = &private.action else {
+            panic!("expected a RoutingAction");
+        };
+        let RoutingActionChoice::FollowTrajectoryAction(follow) = &routing.routing_choice else {
+            panic!("expected a FollowTrajectoryAction");
+        };
+        assert_eq!(
+            follow.trajectory_ref,
+            Some(TrajectoryRef::with_trajectory(trajectory))
+        );
+        assert!(follow.trajectory.is_none());
+        assert!(follow.catalog_reference.is_none());
+    }
 }

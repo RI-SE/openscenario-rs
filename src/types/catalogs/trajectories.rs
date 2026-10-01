@@ -377,26 +377,33 @@ impl CatalogClothoid {
     /// declares its `Position` child with no `minOccurs="0"`. This constructor previously
     /// filled it with `Position::default()`, inventing a start point nobody wrote; it is now
     /// a parameter instead.
+    ///
+    /// `curvature` is the start curvature in 1/m, `curvature_prime` the rate of change of
+    /// curvature along the arc in 1/m², and `length` the arc length in m. The constructor
+    /// writes `curvaturePrime` and leaves the deprecated `curvatureDot` unset: that attribute
+    /// is a rate over time in 1/s, a different quantity, and it can't be derived from
+    /// `curvaturePrime` without a speed.
     pub fn new(
         curvature: Double,
-        curvature_dot: Double,
+        curvature_prime: Double,
         length: Double,
         start_position: Position,
     ) -> Self {
-        Self::with_start_position(curvature, curvature_dot, length, start_position)
+        Self::with_start_position(curvature, curvature_prime, length, start_position)
     }
 
-    /// Creates a clothoid with a start position
+    /// Creates a clothoid with a start position. The arguments are those of
+    /// [`CatalogClothoid::new`], with the same units.
     pub fn with_start_position(
         curvature: Double,
-        curvature_dot: Double,
+        curvature_prime: Double,
         length: Double,
         start_position: Position,
     ) -> Self {
         Self {
             curvature,
-            curvature_dot: Some(curvature_dot),
-            curvature_prime: None,
+            curvature_dot: None,
+            curvature_prime: Some(curvature_prime),
             length,
             start_time: None,
             stop_time: None,
@@ -542,8 +549,16 @@ mod tests {
         );
 
         assert_eq!(clothoid.curvature.as_literal().unwrap(), &0.1);
-        assert!(matches!(clothoid.curvature_dot, Some(Value::Parameter(_))));
         assert_eq!(clothoid.length.as_literal().unwrap(), &50.0);
+
+        // The rate argument is `curvaturePrime` [1/m^2]; the constructor must not
+        // write the deprecated `curvatureDot` [1/s], a different quantity.
+        let xml = quick_xml::se::to_string(&clothoid).unwrap();
+        assert!(
+            xml.contains(r#"curvaturePrime="$curvature_rate""#),
+            "serialized: {xml}"
+        );
+        assert!(!xml.contains("curvatureDot="), "serialized: {xml}");
     }
 
     #[test]
@@ -768,6 +783,17 @@ mod tests {
         let serialized = quick_xml::se::to_string(&clothoid).unwrap();
         let reparsed: CatalogClothoid = quick_xml::de::from_str(&serialized).unwrap();
         assert_eq!(clothoid, reparsed);
+    }
+
+    /// `curvatureDot` is deprecated, but a 1.3 document may still carry it: it reads into
+    /// its own field, not into `curvature_prime`, and writes back unchanged.
+    #[test]
+    fn test_catalog_clothoid_deprecated_curvature_dot_round_trips() {
+        let xml = r#"<Clothoid curvature="0.1" curvatureDot="0.3" length="50"><Position><WorldPosition x="0" y="0"/></Position></Clothoid>"#;
+        let clothoid: CatalogClothoid = quick_xml::de::from_str(xml).unwrap();
+        assert_eq!(clothoid.curvature_dot, Some(Double::literal(0.3)));
+        assert_eq!(clothoid.curvature_prime, None);
+        assert_eq!(quick_xml::se::to_string(&clothoid).unwrap(), xml);
     }
 
     /// `weight` carries `skip_serializing_if` but no `default`, unlike the sibling

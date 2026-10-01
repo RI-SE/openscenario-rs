@@ -9,7 +9,7 @@ use crate::types::basic::{MinVec, Value};
 use crate::types::{
     actions::movement::{
         FollowTrajectoryAction, RoutingAction, TimeReference, TimeReferenceChoice, Timing,
-        Trajectory, TrajectoryFollowingMode,
+        Trajectory, TrajectoryFollowingMode, TrajectoryRef,
     },
     actions::wrappers::PrivateAction,
     basic::{Boolean, Double, OSString},
@@ -276,8 +276,10 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
     fn build_action(self) -> BuilderResult<PrivateAction> {
         self.validate()?;
 
+        // The trajectory goes in `TrajectoryRef` (XSD `:1254`), not in the
+        // `Trajectory` child that OpenSCENARIO 1.1 deprecated (`:1246-1248`).
         let follow_trajectory_action = FollowTrajectoryAction {
-            trajectory: self.trajectory,
+            trajectory: None,
             catalog_reference: None,
             time_reference: TimeReference {
                 time_reference: TimeReferenceChoice::Timing(Timing {
@@ -286,7 +288,7 @@ impl ActionBuilder for FollowTrajectoryActionBuilder {
                     offset: Double::literal(0.0),
                 }),
             },
-            trajectory_ref: None,
+            trajectory_ref: self.trajectory.map(TrajectoryRef::with_trajectory),
             trajectory_following_mode: TrajectoryFollowingMode {
                 following_mode: self.following_mode.unwrap(),
             },
@@ -521,7 +523,7 @@ mod tests {
 
         let action = FollowTrajectoryActionBuilder::new()
             .for_entity("ego")
-            .with_trajectory(trajectory)
+            .with_trajectory(trajectory.clone())
             .following_mode_follow()
             .build_action()
             .unwrap();
@@ -534,7 +536,14 @@ mod tests {
                 else {
                     panic!("Expected FollowTrajectoryAction branch");
                 };
-                assert!(follow_action.trajectory.is_some());
+                // XSD `FollowTrajectoryAction` (:1244-1257): the trajectory goes in
+                // `TrajectoryRef`, not in the deprecated `Trajectory` child.
+                assert_eq!(
+                    follow_action.trajectory_ref,
+                    Some(TrajectoryRef::with_trajectory(trajectory))
+                );
+                assert!(follow_action.trajectory.is_none());
+                assert!(follow_action.catalog_reference.is_none());
                 assert_eq!(
                     follow_action.trajectory_following_mode.following_mode,
                     Value::Literal(FollowingMode::Follow)

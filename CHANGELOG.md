@@ -39,6 +39,13 @@ All notable changes to this project are recorded here. The format follows
   the `new`, `sunny` and `rainy` presets write `fractionalCloudCover`, `Sun@illuminance` (100,000 lx
   in sun, 30,000 lx in rain) and `Precipitation@precipitationIntensity` instead of the deprecated
   `cloudState` and `intensity` attributes. The argument of `rainy` is now in mm/h, not the old 0 to 1 scale.
+- **Breaking:** `FollowTrajectoryAction::{with_trajectory, with_catalog_reference, from_catalog}`,
+  `RoutingAction::with_trajectory_from_catalog` and the follow-trajectory builders write the trajectory
+  into `TrajectoryRef` instead of the deprecated `Trajectory` and `CatalogReference` children, which
+  documents may still carry.
+- **Breaking:** the second argument of `CatalogClothoid::{new, with_start_position}` is now
+  `curvaturePrime` in 1/m², not the deprecated `curvatureDot` in 1/s. These are different quantities,
+  so convert a `curvatureDot` value by dividing it by the constant speed in m/s.
 
 ### Removed
 

@@ -120,6 +120,22 @@ fn trajectory_ref_catalog_reference_branch_round_trips_byte_exact() {
     ));
 }
 
+/// XSD `FollowTrajectoryAction` (:1244-1257) deprecates its `Trajectory` and
+/// `CatalogReference` children in favour of `TrajectoryRef`, but a 1.3 document may
+/// still carry either. Each reads into its own field and writes back byte-exact.
+#[test]
+fn follow_trajectory_action_deprecated_children_round_trip_byte_exact() {
+    let inline = r#"<FollowTrajectoryAction><Trajectory name="t" closed="false"><Shape><Polyline><Vertex><Position><WorldPosition x="0" y="0"/></Position></Vertex><Vertex><Position><WorldPosition x="1" y="1"/></Position></Vertex></Polyline></Shape></Trajectory><TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="follow"/></FollowTrajectoryAction>"#;
+    round_trips::<FollowTrajectoryAction>(inline);
+    let action: FollowTrajectoryAction = de(inline);
+    assert!(action.trajectory.is_some() && action.trajectory_ref.is_none());
+
+    let catalog = r#"<FollowTrajectoryAction><CatalogReference catalogName="TrajectoryCatalog" entryName="Lane"/><TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="follow"/></FollowTrajectoryAction>"#;
+    round_trips::<FollowTrajectoryAction>(catalog);
+    let action: FollowTrajectoryAction = de(catalog);
+    assert!(action.catalog_reference.is_some() && action.trajectory_ref.is_none());
+}
+
 #[test]
 fn trajectory_ref_rejects_zero_branches() {
     let message = err::<TrajectoryRef>("<TrajectoryRef/>");
@@ -484,10 +500,10 @@ fn movement_action_constructors_match_the_xsd_document() {
     );
 
     // XSD `FollowTrajectoryAction` (:1244-1257). These constructors fill the
-    // `Trajectory` / `CatalogReference` children the schema marks deprecated
-    // (:1246-1251), not `TrajectoryRef`, with a `<None/>` `TimeReference`
-    // (:2173-2178). The trajectory is parsed from its own document, so only the
-    // constructors under test build the action.
+    // 1.3 `TrajectoryRef` child (:1254), never the `Trajectory` / `CatalogReference`
+    // children the schema marks deprecated (:1246-1251), with a `<None/>`
+    // `TimeReference` (:2173-2178). The trajectory is parsed from its own document,
+    // so only the constructors under test build the action.
     const TRAJECTORY_XML: &str = r#"<Trajectory name="T1" closed="false"><Shape><Polyline><Vertex time="0"><Position><WorldPosition x="0" y="0"/></Position></Vertex><Vertex time="1"><Position><WorldPosition x="5" y="0"/></Position></Vertex></Polyline></Shape></Trajectory>"#;
     let trajectory: Trajectory = de(TRAJECTORY_XML);
     constructor_matches_document!(
@@ -495,10 +511,10 @@ fn movement_action_constructors_match_the_xsd_document() {
         FollowTrajectoryAction,
         FollowTrajectoryAction::with_trajectory(trajectory, FollowingMode::Position),
         &format!(
-            r#"<FollowTrajectoryAction>{TRAJECTORY_XML}<TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="position"/></FollowTrajectoryAction>"#
+            r#"<FollowTrajectoryAction><TrajectoryRef>{TRAJECTORY_XML}</TrajectoryRef><TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="position"/></FollowTrajectoryAction>"#
         )
     );
-    const FOLLOW_CATALOG_XML: &str = r#"<FollowTrajectoryAction><CatalogReference catalogName="TrajectoryCatalog" entryName="Lane"/><TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="follow"/></FollowTrajectoryAction>"#;
+    const FOLLOW_CATALOG_XML: &str = r#"<FollowTrajectoryAction><TrajectoryRef><CatalogReference catalogName="TrajectoryCatalog" entryName="Lane"/></TrajectoryRef><TimeReference><None/></TimeReference><TrajectoryFollowingMode followingMode="follow"/></FollowTrajectoryAction>"#;
     constructor_matches_document!(
         "FollowTrajectoryAction::with_catalog_reference",
         FollowTrajectoryAction,

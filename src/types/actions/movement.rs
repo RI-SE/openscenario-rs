@@ -1025,13 +1025,22 @@ impl TrajectoryRef {
 }
 
 impl FollowTrajectoryAction {
-    /// Create a follow trajectory action with direct trajectory
+    /// Create a follow trajectory action with direct trajectory.
+    ///
+    /// The trajectory goes in the `TrajectoryRef` child (XSD `:1254`), not in the
+    /// `Trajectory` child that OpenSCENARIO 1.1 deprecated (`:1246-1248`).
     pub fn with_trajectory(trajectory: Trajectory, following_mode: FollowingMode) -> Self {
+        Self::with_trajectory_ref(TrajectoryRef::with_trajectory(trajectory), following_mode)
+    }
+
+    /// Create a follow trajectory action that follows `trajectory_ref`, with a `<None/>`
+    /// time reference and no initial distance offset.
+    fn with_trajectory_ref(trajectory_ref: TrajectoryRef, following_mode: FollowingMode) -> Self {
         Self {
-            trajectory: Some(trajectory),
+            trajectory: None,
             catalog_reference: None,
             time_reference: TimeReference::none(),
-            trajectory_ref: None,
+            trajectory_ref: Some(trajectory_ref),
             trajectory_following_mode: TrajectoryFollowingMode {
                 following_mode: Value::Literal(following_mode),
             },
@@ -1059,21 +1068,18 @@ impl FollowTrajectoryAction {
         Ok(())
     }
 
-    /// Create a follow trajectory action with catalog reference
+    /// Create a follow trajectory action with catalog reference.
+    ///
+    /// The reference goes in the `TrajectoryRef` child (XSD `:1254`), not in the
+    /// `CatalogReference` child that OpenSCENARIO 1.1 deprecated (`:1249-1251`).
     pub fn with_catalog_reference(
         catalog_reference: CatalogReference<CatalogTrajectory>,
         following_mode: FollowingMode,
     ) -> Self {
-        Self {
-            trajectory: None,
-            catalog_reference: Some(catalog_reference),
-            time_reference: TimeReference::none(),
-            trajectory_ref: None,
-            trajectory_following_mode: TrajectoryFollowingMode {
-                following_mode: Value::Literal(following_mode),
-            },
-            initial_distance_offset: None,
-        }
+        Self::with_trajectory_ref(
+            TrajectoryRef::with_catalog_reference(catalog_reference),
+            following_mode,
+        )
     }
 
     /// Create a follow trajectory action from catalog name and entry name
