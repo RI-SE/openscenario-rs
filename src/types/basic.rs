@@ -811,6 +811,23 @@ mod tests {
         let range = Range::new(0.0, 100.0);
         assert_eq!(range.lower_limit.as_literal().unwrap(), &0.0);
         assert_eq!(range.upper_limit.as_literal().unwrap(), &100.0);
+
+        // `try_new` accepts lower <= upper, including equal bounds, in argument order.
+        for (lower, upper) in [(-5.0, 10.0), (3.0, 3.0)] {
+            let range = Range::try_new(lower, upper)
+                .unwrap_or_else(|e| panic!("try_new({lower}, {upper}) rejected: {e}"));
+            assert_eq!(range.lower_limit.as_literal(), Some(&lower));
+            assert_eq!(range.upper_limit.as_literal(), Some(&upper));
+        }
+
+        // ...and rejects an inverted range with a validation error on `Range`.
+        match Range::try_new(10.0, 0.0) {
+            Err(Error::ValidationError { field, message }) => {
+                assert_eq!(field, "Range");
+                assert!(message.contains("lower limit"), "message: {message}");
+            }
+            other => panic!("expected ValidationError for try_new(10.0, 0.0), got {other:?}"),
+        }
     }
 
     #[test]
