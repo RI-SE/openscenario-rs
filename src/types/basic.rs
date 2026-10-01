@@ -221,6 +221,18 @@ impl<T: Default> Default for Value<T> {
     }
 }
 
+// The schema's `parameter` production is `[$][A-Za-z_][A-Za-z0-9_]*` -- unbraced
+// (`Schema/OpenSCENARIO.xsd:4-8`). The braced spelling is the separate `expression`
+// production, and while every *scalar* union lists both members, all 37 *enumeration*
+// unions list `parameter` alone. Emitting `${name}` for a parameter reference therefore
+// produces schema-invalid XML on any enum-typed attribute, while `$name` is valid on
+// every union in the schema. Deserialize stays permissive and accepts either spelling.
+//
+// `Serialize` delegates to `Display` below instead of formatting the `Parameter`/
+// `Expression` branches a second time, so the wire form and the user-visible form
+// cannot drift apart the way they did before (the F15 sigil bug was exactly this class
+// of error: two independent formatters that only agreed because separate tests happened
+// to exercise each one).
 impl<T> Serialize for Value<T>
 where
     T: Serialize + fmt::Display,
@@ -229,18 +241,7 @@ where
     where
         S: Serializer,
     {
-        match self {
-            Value::Literal(value) => value.to_string().serialize(serializer),
-            // The schema's `parameter` production is `[$][A-Za-z_][A-Za-z0-9_]*` --
-            // unbraced (`Schema/OpenSCENARIO.xsd:4-8`). The braced spelling is the separate
-            // `expression` production, and while every *scalar* union lists both members,
-            // all 37 *enumeration* unions list `parameter` alone. Emitting `${name}` for a
-            // parameter reference therefore produces schema-invalid XML on any enum-typed
-            // attribute, while `$name` is valid on every union in the schema. Deserialize
-            // stays permissive and accepts either spelling.
-            Value::Parameter(name) => format!("${}", name).serialize(serializer),
-            Value::Expression(expr) => format!("${{{}}}", expr).serialize(serializer),
-        }
+        serializer.collect_str(self)
     }
 }
 
@@ -252,8 +253,8 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Literal(value) => write!(f, "{}", value),
-            // Same reasoning as `Serialize` above: `$name` is the schema's `parameter`
-            // production and is valid on every union; `${...}` is `expression`.
+            // `$name` is the schema's `parameter` production and is valid on every
+            // union; `${...}` is `expression`. See the module-level note on `Serialize`.
             Value::Parameter(name) => write!(f, "${}", name),
             Value::Expression(expr) => write!(f, "${{{}}}", expr),
         }
@@ -986,6 +987,32 @@ mod tests {
 
         let boolean_expr = Boolean::expression("speed > 30".to_string());
         assert_eq!(format!("{}", boolean_expr), "${speed > 30}");
+    }
+
+    /// `tests/parameterized_enum_test.rs::parameters_serialize_in_the_schema_s_parameter_form`
+    /// pins the serialized `Parameter` spelling (`$cat`) through a full document round trip,
+    /// but nothing pinned the serialized `Expression` spelling (`${...}`) -- only its `Display`
+    /// form, in `test_value_display_trait` above. `Serialize` now delegates to `Display`
+    /// (`serializer.collect_str`), so this asserts the two can no longer disagree: serializing
+    /// through serde produces exactly the same text `Display` does, for both branches.
+    #[test]
+    fn serialize_matches_display_for_parameter_and_expression() {
+        let parameter = Value::<f64>::parameter("speed".to_string());
+        assert_eq!(
+            serde_json::to_string(&parameter).unwrap(),
+            format!("\"{}\"", parameter)
+        );
+        assert_eq!(serde_json::to_string(&parameter).unwrap(), "\"$speed\"");
+
+        let expression = Value::<f64>::expression("speed * 2".to_string());
+        assert_eq!(
+            serde_json::to_string(&expression).unwrap(),
+            format!("\"{}\"", expression)
+        );
+        assert_eq!(
+            serde_json::to_string(&expression).unwrap(),
+            "\"${speed * 2}\""
+        );
     }
 }
 
