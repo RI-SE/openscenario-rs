@@ -101,14 +101,6 @@ impl GlobalAction {
         }
     }
 
-    /// `<ParameterAction>` branch of the XSD `GlobalAction` choice (:1287-1289).
-    /// The schema marks this branch deprecated and still declares it.
-    pub fn parameter(action: crate::types::actions::wrappers::ParameterAction) -> Self {
-        Self {
-            action: GlobalActionChoice::ParameterAction(action),
-        }
-    }
-
     /// `<TrafficAction>` branch of the XSD `GlobalAction` choice (:1290).
     pub fn traffic(action: crate::types::actions::wrappers::TrafficAction) -> Self {
         Self {

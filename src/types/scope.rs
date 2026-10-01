@@ -510,6 +510,7 @@ fn check_conformance(name: &str, parameter_type: &ParameterType, value: &str) ->
     let conforms = match parameter_type {
         ParameterType::String => true,
         // `integer` is the deprecated spelling (XSD:323-325) that `int` replaced.
+        #[allow(deprecated)]
         ParameterType::Int | ParameterType::Integer => value.parse::<i32>().is_ok(),
         ParameterType::UnsignedInt => value.parse::<u32>().is_ok(),
         ParameterType::UnsignedShort => value.parse::<u16>().is_ok(),

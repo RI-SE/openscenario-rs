@@ -551,17 +551,6 @@ impl VariableMultiplyByValueRule {
     }
 }
 
-impl ParameterAction {
-    /// XSD `ParameterAction` (deprecated group): required `@parameterRef`
-    /// plus the required action choice.
-    pub fn new(parameter_ref: impl Into<String>, action: ParameterActionChoice) -> Self {
-        ParameterAction {
-            parameter_ref: OSString::literal(parameter_ref.into()),
-            action,
-        }
-    }
-}
-
 impl ParameterSetAction {
     /// XSD `ParameterSetAction` (:1657-1660): required `@value`.
     pub fn new(value: impl Into<String>) -> Self {

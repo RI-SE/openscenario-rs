@@ -71,6 +71,8 @@ fn distance_condition_matches_xsd_wire_form() {
     );
 }
 
+// `cartesianDistance` is deprecated but must keep round-tripping.
+#[allow(deprecated)]
 #[test]
 fn relative_distance_condition_matches_xsd_wire_form() {
     assert_wire(

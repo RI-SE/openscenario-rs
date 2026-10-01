@@ -24,13 +24,14 @@ macro_rules! osc_enum {
     (
         $(#[$meta:meta])*
         pub enum $name:ident {
-            $($variant:ident => $wire:literal),+ $(,)?
+            $($(#[$vmeta:meta])* $variant:ident => $wire:literal),+ $(,)?
         }
     ) => {
         $(#[$meta])*
         #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
         pub enum $name {
             $(
+                $(#[$vmeta])*
                 #[serde(rename = $wire)]
                 $variant,
             )+
@@ -63,6 +64,24 @@ macro_rules! osc_enum {
                 }
             }
         }
+    };
+}
+
+/// `osc_enum!` for an enum with a `#[deprecated]` variant. The `Serialize`/`Deserialize`
+/// derives re-splice every variant into generated impls that are siblings of the enum, so a
+/// `#[allow(deprecated)]` on the enum does not reach them; a private module carrying the allow
+/// does. The allow is therefore scoped to this one enum, not the crate.
+macro_rules! osc_enum_deprecated_variants {
+    ($module:ident, $name:ident, $($body:tt)+) => {
+        #[allow(deprecated)]
+        mod $module {
+            use serde::{Deserialize, Serialize};
+            use std::fmt;
+            use std::str::FromStr;
+
+            osc_enum! { $($body)+ }
+        }
+        pub use $module::$name;
     };
 }
 
@@ -134,13 +153,16 @@ osc_enum! {
     }
 }
 
-osc_enum! {
+osc_enum_deprecated_variants! {
+    priority,
+    Priority,
     /// Priority level for events and actions
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `Priority` simple
     /// type. The schema marks `overwrite` deprecated in favor of
     /// `override`; both remain valid wire values and are kept here.
     pub enum Priority {
+        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; use `Priority::Override`")]
         Overwrite => "overwrite",
         Override => "override",
         Parallel => "parallel",
@@ -179,7 +201,9 @@ osc_enum! {
     }
 }
 
-osc_enum! {
+osc_enum_deprecated_variants! {
+    parameter_type,
+    ParameterType,
     /// Parameter data type enumeration
     ///
     /// Wire names verified against `Schema/OpenSCENARIO.xsd`'s `ParameterType`
@@ -190,6 +214,7 @@ osc_enum! {
         DateTime => "dateTime",
         Double => "double",
         Int => "int",
+        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; use `ParameterType::Int`")]
         Integer => "integer",
         String => "string",
         UnsignedInt => "unsignedInt",
@@ -255,11 +280,14 @@ osc_enum! {
     }
 }
 
-osc_enum! {
+osc_enum_deprecated_variants! {
+    relative_distance_type,
+    RelativeDistanceType,
     /// Relative distance type enumeration
     pub enum RelativeDistanceType {
         Longitudinal => "longitudinal",
         Lateral => "lateral",
+        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; use `RelativeDistanceType::Euclidian`")]
         Cartesian => "cartesianDistance",
         Euclidian => "euclidianDistance",
     }
@@ -273,7 +301,9 @@ osc_enum! {
     }
 }
 
-osc_enum! {
+osc_enum_deprecated_variants! {
+    misc_object_category,
+    MiscObjectCategory,
     /// Miscellaneous object category enumeration
     pub enum MiscObjectCategory {
         Barrier => "barrier",
@@ -292,6 +322,7 @@ osc_enum! {
         TrafficIsland => "trafficIsland",
         Tree => "tree",
         Vegetation => "vegetation",
+        #[deprecated(note = "deprecated in OpenSCENARIO 1.3; describe wind with the `Wind` element of `Weather`")]
         Wind => "wind",
     }
 }

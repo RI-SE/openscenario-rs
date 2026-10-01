@@ -14,6 +14,7 @@ use openscenario_rs::types::actions::wrappers::{
     VariableActionChoice, VariableModifyAction, VariableModifyRule, VariableSetAction,
 };
 use openscenario_rs::types::actions::{TrafficStopAction, VisibilityAction};
+use openscenario_rs::types::basic::OSString;
 use openscenario_rs::types::positions::{Position, WorldPosition};
 
 fn xml<T: serde::Serialize>(value: &T) -> String {
@@ -57,29 +58,29 @@ fn named_constructors_emit_the_xsd_wire_form() {
         ),
         // XSD `ParameterAction` (:1604-1615) / `ParameterSetAction` (:1657-1660).
         (
-            xml(&ParameterAction::new(
-                "p1",
-                ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("100")),
-            )),
+            xml(&ParameterAction {
+                parameter_ref: OSString::literal("p1".to_string()),
+                action: ParameterActionChoice::ParameterSetAction(ParameterSetAction::new("100")),
+            }),
             r#"<ParameterAction parameterRef="p1"><SetAction value="100"/></ParameterAction>"#,
         ),
         // XSD `ParameterModifyAction` (:1647-1652) / `ModifyRule` (:1490-1496).
         (
-            xml(&ParameterAction::new(
-                "p2",
-                ParameterActionChoice::ParameterModifyAction(ParameterModifyAction::new(
+            xml(&ParameterAction {
+                parameter_ref: OSString::literal("p2".to_string()),
+                action: ParameterActionChoice::ParameterModifyAction(ParameterModifyAction::new(
                     ModifyRule::add_value(5.0),
                 )),
-            )),
+            }),
             r#"<ParameterAction parameterRef="p2"><ModifyAction><Rule><AddValue value="5"/></Rule></ModifyAction></ParameterAction>"#,
         ),
         (
-            xml(&ParameterAction::new(
-                "p3",
-                ParameterActionChoice::ParameterModifyAction(ParameterModifyAction::new(
+            xml(&ParameterAction {
+                parameter_ref: OSString::literal("p3".to_string()),
+                action: ParameterActionChoice::ParameterModifyAction(ParameterModifyAction::new(
                     ModifyRule::multiply_by_value(3.0),
                 )),
-            )),
+            }),
             r#"<ParameterAction parameterRef="p3"><ModifyAction><Rule><MultiplyByValue value="3"/></Rule></ModifyAction></ParameterAction>"#,
         ),
         // XSD `UserDefinedAction` (:2416-2420) / `CustomCommandAction` (:1009-1015).

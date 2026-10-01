@@ -49,8 +49,18 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** `DistributionSet::enumerate` is now an inherent method, so it no longer needs the
   removed `DistributionSampler` trait in scope.
 
+### Deprecated
+
+- `ParameterType::Integer`, `Priority::Overwrite`, `MiscObjectCategory::Wind` and
+  `RelativeDistanceType::Cartesian` now carry `#[deprecated]`. Use `ParameterType::Int`,
+  `Priority::Override`, the `Wind` element of `Weather`, and `RelativeDistanceType::Euclidian`.
+  Documents that spell the old values still parse and serialize unchanged.
+
 ### Removed
 
+- **Breaking:** `ParameterAction::new` and `GlobalAction::parameter`, which built the deprecated
+  `GlobalAction` `ParameterAction`. Use `VariableAction`; the `ParameterAction` type stays so
+  existing documents parse.
 - **Breaking:** `RelativeDistanceConditionBuilder::cartesian` and `RelativeDistanceCondition::cartesian`,
   which wrote the deprecated `cartesianDistance`. Use `euclidian`, which writes `euclidianDistance`.
 - **Breaking:** `ReachPositionConditionBuilder`, `ByEntityCondition::reach_position` and the builder's
