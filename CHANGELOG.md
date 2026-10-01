@@ -8,6 +8,10 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- **`ScenarioValidator` no longer reports errors on schema-valid documents.** An empty
+  `<Entities/>` is valid (`Schema/OpenSCENARIO.xsd:1122-1127`), and a `$parameter` author,
+  entity, story, act or actor name or revision is skipped instead of read as an empty value.
+  Actor-reference findings are now located at `...Actors.EntityRef[<index>]`.
 - **`builder::parameters::utils::parameter_ref` now emits `$name`, not `${name}`.** The XSD
   gives the braced spelling to the `expression` production, not `parameter`
   (`Schema/OpenSCENARIO.xsd:4-13`); `parameter_ref`'s old output was read by the crate's own

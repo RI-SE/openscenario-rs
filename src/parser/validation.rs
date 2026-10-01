@@ -199,6 +199,12 @@ pub struct ValidationMetrics {
     pub cache_hit_ratio: f64,
 }
 
+/// True when `value` is a literal empty string. A `$parameter` or `${expression}` is not empty:
+/// its value is unknown here, so it is never reported.
+fn is_empty_literal(value: &crate::types::OSString) -> bool {
+    matches!(value.as_literal(), Some(s) if s.is_empty())
+}
+
 impl Default for ScenarioValidator {
     fn default() -> Self {
         Self::new()
@@ -222,7 +228,10 @@ impl ScenarioValidator {
         }
     }
 
-    /// Validate a complete OpenSCENARIO document
+    /// Validate a complete OpenSCENARIO document.
+    ///
+    /// Parameterised values (`$name`, `${expr}`) are not checked; to have them checked, validate
+    /// the result of `parse_file_resolved` instead.
     pub fn validate_scenario(&mut self, scenario: &OpenScenario) -> ValidationResult {
         let start_time = std::time::Instant::now();
         let context = self.build_validation_context(scenario);
@@ -286,8 +295,12 @@ impl ScenarioValidator {
         // Register entities (only for scenario definitions)
         if let Some(entities) = &scenario.entities {
             for obj in &entities.scenario_objects {
+                // A parameterised name is unknown here, so the entity cannot be referenced by it.
+                let Some(name) = obj.name.as_literal() else {
+                    continue;
+                };
                 let entity_ref = EntityRef {
-                    name: obj.name.as_literal().unwrap_or(&String::new()).clone(),
+                    name: name.clone(),
                     object_type: Value::Literal(if obj.vehicle().is_some() {
                         ObjectType::Vehicle
                     } else if obj.pedestrian().is_some() {
@@ -306,12 +319,7 @@ impl ScenarioValidator {
     /// Validate file header
     fn validate_file_header(&self, header: &FileHeader, result: &mut ValidationResult) {
         // Check required fields
-        if header
-            .author
-            .as_literal()
-            .unwrap_or(&String::new())
-            .is_empty()
-        {
+        if is_empty_literal(&header.author) {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::MissingRequired,
                 location: "FileHeader.author".to_string(),
@@ -320,12 +328,7 @@ impl ScenarioValidator {
             });
         }
 
-        if header
-            .description
-            .as_literal()
-            .unwrap_or(&String::new())
-            .is_empty()
-        {
+        if is_empty_literal(&header.description) {
             result.warnings.push(ValidationWarning {
                 category: ValidationWarningCategory::BestPractice,
                 location: "FileHeader.description".to_string(),
@@ -335,8 +338,11 @@ impl ScenarioValidator {
         }
 
         // Check version compatibility
-        let rev_major = *header.rev_major.as_literal().unwrap_or(&0);
-        let rev_minor = *header.rev_minor.as_literal().unwrap_or(&0);
+        let (Some(&rev_major), Some(&rev_minor)) =
+            (header.rev_major.as_literal(), header.rev_minor.as_literal())
+        else {
+            return;
+        };
 
         if rev_major < 1 {
             result.errors.push(ValidationError {
@@ -365,15 +371,6 @@ impl ScenarioValidator {
         context: &ValidationContext,
         result: &mut ValidationResult,
     ) {
-        if entities.scenario_objects.is_empty() {
-            result.errors.push(ValidationError {
-                category: ValidationErrorCategory::MissingRequired,
-                location: "Entities".to_string(),
-                message: "At least one scenario object must be defined".to_string(),
-                suggestion: Some("Add vehicle, pedestrian, or miscellaneous objects".to_string()),
-            });
-        }
-
         // Validate each scenario object
         for (index, obj) in entities.scenario_objects.iter().enumerate() {
             self.validate_scenario_object(
@@ -387,8 +384,9 @@ impl ScenarioValidator {
         // Check for duplicate entity names
         let mut names = HashSet::new();
         for obj in &entities.scenario_objects {
-            let default_name = String::new();
-            let name = obj.name.as_literal().unwrap_or(&default_name);
+            let Some(name) = obj.name.as_literal() else {
+                continue;
+            };
             if !names.insert(name.clone()) {
                 result.errors.push(ValidationError {
                     category: ValidationErrorCategory::ConstraintViolation,
@@ -409,9 +407,7 @@ impl ScenarioValidator {
         result: &mut ValidationResult,
     ) {
         // Validate name
-        let default_name = String::new();
-        let name = obj.name.as_literal().unwrap_or(&default_name);
-        if name.is_empty() {
+        if is_empty_literal(&obj.name) {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::MissingRequired,
                 location: format!("{}.name", location),
@@ -462,9 +458,7 @@ impl ScenarioValidator {
         location: &str,
         result: &mut ValidationResult,
     ) {
-        let default_name = String::new();
-        let story_name = story.name.as_literal().unwrap_or(&default_name);
-        if story_name.is_empty() {
+        if is_empty_literal(&story.name) {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::MissingRequired,
                 location: format!("{}.name", location),
@@ -492,9 +486,7 @@ impl ScenarioValidator {
         location: &str,
         result: &mut ValidationResult,
     ) {
-        let default_name = String::new();
-        let act_name = act.name.as_literal().unwrap_or(&default_name);
-        if act_name.is_empty() {
+        if is_empty_literal(&act.name) {
             result.errors.push(ValidationError {
                 category: ValidationErrorCategory::MissingRequired,
                 location: format!("{}.name", location),
@@ -522,13 +514,14 @@ impl ScenarioValidator {
         result: &mut ValidationResult,
     ) {
         // Validate actor references
-        for entity_ref in &mg.actors.entity_refs {
-            let default_name = String::new();
-            let entity_name = entity_ref.entity_ref.as_literal().unwrap_or(&default_name);
+        for (index, entity_ref) in mg.actors.entity_refs.iter().enumerate() {
+            let Some(entity_name) = entity_ref.entity_ref.as_literal() else {
+                continue;
+            };
             if !context.entities.contains_key(entity_name) {
                 result.errors.push(ValidationError {
                     category: ValidationErrorCategory::InvalidReference,
-                    location: format!("{}.Actors.EntityRef", location),
+                    location: format!("{}.Actors.EntityRef[{}]", location, index),
                     message: format!("Referenced entity '{}' not found", entity_name),
                     suggestion: Some(
                         "Ensure the entity is defined in the Entities section".to_string(),
@@ -599,9 +592,7 @@ impl ScenarioValidator {
         location: &str,
         result: &mut ValidationResult,
     ) {
-        let default_name = String::new();
-        let condition_name = condition.name.as_literal().unwrap_or(&default_name);
-        if condition_name.is_empty() {
+        if is_empty_literal(&condition.name) {
             result.warnings.push(ValidationWarning {
                 category: ValidationWarningCategory::BestPractice,
                 location: format!("{}.name", location),
@@ -900,9 +891,65 @@ mod tests {
                 "actor that names no entity",
                 swap(&base, r#"<EntityRef entityRef="Ego"/>"#, r#"<EntityRef entityRef="Ghost"/>"#),
                 vec![
-                    "error InvalidReference @ Storyboard.Story[0].Act[0].ManeuverGroup[0].Actors.EntityRef"
+                    "error InvalidReference @ Storyboard.Story[0].Act[0].ManeuverGroup[0].Actors.EntityRef[0]"
                         .into(),
                 ],
+            ),
+            (
+                "empty Entities element",
+                // The actor goes with the entity; the point is that `<Entities/>` alone is valid.
+                swap(
+                    &swap(&base, r#"<EntityRef entityRef="Ego"/>"#, ""),
+                    &format!(r#"<ScenarioObject name="Ego">{VEHICLE}</ScenarioObject>"#),
+                    "",
+                ),
+                vec![],
+            ),
+            (
+                "parameterised author",
+                swap(&base, r#"author="Tester""#, r#"author="$author""#),
+                vec![],
+            ),
+            (
+                "parameterised revision",
+                swap(&base, r#"revMajor="1""#, r#"revMajor="$major""#),
+                vec![],
+            ),
+            (
+                "parameterised scenario object name",
+                swap(
+                    &swap(&base, r#"<ScenarioObject name="Ego">"#, r#"<ScenarioObject name="$obj">"#),
+                    r#"entityRef="Ego""#,
+                    r#"entityRef="$obj""#,
+                ),
+                vec![],
+            ),
+            (
+                "parameterised story name",
+                swap(&base, r#"<Story name="Story1">"#, r#"<Story name="$story">"#),
+                vec![],
+            ),
+            (
+                "parameterised act name",
+                swap(&base, r#"<Act name="Act1">"#, r#"<Act name="$act">"#),
+                vec![],
+            ),
+            (
+                "parameterised actor",
+                swap(&base, r#"entityRef="Ego""#, r#"entityRef="$ego""#),
+                vec![],
+            ),
+            (
+                "two parameterised scenario object names",
+                with_second_object(
+                    &swap(
+                        &swap(&base, r#"<ScenarioObject name="Ego">"#, r#"<ScenarioObject name="$a">"#),
+                        r#"entityRef="Ego""#,
+                        r#"entityRef="$a""#,
+                    ),
+                    "$b",
+                ),
+                vec![],
             ),
             (
                 "unnamed event start condition",
