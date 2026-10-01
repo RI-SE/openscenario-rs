@@ -547,6 +547,10 @@ mod tests {
                 "Failed to parse 'abc': ctx: not a number",
             ),
             (
+                Error::expression_error("1/0", "division by zero").with_context("ctx"),
+                "Expression evaluation failed: 1/0 - ctx: division by zero",
+            ),
+            (
                 Error::invalid_value("speed", "-5", "must be positive").with_context("ctx"),
                 "Invalid value for field 'speed': -5. ctx: must be positive",
             ),
