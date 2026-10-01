@@ -17,6 +17,9 @@ All notable changes to this project are recorded here. The format follows
   its `TrafficDefinition` argument (the schema makes `TrafficDistribution` optional, so add it with
   `with_traffic_distribution`), and `TrafficSourceAction::with_velocity` is replaced by `with_speed`,
   which writes `speed`.
+- **Breaking:** `Vehicle::new_truck`'s bounding box height is now 3.8 m (was 3.5 m), matching
+  `Dimensions::truck()` rather than the removed `Dimensions::truck_default()`.
+
 ### Removed
 
 - **Deprecated traffic builder methods.** `TrafficSwarmAction::with_velocity` (use
@@ -29,32 +32,6 @@ All notable changes to this project are recorded here. The format follows
   the speed, teleport and follow-trajectory action builders) could not complete a storyboard: each
   borrowed its parent for the parent's whole lifetime, so `finish()` never compiled. Use
   `DetachedStoryBuilder::add_act`, `DetachedActBuilder::add_maneuver` and `attach_to_detached`.
-
-### Fixed
-
-- **File-level errors now name the file.** A missing file is `Error::FileNotFound { path }`, any
-  other read failure `Error::FileReadError { path, .. }`, and a write failure the new
-  `Error::FileWriteError { path, reason }`; the 100 MB size refusal and the `_validated` structural
-  rejections carry the path too, and `Error::with_context` now applies to `InvalidXmlStructure`.
-  Code matching `Error::IoError` on these entry points must match the new variants.
-
-- **`ScenarioValidator` no longer reports errors on schema-valid documents.** An empty
-  `<Entities/>` is valid (`Schema/OpenSCENARIO.xsd:1122-1127`), and a `$parameter` author,
-  entity, story, act or actor name or revision is skipped instead of read as an empty value.
-  Actor-reference findings are now located at `...Actors.EntityRef[<index>]`.
-- **`builder::parameters::utils::parameter_ref` now emits `$name`, not `${name}`.** The XSD
-  gives the braced spelling to the `expression` production, not `parameter`
-  (`Schema/OpenSCENARIO.xsd:4-13`); `parameter_ref`'s old output was read by the crate's own
-  parser as an expression, not a parameter reference. Callers relying on the old `${name}`
-  spelling will see a behaviour change.
-
-### Changed
-
-- **Breaking:** `Vehicle::new_truck`'s bounding box height is now 3.8 m (was 3.5 m), matching
-  `Dimensions::truck()` rather than the removed `Dimensions::truck_default()`.
-
-### Removed
-
 - **Breaking:** `Dimensions::{vehicle_default, pedestrian_default, truck_default}`. Nothing but
   `Vehicle::new_truck` and an example called them, and all three disagreed with the authoritative
   presets (`Dimensions::car`, `Dimensions::pedestrian`, `Dimensions::truck`) they duplicated. Use
@@ -83,8 +60,8 @@ All notable changes to this project are recorded here. The format follows
   same arguments. Call `TrafficDefinition::new`.
 - **Breaking:** `Error::ChoiceGroupError` and `Error::choice_group_error`, left over from the
   removed `parser::choice_groups` module; nothing else produced them.
-- **Breaking:** `Error::FileWriteError` and `Error::file_write_error`. The crate never built
-  this error; a failed write surfaces as `Error::IoError`.
+- **Breaking:** `Error::file_write_error`. Build the error with `Error::file_write`, which takes
+  the path and the `std::io::Error`.
 - **Breaking:** `Error::parsing_error`. Nothing called it, and its name promised a parse error
   while it built a `ValidationError` with the line and column in the `field` slot. Use
   `Error::parse_error`, or `Error::validation_error` with a field name.
@@ -102,6 +79,23 @@ All notable changes to this project are recorded here. The format follows
   ParameterValueDistributionDefinitionGroup}`. No type held them. The first duplicated
   `DeterministicMultiParameterDistribution` field for field; the second only wrapped a
   `ParameterValueDistribution`. Use those types directly.
+
+### Fixed
+
+- **File-level errors now name the file.** A missing file is `Error::FileNotFound { path }`, any
+  other read failure `Error::FileReadError { path, .. }`, and a write failure
+  `Error::FileWriteError { path, reason }`; the 100 MB size refusal and the `_validated` structural
+  rejections carry the path too, and `Error::with_context` now applies to `InvalidXmlStructure`.
+  Code matching `Error::IoError` on these entry points must match the new variants.
+- **`ScenarioValidator` no longer reports errors on schema-valid documents.** An empty
+  `<Entities/>` is valid (`Schema/OpenSCENARIO.xsd:1122-1127`), and a `$parameter` author,
+  entity, story, act or actor name or revision is skipped instead of read as an empty value.
+  Actor-reference findings are now located at `...Actors.EntityRef[<index>]`.
+- **`builder::parameters::utils::parameter_ref` now emits `$name`, not `${name}`.** The XSD
+  gives the braced spelling to the `expression` production, not `parameter`
+  (`Schema/OpenSCENARIO.xsd:4-13`); `parameter_ref`'s old output was read by the crate's own
+  parser as an expression, not a parameter reference. Callers relying on the old `${name}`
+  spelling will see a behaviour change.
 
 ## [0.5.0] - 2026-09-22
 
