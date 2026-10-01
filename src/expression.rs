@@ -8,7 +8,10 @@
 //! `not`/`and`/`or` (ASAM OpenSCENARIO XML v1.3.0 section 9.2, "Supported Boolean operators
 //! (ordered by operator precedence): Negation operator (not), Conjunction operator (and),
 //! Disjunction operator (or)").
-//! Operands: numeric literals, parameter references, and the constants `PI` and `E`.
+//! Operands: numeric literals, parameter references, and the constant `pi`. `pi` is defined by
+//! OpenSCENARIO XML v1.4.0 section 9.2.2 ("Constants") and is accepted here as a
+//! forward-compatible extension to 1.3. Any other bare identifier is an error, because a
+//! parameter is referenced as `$name`.
 //! Functions: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`, `abs`, `sign`, `floor`,
 //! `ceil`, `round`, `pow`, `min`, `max` (section 9.2, "Supported arithmetic operators").
 //!
@@ -29,7 +32,8 @@ pub enum Token {
     Parameter(String),
     Operator(Operator),
     Function(String),
-    Constant(String),
+    /// A named constant, already resolved to its value (only `pi` exists).
+    Constant(f64),
     LeftParen,
     RightParen,
     Comma,
@@ -60,7 +64,8 @@ pub enum Operator {
 pub enum Expr {
     Number(f64),
     Parameter(String),
-    Constant(String),
+    /// A named constant, already resolved to its value (only `pi` exists).
+    Constant(f64),
     BinaryOp {
         left: Box<Expr>,
         operator: Operator,
@@ -223,10 +228,15 @@ impl ExpressionParser {
                         tokens.push(Token::And);
                     } else if identifier == "or" {
                         tokens.push(Token::Or);
-                    } else if Self::is_constant(&identifier) {
-                        tokens.push(Token::Constant(identifier));
+                    } else if identifier == "pi" {
+                        tokens.push(Token::Constant(std::f64::consts::PI));
                     } else {
-                        tokens.push(Token::Parameter(identifier));
+                        return Err(Error::parse_error(
+                            input,
+                            &format!(
+                                "unknown identifier '{identifier}' in expression; parameters are referenced as ${identifier}"
+                            ),
+                        ));
                     }
                 }
                 _ => {
@@ -314,11 +324,6 @@ impl ExpressionParser {
         }
 
         Ok(content)
-    }
-
-    /// Check if identifier is a mathematical constant
-    fn is_constant(identifier: &str) -> bool {
-        matches!(identifier, "PI" | "E")
     }
 
     /// Parse an expression with precedence handling. The Boolean operators sit above
@@ -530,7 +535,7 @@ impl ExpressionParser {
         match token {
             Token::Number(n) => Ok(Expr::Number(*n)),
             Token::Parameter(name) => Ok(Expr::Parameter(name.clone())),
-            Token::Constant(name) => Ok(Expr::Constant(name.clone())),
+            Token::Constant(value) => Ok(Expr::Constant(*value)),
             Token::Function(name) => {
                 // Function call: function_name(arg1, arg2, ...)
                 // The tokenizer only emits Token::Function when the identifier is
@@ -635,11 +640,7 @@ impl ExpressionEvaluator {
                     )
                 })
             }
-            Expr::Constant(name) => match name.as_str() {
-                "PI" => Ok(std::f64::consts::PI),
-                "E" => Ok(std::f64::consts::E),
-                _ => Err(Error::parameter_error(name, "unknown constant")),
-            },
+            Expr::Constant(value) => Ok(*value),
             Expr::BinaryOp {
                 left,
                 operator,
@@ -1169,21 +1170,53 @@ mod tests {
         assert_eq!(result, -15.0);
     }
 
+    /// The only named constant is lowercase `pi`; a bare identifier is never a parameter.
     #[test]
-    fn test_mathematical_constants() {
-        let params = HashMap::new();
+    fn test_pi_constant_and_bare_identifiers() {
+        let mut params = HashMap::new();
+        params.insert("x".to_string(), "3".to_string());
+        params.insert("a".to_string(), "2".to_string());
+        let pi = std::f64::consts::PI;
 
-        // Test PI constant
-        let result: f64 = evaluate_expression("PI", &params).unwrap();
-        assert!((result - std::f64::consts::PI).abs() < f64::EPSILON);
+        let values = [
+            ("$x", 3.0),
+            ("pi", pi),
+            ("2*pi", 2.0 * pi),
+            ("$a*pi", 2.0 * pi),
+            ("${a}*pi", 2.0 * pi),
+            ("-pi", -pi),
+            ("65*pi/180", 65.0 * pi / 180.0),
+            ("sin(pi / 2)", 1.0),
+        ];
+        for (expr, expected) in values {
+            let got: f64 = evaluate_expression(expr, &params).expect(expr);
+            assert!(
+                (got - expected).abs() < 1e-12,
+                "{expr}: expected {expected}, got {got}"
+            );
+        }
 
-        // Test E constant
-        let result: f64 = evaluate_expression("E", &params).unwrap();
-        assert!((result - std::f64::consts::E).abs() < f64::EPSILON);
-
-        // Test constants in expressions
-        let result: f64 = evaluate_expression("2 * PI", &params).unwrap();
-        assert!((result - 2.0 * std::f64::consts::PI).abs() < f64::EPSILON);
+        let refusals = [
+            (
+                "PI",
+                "unknown identifier 'PI' in expression; parameters are referenced as $PI",
+            ),
+            (
+                "E",
+                "unknown identifier 'E' in expression; parameters are referenced as $E",
+            ),
+            (
+                "x",
+                "unknown identifier 'x' in expression; parameters are referenced as $x",
+            ),
+            ("$a*e", "parameters are referenced as $e"),
+        ];
+        for (expr, cause) in refusals {
+            let err = evaluate_expression::<f64>(expr, &params)
+                .expect_err(expr)
+                .to_string();
+            assert!(err.contains(cause), "{expr}: expected {cause:?}, got {err}");
+        }
     }
 
     #[test]
@@ -1194,14 +1227,14 @@ mod tests {
         let result: f64 = evaluate_expression("sin(0)", &params).unwrap();
         assert!((result - 0.0).abs() < f64::EPSILON);
 
-        let result: f64 = evaluate_expression("sin(PI / 2)", &params).unwrap();
+        let result: f64 = evaluate_expression("sin(pi / 2)", &params).unwrap();
         assert!((result - 1.0).abs() < 1e-10);
 
         // Test cos function
         let result: f64 = evaluate_expression("cos(0)", &params).unwrap();
         assert!((result - 1.0).abs() < f64::EPSILON);
 
-        let result: f64 = evaluate_expression("cos(PI)", &params).unwrap();
+        let result: f64 = evaluate_expression("cos(pi)", &params).unwrap();
         assert!((result - (-1.0)).abs() < 1e-10);
 
         // Test tan function
@@ -1325,8 +1358,8 @@ mod tests {
         let result: f64 = evaluate_expression("${radius} * sin(${angle})", &params).unwrap();
         assert!((result - 10.0 * 0.5_f64.sin()).abs() < 1e-10);
 
-        // Test with constants: 2 * PI * radius
-        let result: f64 = evaluate_expression("2 * PI * ${radius}", &params).unwrap();
+        // Test with constants: 2 * pi * radius
+        let result: f64 = evaluate_expression("2 * pi * ${radius}", &params).unwrap();
         assert!((result - 2.0 * std::f64::consts::PI * 10.0).abs() < 1e-10);
 
         // Test nested functions: sqrt(abs(-16))
@@ -1355,13 +1388,9 @@ mod tests {
             ("pow(2)", "pow() requires exactly 2 arguments"),
             ("min(5)", "min() requires exactly 2 arguments"),
             ("max(1, 2, 3)", "max() requires exactly 2 arguments"),
-            // Unknown names. A bare name that is not `PI` or `E` is read as a parameter
-            // reference, so an unknown one fails as an undeclared parameter.
+            // An unknown function name. A bare identifier is covered by
+            // `test_pi_constant_and_bare_identifiers`.
             ("unknown_func(5)", "unknown function"),
-            (
-                "UNKNOWN_CONSTANT",
-                "Parameter 'UNKNOWN_CONSTANT' error: parameter not found",
-            ),
             // Domain violations
             ("sqrt(-1)", "sqrt() of negative number"),
             ("acos(2)", "acos(2) is undefined outside [-1, 1]"),

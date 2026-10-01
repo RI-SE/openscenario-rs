@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Expressions: bare `pi` is the constant, every other bare identifier is a syntax error.**
+  `${65*pi/180}` now evaluates, using the constant from OpenSCENARIO XML 1.4.0 section 9.2.2. `PI`
+  and `E` are removed, and a bare name such as `x` fails with "unknown identifier 'x' in
+  expression; parameters are referenced as $x" instead of "parameter not found". Write `$x` or
+  `${x}` for a parameter.
 ### Removed
 
 - **The attached storyboard builder chain.** `StoryBuilder::add_act`, `ActBuilder`, `ManeuverBuilder`,

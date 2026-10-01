@@ -620,7 +620,7 @@ mod tests {
         assert_eq!(parameter.resolve(&params).unwrap(), 30.0);
 
         // Test expression resolution (basic)
-        let expression = Value::<String>::expression("speed".to_string());
+        let expression = Value::<String>::expression("$speed".to_string());
         assert_eq!(expression.resolve(&params).unwrap(), "30");
     }
 
@@ -710,7 +710,7 @@ mod tests {
             quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
         let err = as_double.resolve(&params).unwrap_err().to_string();
         assert!(
-            err.contains("unexpected token"),
+            err.contains("unknown identifier 'this'"),
             "expected the parser's cause, got: {err}"
         );
 
@@ -718,30 +718,30 @@ mod tests {
             quick_xml::de::from_str(r#"<v>${this is not an expression}</v>"#).unwrap();
         let err = as_string.resolve(&params).unwrap_err().to_string();
         assert!(
-            err.contains("unexpected token"),
+            err.contains("unknown identifier 'this'"),
             "expected the parser's cause, got: {err}"
         );
     }
 
-    /// `${pi}` names no parameter the crate defines and no constant section 9.2 defines, so
-    /// resolving it must fail -- as both a `Double` and a `String` -- naming the cause rather
-    /// than silently succeeding the way the pre-fix `$pi` conflation did.
+    /// `${x}` is a bare identifier: it names no constant, and a parameter is referenced as
+    /// `$x`, so resolving it must fail -- as both a `Double` and a `String` -- saying the `$`
+    /// is missing rather than reporting a parameter that was never meant.
     #[test]
     fn braced_bare_name_fails_to_resolve() {
         let params = HashMap::new();
 
-        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
+        let as_double: Value<f64> = quick_xml::de::from_str(r#"<v>${x}</v>"#).unwrap();
         let err = as_double.resolve(&params).unwrap_err().to_string();
         assert!(
-            err.contains("not found"),
-            "expected the real cause, got: {err}"
+            err.contains("parameters are referenced as $x"),
+            "expected the missing-`$` cause, got: {err}"
         );
 
-        let as_string: Value<String> = quick_xml::de::from_str(r#"<v>${pi}</v>"#).unwrap();
+        let as_string: Value<String> = quick_xml::de::from_str(r#"<v>${x}</v>"#).unwrap();
         let err = as_string.resolve(&params).unwrap_err().to_string();
         assert!(
-            err.contains("not found"),
-            "expected the real cause, got: {err}"
+            err.contains("parameters are referenced as $x"),
+            "expected the missing-`$` cause, got: {err}"
         );
     }
 

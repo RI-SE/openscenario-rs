@@ -133,7 +133,7 @@ use openscenario_rs::types::basic::Double;
 
 let literal = Double::literal(25.0);
 let parameter = Double::parameter("vehicle_speed".to_string());
-let expression = Double::expression("vehicle_speed + 10".to_string());
+let expression = Double::expression("$vehicle_speed + 10".to_string());
 ```
 
 Inspection is by three accessors, each returning `None` for the other two variants. There is
@@ -172,8 +172,14 @@ Arithmetic expressions are evaluated separately:
 ```rust
 use openscenario_rs::evaluate_expression;
 
-let result: f64 = evaluate_expression("vehicle_speed * 2 + 5", &params)?;
+let result: f64 = evaluate_expression("$vehicle_speed * 2 + 5", &params)?;
 ```
+
+A parameter is always written `$name` or `${name}`. A bare identifier is a syntax error that says
+the `$` is missing. The one name an expression can use without a `$` is the constant `pi`
+(3.141592653589793), as in `${65 * pi / 180}`. OpenSCENARIO XML 1.4.0 section 9.2.2 defines it;
+the crate accepts it for 1.3 documents as a forward-compatible extension. There is no `e`, and
+no uppercase `PI`.
 
 `examples/expression_demo.rs` runs through all three value kinds.
 
