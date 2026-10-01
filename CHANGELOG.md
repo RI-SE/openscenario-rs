@@ -31,6 +31,10 @@ All notable changes to this project are recorded here. The format follows
   They are replaced by `from_degrees`, `from_degrees_with_altitude` and
   `from_degrees_with_altitude_and_heading`, which take degrees and write `latitudeDeg`,
   `longitudeDeg` and `altitude`; documents with the deprecated attributes still parse unchanged.
+- **Breaking:** `CatalogWeather::new` takes a `FractionalCloudCover` instead of a `CloudState`, and
+  the `new`, `sunny` and `rainy` presets write `fractionalCloudCover`, `Sun@illuminance` (100,000 lx
+  in sun, 30,000 lx in rain) and `Precipitation@precipitationIntensity` instead of the deprecated
+  `cloudState` and `intensity` attributes. The argument of `rainy` is now in mm/h, not the old 0 to 1 scale.
 
 ### Removed
 

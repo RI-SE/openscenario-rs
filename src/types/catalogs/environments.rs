@@ -130,7 +130,7 @@ pub struct CatalogWeather {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Sun")]
 pub struct CatalogSun {
-    /// Light intensity (0.0-1.0, can be parameterized) — deprecated per XSD
+    /// Illuminance in lux (can be parameterized). Deprecated per XSD; use `illuminance`.
     #[serde(
         rename = "@intensity",
         default,
@@ -191,7 +191,8 @@ pub struct CatalogPrecipitation {
     #[serde(rename = "@precipitationType")]
     pub precipitation_type: Value<PrecipitationType>,
 
-    /// Precipitation intensity (0.0-1.0, can be parameterized) — deprecated per XSD
+    /// Precipitation intensity, range [0..1] (can be parameterized). Deprecated per XSD; use
+    /// `precipitation_intensity`.
     #[serde(
         rename = "@intensity",
         default,
@@ -199,7 +200,7 @@ pub struct CatalogPrecipitation {
     )]
     pub intensity: Option<Double>,
 
-    /// Precipitation intensity (current replacement for `intensity`)
+    /// Precipitation intensity in mm/h (current replacement for `intensity`)
     #[serde(
         rename = "@precipitationIntensity",
         default,
@@ -379,81 +380,62 @@ impl CatalogTimeOfDay {
 }
 
 impl CatalogWeather {
-    /// Creates weather with the specified cloud state
-    #[allow(deprecated)]
-    pub fn new(cloud_state: CloudState) -> Self {
+    /// Illuminance of direct sunlight in lux. The `Sun` model reference gives "direct
+    /// sunlight is around 100,000 lx" as its scale for `illuminance`.
+    const DIRECT_SUNLIGHT_LUX: f64 = 100_000.0;
+
+    /// Creates fair weather with the given cloud cover: the sun at the zenith at
+    /// [`Self::DIRECT_SUNLIGHT_LUX`], 100 km visual range and no precipitation.
+    pub fn new(fractional_cloud_cover: FractionalCloudCover) -> Self {
         Self {
-            cloud_state: Some(Value::Literal(cloud_state)),
+            cloud_state: None,
             atmospheric_pressure: None,
             temperature: None,
-            fractional_cloud_cover: None,
+            fractional_cloud_cover: Some(Value::Literal(fractional_cloud_cover)),
             sun: Some(CatalogSun {
-                intensity: Some(Value::Literal(1.0)),
+                intensity: None,
                 azimuth: Value::Literal(0.0),
                 elevation: Value::Literal(1.571),
-                illuminance: None,
+                illuminance: Some(Value::Literal(Self::DIRECT_SUNLIGHT_LUX)),
             }),
-            fog: Some(CatalogFog::new(100000.0)), // 100km clear visibility, explicit in this preset
+            fog: Some(CatalogFog::new(100000.0)),
             precipitation: Some(CatalogPrecipitation {
                 precipitation_type: Value::Literal(PrecipitationType::Dry),
-                intensity: Some(Value::Literal(0.0)),
-                precipitation_intensity: None,
+                intensity: None,
+                precipitation_intensity: Some(Value::Literal(0.0)),
             }),
             wind: None,
             dome_image: None,
         }
     }
 
-    /// Creates sunny weather conditions
-    #[allow(deprecated)]
+    /// Creates sunny weather: [`Self::new`] with `zeroOktas`, which the
+    /// `FractionalCloudCover` model reference equates with the deprecated `free` cloud state.
     pub fn sunny() -> Self {
-        Self {
-            cloud_state: Some(Value::Literal(CloudState::Free)),
-            atmospheric_pressure: None,
-            temperature: None,
-            fractional_cloud_cover: None,
-            sun: Some(CatalogSun {
-                intensity: Some(Value::Literal(1.0)),
-                azimuth: Value::Literal(0.0),
-                elevation: Value::Literal(1.571),
-                illuminance: None,
-            }),
-            fog: Some(CatalogFog {
-                visual_range: Value::Literal(100000.0),
-                bounding_box: None,
-            }),
-            precipitation: Some(CatalogPrecipitation {
-                precipitation_type: Value::Literal(PrecipitationType::Dry),
-                intensity: Some(Value::Literal(0.0)),
-                precipitation_intensity: None,
-            }),
-            wind: None,
-            dome_image: None,
-        }
+        Self::new(FractionalCloudCover::ZeroOktas)
     }
 
-    /// Creates rainy weather conditions
-    #[allow(deprecated)]
-    pub fn rainy(intensity: Double) -> Self {
+    /// Creates rainy weather with `precipitation_intensity` in mm/h. The sky is `sixOktas`,
+    /// which the `FractionalCloudCover` model reference equates with the deprecated `rainy`
+    /// cloud state. The sun is dimmed to 30% of [`Self::DIRECT_SUNLIGHT_LUX`] and the visual
+    /// range drops to 5 km.
+    pub fn rainy(precipitation_intensity: Double) -> Self {
         Self {
-            cloud_state: Some(Value::Literal(CloudState::Rainy)),
+            cloud_state: None,
             atmospheric_pressure: None,
             temperature: None,
-            fractional_cloud_cover: None,
+            fractional_cloud_cover: Some(Value::Literal(FractionalCloudCover::SixOktas)),
             sun: Some(CatalogSun {
-                intensity: Some(Value::Literal(0.3)),
+                intensity: None,
                 azimuth: Value::Literal(0.0),
                 elevation: Value::Literal(1.571),
-                illuminance: None,
+                illuminance: Some(Value::Literal(0.3 * Self::DIRECT_SUNLIGHT_LUX)),
             }),
-            fog: Some(CatalogFog {
-                visual_range: Value::Literal(5000.0), // Reduced visibility in rain
-                bounding_box: None,
-            }),
+            fog: Some(CatalogFog::new(5000.0)),
             precipitation: Some(CatalogPrecipitation {
                 precipitation_type: Value::Literal(PrecipitationType::Rain),
-                intensity: Some(intensity),
-                precipitation_intensity: None,
+                intensity: None,
+                precipitation_intensity: Some(precipitation_intensity),
             }),
             wind: None,
             dome_image: None,
@@ -505,46 +487,40 @@ mod tests {
         assert_eq!(parameterized.parameter_declarations, Some(declarations));
     }
 
+    /// The presets write the 1.3 attributes and none of the deprecated ones. Expected oktas
+    /// follow the `FractionalCloudCover` model reference, which equates `zeroOktas` with the
+    /// deprecated `free` and `sixOktas` with the deprecated `rainy`.
     #[test]
     fn test_catalog_weather_presets() {
-        let sunny = CatalogWeather::sunny();
-        let rainy = CatalogWeather::rainy(Value::Literal(0.8));
-
-        assert_eq!(sunny.cloud_state, Some(Value::Literal(CloudState::Free)));
-        assert_eq!(
-            sunny
-                .sun
-                .as_ref()
-                .unwrap()
-                .intensity
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &1.0
-        );
-        assert_eq!(
-            sunny.precipitation.as_ref().unwrap().precipitation_type,
-            Value::Literal(PrecipitationType::Dry)
-        );
-
-        assert_eq!(rainy.cloud_state, Some(Value::Literal(CloudState::Rainy)));
-        assert_eq!(
-            rainy.precipitation.as_ref().unwrap().precipitation_type,
-            Value::Literal(PrecipitationType::Rain)
-        );
-        assert_eq!(
-            rainy
-                .precipitation
-                .as_ref()
-                .unwrap()
-                .intensity
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &0.8
-        );
+        let cases = [
+            (
+                CatalogWeather::sunny(),
+                [
+                    r#"fractionalCloudCover="zeroOktas""#,
+                    r#"illuminance="100000""#,
+                    r#"precipitationType="dry""#,
+                    r#"precipitationIntensity="0""#,
+                ],
+            ),
+            (
+                CatalogWeather::rainy(Value::Literal(4.0)),
+                [
+                    r#"fractionalCloudCover="sixOktas""#,
+                    r#"illuminance="30000""#,
+                    r#"precipitationType="rain""#,
+                    r#"precipitationIntensity="4""#,
+                ],
+            ),
+        ];
+        for (weather, expected) in cases {
+            let xml = quick_xml::se::to_string(&weather).unwrap();
+            for attr in expected {
+                assert!(xml.contains(attr), "missing {attr}: {xml}");
+            }
+            for deprecated in ["cloudState=", " intensity="] {
+                assert!(!xml.contains(deprecated), "wrote {deprecated}: {xml}");
+            }
+        }
     }
 
     #[test]
@@ -591,25 +567,15 @@ mod tests {
                 .to_string(),
             "2021-06-21T12:00:00"
         );
+        let weather = scenario_env.weather.as_ref().unwrap();
         assert_eq!(
-            scenario_env.weather.as_ref().unwrap().cloud_state,
-            Some(Value::Literal(CloudState::Free))
+            weather.fractional_cloud_cover,
+            Some(Value::Literal(FractionalCloudCover::ZeroOktas))
         );
-        assert_eq!(
-            scenario_env
-                .weather
-                .as_ref()
-                .unwrap()
-                .sun
-                .as_ref()
-                .unwrap()
-                .intensity
-                .as_ref()
-                .unwrap()
-                .as_literal()
-                .unwrap(),
-            &1.0
-        );
+        assert_eq!(weather.cloud_state, None);
+        let sun = weather.sun.as_ref().unwrap();
+        assert_eq!(sun.illuminance, Some(Double::literal(100_000.0)));
+        assert_eq!(sun.intensity, None);
         let road_condition = scenario_env.road_condition.as_ref().unwrap();
         assert_eq!(road_condition.friction_scale_factor, Double::literal(0.7));
         assert_eq!(road_condition.wetness, Some(Value::Literal(Wetness::Moist)));
