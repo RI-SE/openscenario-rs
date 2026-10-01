@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **`builder::parameters::utils::parameter_ref` now emits `$name`, not `${name}`.** The XSD
+  gives the braced spelling to the `expression` production, not `parameter`
+  (`Schema/OpenSCENARIO.xsd:4-13`); `parameter_ref`'s old output was read by the crate's own
+  parser as an expression, not a parameter reference. Callers relying on the old `${name}`
+  spelling will see a behaviour change.
+
 ### Removed
 
 - **Breaking:** the `parser::choice_groups` module and its crate-root re-exports

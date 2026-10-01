@@ -121,9 +121,12 @@ mod parameter_builder_tests {
     fn test_parameter_utils() {
         use openscenario_rs::builder::parameters::utils;
 
-        // Test parameter reference creation
-        assert_eq!(utils::parameter_ref("speed"), "${speed}");
-        assert_eq!(utils::parameter_ref("vehicle_name"), "${vehicle_name}");
+        // Test parameter reference creation. `$name` is the XSD's `parameter` production;
+        // `${name}` is `expression` (Schema/OpenSCENARIO.xsd:4-13) -- see
+        // `parameter_ref_output_parses_as_a_parameter_not_an_expression` below for proof that
+        // the crate's own parser reads this spelling as a parameter.
+        assert_eq!(utils::parameter_ref("speed"), "$speed");
+        assert_eq!(utils::parameter_ref("vehicle_name"), "$vehicle_name");
 
         // Test parameterized value creation
         let param_string = utils::parameterized_string("vehicle_name");
@@ -139,5 +142,25 @@ mod parameter_builder_tests {
             openscenario_rs::types::basic::Value::Parameter(name) => assert_eq!(name, "speed"),
             _ => panic!("Expected parameter reference"),
         }
+    }
+
+    #[test]
+    fn parameter_ref_output_parses_as_a_parameter_not_an_expression() {
+        use openscenario_rs::builder::parameters::utils;
+        use openscenario_rs::types::entities::vehicle::Property;
+
+        // Feed the helper's own output through the crate's attribute parser (the same one
+        // every `Value<T>` field uses). `${speedLimit}` would parse as `Value::Expression`
+        // (see `tests/parameterized_enum_test.rs::the_braced_spelling_is_an_expression_not_a_parameter`);
+        // this proves `parameter_ref` no longer produces that spelling.
+        let value = utils::parameter_ref("speedLimit");
+        let xml = format!(r#"<Property name="maxSpeed" value="{value}"/>"#);
+        let property: Property = quick_xml::de::from_str(&xml)
+            .unwrap_or_else(|e| panic!("parameter_ref's output must parse: {e}\nxml: {xml}"));
+        assert_eq!(
+            property.value,
+            Value::Parameter("speedLimit".to_string()),
+            "parameter_ref's output must be read as a parameter reference, not an expression"
+        );
     }
 }

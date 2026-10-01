@@ -150,9 +150,12 @@ impl<T> ParameterizedValueBuilder<T> {
 pub mod utils {
     use super::*;
 
-    /// Create a parameter reference string
+    /// Create a parameter reference string.
+    ///
+    /// The XSD gives the braced spelling (`${name}`) to the `expression` production, not
+    /// `parameter` (`Schema/OpenSCENARIO.xsd:4-13`); a parameter reference is always unbraced.
     pub fn parameter_ref(name: &str) -> String {
-        format!("${{{}}}", name)
+        format!("${}", name)
     }
 
     /// Create a parameterized OSString
