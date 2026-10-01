@@ -1098,14 +1098,6 @@ impl ByEntityCondition {
         )
     }
 
-    /// Create an off-road condition
-    pub fn off_road(triggering_entities: TriggeringEntities, duration: f64) -> Self {
-        Self::new(
-            triggering_entities,
-            EntityCondition::EndOfRoad(EndOfRoadCondition::with_duration(duration)),
-        )
-    }
-
     /// Create an offroad condition (XSD-compliant OffroadCondition)
     pub fn offroad(triggering_entities: TriggeringEntities, duration: f64) -> Self {
         Self::new(

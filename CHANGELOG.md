@@ -11,6 +11,10 @@ All notable changes to this project are recorded here. The format follows
 - **Breaking:** the `parser::choice_groups` module and its crate-root re-exports
   `XsdChoiceGroup`, `ChoiceGroupParser`, `ChoiceGroupRegistry` and `parse_choice_group`. Nothing
   in the crate implemented or called them; the schema's choice groups are parsed through serde.
+- **Breaking:** `ByEntityCondition::off_road`. Despite its name it built an
+  `EndOfRoadCondition`, not the XSD's `OffroadCondition`, silently giving callers a different
+  trigger than the one they asked for. Use `offroad` for the XSD-compliant `OffroadCondition`,
+  or `end_of_road` for the condition `off_road` actually built.
 
 ## [0.5.0] - 2026-09-22
 

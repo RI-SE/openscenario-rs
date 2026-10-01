@@ -349,12 +349,6 @@ fn by_entity_condition_constructors_match_xsd_wire_form() {
         &by_entity_xml(r#"<EndOfRoadCondition duration="3"/>"#),
         &ByEntityCondition::end_of_road(ego(), 3.0),
     );
-    // `off_road` builds an EndOfRoadCondition, not an OffroadCondition (`offroad` builds that).
-    // This row records the current behaviour; it is not what the name promises.
-    assert_wire(
-        &by_entity_xml(r#"<EndOfRoadCondition duration="2"/>"#),
-        &ByEntityCondition::off_road(ego(), 2.0),
-    );
     assert_wire(
         &by_entity_xml(
             r#"<TimeHeadwayCondition entityRef="Lead" value="2" rule="lessThan" freespace="true"/>"#,
@@ -393,7 +387,7 @@ fn by_entity_condition_constructors_match_xsd_wire_form() {
             EntityCondition::StandStill(StandStillCondition::new(6.0)),
         ),
     );
-    // `offroad` builds the XSD-compliant OffroadCondition (distinct from `off_road` above).
+    // `offroad` builds the XSD-compliant OffroadCondition.
     assert_wire(
         &by_entity_xml(r#"<OffroadCondition duration="7"/>"#),
         &ByEntityCondition::offroad(ego(), 7.0),
