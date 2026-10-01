@@ -831,6 +831,13 @@ mod tests {
         }
     }
 
+    /// `Range::new` documents a panic on an inverted range; it must hold in release builds too.
+    #[test]
+    #[should_panic(expected = "Range lower limit must be <= upper limit")]
+    fn range_new_panics_on_inverted_limits() {
+        let _ = Range::new(1.0, 0.0);
+    }
+
     #[test]
     fn test_directory_creation() {
         // Test basic creation
@@ -1215,9 +1222,9 @@ impl Range {
     /// Create a new range with the given limits
     ///
     /// # Panics
-    /// Panics if lower > upper when both are literals
+    /// Panics if `lower > upper`. Use [`Range::try_new`] to get an error instead.
     pub fn new(lower: f64, upper: f64) -> Self {
-        debug_assert!(lower <= upper, "Range lower limit must be <= upper limit");
+        assert!(lower <= upper, "Range lower limit must be <= upper limit");
         Self {
             lower_limit: Double::literal(lower),
             upper_limit: Double::literal(upper),

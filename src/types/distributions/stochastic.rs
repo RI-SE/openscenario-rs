@@ -1,7 +1,8 @@
 //! Stochastic distribution types for probabilistic parameter variation
 
+use crate::error::Error;
 use crate::error::Result;
-use crate::types::basic::{MinVec, OSString, UnsignedInt, Value};
+use crate::types::basic::{Double, MinVec, OSString, Range, UnsignedInt, Value};
 use crate::types::distributions::{DistributionSampler, ValidateDistribution};
 use serde::{Deserialize, Serialize};
 
@@ -68,16 +69,16 @@ pub struct ProbabilityDistributionSetElement {
     #[serde(rename = "@value")]
     pub value: OSString,
     #[serde(rename = "@weight")]
-    pub weight: OSString,
+    pub weight: Double,
 }
 
 /// Normal (Gaussian) distribution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NormalDistribution {
     #[serde(rename = "@expectedValue")]
-    pub expected_value: OSString,
+    pub expected_value: Double,
     #[serde(rename = "@variance")]
-    pub variance: OSString,
+    pub variance: Double,
     /// Optional bounding range — serializes as a child `<Range>` element, not an attribute.
     #[serde(rename = "Range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
@@ -87,9 +88,9 @@ pub struct NormalDistribution {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LogNormalDistribution {
     #[serde(rename = "@expectedValue")]
-    pub expected_value: OSString,
+    pub expected_value: Double,
     #[serde(rename = "@variance")]
-    pub variance: OSString,
+    pub variance: Double,
     /// Optional bounding range — child `<Range>` element, not an attribute.
     #[serde(rename = "Range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
@@ -107,7 +108,7 @@ pub struct UniformDistribution {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PoissonDistribution {
     #[serde(rename = "@expectedValue")]
-    pub expected_value: OSString,
+    pub expected_value: Double,
     /// Optional bounding range — child `<Range>` element, not an attribute.
     #[serde(rename = "Range", skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
@@ -130,16 +131,7 @@ pub struct HistogramBin {
     #[serde(rename = "Range")]
     pub range: Range,
     #[serde(rename = "@weight")]
-    pub weight: OSString,
-}
-
-/// Range specification for distributions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Range {
-    #[serde(rename = "@lowerLimit")]
-    pub lower_limit: OSString,
-    #[serde(rename = "@upperLimit")]
-    pub upper_limit: OSString,
+    pub weight: Double,
 }
 
 // No Default for Stochastic: `numberOfTestRuns` is `use="required"` in the XSD with no
@@ -194,17 +186,44 @@ impl ValidateDistribution for ProbabilityDistributionSet {
     }
 }
 
+/// Validates `Option<Range>` the same way for every distribution that bounds itself with one.
+fn validate_optional_range(range: &Option<Range>) -> Result<()> {
+    range.as_ref().map_or(Ok(()), Range::validate)
+}
+
 impl ValidateDistribution for NormalDistribution {
+    /// The model reference states no range for `expectedValue` or `variance`, so only the
+    /// optional `Range` is checked.
     fn validate(&self) -> Result<()> {
-        // Basic validation - detailed validation would require parameter resolution
-        Ok(())
+        validate_optional_range(&self.range)
     }
 }
 
 impl ValidateDistribution for LogNormalDistribution {
+    /// The model reference gives `variance` the range `]0; inf[` and requires the lower limit
+    /// of the optional `Range` to be `> 0`.
     fn validate(&self) -> Result<()> {
-        // Basic validation - detailed validation would require parameter resolution
-        Ok(())
+        // A `$param` or `${expr}` operand is unknown until parameter resolution.
+        if let Some(&variance) = self.variance.as_literal() {
+            if variance <= 0.0 {
+                return Err(Error::validation_error(
+                    "LogNormalDistribution.variance",
+                    "LogNormalDistribution variance must be > 0",
+                ));
+            }
+        }
+        if let Some(range) = &self.range {
+            // A `$param` or `${expr}` limit is unknown until parameter resolution.
+            if let Some(&lower) = range.lower_limit.as_literal() {
+                if lower <= 0.0 {
+                    return Err(Error::validation_error(
+                        "LogNormalDistribution.Range.lowerLimit",
+                        "LogNormalDistribution Range lowerLimit must be > 0",
+                    ));
+                }
+            }
+        }
+        validate_optional_range(&self.range)
     }
 }
 
@@ -215,9 +234,10 @@ impl ValidateDistribution for UniformDistribution {
 }
 
 impl ValidateDistribution for PoissonDistribution {
+    /// The model reference states no range for `expectedValue`, so only the optional `Range`
+    /// is checked.
     fn validate(&self) -> Result<()> {
-        // Basic validation - detailed validation would require parameter resolution
-        Ok(())
+        validate_optional_range(&self.range)
     }
 }
 
@@ -234,15 +254,9 @@ impl ValidateDistribution for Histogram {
 }
 
 impl ValidateDistribution for HistogramBin {
+    /// The model reference states no range for `weight`, so only the bin's `Range` is checked.
     fn validate(&self) -> Result<()> {
         self.range.validate()
-    }
-}
-
-impl ValidateDistribution for Range {
-    fn validate(&self) -> Result<()> {
-        // Basic validation - detailed validation would require parameter resolution
-        Ok(())
     }
 }
 
@@ -280,7 +294,7 @@ impl DistributionSampler for UniformDistribution {
     fn sample(&self) -> Result<Self::Output> {
         // For basic implementation, return a placeholder
         match (&self.range.lower_limit, &self.range.upper_limit) {
-            (OSString::Literal(lower), OSString::Literal(upper)) => {
+            (Value::Literal(lower), Value::Literal(upper)) => {
                 Ok(format!("uniform({}, {})", lower, upper))
             }
             _ => Err(crate::error::Error::validation_error(
@@ -329,26 +343,99 @@ mod tests {
         );
     }
 
-    /// `Stochastic::validate` visits every distribution kind; the prior fixture only reached
-    /// `ProbabilityDistributionSet`/`Uniform`/`Histogram`/`UserDefinedDistribution`. This
-    /// exercises the three remaining `StochasticDistributionType::validate` match arms
-    /// (`Normal`, `LogNormal`, `Poisson`) and the all-valid `Ok(())` return of
-    /// `Stochastic::validate` itself, which only runs when no distribution errors.
+    /// Bounds the ASAM model reference states for the stochastic distributions, checked on
+    /// literal operands only. Each row wraps one distribution in a `Stochastic`, so the
+    /// `Ok` rows also reach `Stochastic::validate`'s all-valid return and every
+    /// `StochasticDistributionType` arm that bounds itself with a `Range`. `None` expects
+    /// `Ok`; `Some(field)` expects a `ValidationError` on that field.
     #[test]
-    fn stochastic_validation_passes_for_normal_lognormal_and_poisson_distributions() {
-        let xml = r#"<Stochastic numberOfTestRuns="5">
-    <StochasticDistribution parameterName="a">
-        <NormalDistribution expectedValue="0" variance="1"/>
-    </StochasticDistribution>
-    <StochasticDistribution parameterName="b">
-        <LogNormalDistribution expectedValue="1" variance="2"/>
-    </StochasticDistribution>
-    <StochasticDistribution parameterName="c">
-        <PoissonDistribution expectedValue="3"/>
-    </StochasticDistribution>
-</Stochastic>"#;
-        let stochastic: Stochastic = quick_xml::de::from_str(xml).expect("fixture parses");
-        assert!(stochastic.validate().is_ok());
+    fn stochastic_distribution_bounds_are_checked_on_literals() {
+        let rows: &[(&str, &str, Option<&str>)] = &[
+            (
+                "normal, valid range",
+                r#"<NormalDistribution expectedValue="0" variance="1"><Range lowerLimit="-1" upperLimit="1"/></NormalDistribution>"#,
+                None,
+            ),
+            (
+                "normal, inverted range",
+                r#"<NormalDistribution expectedValue="0" variance="1"><Range lowerLimit="1" upperLimit="-1"/></NormalDistribution>"#,
+                Some("Range.lowerLimit"),
+            ),
+            (
+                "log-normal, valid",
+                r#"<LogNormalDistribution expectedValue="1" variance="2"><Range lowerLimit="0.5" upperLimit="3"/></LogNormalDistribution>"#,
+                None,
+            ),
+            (
+                "log-normal, zero variance",
+                r#"<LogNormalDistribution expectedValue="1" variance="0"/>"#,
+                Some("LogNormalDistribution.variance"),
+            ),
+            (
+                "log-normal, parameter variance",
+                r#"<LogNormalDistribution expectedValue="1" variance="$v"/>"#,
+                None,
+            ),
+            (
+                "log-normal, zero range lower limit",
+                r#"<LogNormalDistribution expectedValue="1" variance="2"><Range lowerLimit="0" upperLimit="3"/></LogNormalDistribution>"#,
+                Some("LogNormalDistribution.Range.lowerLimit"),
+            ),
+            (
+                "log-normal, inverted range",
+                r#"<LogNormalDistribution expectedValue="1" variance="2"><Range lowerLimit="3" upperLimit="1"/></LogNormalDistribution>"#,
+                Some("Range.lowerLimit"),
+            ),
+            (
+                "log-normal, parameter range lower limit",
+                r#"<LogNormalDistribution expectedValue="1" variance="2"><Range lowerLimit="$lo" upperLimit="3"/></LogNormalDistribution>"#,
+                None,
+            ),
+            (
+                "poisson, valid range",
+                r#"<PoissonDistribution expectedValue="3"><Range lowerLimit="0" upperLimit="10"/></PoissonDistribution>"#,
+                None,
+            ),
+            (
+                "poisson, inverted range",
+                r#"<PoissonDistribution expectedValue="3"><Range lowerLimit="10" upperLimit="0"/></PoissonDistribution>"#,
+                Some("Range.lowerLimit"),
+            ),
+            (
+                "uniform, equal limits",
+                r#"<UniformDistribution><Range lowerLimit="2" upperLimit="2"/></UniformDistribution>"#,
+                None,
+            ),
+            (
+                "uniform, inverted range",
+                r#"<UniformDistribution><Range lowerLimit="2" upperLimit="1"/></UniformDistribution>"#,
+                Some("Range.lowerLimit"),
+            ),
+            (
+                "uniform, parameter lower limit",
+                r#"<UniformDistribution><Range lowerLimit="$lo" upperLimit="-1"/></UniformDistribution>"#,
+                None,
+            ),
+            (
+                "histogram, inverted bin range",
+                r#"<Histogram><Bin weight="1"><Range lowerLimit="0" upperLimit="1"/></Bin><Bin weight="1"><Range lowerLimit="5" upperLimit="2"/></Bin></Histogram>"#,
+                Some("Range.lowerLimit"),
+            ),
+        ];
+        for (name, body, expected) in rows {
+            let xml = format!(
+                r#"<Stochastic numberOfTestRuns="1"><StochasticDistribution parameterName="p">{body}</StochasticDistribution></Stochastic>"#
+            );
+            let stochastic: Stochastic = quick_xml::de::from_str(&xml)
+                .unwrap_or_else(|e| panic!("{name}: fixture must parse: {e}"));
+            match (stochastic.validate(), expected) {
+                (Ok(()), None) => {}
+                (Err(Error::ValidationError { field, .. }), Some(expected)) => {
+                    assert_eq!(&field, expected, "{name}")
+                }
+                (result, expected) => panic!("{name}: expected {expected:?}, got {result:?}"),
+            }
+        }
     }
 
     /// `ProbabilityDistributionSet::sample` had no test at all: it returns the first
@@ -360,11 +447,11 @@ mod tests {
             elements: MinVec::new(vec![
                 ProbabilityDistributionSetElement {
                     value: OSString::Literal("a".to_string()),
-                    weight: OSString::Literal("0.5".to_string()),
+                    weight: Value::Literal(0.5),
                 },
                 ProbabilityDistributionSetElement {
                     value: OSString::Literal("b".to_string()),
-                    weight: OSString::Literal("0.5".to_string()),
+                    weight: Value::Literal(0.5),
                 },
             ])
             .unwrap(),
@@ -378,7 +465,7 @@ mod tests {
         let param_set = ProbabilityDistributionSet {
             elements: MinVec::new(vec![ProbabilityDistributionSetElement {
                 value: OSString::Parameter("p".to_string()),
-                weight: OSString::Literal("1.0".to_string()),
+                weight: Value::Literal(1.0),
             }])
             .unwrap(),
         };
@@ -393,7 +480,7 @@ mod tests {
         let expr_set = ProbabilityDistributionSet {
             elements: MinVec::new(vec![ProbabilityDistributionSetElement {
                 value: OSString::Expression("${p}".to_string()),
-                weight: OSString::Literal("1.0".to_string()),
+                weight: Value::Literal(1.0),
             }])
             .unwrap(),
         };
@@ -414,7 +501,7 @@ mod tests {
         let uniform = UniformDistribution {
             range: Range {
                 lower_limit: Value::Parameter("lo".to_string()),
-                upper_limit: Value::Literal("10.0".to_string()),
+                upper_limit: Value::Literal(10.0),
             },
         };
         let err = uniform
@@ -430,8 +517,8 @@ mod tests {
     fn test_uniform_distribution_sampling() {
         let uniform = UniformDistribution {
             range: Range {
-                lower_limit: Value::Literal("0.0".to_string()),
-                upper_limit: Value::Literal("10.0".to_string()),
+                lower_limit: Value::Literal(0.0),
+                upper_limit: Value::Literal(10.0),
             },
         };
 
@@ -447,8 +534,8 @@ mod tests {
             distribution_type: StochasticDistributionType::UniformDistribution(
                 UniformDistribution {
                     range: Range {
-                        lower_limit: Value::Literal("0.0".to_string()),
-                        upper_limit: Value::Literal("1.0".to_string()),
+                        lower_limit: Value::Literal(0.0),
+                        upper_limit: Value::Literal(1.0),
                     },
                 },
             ),

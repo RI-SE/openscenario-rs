@@ -1,7 +1,7 @@
 //! Deterministic distribution types for systematic parameter variation
 
 use crate::error::Result;
-use crate::types::basic::{MinVec, OSString, Value};
+use crate::types::basic::{Double, MinVec, OSString, Value};
 use crate::types::distributions::{
     DeterministicParameterDistributionGroup, DistributionSampler, ValidateDistribution,
 };
@@ -145,7 +145,7 @@ pub struct DistributionSetElement {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DistributionRange {
     #[serde(rename = "@stepWidth")]
-    pub step_width: OSString,
+    pub step_width: Double,
     #[serde(rename = "Range")]
     pub range: crate::types::basic::Range,
 }
@@ -223,21 +223,14 @@ impl ValidateDistribution for DistributionSet {
 }
 
 impl ValidateDistribution for DistributionRange {
+    /// The model reference states no range for `stepWidth`, so only the `Range` is checked.
     fn validate(&self) -> Result<()> {
-        // Basic validation - for more detailed validation, parameter resolution would be needed
-        Ok(())
+        self.range.validate()
     }
 }
 
 impl ValidateDistribution for ValueSetDistribution {
     fn validate(&self) -> Result<()> {
-        if self.parameter_value_sets.is_empty() {
-            return Err(crate::error::Error::validation_error(
-                "parameter_value_sets",
-                "ValueSetDistribution must have at least one parameter value set",
-            ));
-        }
-
         for value_set in &self.parameter_value_sets {
             value_set.validate()?;
         }
@@ -247,13 +240,6 @@ impl ValidateDistribution for ValueSetDistribution {
 
 impl ValidateDistribution for ParameterValueSet {
     fn validate(&self) -> Result<()> {
-        if self.parameter_assignments.is_empty() {
-            return Err(crate::error::Error::validation_error(
-                "parameter_assignments",
-                "ParameterValueSet must have at least one parameter assignment",
-            ));
-        }
-
         // Check for duplicate parameter references
         let mut param_refs = std::collections::HashSet::new();
         for assignment in &self.parameter_assignments {
@@ -297,7 +283,7 @@ impl DistributionSetElement {
 }
 
 impl DistributionRange {
-    pub fn new(step_width: OSString, range: crate::types::basic::Range) -> Self {
+    pub fn new(step_width: Double, range: crate::types::basic::Range) -> Self {
         Self { step_width, range }
     }
 }
@@ -572,7 +558,7 @@ mod tests {
 
     fn range_with_lower(lower: Value<f64>) -> DistributionRange {
         DistributionRange::new(
-            Value::literal("1.0".to_string()),
+            Value::literal(1.0),
             crate::types::basic::Range {
                 lower_limit: lower,
                 upper_limit: Value::literal(10.0),
@@ -580,14 +566,42 @@ mod tests {
         )
     }
 
-    /// `DistributionRange::new`, `::validate` and `DistributionSampler::{sample,
-    /// is_deterministic}` had no test at all.
+    /// `DistributionRange::new` and `DistributionSampler::{sample, is_deterministic}`.
     #[test]
-    fn distribution_range_sample_and_validate() {
+    fn distribution_range_sample_returns_lower_limit() {
         let range = range_with_lower(Value::literal(0.0));
-        assert!(range.validate().is_ok());
         assert_eq!(range.sample().unwrap(), "0");
         assert!(range.is_deterministic());
+    }
+
+    /// `DistributionRange::validate` checks its `Range` on literal limits (upper limit 10 in
+    /// every row). The model reference states no range for `stepWidth`. `None` expects `Ok`;
+    /// `Some(field)` expects a `ValidationError` on that field.
+    #[test]
+    fn distribution_range_bounds_are_checked_on_literals() {
+        let rows: [(&str, Value<f64>, Option<&str>); 4] = [
+            ("lower below upper", Value::literal(0.0), None),
+            ("lower equal to upper", Value::literal(10.0), None),
+            (
+                "lower above upper",
+                Value::literal(11.0),
+                Some("Range.lowerLimit"),
+            ),
+            (
+                "parameter lower limit",
+                Value::Parameter("lo".to_string()),
+                None,
+            ),
+        ];
+        for (name, lower, expected) in rows {
+            match (range_with_lower(lower).validate(), expected) {
+                (Ok(()), None) => {}
+                (Err(crate::error::Error::ValidationError { field, .. }), Some(expected)) => {
+                    assert_eq!(field, expected, "{name}")
+                }
+                (result, expected) => panic!("{name}: expected {expected:?}, got {result:?}"),
+            }
+        }
     }
 
     #[test]

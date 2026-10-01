@@ -89,22 +89,34 @@ fn two_bin_histogram_round_trips_byte_exact() {
     assert_eq!(round_trip(TWO_BIN_HISTOGRAM), TWO_BIN_HISTOGRAM);
 }
 
-#[test]
-fn zero_branch_document_is_rejected() {
-    let result: Result<StochasticDistribution, _> = quick_xml::de::from_str(ZERO_BRANCH);
-    let err = result.expect_err("a document with no distribution branch must be rejected");
-    assert!(
-        err.to_string().contains("missing field `$value`"),
-        "unexpected error text: {err}"
-    );
-}
+const NON_NUMERIC_VARIANCE: &str = concat!(
+    r#"<StochasticDistribution parameterName="p">"#,
+    r#"<NormalDistribution expectedValue="0" variance="abc"/>"#,
+    r#"</StochasticDistribution>"#,
+);
 
+/// Each row is a schema-invalid document and a fragment of the error that must refuse it.
+/// `@variance` is `Double` in the XSD (`:1513`), so a non-numeric literal must not parse.
 #[test]
-fn two_branch_document_is_rejected() {
-    let result: Result<StochasticDistribution, _> = quick_xml::de::from_str(TWO_BRANCH);
-    let err = result.expect_err("a document with two distribution branches must be rejected");
-    assert!(
-        err.to_string().contains("duplicate field `$value`"),
-        "unexpected error text: {err}"
-    );
+fn schema_invalid_documents_are_rejected() {
+    for (name, xml, expected) in [
+        (
+            "no distribution branch",
+            ZERO_BRANCH,
+            "missing field `$value`",
+        ),
+        (
+            "two distribution branches",
+            TWO_BRANCH,
+            "duplicate field `$value`",
+        ),
+        ("non-numeric variance", NON_NUMERIC_VARIANCE, "abc"),
+    ] {
+        let result: Result<StochasticDistribution, _> = quick_xml::de::from_str(xml);
+        let err = result.expect_err(&format!("{name}: the document must be rejected"));
+        assert!(
+            err.to_string().contains(expected),
+            "{name}: unexpected error text: {err}"
+        );
+    }
 }

@@ -487,16 +487,13 @@ fn print_resolution_summary(document: &openscenario_rs::types::scenario::storybo
                             DeterministicSingleParameterDistributionType::DistributionRange(
                                 range,
                             ) => {
-                                if let Some(step_val) = range.step_width.as_literal() {
+                                if let Some(step) = range.step_width.as_literal() {
                                     if let (Some(lower), Some(upper)) = (
                                         range.range.lower_limit.as_literal(),
                                         range.range.upper_limit.as_literal(),
                                     ) {
-                                        if let Ok(step_f64) = step_val.parse::<f64>() {
-                                            let count =
-                                                ((upper - lower) / step_f64 + 1.0) as usize;
-                                            total_combinations *= count;
-                                        }
+                                        let count = ((upper - lower) / step + 1.0) as usize;
+                                        total_combinations *= count;
                                     }
                                 }
                             }

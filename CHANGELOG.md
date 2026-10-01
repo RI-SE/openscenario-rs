@@ -19,6 +19,13 @@ All notable changes to this project are recorded here. The format follows
   which writes `speed`.
 - **Breaking:** `Vehicle::new_truck`'s bounding box height is now 3.8 m (was 3.5 m), matching
   `Dimensions::truck()` rather than the removed `Dimensions::truck_default()`.
+- **Breaking:** distribution attributes the schema types as `Double` are now `Double`, not
+  `OSString`: `expected_value` and `variance` on `NormalDistribution` and `LogNormalDistribution`,
+  `PoissonDistribution::expected_value`, `HistogramBin::weight`,
+  `ProbabilityDistributionSetElement::weight` and `DistributionRange::step_width`. A non-numeric
+  literal such as `variance="abc"` is now a parse error.
+- **Breaking:** `types::distributions::Range`, a copy of `types::basic::Range` with string limits,
+  is removed; every distribution now holds `types::basic::Range`.
 
 ### Removed
 
@@ -96,6 +103,11 @@ All notable changes to this project are recorded here. The format follows
   (`Schema/OpenSCENARIO.xsd:4-13`); `parameter_ref`'s old output was read by the crate's own
   parser as an expression, not a parameter reference. Callers relying on the old `${name}`
   spelling will see a behaviour change.
+- **Distribution `validate()` checks the bounds the ASAM model reference states.** On literal
+  operands it rejects a `Range` whose `lowerLimit` exceeds its `upperLimit`, and a
+  `LogNormalDistribution` whose `variance` or `Range` lower limit is not positive; `$parameter`
+  and `${expression}` operands are left to parameter resolution. `basic::Range::new` now panics on
+  an inverted range in release builds as well, as its documentation states.
 
 ## [0.5.0] - 2026-09-22
 

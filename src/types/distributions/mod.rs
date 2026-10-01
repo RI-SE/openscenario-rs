@@ -164,6 +164,25 @@ impl ValidateDistribution for UserDefinedDistribution {
     }
 }
 
+/// The model reference for `Range` states `lowerLimit <= value <= upperLimit`, so an inverted
+/// range admits no value. Only literal limits are checked.
+impl ValidateDistribution for crate::types::basic::Range {
+    fn validate(&self) -> Result<()> {
+        // A `$param` or `${expr}` limit is unknown until parameter resolution.
+        if let (Some(lower), Some(upper)) =
+            (self.lower_limit.as_literal(), self.upper_limit.as_literal())
+        {
+            if lower > upper {
+                return Err(crate::error::Error::validation_error(
+                    "Range.lowerLimit",
+                    "Range lowerLimit must be <= upperLimit",
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
 // XSD Group Implementations - Distribution Groups
 //
 // `DistributionDefinitionGroup` (a Deterministic|Stochastic choice) and
