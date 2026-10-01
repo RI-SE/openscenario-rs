@@ -137,8 +137,10 @@ single test file (`catalog_parameter_assignments/`, used by `catalog_parameter_a
 ## What these tests do not cover
 
 The fixtures here are a handful of files, and they are not the conformance check. The corpus
-that exercises the schema more broadly lives in the `conformance` workspace member and covers
-about 53% of the schema's element declarations even so.
+that exercises the schema more broadly lives in the `conformance` workspace member; see
+[The corpus covers about three fifths of the schema](../docs/xsd_gaps.md#the-corpus-covers-about-three-fifths-of-the-schema)
+for the current element-coverage figures (present vs. proven by a passing gate) rather than a
+number restated here that drifts out of sync.
 
 Be careful how you read a green round-trip test. serde ignores unknown XML by default, so a
 field the Rust types do not model is dropped identically on every pass and the comparison
