@@ -13,7 +13,7 @@ which this repository's CI never sees.
 5. `git switch main && git pull && git tag v0.5.0 && git push origin v0.5.0`
    — this triggers `.github/workflows/release.yml`, which checks the tag against
    `Cargo.toml`'s version, checks `CHANGELOG.md` has a `## [0.5.0]` section, runs
-   `scripts/gate.sh` (the same gate CI runs on every push — a release must not ship something
+   `scripts/gate.sh` (the same gate the `pre-push` hook runs — a release must not ship something
    the gate would reject), slices that section's body into release notes, and creates a
    GitHub Release from them.
 6. `cargo publish` — **MANUAL**, from a clean checkout of the tag. This is the only step no gate

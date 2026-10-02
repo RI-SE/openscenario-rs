@@ -27,10 +27,12 @@ all – which is an easy way to land code that does not build.
 
 All eleven gate stages – markdown links, `cargo fmt --check`, clippy, build, test, and the six
 conformance stages – live in one place, [`scripts/gate.sh`](scripts/gate.sh). Both the local
-`pre-push` hook and the hosted `gate` job in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) run that same script, so there is exactly
-one copy of the stage list and it cannot drift between "what the hook checks" and "what CI
-checks."
+`pre-push` hook and the release workflow run that same script, so there is exactly one copy of
+the stage list and it cannot drift between "what the hook checks" and "what a release checks."
+There is no hosted CI on pushes or pull requests; the hook is the gate.
+
+`nix develop` gives a shell with everything the gate needs (Rust toolchain, clippy, rustfmt,
+pkg-config, libxml2, libclang), and `nix build` builds and tests the crate.
 
 Enable the hook once per clone:
 
@@ -74,9 +76,8 @@ is a branch and a pull request:
   branch (see [RELEASING.md](RELEASING.md)).
 - Pull requests are **squash merged only**, and the branch is deleted on merge. `main` keeps a
   linear history – no merge commits.
-- The `gate` check (the same `scripts/gate.sh` described above, run by
-  [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) must be green on the PR. It is a
-  required check; there is no override short of an admin bypass.
+- `scripts/gate.sh` (described above) must pass locally before the branch is pushed; the
+  `pre-push` hook enforces this.
 - Anything user-visible goes into `CHANGELOG.md`'s `[Unreleased]` section as part of the same PR
   – not just breaking changes, any addition, fix or behavior change a downstream user could
   notice. The crate has downstream users, and a change that only shows up in `git log` is
