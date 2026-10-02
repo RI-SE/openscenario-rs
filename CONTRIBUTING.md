@@ -73,7 +73,7 @@ is a branch and a pull request:
 
 - Branch names follow the same conventional-commit prefixes this file already mandates for
   commits: `feat/`, `fix/`, `refactor/`, `docs/`, `chore/`, plus `release/x.y.z` for a release
-  branch (see [RELEASING.md](RELEASING.md)).
+  branch .
 - Pull requests are **squash merged only**, and the branch is deleted on merge. `main` keeps a
   linear history – no merge commits.
 - `scripts/gate.sh` (described above) must pass locally before the branch is pushed; the
@@ -83,8 +83,7 @@ is a branch and a pull request:
   notice. The crate has downstream users, and a change that only shows up in `git log` is
   effectively undocumented.
 - Releases – tagging, the `release.yml` workflow, and the one manual step it deliberately does
-  not automate (publishing to crates.io stays a manual, local `cargo publish`, never run in CI) –
-  are the whole subject of [RELEASING.md](RELEASING.md).
+  not automate (publishing to crates.io stays a manual, local `cargo publish`, never run in CI).
 
 ## The one rule that matters
 
@@ -102,14 +101,14 @@ is a branch and a pull request:
 
 The [type system guide](docs/type_system_guide.md) covers these in full; the summary:
 
-| Schema shape | Rust |
-|---|---|
-| Attribute | `#[serde(rename = "@name")]`, where the `@` is not optional |
-| Child element | `#[serde(rename = "ElementName")]` |
-| `minOccurs="0"` | `Option<T>` with `skip_serializing_if = "Option::is_none"` |
+| Schema shape          | Rust                                                                          |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Attribute             | `#[serde(rename = "@name")]`, where the `@` is not optional                   |
+| Child element         | `#[serde(rename = "ElementName")]`                                            |
+| `minOccurs="0"`       | `Option<T>` with `skip_serializing_if = "Option::is_none"`                    |
 | `maxOccurs` above one | `Vec<T>` with `default`, usually plus `skip_serializing_if = "Vec::is_empty"` |
-| Required | The bare type, no `default` |
-| Enumeration | A unit enum with each variant renamed to its schema value |
+| Required              | The bare type, no `default`                                                   |
+| Enumeration           | A unit enum with each variant renamed to its schema value                     |
 
 Two further points that cause real bugs:
 
@@ -159,7 +158,7 @@ A few further rules, each here because its absence let a real test rot into nois
 - **Prefer the real boundary.** A round-trip test through the public parse/serialize API is a
   stronger keeper than a test that only calls a constructor, because it also proves the value
   reaches the wire correctly.
-- **A green round trip proves *stable*, not *lossless*.** serde drops XML it does not model
+- **A green round trip proves _stable_, not _lossless_.** serde drops XML it does not model
   identically on every pass, so a passing comparison does not mean nothing was lost; say in the
   test, or nearby, what it does and does not prove when that distinction matters.
 - **Public API gets a real caller, not just a test.** If the only caller of a `pub` item is a
@@ -179,13 +178,13 @@ EPL-2.0), not vendored into this GPL-3.0-only repo. Fetch it once with:
 bash scripts/fetch-corpus.sh
 ```
 
-| Command | Compares | Catches |
-|---|---|---|
-| `cargo run -p openscenario-roundtrip-harness --bin report` | `xml1` vs `xml2` | parse failures, instability across serialization |
-| `cargo run -p openscenario-roundtrip-harness --bin lossy` | the original file vs `xml1` | data dropped or invented on the first parse |
-| `cargo run -p openscenario-roundtrip-harness --bin validate` | `xml1` vs the XSD | schema-invalid output |
-| `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs the XSD | a schema-invalid input, which the crate may otherwise "improve" into a valid document by dropping the invalid part |
-| `cargo run -p openscenario-roundtrip-harness --bin mutate` | the crate's verdict vs the XSD's, on deliberately broken copies of each file | a type that **accepts** what the schema forbids: a missing required child or attribute, a repeated element past its `maxOccurs`, two branches of one choice, a value outside an enumeration |
+| Command                                                            | Compares                                                                     | Catches                                                                                                                                                                                     |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cargo run -p openscenario-roundtrip-harness --bin report`         | `xml1` vs `xml2`                                                             | parse failures, instability across serialization                                                                                                                                            |
+| `cargo run -p openscenario-roundtrip-harness --bin lossy`          | the original file vs `xml1`                                                  | data dropped or invented on the first parse                                                                                                                                                 |
+| `cargo run -p openscenario-roundtrip-harness --bin validate`       | `xml1` vs the XSD                                                            | schema-invalid output                                                                                                                                                                       |
+| `cargo run -p openscenario-roundtrip-harness --bin validate-input` | the **original file** vs the XSD                                             | a schema-invalid input, which the crate may otherwise "improve" into a valid document by dropping the invalid part                                                                          |
+| `cargo run -p openscenario-roundtrip-harness --bin mutate`         | the crate's verdict vs the XSD's, on deliberately broken copies of each file | a type that **accepts** what the schema forbids: a missing required child or attribute, a repeated element past its `maxOccurs`, two branches of one choice, a value outside an enumeration |
 
 Run them from the repo root. `lossy` is the one to check after adding a type, because it is the
 only gate that sees first-parse data loss. `mutate` is the one to check after tightening a type,
@@ -206,7 +205,7 @@ that reaches the remote has already cleared them.
 Be careful how you read a green `report` run. serde drops unknown XML on every pass
 identically, so the round-trip comparison still succeeds over data the types never modeled.
 The corpus reported 172/172 for a long time while discarding route positions, vehicle light
-states and global actions. A green `report` means *stable*, not *lossless*.
+states and global actions. A green `report` means _stable_, not _lossless_.
 
 The corpus also covers only part of the schema: 175 of 294 element declarations are present in
 it, and only 165 are reached by a file that a gate actually passes. If you add a type and `lossy`
