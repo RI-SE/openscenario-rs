@@ -28,7 +28,7 @@ clap = { version = "4.0", features = ["derive"] }
 indexmap = { version = "2.0" }
 chrono = { version = "0.4", features = ["serde"] }
 regex = { version = "1.0" }
-markup_fmt = "0.24"
+markup_fmt = "0.27"
 
 
 [features]
